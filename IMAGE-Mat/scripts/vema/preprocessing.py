@@ -1,3 +1,4 @@
+#%%
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,8 +9,9 @@ import os
 from pathlib import Path
 # from read_scripts.dynamic_stock_model_BM import DynamicStockModel as DSM
 from read_scripts.read_mym import read_mym_df
+import read_scripts.import_labels as import_labels
 
-os.chdir("C:/Users/3976866/Documents/ITS repositories/image-materials/IMAGE-Mat/scripts/vema")   # SET YOUR PATH HERE
+os.chdir("../../../IMAGE-Mat/scripts/vema")   # SET YOUR PATH HERE
 
 st = time.time()
 
@@ -110,23 +112,12 @@ car_vshares.set_index(["time", "DIM_1"], inplace=True)
 medtruck_vshares.set_index(["time", "DIM_1"], inplace=True)
 hvytruck_vshares.set_index(["time", "DIM_1"], inplace=True)
 
-bus_label   = ["BusOil",	"BusBio",	"BusGas",	"BusElecTrolley",	"Bus Hybrid1",	"Bus Hybrid2",	"BusBattElectric", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]
-truck_label = ["Conv. ICE(2000)",	"Conv. ICE(2010)", "Adv. ICEOil",	"Adv. ICEH2", "Turbo-petrol IC", "Diesel ICEOil", "Diesel ICEBio", "ICE-HEV-gasoline", "ICE-HEV-diesel oil", "ICE-HEV-H2", "ICE-HEV-CNG Gas", "ICE-HEV-diesel bio", "FCV Oil", "FCV Bio", "FCV H2", "PEV-10 OilElec.", "PEV-30 OilElec.", "PEV-60 OilElec.", "PEV-10 BioElec.", "PEV-30 BioElec.", "PEV-60 BioElec.", "BEV Elec.", "", "", ""]
-car_label   = ["Conv. ICE(2000)",	"Conv. ICE(2010)", "Adv. ICEOil",	"Adv. ICEH2", "Turbo-petrol IC", "Diesel ICEOil", "Diesel ICEBio", "ICE-HEV-gasoline", "ICE-HEV-diesel oil", "ICE-HEV-H2", "ICE-HEV-CNG Gas", "ICE-HEV-diesel bio", "FCV Oil", "FCV Bio", "FCV H2", "PEV-10 OilElec.", "PEV-30 OilElec.", "PEV-60 OilElec.", "PEV-10 BioElec.", "PEV-30 BioElec.", "PEV-60 BioElec.", "BEV Elec.", "PHEV_BEV", "BEV", "Gas car"]
-tkms_label  = ["inland shipping", "freight train", "medium truck", "heavy truck", "air cargo", "international shipping", "empty", "total"]
-pkms_label  = ["walking", "biking", "bus", "train", "car", "hst", "air", "total"]
-columns_vehcile_output = ["Buses","Trains","HST","Cars","Planes","Bikes","Trucks","Cargo Trains","Ships","Inland ships","Cargo Planes"]
-
 # insert column descriptions
-tonkms_Mtkms.columns       = tkms_label
-passengerkms_Tpkms.columns = pkms_label
-medtruck_vshares.columns   = truck_label
-hvytruck_vshares.columns   = truck_label
-buses_vshares.columns      = bus_label
-
-# output transport drivers to output folder for 450 vs Bl comparisson in overarching figures later on
-tonkms_Mtkms.to_csv(OUTPUT_FOLDER + "/transport_tkms.csv", index=True)       # in Mega tkms
-passengerkms_Tpkms.to_csv(OUTPUT_FOLDER + "/transport_pkms.csv", index=True) # in Tera pkms
+tonkms_Mtkms.columns       = import_labels.tkms_label
+passengerkms_Tpkms.columns = import_labels.pkms_label
+medtruck_vshares.columns   = import_labels.truck_label
+hvytruck_vshares.columns   = import_labels.truck_label
+buses_vshares.columns      = import_labels.bus_label
 
 # aggregate car types into 5 car types
 BEV_collist  = [22, 24]
@@ -144,16 +135,8 @@ vehicleshare_cars.loc[idx[:,:],"PHEV"] = car_vshares[PHEV_collist].sum(axis=1).t
 vehicleshare_cars.loc[idx[:,:],"BEV"]  = car_vshares[BEV_collist].sum(axis=1).to_numpy()
 vehicleshare_cars.loc[idx[:,:],"FCV"]  = car_vshares[FCV_collist].sum(axis=1).to_numpy()
 
-# output to IRP
-vehicleshare_cars.to_csv(OUTPUT_FOLDER + "\\car_type_share_regional.csv", index=True)
-
 # labels etc.
-x_graphs        = [i for i in range(START_YEAR, END_YEAR, 1)]                           # this is used as an x-axis for the years in graphs
-labels_pas      = ["bicycle", "rail_reg","rail_hst","midi_bus","reg_bus","air_pas","ICE","HEV","PHEV","BEV", "FCV"]             # Names used to shorten plots
-labels_fre      = ["inland_shipping", "rail_freight","LCV", "MFT", "HFT", "air_freight", "sea_shipping_small", "sea_shipping_med", "sea_shipping_large", "sea_shipping_vl"] #names used to shorten plots
-labels_materials= ["Steel", "Aluminium", "Cu", "Plastics", "Glass", "Ti", "Wood", "Rubber", "Li","Co","Ni", "Mn","Nd","Pb"]
-labels_ev_batt  = ["NiMH","LMO","NMC","NCA","LFP","Lithium Sulfur","Lithium Ceramic","Lithium-air"]
-
+#x_graphs        = [i for i in range(START_YEAR, END_YEAR, 1)]                           # this is used as an x-axis for the years in graphs
 
 #%% For dynamic variables, apply interpolation and extend over the whole timeframe
 
@@ -367,7 +350,7 @@ diff_ships_total = total_nr_of_ships.loc[list(range(2005,2018+1)), 28].div(nr_of
 # Export total global number of vehicles in the fleet (stock) as csv
 region_list = list(range(1,27))
 index = pd.MultiIndex.from_product([list(total_nr_of_ships.index), region_list], names = ["years","regions"])
-total_nr_vehicles = pd.DataFrame(index=index, columns=columns_vehcile_output)
+total_nr_vehicles = pd.DataFrame(index=index, columns=import_labels.columns_vehicle_output)
 total_nr_vehicles["Buses"]        = bus_regl_nr[region_list].stack() + bus_midi_nr[region_list].stack()
 total_nr_vehicles["Trains"]       = rail_reg_nr[region_list].stack()
 total_nr_vehicles["HST"]          = rail_hst_nr[region_list].stack()
@@ -380,14 +363,11 @@ total_nr_vehicles["Ships"]        = total_nr_of_ships[region_list].stack()
 total_nr_vehicles["Inland ships"] = inland_ship_nr[region_list].stack()  
 total_nr_vehicles["Cargo Planes"] = air_freight_nr[region_list].stack() 
 
-total_nr_vehicles.sum(axis=0, level=0).to_csv(OUTPUT_FOLDER + "\\global_vehicle_nr.csv", index=True) # total global nr of vehicles 
-total_nr_vehicles.to_csv(OUTPUT_FOLDER +  "\\region_vehicle_nr.csv", index=True) # regional nr of vehicles 
-
 # Generate csv output file on pkms & tkms (same format as files on number of vehicles (also used later on)), unit: pkm or tkm 
 region_list = list(range(1,27))
 car_pkms.columns = list(range(1,27))      # remove region labels 
 index = pd.MultiIndex.from_product([list(total_nr_of_ships.index), region_list], names = ["years","regions"])
-total_pkm_tkm = pd.DataFrame(index=index, columns=columns_vehcile_output)
+total_pkm_tkm = pd.DataFrame(index=index, columns=import_labels.columns_vehicle_output)
 total_pkm_tkm["Buses"]        = (bus_regl_pkms[region_list].stack() + bus_midi_pkms[region_list].stack()) * 1000000000000
 total_pkm_tkm["Trains"]       = passengerkms_Tpkms["train"]   * 1000000000000                              
 total_pkm_tkm["HST"]          = passengerkms_Tpkms["hst"]     * 1000000000000
@@ -400,11 +380,22 @@ total_pkm_tkm["Ships"]        = tonkms_Mtkms["international shipping"] * 1000000
 total_pkm_tkm["Inland ships"] = tonkms_Mtkms["inland shipping"] * 1000000
 total_pkm_tkm["Cargo Planes"] = air_freight_tkms[region_list].stack() * 1000000     # mind that these are the tkms flows with cargo planes, real demand for air cargo is higher due to 50% hitching with passenger flights
 
-total_pkm_tkm.sum(axis=0, level=0).to_csv(OUTPUT_FOLDER + "\\global_pkm_tkm.csv", index=True) # total global pkms & tkms 
-total_pkm_tkm.to_csv(OUTPUT_FOLDER + "\\region_pkm_tkm.csv", index=True)  # regional pkms & tkms 
 
+""" Only used to check data
 # some indicators for the model accuracy comparison
 inland_ship_nr[[2,11,16,20]].loc[2015].sum()           # inland shipping in 2015 (China, Russia, Europe & US)
 car_total_nr[[11,12]].loc[2018].sum()
 rail_reg_nr[[1,2,11,12,18,20,23]].loc[2017].sum()      # India, Canada, China, United States, Europe, Japan
 rail_freight_nr[[1,2,11,12,18,20,16]].loc[2016].sum()  # India, Canada, China, United States, Europe, Russia
+"""
+
+#%% Save output
+# output to IRP
+# output transport drivers to output folder for 450 vs Bl comparisson in overarching figures later on
+tonkms_Mtkms.to_csv(OUTPUT_FOLDER + "/transport_tkms.csv", index=True)       # in Mega tkms
+passengerkms_Tpkms.to_csv(OUTPUT_FOLDER + "/transport_pkms.csv", index=True) # in Tera pkms
+vehicleshare_cars.to_csv(OUTPUT_FOLDER + "\\car_type_share_regional.csv", index=True)
+total_nr_vehicles.to_csv(OUTPUT_FOLDER +  "\\region_vehicle_nr.csv", index=True) # regional nr of vehicles 
+total_nr_vehicles.sum(axis=0, level=0).to_csv(OUTPUT_FOLDER + "\\global_vehicle_nr.csv", index=True) # total global nr of vehicles 
+total_pkm_tkm.sum(axis=0, level=0).to_csv(OUTPUT_FOLDER + "\\global_pkm_tkm.csv", index=True) # total global pkms & tkms 
+total_pkm_tkm.to_csv(OUTPUT_FOLDER + "\\region_pkm_tkm.csv", index=True)  # regional pkms & tkms 
