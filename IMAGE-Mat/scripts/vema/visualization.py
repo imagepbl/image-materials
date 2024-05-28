@@ -5,24 +5,6 @@ import matplotlib
 
 
 def plot_transport_demand(OUTPUT_FOLDER, OUT_YEAR, VARIANT, passengerkms_Tpkms, tonkms_Mtkms):
-    # color dictionary for vehicles & materials
-    color_vehicle = {
-    "air"                   : "#334fff",
-    "biking"                : "#058b37",
-    "bus"                   : "#f2cc3a",
-    "midi bus"              : "#e89a18",
-    "car"                   : "#09608b",
-    "train"                 : "#76765d",
-    "hst"                   : "#6b6b54",
-    "international shipping": "#199841",
-    "inland shipping"       : "#199881",
-    "freight train"         : "#193198",
-    "medium truck"          : "#811998",
-    "heavy truck"           : "#197098",
-    "air cargo"             : "#578F16"
-    }
-
-
     #tkms_label  = ['inland shipping', 'freight train', 'medium truck', 'heavy truck', 'air cargo', 'international shipping', 'empty', 'total']
     #pkms_label  = ['walking', 'biking', 'bus', 'train', 'car', 'hst', 'air', 'total']
     font = {'family' : 'sans-serif',
