@@ -16,13 +16,14 @@ os.chdir("../../../IMAGE-Mat/scripts/vema")   # SET YOUR PATH HERE
 st = time.time()
 
 # settings & constants
-START_YEAR = 1971
+START_YEAR = 1971            # start year of historic IMAGE data
 END_YEAR = 2060
 OUT_YEAR = 2060              # year of output generation
 REGIONS = 26
 idx = pd.IndexSlice          # needed for slicing multi-index
 FIRST_YEAR_BOATS = 1900
 LOAD_FACTOR = 1.6            # reference loadfactor of cars in TIMER (the trp_trvl_Load.out file is relative to this BASE loadfcator (persons/car))
+FIRST_YEAR = first_year_vehicle.values.min()  # start year of the full model period (including stock-development from scratch, which needs to be the oldest year of any vehicle, all stock calculations are initiated in this year, so this has an effect on runtime)
 
 # scenario settings
 SCEN    = "SSP2"
@@ -140,88 +141,54 @@ vehicleshare_cars.loc[idx[:,:],"FCV"]  = car_vshares[FCV_collist].sum(axis=1).to
 
 #%% For dynamic variables, apply interpolation and extend over the whole timeframe
 
-# For some files, data is only found for a limited number of years, so we need to infer time-series before & after the data ends
-def add_history_and_future(original, first_year, change="no"):  
-    """
-    This function fills data for the entire scenario period, even when not all years are provided in the input files. 
-    Assuming constant values before the first and after the last available year and linear interpolation between available years. Equivalent to the Runge-Kutta interpolation in MyM
-    input:  pandas dataframe with at least two timesteps defined as rows
-    output: pandas dataframe with all scenario timesteps defined as rows (including the initial stock buildup phase, which differs between vehicles)
-    """ 
-    #determine the first and last year in the original data (start = first year of data available, first_year (input) = the first year in which vehicles existed & started building a stock) 
-    start = original.first_valid_index()
-    end = original.last_valid_index()
-
-    #first interpolate between available years
-    original_copy = original[:].reindex(list(range(start,end+1))).interpolate()
-    
-    # add the historic tail (assuming constant values)
-    for row in range(first_year,start):
-        original_copy.loc[row] = original_copy.loc[start].values
-        history = original_copy.sort_index(axis=0)
-        
-    # add "future" years after the latest year of the original data (depending on the "change" settings these remain constant or grow based on an average annual growth rate)
-    if change == "no":
-        # if change = "no", just assume constant values after the last historic year
-        for row in range(end, END_YEAR + 1):
-            history.loc[row] = history.loc[end].values      # fill new years with the same values as in the last year of the origial data 
-            new = history.sort_index(axis=0)
-    else:
-        # if change = "yes", first determine the growth rate based on the historic series (start-to-end)
-        growthrate = history.pct_change().sum(axis=0)/(end-start)
-        # then apply the average annual growth rate to the last historic year
-        for row in range(end+1, END_YEAR + 1):
-            history.loc[row] = history.loc[row-1].values * (1+growthrate)
-            new = history.sort_index(axis=0)
-    return new 
-
 # use the add_history_and_future() function to speciyfy dynamic variables over the entire scenario period
 # complete & interpolate the vehicle weight data
-vehicle_weight_kg_air_pas     = add_history_and_future(pd.DataFrame(vehicle_weight_kg_simple["air_pas"]),         first_year_vehicle["air_pas"].values[0],         change="no")
-vehicle_weight_kg_air_frgt    = add_history_and_future(pd.DataFrame(vehicle_weight_kg_simple["air_freight"]),     first_year_vehicle["air_freight"].values[0],     change="no")
-vehicle_weight_kg_rail_reg    = add_history_and_future(pd.DataFrame(vehicle_weight_kg_simple["rail_reg"]),        first_year_vehicle["rail_reg"].values[0],        change="no")
-vehicle_weight_kg_rail_hst    = add_history_and_future(pd.DataFrame(vehicle_weight_kg_simple["rail_hst"]),        first_year_vehicle["rail_hst"].values[0],        change="no")
-vehicle_weight_kg_rail_frgt   = add_history_and_future(pd.DataFrame(vehicle_weight_kg_simple["rail_freight"]),    first_year_vehicle["rail_freight"].values[0],    change="no")
-vehicle_weight_kg_inland_ship = add_history_and_future(pd.DataFrame(vehicle_weight_kg_simple["inland_shipping"]), first_year_vehicle["inland_shipping"].values[0], change="no")
-vehicle_weight_kg_bicycle     = add_history_and_future(pd.DataFrame(vehicle_weight_kg_simple["bicycle"]),         first_year_vehicle["bicycle"].values[0],         change="no")
+vehicle_weight_kg_air_pas     = interpolate(pd.DataFrame(vehicle_weight_kg_simple["air_pas"]),         change='no')
+vehicle_weight_kg_air_frgt    = interpolate(pd.DataFrame(vehicle_weight_kg_simple["air_freight"]),     change='no')
+vehicle_weight_kg_rail_reg    = interpolate(pd.DataFrame(vehicle_weight_kg_simple["rail_reg"]),        change='no')
+vehicle_weight_kg_rail_hst    = interpolate(pd.DataFrame(vehicle_weight_kg_simple["rail_hst"]),        change='no')
+vehicle_weight_kg_rail_frgt   = interpolate(pd.DataFrame(vehicle_weight_kg_simple["rail_freight"]),    change='no')
+vehicle_weight_kg_inland_ship = interpolate(pd.DataFrame(vehicle_weight_kg_simple["inland_shipping"]), change='no')
+vehicle_weight_kg_bicycle     = interpolate(pd.DataFrame(vehicle_weight_kg_simple["bicycle"]),         change='no')
 
-vehicle_weight_kg_car    = add_history_and_future(vehicle_weight_kg_typical["car"].unstack(),     first_year_vehicle["car"].values[0],     change="no")
-vehicle_weight_kg_LCV    = add_history_and_future(vehicle_weight_kg_typical["LCV"].unstack(),     first_year_vehicle["LCV"].values[0],     change="no")
-vehicle_weight_kg_MFT    = add_history_and_future(vehicle_weight_kg_typical["MFT"].unstack(),     first_year_vehicle["MFT"].values[0],     change="no")
-vehicle_weight_kg_HFT    = add_history_and_future(vehicle_weight_kg_typical["HFT"].unstack(),     first_year_vehicle["HFT"].values[0],     change="no")
-vehicle_weight_kg_bus    = add_history_and_future(vehicle_weight_kg_typical["reg_bus"].unstack(), first_year_vehicle["reg_bus"].values[0], change="no")
-vehicle_weight_kg_midi   = add_history_and_future(vehicle_weight_kg_typical["midi_bus"].unstack(),first_year_vehicle["midi_bus"].values[0],change="no")
+vehicle_weight_kg_car         = interpolate(vehicle_weight_kg_typical["car"].unstack(),      change='no')
+vehicle_weight_kg_LCV         = interpolate(vehicle_weight_kg_typical["LCV"].unstack(),      change='no')
+vehicle_weight_kg_MFT         = interpolate(vehicle_weight_kg_typical["MFT"].unstack(),      change='no')
+vehicle_weight_kg_HFT         = interpolate(vehicle_weight_kg_typical["HFT"].unstack(),      change='no')
+vehicle_weight_kg_bus         = interpolate(vehicle_weight_kg_typical["reg_bus"].unstack(),  change='no')
+vehicle_weight_kg_midi        = interpolate(vehicle_weight_kg_typical["midi_bus"].unstack(), change='no')
 
 # complete & interpolate the vehicle composition data (simple first)
-material_fractions_air_pas     = add_history_and_future(material_fractions["air_pas"].unstack(),            first_year_vehicle["air_pas"].values[0],         change="no")
-material_fractions_air_frgt    = add_history_and_future(material_fractions["air_freight"].unstack(),        first_year_vehicle["air_freight"].values[0],     change="no")
-material_fractions_rail_reg    = add_history_and_future(material_fractions["rail_reg"].unstack(),           first_year_vehicle["rail_reg"].values[0],        change="no")
-material_fractions_rail_hst    = add_history_and_future(material_fractions["rail_hst"].unstack(),           first_year_vehicle["rail_hst"].values[0],        change="no")
-material_fractions_rail_frgt   = add_history_and_future(material_fractions["rail_freight"].unstack(),       first_year_vehicle["rail_freight"].values[0],    change="no")
-material_fractions_ship_small  = add_history_and_future(material_fractions["sea_shipping_small"].unstack(), FIRST_YEAR_BOATS,                                change="no")
-material_fractions_ship_medium = add_history_and_future(material_fractions["sea_shipping_med"].unstack(),   FIRST_YEAR_BOATS,                                change="no")
-material_fractions_ship_large  = add_history_and_future(material_fractions["sea_shipping_large"].unstack(), FIRST_YEAR_BOATS,                                change="no")
-material_fractions_ship_vlarge = add_history_and_future(material_fractions["sea_shipping_vl"].unstack(),    FIRST_YEAR_BOATS,                                change="no")
-material_fractions_inland_ship = add_history_and_future(material_fractions["inland_shipping"].unstack(),    first_year_vehicle["inland_shipping"].values[0], change="no")
-material_fractions_bicycle     = add_history_and_future(material_fractions["bicycle"].unstack(),            first_year_vehicle["bicycle"].values[0],         change="no")
+material_fractions_air_pas     = interpolate(material_fractions['air_pas'].unstack(),            change='no')
+material_fractions_air_frgt    = interpolate(material_fractions['air_freight'].unstack(),        change='no')
+material_fractions_rail_reg    = interpolate(material_fractions['rail_reg'].unstack(),           change='no')
+material_fractions_rail_hst    = interpolate(material_fractions['rail_hst'].unstack(),           change='no')
+material_fractions_rail_frgt   = interpolate(material_fractions['rail_freight'].unstack(),       change='no')
+material_fractions_ship_small  = interpolate(material_fractions['sea_shipping_small'].unstack(), change='no')
+material_fractions_ship_medium = interpolate(material_fractions['sea_shipping_med'].unstack(),   change='no')
+material_fractions_ship_large  = interpolate(material_fractions['sea_shipping_large'].unstack(), change='no')
+material_fractions_ship_vlarge = interpolate(material_fractions['sea_shipping_vl'].unstack(),    change='no')
+material_fractions_inland_ship = interpolate(material_fractions['inland_shipping'].unstack(),    change='no')
+material_fractions_bicycle     = interpolate(material_fractions['bicycle'].unstack(),            change='no')
 
-# complete & interpolate the vehicle composition data (by vehicle sub-type second): runtime appr. 11 min.
-material_fractions_car        = add_history_and_future(material_fractions_type["car"].unstack(),            first_year_vehicle["car"].values[0],             change="no")
-material_fractions_bus_reg    = add_history_and_future(material_fractions_type["reg_bus"].unstack(),        first_year_vehicle["reg_bus"].values[0],         change="no")
-material_fractions_bus_midi   = add_history_and_future(material_fractions_type["midi_bus"].unstack(),       first_year_vehicle["midi_bus"].values[0],        change="no")
-material_fractions_truck_HFT  = add_history_and_future(material_fractions_type["HFT"].unstack(),            first_year_vehicle["HFT"].values[0],             change="no")
-material_fractions_truck_MFT  = add_history_and_future(material_fractions_type["MFT"].unstack(),            first_year_vehicle["MFT"].values[0],             change="no")
-material_fractions_truck_LCV  = add_history_and_future(material_fractions_type["LCV"].unstack(),            first_year_vehicle["LCV"].values[0],             change="no")
+# complete & interpolate the vehicle composition data (by vehicle sub-type second)
+material_fractions_car        = interpolate(material_fractions_type['car'].unstack(),     change='no')
+material_fractions_bus_reg    = interpolate(material_fractions_type['reg_bus'].unstack(), change='no')
+material_fractions_bus_midi   = interpolate(material_fractions_type['midi_bus'].unstack(),change='no')
+material_fractions_truck_HFT  = interpolate(material_fractions_type['HFT'].unstack(),     change='no')
+material_fractions_truck_MFT  = interpolate(material_fractions_type['MFT'].unstack(),     change='no')
+material_fractions_truck_LCV  = interpolate(material_fractions_type['LCV'].unstack(),     change='no')
 
 # interpolate & complete series for battery weights, shares & composition too
-battery_weights_full    = add_history_and_future(battery_weights.unstack(),   START_YEAR)
-battery_materials_full  = add_history_and_future(battery_materials.unstack(), START_YEAR)
+battery_weights_full    = interpolate(battery_weights.unstack(),   change='no')
+battery_materials_full  = interpolate(battery_materials.unstack(), change='no')
+battery_shares_full     = interpolate(battery_shares_full, change='no')
 
 # same for lifetime data
-lifetimes_vehicles_mean  = add_history_and_future(lifetimes_vehicles.loc[idx[:,"mean"],:].droplevel(["data"]), START_YEAR)
-lifetimes_vehicles_stdev = add_history_and_future(lifetimes_vehicles.loc[idx[:,"stdev"],:].droplevel(["data"]), START_YEAR)
-lifetimes_vehicles_shape = add_history_and_future(lifetimes_vehicles.loc[idx[:,"shape"],:].droplevel(["data"]), START_YEAR)
-lifetimes_vehicles_scale = add_history_and_future(lifetimes_vehicles.loc[idx[:,"scale"],:].droplevel(["data"]), START_YEAR)
+lifetimes_vehicles_mean  = interpolate(lifetimes_vehicles.loc[idx[:,"mean"],:].droplevel(["data"]),  change='no')
+lifetimes_vehicles_stdev = interpolate(lifetimes_vehicles.loc[idx[:,"stdev"],:].droplevel(["data"]), change='no')
+lifetimes_vehicles_shape = interpolate(lifetimes_vehicles.loc[idx[:,"shape"],:].droplevel(["data"]), change='no')
+lifetimes_vehicles_scale = interpolate(lifetimes_vehicles.loc[idx[:,"scale"],:].droplevel(["data"]), change='no')
 
 #%% Caculating the tonnekilometres for all freight and passenger vehicle types (adjustments are made to: freight air, trucks, and buses)
 
@@ -249,19 +216,6 @@ car_pkms.columns       = region_list
 
 #%% Calculate the NUMBER OF VEHICLES (stock, on the road) to fulfull the ton-kilometers transport demand
  
-def tkms_to_nr_of_vehicles_fixed(tera_tkms, mileage, load, loadfactor):
-   """
-   This function translates ton kilometers (by year & by region) to nr of vehicles (same dimms) 
-   using fixed indicators on mileage, load capacity and load factor
-   """
-   # first_translate Tera ton/person- kms into person/ton-kms
-   tkms = tera_tkms * 1000000000000  
-   # then get the vehicle kilometers required to fulfill the transport demand
-   vkms = tkms/(load*loadfactor)
-   # then get the number of vehicles by dividing by the mileage
-   nr_of_vehicles = vkms.div(mileage, axis=0)
-   return nr_of_vehicles
-
 #calculate the number of vehicles on the road (first passenger, then freight)
 air_pas_nr      = tkms_to_nr_of_vehicles_fixed(passengerkms_Tpkms["air"].unstack(),    mileages["air_pas"],  load["air_pas"].values[0],    loadfactor["air_pas"].values[0])
 rail_reg_nr     = tkms_to_nr_of_vehicles_fixed(passengerkms_Tpkms["train"].unstack(),  mileages["rail_reg"], load["rail_reg"].values[0],   loadfactor["rail_reg"].values[0])
@@ -301,11 +255,11 @@ mile_adjustment = [1, 1, 1, 1]
 #pre-calculate the shares of the boats based on the number of boats, before adding history/future
 share_of_boats       = nr_of_boats.div(nr_of_boats.sum(axis=1), axis=0)
 
-share_of_boats_yrs    =  add_history_and_future(share_of_boats   , FIRST_YEAR_BOATS,   change="yes")   # could be "yes" based on better data
-cap_of_boats_yrs      =  add_history_and_future(cap_of_boats     , FIRST_YEAR_BOATS,   change="no")    # could be "yes" based on better data
-loadfactor_boats_yrs  =  add_history_and_future(loadfactor_boats , FIRST_YEAR_BOATS,   change="no")   
-mileage_boats_yrs     =  add_history_and_future(mileage_boats    , FIRST_YEAR_BOATS,   change="no")  
-weight_frac_boats_yrs =  add_history_and_future(weight_boats     , FIRST_YEAR_BOATS,   change="no")  
+share_of_boats_yrs    =  interpolate(share_of_boats,   change='yes')   # does change based on trend in original data
+cap_of_boats_yrs      =  interpolate(cap_of_boats,     change='no')    # could be 'yes' based on better data
+loadfactor_boats_yrs  =  interpolate(loadfactor_boats, change='no')   
+mileage_boats_yrs     =  interpolate(mileage_boats,    change='no')  
+weight_frac_boats_yrs =  interpolate(weight_boats,     change='no')  
 
 # normalize the share of boats to 1 & adjust the capacity & mileage for smaller ships 
 share_of_boats_yrs   = share_of_boats_yrs.div(share_of_boats_yrs.sum(axis=1), axis=0)
