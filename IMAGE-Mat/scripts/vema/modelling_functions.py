@@ -27,8 +27,8 @@ def interpolate(original: pd.DataFrame, first_year=[], change: str='no'):
         A pandas dataframe fully filled over the entire model time (index). Columns are the same as the original input
 
     """
-    FIRST_YEAR = 1071
-    END_YEAR = 2016
+    FIRST_YEAR = 1971
+    END_YEAR = 2060
     
     # determine the first & last available year in the original data
     start = original.first_valid_index()
