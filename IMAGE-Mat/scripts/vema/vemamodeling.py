@@ -1,155 +1,54 @@
+import pandas as pd
+
+# Core modelling of stock dynamics & material use, assumes input as pandas dataFrames
+# 1. Add assumptions on historic development
+# 2. Run stock calculations, inflow and outflow and stocks by cohort
+#    Input:  stock and lifetimes
+#    Output: inflow and outflow and stocks by cohort
+# 3. Intermediate export of results
+# 4. Material calculations
+# 5. Preparing output
 
 
 #%% INFLOW-OUTFLOW calculations using the ODYM Dynamic Stock Model (DSM) as a function
 
-# In order to calculate inflow & outflow smoothly (without peaks for the initial years), 
-def stock_tail(stock, first_year_veh, choice='stock'):
-    """
-    In order to avoid an initial inflow shock, this function calculates the size of the initial development of the vehicle stock (in number of vehicles) before the first scenario year of the IMAGE model (1971).
-    It does so by adding a so-called historic tail to the stock, by adding a 0 value for first year of operation (e.g. 1926), then linear interpolation of values towards 1971    
-    """
-    if choice=='stock':
-       zero_value = [0 for i in range(0, REGIONS)]
-    else:
-       zero_value = stock.head(1).values[0]
-       
-    stock_used = pd.DataFrame(stock).reindex_like(stock)
-    stock_used.loc[first_year_veh] = zero_value  # set all regions to 0 in the year of initial operation
-    stock_new  = stock_used.reindex(list(range(first_year_veh, END_YEAR + 1))).interpolate()
-    return stock_new
-
-# lifetimes also need a tail, but this doesn't start at 0, but remains constant at the first known value (assumed)
-def lifetime_tail(lifetime_vehicles_in, vehicle):
-    first_year = first_year_vehicle[vehicle].values[0]
-    lifetime_vehicles_out = lifetime_vehicles_in[vehicle]
-    for year in range(first_year, START_YEAR):
-        lifetime_vehicles_out[year] = lifetime_vehicles_in[vehicle][START_YEAR]
-    return lifetime_vehicles_out.reindex(list(range(first_year, END_YEAR + 1)))
-
-# apply the dynamic stock model
-def inflow_outflow_dynamic_np(stock, fact1, fact2, distribution):
-    """
-    In this function the stock-driven DSM is applied to return inflow & outflow for all regions
-    IN: stock as a dataframe (nr of vehicles by year & region), lifetime (in years), stdev_mult (multiplier to derive the standard deviation from the mean)
-    OUT: 3 dataframes of stock, inflow & outflow (nr of vehicles by year^2 & region)
-    
-    This DYNAMIC variant of the DSM calculates & returns the full unadjusted (cohort specific) matrix (YES, very memory intensive, but neccesary for dynamic assesmment, i.e. changing vehicle weights & compositions)
-    """
-    inflow         = np.empty((len(stock[0]), len(stock)))
-    outflow_cohort = np.empty((len(stock[0]), len(stock), len(stock))) 
-    stock_cohort   = np.empty((len(stock[0]), len(stock), len(stock))) 
-
-    # define mean (fact1) & standard deviation (fact2) (applied accross all regions) (For Weibull fact1 = shape & fact2 = scale)
-                     
-    # fact 1 is a list with the mean lifetime (for Weibull: it's the shape parameter), given for every timestep (e.g. 1900-2100), needed for the DSM as it allows to change lifetime for different cohort
-    # fact 2 is a list with the standarddeviation as a fraction of the mean lifetime (for Weibull: it's the scale parameter)
-    if distribution == 'FoldedNormal':
-       fact2_list = fact1.mul(fact2)   # for the (Folded) normal distribution, the standard_deviation is calculated as the mean times the multiplier (i.e. the standard deviation as a fraction of the mean)
-    else:
-       fact2_list = fact2
-
-    for region in range(0,len(stock[0])):
-        # define and run the DSM   
-        if distribution == 'FoldedNormal':
-           DSMforward = DSM(t = np.arange(0,len(stock[:,region]),1), s=stock[:,region], lt = {'Type': 'FoldedNormal', 'Mean': np.array(fact1), 'StdDev': np.array(fact2_list)})  # definition of the DSM based on a folded normal distribution
-        else:
-           DSMforward = DSM(t = np.arange(0,len(stock[:,region]),1), s=stock[:,region], lt = {'Type': 'Weibull', 'Shape': np.array(fact1), 'Scale': np.array(fact2_list)})       # definition of the DSM based on a Weibull distribution
-           
-        out_sc, out_oc, out_i = DSMforward.compute_stock_driven_model_surplus()                                                                 # run the DSM, to give 3 outputs: stock_by_cohort, outflow_by_cohort & inflow_per_year
-        
-        # store the regional results in the return dataframe (full range of years (e.g. 1900 onwards), for later use in material calculations  & no moving average applied here)
-        outflow_cohort[region,:,:] = out_oc                                                                                                      # sum the outflow by cohort to get the total outflow per year
-        stock_cohort[region,:,:]   = out_sc
-        inflow[region,:]           = out_i
-         
-    return inflow.T, outflow_cohort, stock_cohort     
-
-
-# Pre-calculate the inflow (aka. market-)share corresponding to the (known) share of vehicles in stock (from IMAGE)
-def inflow_outflow_typical_np(stock, fact1, fact2, distribution, stock_share):
-   """
-   In this function the dynamic inflow & outflow calculations are applied to vehicles with sub-types. To return inflow & outflow for all regions & vehicle types
-   IN: stock as a dataframe (nr of vehicles by year, region and type), lifetime (in years), stdev_mult (multiplier to derive the standard deviation from the mean)
-   OUT: 3 dataframes of stock, inflow & outflow (nr of vehicles by year^2 & region & type)
-   
-   This TYPICAL variant of the DSM calculates & returns the full unadjusted (cohort specific) matrix (time*time) for every region AND vehicle type (YES, very memory intensive, but neccesary for dynamic assesmment, i.e. changing vehicle weights & compositions)
-   """
-   initial_year        = stock.first_valid_index()
-   initial_year_shares = stock_share.first_valid_index()[0]
-   
-   inflow              = np.zeros((len(stock_share.iloc[0]), len(stock.iloc[0]), len(stock)))
-   outflow_cohort      = np.zeros((len(stock_share.iloc[0]), len(stock.iloc[0]), len(stock), len(stock)))
-   stock_cohort        = np.zeros((len(stock_share.iloc[0]), len(stock.iloc[0]), len(stock), len(stock)))
-
-   index = pd.MultiIndex.from_product([stock_share.columns, stock.index], names=['type', 'time'])
-   stock_by_vtype      = pd.DataFrame(0, index=index, columns=stock.columns)
-   stock_share_used    = stock_share.unstack().stack(level=0).reorder_levels([1,0]).sort_index()
-   
-   # before running the DSM: 
-   # 1) extend the historic coverage of the stock shares (assuming constant pre-1971), and
-   for vtype in list(stock_share.columns):
-      stock_share_used.loc[idx[vtype, initial_year],:] = stock_share[vtype].unstack().loc[initial_year_shares]
-   stock_share_used = stock_share_used.reindex(index).interpolate()
-   
-   # 2) calculate the stocks of individual (vehicle) types (in nr of vehicles)
-   for vtype in list(stock_share.columns):
-      stock_by_vtype.loc[idx[vtype,:],:] = stock.mul(stock_share_used.loc[idx[vtype,:],:])
-
-   vtype_list  = list(stock_by_vtype.index.unique('type'))
-   vtype_count = list(range(0,len(stock_share.columns))) 
-   vtype_dict   = dict(zip(vtype_count, vtype_list))
-
-   # Then run the original DSM for each vehicle type & add it to the inflow, ouflow & stock containers, (for stock: index = vtype, time; columns = region, time)
-   for vtype in range(0,len(stock_share.columns)): 
-      if stock_share.iloc[:,vtype].sum() > 0.001:
-         dsm_inflow, dsm_outflow_coh, dsm_stock_coh = inflow_outflow_dynamic_np(stock_by_vtype.loc[idx[vtype_dict[vtype],:],:].to_numpy(), fact1, fact2, distribution)
-         
-         inflow[vtype,:,:]           = dsm_inflow.T
-         outflow_cohort[vtype,:,:,:] = dsm_outflow_coh
-         stock_cohort[vtype,:,:,:]   = dsm_stock_coh
-      
-      else:
-         pass
-        
-   return inflow, outflow_cohort, stock_cohort
-
 # Calculate the historic tail (& reduce regions to 26)
-air_pas_nr     = stock_tail(air_pas_nr[list(range(1,REGIONS+1))],  first_year_vehicle['air_pas'].values[0])
-rail_reg_nr    = stock_tail(rail_reg_nr[list(range(1,REGIONS+1))], first_year_vehicle['rail_reg'].values[0])
-rail_hst_nr    = stock_tail(rail_hst_nr[list(range(1,REGIONS+1))], first_year_vehicle['rail_hst'].values[0])
-bikes_nr       = stock_tail(bikes_nr[list(range(1,REGIONS+1))],    first_year_vehicle['bicycle'].values[0])
+air_pas_nr     = interpolate(air_pas_nr[list(range(1,REGIONS+1))],  pd.DataFrame(first_year_vehicle['air_pas'].values[0], index=['0'], columns=list(range(1,REGIONS+1))), change='no')
+rail_reg_nr    = interpolate(rail_reg_nr[list(range(1,REGIONS+1))], pd.DataFrame(first_year_vehicle['rail_reg'].values[0], index=['0'], columns=list(range(1,REGIONS+1))), change='no')
+rail_hst_nr    = interpolate(rail_hst_nr[list(range(1,REGIONS+1))], pd.DataFrame(first_year_vehicle['rail_hst'].values[0], index=['0'], columns=list(range(1,REGIONS+1))), change='no')
+bikes_nr       = interpolate(bikes_nr[list(range(1,REGIONS+1))],    pd.DataFrame(first_year_vehicle['bicycle'].values[0], index=['0'], columns=list(range(1,REGIONS+1))), change='no')
 
-air_freight_nr  = stock_tail(air_freight_nr[list(range(1, REGIONS+1))],  first_year_vehicle['air_freight'].values[0])
-rail_freight_nr = stock_tail(rail_freight_nr[list(range(1, REGIONS+1))], first_year_vehicle['rail_freight'].values[0])
-inland_ship_nr  = stock_tail(inland_ship_nr[list(range(1, REGIONS+1))],  first_year_vehicle['inland_shipping'].values[0])
-ship_small_nr   = stock_tail(ship_small_nr[list(range(1, REGIONS+1))],   1900)
-ship_medium_nr  = stock_tail(ship_medium_nr[list(range(1, REGIONS+1))],  1900)
-ship_large_nr   = stock_tail(ship_large_nr[list(range(1, REGIONS+1))],   1900)
-ship_vlarge_nr  = stock_tail(ship_vlarge_nr[list(range(1, REGIONS+1))],  1900)
+air_freight_nr  = interpolate(air_freight_nr[list(range(1, REGIONS+1))],  pd.DataFrame(first_year_vehicle['air_freight'].values[0], index=['0'], columns=list(range(1,REGIONS+1))),    change='no')
+rail_freight_nr = interpolate(rail_freight_nr[list(range(1, REGIONS+1))], pd.DataFrame(first_year_vehicle['rail_freight'].values[0], index=['0'], columns=list(range(1,REGIONS+1))),   change='no')
+inland_ship_nr  = interpolate(inland_ship_nr[list(range(1, REGIONS+1))],  pd.DataFrame(first_year_vehicle['inland_shipping'].values[0], index=['0'], columns=list(range(1,REGIONS+1))),change='no')
+ship_small_nr   = interpolate(ship_small_nr[list(range(1, REGIONS+1))],   pd.DataFrame(FIRST_YEAR_BOATS, index=['0'], columns=list(range(1,REGIONS+1))), change='no')
+ship_medium_nr  = interpolate(ship_medium_nr[list(range(1, REGIONS+1))],  pd.DataFrame(FIRST_YEAR_BOATS, index=['0'], columns=list(range(1,REGIONS+1))), change='no')
+ship_large_nr   = interpolate(ship_large_nr[list(range(1, REGIONS+1))],   pd.DataFrame(FIRST_YEAR_BOATS, index=['0'], columns=list(range(1,REGIONS+1))), change='no')
+ship_vlarge_nr  = interpolate(ship_vlarge_nr[list(range(1, REGIONS+1))],  pd.DataFrame(FIRST_YEAR_BOATS, index=['0'], columns=list(range(1,REGIONS+1))), change='no')
 
-bus_regl_nr     = stock_tail(bus_regl_nr[list(range(1, REGIONS+1))],  first_year_vehicle['reg_bus'].values[0])
-bus_midi_nr     = stock_tail(bus_midi_nr[list(range(1, REGIONS+1))],  first_year_vehicle['midi_bus'].values[0])
-car_total_nr    = stock_tail(car_total_nr[list(range(1, REGIONS+1))], first_year_vehicle['car'].values[0])
+bus_regl_nr     = interpolate(bus_regl_nr[list(range(1, REGIONS+1))],  pd.DataFrame(first_year_vehicle['reg_bus'].values[0], index=['0'], columns=list(range(1,REGIONS+1))), change='no')
+bus_midi_nr     = interpolate(bus_midi_nr[list(range(1, REGIONS+1))],  pd.DataFrame(first_year_vehicle['midi_bus'].values[0], index=['0'], columns=list(range(1,REGIONS+1))), change='no')
+car_total_nr    = interpolate(car_total_nr[list(range(1, REGIONS+1))], pd.DataFrame(first_year_vehicle['car'].values[0], index=['0'], columns=list(range(1,REGIONS+1))), change='no')
 
-trucks_HFT_nr   = stock_tail(trucks_HFT_nr[list(range(1, REGIONS+1))], first_year_vehicle['HFT'].values[0])
-trucks_MFT_nr   = stock_tail(trucks_HFT_nr[list(range(1, REGIONS+1))], first_year_vehicle['MFT'].values[0])
-trucks_LCV_nr   = stock_tail(trucks_LCV_nr[list(range(1, REGIONS+1))], first_year_vehicle['LCV'].values[0])
+trucks_HFT_nr   = interpolate(trucks_HFT_nr[list(range(1, REGIONS+1))], pd.DataFrame(first_year_vehicle['HFT'].values[0], index=['0'], columns=list(range(1,REGIONS+1))), change='no')
+trucks_MFT_nr   = interpolate(trucks_HFT_nr[list(range(1, REGIONS+1))], pd.DataFrame(first_year_vehicle['MFT'].values[0], index=['0'], columns=list(range(1,REGIONS+1))), change='no')
+trucks_LCV_nr   = interpolate(trucks_LCV_nr[list(range(1, REGIONS+1))], pd.DataFrame(first_year_vehicle['LCV'].values[0], index=['0'], columns=list(range(1,REGIONS+1))), change='no')
 
 ##################### DYNAMIC MODEL (runtime: ca. 30 sec) ########################################################################
 # Calculate the NUMBER of vehicles, total for inflow & by cohort for stock & outflow, first only for simple vehicles
 
-air_pas_in,      air_pas_out_coh,      air_pas_stock_coh      = inflow_outflow_dynamic_np(air_pas_nr.to_numpy(),    lifetime_tail(lifetimes_vehicles_mean,'air_pas'),  lifetime_tail(lifetimes_vehicles_stdev,'air_pas'),  'FoldedNormal')
-rail_reg_in,     rail_reg_out_coh,     rail_reg_stock_coh     = inflow_outflow_dynamic_np(rail_reg_nr.to_numpy(),   lifetime_tail(lifetimes_vehicles_mean,'rail_reg'), lifetime_tail(lifetimes_vehicles_stdev,'rail_reg'), 'FoldedNormal')
-rail_hst_in,     rail_hst_out_coh,     rail_hst_stock_coh     = inflow_outflow_dynamic_np(rail_hst_nr.to_numpy(),   lifetime_tail(lifetimes_vehicles_mean,'rail_hst'), lifetime_tail(lifetimes_vehicles_stdev,'rail_hst'), 'FoldedNormal')
-bikes_in,        bikes_out_coh,        bikes_stock_coh        = inflow_outflow_dynamic_np(bikes_nr.to_numpy(),      lifetime_tail(lifetimes_vehicles_mean,'bicycle'),  lifetime_tail(lifetimes_vehicles_stdev,'bicycle'),  'FoldedNormal')
+air_pas_in,      air_pas_out_coh,      air_pas_stock_coh      = inflow_outflow_dynamic_np(air_pas_nr.to_numpy(),    lifetimes_vehicles_mean['air_pas'],  lifetimes_vehicles_stdev['air_pas'],  'FoldedNormal')
+rail_reg_in,     rail_reg_out_coh,     rail_reg_stock_coh     = inflow_outflow_dynamic_np(rail_reg_nr.to_numpy(),   lifetimes_vehicles_mean['rail_reg'], lifetimes_vehicles_stdev['rail_reg'], 'FoldedNormal')
+rail_hst_in,     rail_hst_out_coh,     rail_hst_stock_coh     = inflow_outflow_dynamic_np(rail_hst_nr.to_numpy(),   lifetimes_vehicles_mean['rail_hst'], lifetimes_vehicles_stdev['rail_hst'], 'FoldedNormal')
+bikes_in,        bikes_out_coh,        bikes_stock_coh        = inflow_outflow_dynamic_np(bikes_nr.to_numpy(),      lifetimes_vehicles_mean['bicycle'],  lifetimes_vehicles_stdev['bicycle'],  'FoldedNormal')
 
-air_freight_in,  air_freight_out_coh,  air_freight_stock_coh  = inflow_outflow_dynamic_np(air_freight_nr.to_numpy(),  lifetime_tail(lifetimes_vehicles_mean,'air_freight'),        lifetime_tail(lifetimes_vehicles_stdev,'air_freight'),        'FoldedNormal')
-rail_freight_in, rail_freight_out_coh, rail_freight_stock_coh = inflow_outflow_dynamic_np(rail_freight_nr.to_numpy(), lifetime_tail(lifetimes_vehicles_mean,'rail_freight'),       lifetime_tail(lifetimes_vehicles_stdev,'rail_freight'),       'FoldedNormal')
-inland_ship_in,  inland_ship_out_coh,  inland_ship_stock_coh  = inflow_outflow_dynamic_np(inland_ship_nr.to_numpy(),  lifetime_tail(lifetimes_vehicles_mean,'inland_shipping'),    lifetime_tail(lifetimes_vehicles_stdev,'inland_shipping'),    'FoldedNormal')
-ship_small_in,   ship_small_out_coh,   ship_small_stock_coh   = inflow_outflow_dynamic_np(ship_small_nr.to_numpy(),   lifetime_tail(lifetimes_vehicles_mean,'sea_shipping_small'), lifetime_tail(lifetimes_vehicles_stdev,'sea_shipping_small'), 'FoldedNormal')
-ship_medium_in,  ship_medium_out_coh,  ship_medium_stock_coh  = inflow_outflow_dynamic_np(ship_medium_nr.to_numpy(),  lifetime_tail(lifetimes_vehicles_mean,'sea_shipping_med'),   lifetime_tail(lifetimes_vehicles_stdev,'sea_shipping_med'),   'FoldedNormal')
-ship_large_in,   ship_large_out_coh,   ship_large_stock_coh   = inflow_outflow_dynamic_np(ship_large_nr.to_numpy(),   lifetime_tail(lifetimes_vehicles_mean,'sea_shipping_large'), lifetime_tail(lifetimes_vehicles_stdev,'sea_shipping_large'), 'FoldedNormal')
-ship_vlarge_in,  ship_vlarge_out_coh,  ship_vlarge_stock_coh  = inflow_outflow_dynamic_np(ship_vlarge_nr.to_numpy(),  lifetime_tail(lifetimes_vehicles_mean,'sea_shipping_vl'),    lifetime_tail(lifetimes_vehicles_stdev,'sea_shipping_vl'),    'FoldedNormal')
+air_freight_in,  air_freight_out_coh,  air_freight_stock_coh  = inflow_outflow_dynamic_np(air_freight_nr.to_numpy(),  lifetimes_vehicles_mean['air_freight'],        lifetimes_vehicles_stdev['air_freight'],        'FoldedNormal')
+rail_freight_in, rail_freight_out_coh, rail_freight_stock_coh = inflow_outflow_dynamic_np(rail_freight_nr.to_numpy(), lifetimes_vehicles_mean['rail_freight'],       lifetimes_vehicles_stdev['rail_freight'],       'FoldedNormal')
+inland_ship_in,  inland_ship_out_coh,  inland_ship_stock_coh  = inflow_outflow_dynamic_np(inland_ship_nr.to_numpy(),  lifetimes_vehicles_mean['inland_shipping'],    lifetimes_vehicles_stdev['inland_shipping'],    'FoldedNormal')
+ship_small_in,   ship_small_out_coh,   ship_small_stock_coh   = inflow_outflow_dynamic_np(ship_small_nr.to_numpy(),   lifetimes_vehicles_mean['sea_shipping_small'], lifetimes_vehicles_stdev['sea_shipping_small'], 'FoldedNormal')
+ship_medium_in,  ship_medium_out_coh,  ship_medium_stock_coh  = inflow_outflow_dynamic_np(ship_medium_nr.to_numpy(),  lifetimes_vehicles_mean['sea_shipping_med'],   lifetimes_vehicles_stdev['sea_shipping_med'],   'FoldedNormal')
+ship_large_in,   ship_large_out_coh,   ship_large_stock_coh   = inflow_outflow_dynamic_np(ship_large_nr.to_numpy(),   lifetimes_vehicles_mean['sea_shipping_large'], lifetimes_vehicles_stdev['sea_shipping_large'], 'FoldedNormal')
+ship_vlarge_in,  ship_vlarge_out_coh,  ship_vlarge_stock_coh  = inflow_outflow_dynamic_np(ship_vlarge_nr.to_numpy(),  lifetimes_vehicles_mean['sea_shipping_vl'],    lifetimes_vehicles_stdev['sea_shipping_vl'],    'FoldedNormal')
 
 #%% BATTERY VEHICLE CALCULATIONS - Determine the fraction of the fleet that uses batteries, based on vehicle share files
 # Batteries are relevant for 1) BUSES 2) TRUCKS
@@ -212,13 +111,13 @@ trucks_HFT_vshares['FCV']     = hvytruck_vshares[truck_label_FCV].sum(axis=1)
 trucks_HFT_vshares['Trolley'] = pd.DataFrame(0, index=hvytruck_vshares.index, columns=['Trolley'])   # No trolley trucks 
 
 ### Then calculate the inflow & outflow for typical vehicles (vehicles with relevant sub types) as well (runtime appr. 1 min.)
-bus_regl_in,     bus_regl_out_coh,     bus_regl_stock_coh     = inflow_outflow_typical_np(bus_regl_nr,    lifetime_tail(lifetimes_vehicles_mean, 'reg_bus'),  lifetime_tail(lifetimes_vehicles_stdev, 'reg_bus'),  'FoldedNormal', buses_regl_vshares)
-bus_midi_in,     bus_midi_out_coh,     bus_midi_stock_coh     = inflow_outflow_typical_np(bus_midi_nr,    lifetime_tail(lifetimes_vehicles_mean, 'midi_bus'), lifetime_tail(lifetimes_vehicles_stdev, 'midi_bus'), 'FoldedNormal', buses_midi_vshares)
-car_in,          car_out_coh,          car_stock_coh          = inflow_outflow_typical_np(car_total_nr,   lifetime_tail(lifetimes_vehicles_shape, 'car'),     lifetime_tail(lifetimes_vehicles_scale, 'car'),      'Weibull',      vehicleshare_cars)
+bus_regl_in,     bus_regl_out_coh,     bus_regl_stock_coh     = inflow_outflow_typical_np(bus_regl_nr,    lifetimes_vehicles_mean['reg_bus'],  lifetimes_vehicles_stdev['reg_bus'],  'FoldedNormal', buses_regl_vshares)
+bus_midi_in,     bus_midi_out_coh,     bus_midi_stock_coh     = inflow_outflow_typical_np(bus_midi_nr,    lifetimes_vehicles_mean['midi_bus'], lifetimes_vehicles_stdev['midi_bus'], 'FoldedNormal', buses_midi_vshares)
+car_in,          car_out_coh,          car_stock_coh          = inflow_outflow_typical_np(car_total_nr,   lifetimes_vehicles_shape['car'],     lifetimes_vehicles_scale['car'],      'Weibull',      vehicleshare_cars)
 
-trucks_HFT_in,   trucks_HFT_out_coh,   trucks_HFT_stock_coh   = inflow_outflow_typical_np(trucks_HFT_nr,  lifetime_tail(lifetimes_vehicles_mean, 'HFT'),     lifetime_tail(lifetimes_vehicles_stdev, 'HFT'),      'FoldedNormal',  trucks_HFT_vshares)
-trucks_MFT_in,   trucks_MFT_out_coh,   trucks_MFT_stock_coh   = inflow_outflow_typical_np(trucks_MFT_nr,  lifetime_tail(lifetimes_vehicles_mean, 'MFT'),     lifetime_tail(lifetimes_vehicles_stdev, 'MFT'),      'FoldedNormal',  trucks_MFT_vshares)
-trucks_LCV_in,   trucks_LCV_out_coh,   trucks_LCV_stock_coh   = inflow_outflow_typical_np(trucks_LCV_nr,  lifetime_tail(lifetimes_vehicles_mean, 'LCV'),     lifetime_tail(lifetimes_vehicles_stdev, 'LCV'),      'FoldedNormal',  trucks_MFT_vshares)  # Assumption: used MFT as a market-share for LCVs
+trucks_HFT_in,   trucks_HFT_out_coh,   trucks_HFT_stock_coh   = inflow_outflow_typical_np(trucks_HFT_nr,  lifetimes_vehicles_mean['HFT'],     lifetimes_vehicles_stdev['HFT'],      'FoldedNormal',  trucks_HFT_vshares)
+trucks_MFT_in,   trucks_MFT_out_coh,   trucks_MFT_stock_coh   = inflow_outflow_typical_np(trucks_MFT_nr,  lifetimes_vehicles_mean['MFT'],     lifetimes_vehicles_stdev['MFT'],      'FoldedNormal',  trucks_MFT_vshares)
+trucks_LCV_in,   trucks_LCV_out_coh,   trucks_LCV_stock_coh   = inflow_outflow_typical_np(trucks_LCV_nr,  lifetimes_vehicles_mean['LCV'],     lifetimes_vehicles_stdev['LCV'],      'FoldedNormal',  trucks_MFT_vshares)  # Assumption: used MFT as a market-share for LCVs
 
 #%% Intermediate export of inflow & outflow of vehicles (for IRP database) ###############
 
@@ -257,99 +156,6 @@ total_nr_vehicles_out.to_csv(OUTPUT_FOLDER + '\\region_vehicle_out.csv', index=T
 
 
 #%% ################### MATERIAL CALCULATIONS ##########################################
-
-# Material calculations for vehicles with only 1 relevant sub-type
-def nr_by_cohorts_to_materials_simple_np(inflow, outflow_cohort, stock_cohort, weight, composition):
-   """
-   for those vehicles with only 1 relevant sub-type, we calculate the material stocks & flows as: 
-   Nr * weight (kg) * composition (%)
-   INPUT:  -------------- 
-   inflow         = numpy array (time, regions)      - number of vehicles by region over time
-   outflow_cohort = numpy array (region, time, time) - number of vehicles in outlfow by region over time, by built year
-   stock_cohort   = numpy array (region, time, time) - number of vehicles in stock by region over time, by built year
-   OUTPUT: --------------
-   pd_inflow_mat  = pandas dataframe (index: material, time; column: regions) - inflow of materials in kg of material, by region & time
-   pd_outflow_mat = pandas dataframe (index: material, time; column: regions) - inflow of materials in kg of material, by region & time
-   pd_stock_mat   = pandas dataframe (index: material, time; column: regions) - inflow of materials in kg of material, by region & time
-   """
-   inflow_mat  = np.zeros((len(composition.columns), len(inflow[0]), len(inflow)))
-   outflow_mat = np.zeros((len(composition.columns), len(inflow[0]), len(inflow)))
-   stock_mat   = np.zeros((len(composition.columns), len(inflow[0]), len(inflow)))
-   
-   for material in range(0, len(composition.columns)): 
-      # before running, check if the material is at all relevant in the vehicle (save calculation time)
-      if composition.iloc[:,material].sum() > 0.001:          
-         for region in range(0,len(inflow[0])):
-            composition_used = composition.iloc[:,material].values
-            inflow_mat[material,region,:]  = (inflow[:,region] * weight) * composition_used
-            outflow_mat[material,region,:] = np.multiply(np.multiply(outflow_cohort[region,:,:].T, weight), composition_used).T.sum(axis=1)
-            stock_mat[material,region,:]   = np.multiply(np.multiply(stock_cohort[region,:,:], weight), composition_used).sum(axis=1)
-      else:
-         pass
-
-   length_materials = len(composition.columns)
-   length_time      = END_YEAR + 1 - (END_YEAR + 1 - len(inflow))
-
-   index          = pd.MultiIndex.from_product([composition.columns, range(END_YEAR + 1 - len(inflow), END_YEAR + 1)], names=['time', 'type'])
-   pd_inflow_mat  = pd.DataFrame(inflow_mat.transpose(0,2,1).reshape((length_materials * length_time), REGIONS),  index=index, columns=range(1,len(inflow[0]) + 1))
-   pd_outflow_mat = pd.DataFrame(outflow_mat.transpose(0,2,1).reshape((length_materials * length_time), REGIONS), index=index, columns=range(1,len(inflow[0]) + 1))
-   pd_stock_mat   = pd.DataFrame(stock_mat.transpose(0,2,1).reshape((length_materials * length_time), REGIONS),   index=index, columns=range(1,len(inflow[0]) + 1))
-      
-   return pd_inflow_mat, pd_outflow_mat, pd_stock_mat
-
-
-# Material calculations for vehicles with only multiple sub-types
-def nr_by_cohorts_to_materials_typical_np(inflow, outflow_cohort, stock_cohort, weight, composition):
-   """
-   for those vehicles with multiple sub-type, we calculate the material stocks & flows in the same way, so:
-   Nr * weight (kg) * composition (%) - but using data on specific vehicle sub-types
-   """
-   inflow_mat  = np.zeros((len(inflow), len(composition.columns.levels[1]), len(inflow[0]), len(inflow[0][0])))
-   outflow_mat = np.zeros((len(inflow), len(composition.columns.levels[1]), len(inflow[0]), len(inflow[0][0])))
-   stock_mat   = np.zeros((len(inflow), len(composition.columns.levels[1]), len(inflow[0]), len(inflow[0][0])))
-   
-   composition.columns.names = ['type', 'material']
-   
-   # get two dictionaries to keep tarck of the order of materials & vtypes while using numpy
-   vtype_list   = list(composition.columns.unique('type'))  # columns.unique() keeps the original order, which is important here (same for materials)
-   vtype_count  = list(range(0,len(inflow))) 
-   vtype_dict   = dict(zip(vtype_count, vtype_list))
-   print(vtype_dict)
-   mater_list   = list(composition.columns.unique('material'))
-   mater_count  = list(range(0,len(composition.columns.levels[1]))) 
-   mater_dict   = dict(zip(mater_count, mater_list))
-   print(mater_dict)
-   
-   for vtype in range(0, len(inflow)): 
-      # before running, check if the vehicle type is at all relevant in the vehicle (save calculation time)
-      weight_used = weight.loc[:,vtype_dict[vtype]].values
-      if stock_cohort[vtype].sum() > 0.001:  
-         for material in range(0, len(mater_list)): 
-            composition_used = composition.loc[:,idx[vtype_dict[vtype],mater_dict[material]]].values
-            # before running, check if the material is at all relevant in the vehicle (save calculation time)
-            if composition_used.sum() > 0.001:          
-               for region in range(0, len(inflow[0])):
-                  inflow_mat[vtype, material, region, :]  = (inflow[vtype, region, :] * weight_used) * composition_used
-                  outflow_mat[vtype, material, region, :] = np.multiply(np.multiply(outflow_cohort[vtype, region, :, :].T, weight_used), composition_used).T.sum(axis=1)
-                  stock_mat[vtype, material, region, :]   = np.multiply(np.multiply(stock_cohort[vtype, region, :, :], weight_used), composition_used).sum(axis=1)
-   
-            else:
-               pass
-      else:
-         pass
-   
-   length_materials = len(composition.columns.levels[1])
-   length_time      = END_YEAR + 1 - (END_YEAR + 1 - len(inflow[0][0]))
-   
-   #return as pandas dataframe, just once
-   index          = pd.MultiIndex.from_product([mater_list, list(range((END_YEAR + 1 - len(inflow[0][0])), END_YEAR + 1))], names=['material', 'time'])
-   columns        = pd.MultiIndex.from_product([vtype_list, range(1,REGIONS+1)],      names=['type', 'region'])
-   pd_inflow_mat  = pd.DataFrame(inflow_mat.transpose(1,3,0,2).reshape((length_materials * length_time), (len(inflow) * REGIONS)), index=index, columns=columns)
-   pd_outflow_mat = pd.DataFrame(outflow_mat.transpose(1,3,0,2).reshape((length_materials * length_time),(len(inflow) * REGIONS)), index=index, columns=columns)
-   pd_stock_mat   = pd.DataFrame(stock_mat.transpose(1,3,0,2).reshape((length_materials * length_time),  (len(inflow) * REGIONS)), index=index, columns=columns)
-         
-   return pd_inflow_mat, pd_outflow_mat, pd_stock_mat
-
 
 # capacity of boats is in tonnes, the weight - expressed as a fraction of the capacity - is calculated in in kgs here
 weight_boats  = weight_frac_boats_yrs * cap_of_boats_yrs * 1000 
@@ -402,15 +208,14 @@ for vehicle in list(battery_weights_full.columns.levels[0]):
       for material in list(battery_materials_full.columns.levels[0]):
          battery_material_composition.loc[idx[vehicle,:],idx[vtype,material]] = battery_shares_full.mul(battery_materials_full.loc[:,idx[material,:]].droplevel(0,axis=1)).sum(axis=1).values
 
-last_years = -(END_YEAR +1 - START_YEAR)
-# Battery material calculations (these are made from 1971 onwwards, hence the selection in years) 
-bus_regl_bat_in,     bus_regl_bat_out,     bus_regl_bat_stock       = nr_by_cohorts_to_materials_typical_np(bus_regl_in[:,:,last_years:],  bus_regl_out_coh[:,:,last_years:, last_years:], bus_regl_stock_coh[:,:,last_years:, last_years:], battery_weights_full['reg_bus'],   battery_material_composition.loc[idx['reg_bus',:],:].droplevel(0))
-bus_midi_bat_in,     bus_midi_bat_out,     bus_midi_bat_stock       = nr_by_cohorts_to_materials_typical_np(bus_midi_in[:,:,last_years:],  bus_midi_out_coh[:,:,last_years:, last_years:], bus_midi_stock_coh[:,:,last_years:, last_years:], battery_weights_full['midi_bus'],  battery_material_composition.loc[idx['midi_bus',:],:].droplevel(0))
-car_total_bat_in,    car_total_bat_out,    car_total_bat_stock      = nr_by_cohorts_to_materials_typical_np(car_in[:,:,last_years:],       car_out_coh[:,:,last_years:, last_years:],      car_stock_coh[:,:,last_years:, last_years:],      battery_weights_full['car'],       battery_material_composition.loc[idx['car',:],idx[car_types,:]].droplevel(0))    #mind that cars don't have Trolleys, hence the additional selection
+# Battery material calculations 
+bus_regl_bat_in,     bus_regl_bat_out,     bus_regl_bat_stock       = nr_by_cohorts_to_materials_typical_np(bus_regl_in,  bus_regl_out_coh, bus_regl_stock_coh, battery_weights_full['reg_bus'],   battery_material_composition.loc[idx['reg_bus',:],:].droplevel(0))
+bus_midi_bat_in,     bus_midi_bat_out,     bus_midi_bat_stock       = nr_by_cohorts_to_materials_typical_np(bus_midi_in,  bus_midi_out_coh, bus_midi_stock_coh, battery_weights_full['midi_bus'],  battery_material_composition.loc[idx['midi_bus',:],:].droplevel(0))
+car_total_bat_in,    car_total_bat_out,    car_total_bat_stock      = nr_by_cohorts_to_materials_typical_np(car_in,       car_out_coh,      car_stock_coh,      battery_weights_full['car'],       battery_material_composition.loc[idx['car',:],idx[car_types,:]].droplevel(0))    #mind that cars don't have Trolleys, hence the additional selection
 
-trucks_HFT_bat_in,   trucks_HFT_bat_out,   trucks_HFT_bat_stock     = nr_by_cohorts_to_materials_typical_np(trucks_HFT_in[:,:,last_years:], trucks_HFT_out_coh[:,:,last_years:, last_years:], trucks_HFT_stock_coh[:,:,last_years:, last_years:], battery_weights_full['HFT'],  battery_material_composition.loc[idx['HFT',:],:].droplevel(0))
-trucks_MFT_bat_in,   trucks_MFT_bat_out,   trucks_MFT_bat_stock     = nr_by_cohorts_to_materials_typical_np(trucks_MFT_in[:,:,last_years:], trucks_MFT_out_coh[:,:,last_years:, last_years:], trucks_MFT_stock_coh[:,:,last_years:, last_years:], battery_weights_full['MFT'],  battery_material_composition.loc[idx['MFT',:],:].droplevel(0))
-trucks_LCV_bat_in,   trucks_LCV_bat_out,   trucks_LCV_bat_stock     = nr_by_cohorts_to_materials_typical_np(trucks_LCV_in[:,:,last_years:], trucks_LCV_out_coh[:,:,last_years:, last_years:], trucks_LCV_stock_coh[:,:,last_years:, last_years:], battery_weights_full['LCV'],  battery_material_composition.loc[idx['LCV',:],:].droplevel(0))
+trucks_HFT_bat_in,   trucks_HFT_bat_out,   trucks_HFT_bat_stock     = nr_by_cohorts_to_materials_typical_np(trucks_HFT_in, trucks_HFT_out_coh, trucks_HFT_stock_coh, battery_weights_full['HFT'],  battery_material_composition.loc[idx['HFT',:],:].droplevel(0))
+trucks_MFT_bat_in,   trucks_MFT_bat_out,   trucks_MFT_bat_stock     = nr_by_cohorts_to_materials_typical_np(trucks_MFT_in, trucks_MFT_out_coh, trucks_MFT_stock_coh, battery_weights_full['MFT'],  battery_material_composition.loc[idx['MFT',:],:].droplevel(0))
+trucks_LCV_bat_in,   trucks_LCV_bat_out,   trucks_LCV_bat_stock     = nr_by_cohorts_to_materials_typical_np(trucks_LCV_in, trucks_LCV_out_coh, trucks_LCV_stock_coh, battery_weights_full['LCV'],  battery_material_composition.loc[idx['LCV',:],:].droplevel(0))
 
 # Sum the weight of the accounted materials (! so not total weight) in batteries by vehicle & vehicle type, output for figures
 for vtype in list(battery_weights_full.columns.levels[1]):
