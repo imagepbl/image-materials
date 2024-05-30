@@ -140,57 +140,32 @@ vehicleshare_cars.loc[idx[:,:],"FCV"]  = car_vshares[FCV_collist].sum(axis=1).to
 
 # labels etc.
 #x_graphs        = [i for i in range(START_YEAR, END_YEAR, 1)]                           # this is used as an x-axis for the years in graphs
-
 #%% For dynamic variables, apply interpolation and extend over the whole timeframe
 
-# use the add_history_and_future() function to speciyfy dynamic variables over the entire scenario period
 # complete & interpolate the vehicle weight data
-vehicle_weight_kg_air_pas     = interpolate(pd.DataFrame(vehicle_weight_kg_simple["air_pas"]),         change='no')
-vehicle_weight_kg_air_frgt    = interpolate(pd.DataFrame(vehicle_weight_kg_simple["air_freight"]),     change='no')
-vehicle_weight_kg_rail_reg    = interpolate(pd.DataFrame(vehicle_weight_kg_simple["rail_reg"]),        change='no')
-vehicle_weight_kg_rail_hst    = interpolate(pd.DataFrame(vehicle_weight_kg_simple["rail_hst"]),        change='no')
-vehicle_weight_kg_rail_frgt   = interpolate(pd.DataFrame(vehicle_weight_kg_simple["rail_freight"]),    change='no')
-vehicle_weight_kg_inland_ship = interpolate(pd.DataFrame(vehicle_weight_kg_simple["inland_shipping"]), change='no')
-vehicle_weight_kg_bicycle     = interpolate(pd.DataFrame(vehicle_weight_kg_simple["bicycle"]),         change='no')
+vehicle_weight_simple = interpolate(pd.DataFrame(vehicle_weight_kg_simple))
 
-vehicle_weight_kg_car         = interpolate(vehicle_weight_kg_typical["car"].unstack(),      change='no')
-vehicle_weight_kg_LCV         = interpolate(vehicle_weight_kg_typical["LCV"].unstack(),      change='no')
-vehicle_weight_kg_MFT         = interpolate(vehicle_weight_kg_typical["MFT"].unstack(),      change='no')
-vehicle_weight_kg_HFT         = interpolate(vehicle_weight_kg_typical["HFT"].unstack(),      change='no')
-vehicle_weight_kg_bus         = interpolate(vehicle_weight_kg_typical["reg_bus"].unstack(),  change='no')
-vehicle_weight_kg_midi        = interpolate(vehicle_weight_kg_typical["midi_bus"].unstack(), change='no')
+vehicle_weight_typical = vehicle_weight_kg_typical.rename_axis('mode', axis=1).stack().unstack(['mode', 'type'])
+vehicle_weight_typical = interpolate(pd.DataFrame(vehicle_weight_typical))
 
 # complete & interpolate the vehicle composition data (simple first)
-material_fractions_air_pas     = interpolate(material_fractions['air_pas'].unstack(),            change='no')
-material_fractions_air_frgt    = interpolate(material_fractions['air_freight'].unstack(),        change='no')
-material_fractions_rail_reg    = interpolate(material_fractions['rail_reg'].unstack(),           change='no')
-material_fractions_rail_hst    = interpolate(material_fractions['rail_hst'].unstack(),           change='no')
-material_fractions_rail_frgt   = interpolate(material_fractions['rail_freight'].unstack(),       change='no')
-material_fractions_ship_small  = interpolate(material_fractions['sea_shipping_small'].unstack(), change='no')
-material_fractions_ship_medium = interpolate(material_fractions['sea_shipping_med'].unstack(),   change='no')
-material_fractions_ship_large  = interpolate(material_fractions['sea_shipping_large'].unstack(), change='no')
-material_fractions_ship_vlarge = interpolate(material_fractions['sea_shipping_vl'].unstack(),    change='no')
-material_fractions_inland_ship = interpolate(material_fractions['inland_shipping'].unstack(),    change='no')
-material_fractions_bicycle     = interpolate(material_fractions['bicycle'].unstack(),            change='no')
+material_fractions_simple = material_fractions.rename_axis('mode', axis=1).rename_axis(['year','material'], axis=0).stack().unstack(['mode', 'material'])
+material_fractions_simple = interpolate(pd.DataFrame(material_fractions_simple))
 
 # complete & interpolate the vehicle composition data (by vehicle sub-type second)
-material_fractions_car        = interpolate(material_fractions_type['car'].unstack(),     change='no')
-material_fractions_bus_reg    = interpolate(material_fractions_type['reg_bus'].unstack(), change='no')
-material_fractions_bus_midi   = interpolate(material_fractions_type['midi_bus'].unstack(),change='no')
-material_fractions_truck_HFT  = interpolate(material_fractions_type['HFT'].unstack(),     change='no')
-material_fractions_truck_MFT  = interpolate(material_fractions_type['MFT'].unstack(),     change='no')
-material_fractions_truck_LCV  = interpolate(material_fractions_type['LCV'].unstack(),     change='no')
+material_fractions_typical = material_fractions_type.rename_axis(['mode','submode'], axis=1).rename_axis(['year','material'], axis=0).stack().stack().unstack(['mode','submode', 'material'])
+material_fractions_typical = interpolate(pd.DataFrame(material_fractions_typical))
 
 # interpolate & complete series for battery weights, shares & composition too
-battery_weights_full    = interpolate(battery_weights.unstack(),   change='no')
-battery_materials_full  = interpolate(battery_materials.unstack(), change='no')
-battery_shares_full     = interpolate(battery_shares_full, change='no')
+battery_weights_full    = interpolate(battery_weights.unstack())
+battery_materials_full  = interpolate(battery_materials.unstack())
+battery_shares_full     = interpolate(battery_shares_full)
 
 # same for lifetime data
-lifetimes_vehicles_mean  = interpolate(lifetimes_vehicles.loc[idx[:,"mean"],:].droplevel(["data"]),  change='no')
-lifetimes_vehicles_stdev = interpolate(lifetimes_vehicles.loc[idx[:,"stdev"],:].droplevel(["data"]), change='no')
-lifetimes_vehicles_shape = interpolate(lifetimes_vehicles.loc[idx[:,"shape"],:].droplevel(["data"]), change='no')
-lifetimes_vehicles_scale = interpolate(lifetimes_vehicles.loc[idx[:,"scale"],:].droplevel(["data"]), change='no')
+lifetimes_vehicles_restructured = lifetimes_vehicles.rename_axis('mode', axis=1).stack().unstack(['mode', 'data'])
+lifetimes_vehicles_int = interpolate(pd.DataFrame(lifetimes_vehicles_restructured))
+
+#TODO align dataframe structures below to the now changed dataframe formats 
 
 #%% Caculating the tonnekilometres for all freight and passenger vehicle types (adjustments are made to: freight air, trucks, and buses)
 
