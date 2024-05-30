@@ -10,6 +10,7 @@ from pathlib import Path
 # from read_scripts.dynamic_stock_model_BM import DynamicStockModel as DSM
 from read_scripts.read_mym import read_mym_df
 import read_scripts.import_labels as import_labels
+from modelling_functions import interpolate, tkms_to_nr_of_vehicles_fixed
 
 os.chdir("../../../IMAGE-Mat/scripts/vema")   # SET YOUR PATH HERE
 
@@ -17,13 +18,14 @@ st = time.time()
 
 # settings & constants
 START_YEAR = 1971            # start year of historic IMAGE data
+FIRST_YEAR = START_YEAR
 END_YEAR = 2060
 OUT_YEAR = 2060              # year of output generation
 REGIONS = 26
 idx = pd.IndexSlice          # needed for slicing multi-index
 FIRST_YEAR_BOATS = 1900
 LOAD_FACTOR = 1.6            # reference loadfactor of cars in TIMER (the trp_trvl_Load.out file is relative to this BASE loadfcator (persons/car))
-FIRST_YEAR = first_year_vehicle.values.min()  # start year of the full model period (including stock-development from scratch, which needs to be the oldest year of any vehicle, all stock calculations are initiated in this year, so this has an effect on runtime)
+#FIRST_YEAR = first_year_vehicle.values.min()  # start year of the full model period (including stock-development from scratch, which needs to be the oldest year of any vehicle, all stock calculations are initiated in this year, so this has an effect on runtime)
 
 # scenario settings
 SCEN    = "SSP2"
@@ -31,7 +33,7 @@ VARIANT = "2D_RE"               # CP or 2D (Add "_RE" for Resource Efficiency)
 PROJECT = "mock_project"
 FOLDER  = SCEN + "_" + VARIANT
 # IMAGE_FOLDER = PROJECT + "/" + SCEN
-OUTPUT_FOLDER ="output/" + PROJECT + "/" + FOLDER
+OUTPUT_FOLDER ="../../output/" + PROJECT + "/" + FOLDER
 
 # Settings paths - TODO: make this a command line parameter (?)
 base_input_data_path = Path("..", "..", "input", "vehicles")
@@ -128,7 +130,7 @@ HEV_collist  = [8,9,10,11,12]
 FCV_collist  = [13,14,15]
 car_types = ["ICE","HEV","PHEV","BEV","FCV"]
 
-index = pd.MultiIndex.from_product([list(kilometrage.index), list(range(1,27))], names=["time", "DIM_1"])
+index = pd.MultiIndex.from_product([list(range(START_YEAR, END_YEAR+1)), list(range(1,27))], names=["time", "DIM_1"])
 vehicleshare_cars = pd.DataFrame(index=index, columns=car_types)
 vehicleshare_cars.loc[idx[:,:],"ICE"]  = car_vshares[ICE_collist].sum(axis=1).to_numpy()
 vehicleshare_cars.loc[idx[:,:],"HEV"]  = car_vshares[HEV_collist].sum(axis=1).to_numpy()
