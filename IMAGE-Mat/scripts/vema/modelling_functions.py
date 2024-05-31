@@ -1,6 +1,6 @@
 import pandas as pd
 
-from constants import FIRST_YEAR, END_YEAR
+from constants import FIRST_YEAR, END_YEAR, REGIONS
 
 
 # Generic interpolation function
