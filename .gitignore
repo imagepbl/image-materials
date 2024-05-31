@@ -170,4 +170,4 @@ cython_debug/
 *.scn
 *.his
 
-IMAGE-Mat/output
+IMAGE-Mat/output/
