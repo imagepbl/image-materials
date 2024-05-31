@@ -169,3 +169,5 @@ cython_debug/
 *.dat
 *.scn
 *.his
+
+IMAGE-Mat/output
