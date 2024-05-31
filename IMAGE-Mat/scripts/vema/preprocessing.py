@@ -9,36 +9,14 @@ import os
 from pathlib import Path
 # from read_scripts.dynamic_stock_model_BM import DynamicStockModel as DSM
 from read_scripts.read_mym import read_mym_df
-import read_scripts.import_labels as import_labels
 from modelling_functions import interpolate, tkms_to_nr_of_vehicles_fixed
+from constants import *
 
 os.chdir("../../../IMAGE-Mat/scripts/vema")   # SET YOUR PATH HERE
 
 st = time.time()
 
-# settings & constants
-START_YEAR = 1971            # start year of historic IMAGE data
-FIRST_YEAR = START_YEAR
-END_YEAR = 2060
-OUT_YEAR = 2060              # year of output generation
-REGIONS = 26
 idx = pd.IndexSlice          # needed for slicing multi-index
-FIRST_YEAR_BOATS = 1900
-LOAD_FACTOR = 1.6            # reference loadfactor of cars in TIMER (the trp_trvl_Load.out file is relative to this BASE loadfcator (persons/car))
-#FIRST_YEAR = first_year_vehicle.values.min()  # start year of the full model period (including stock-development from scratch, which needs to be the oldest year of any vehicle, all stock calculations are initiated in this year, so this has an effect on runtime)
-
-# scenario settings
-SCEN    = "SSP2"
-VARIANT = "2D_RE"               # CP or 2D (Add "_RE" for Resource Efficiency)
-PROJECT = "mock_project"
-FOLDER  = SCEN + "_" + VARIANT
-# IMAGE_FOLDER = PROJECT + "/" + SCEN
-OUTPUT_FOLDER ="../../output/" + PROJECT + "/" + FOLDER
-
-# Settings paths - TODO: make this a command line parameter (?)
-base_input_data_path = Path("..", "..", "input", "vehicles")
-standard_input_data_path = base_input_data_path.joinpath("standard_data")
-image_output_path = Path("..", "..", "image", PROJECT, SCEN)
 
 #%% Reading all csv files for vehicles and ships that are external to IMAGE
 
@@ -75,13 +53,13 @@ battery_materials = pd.read_csv(base_input_data_path.joinpath(FOLDER, "battery_m
 #%% Reading all out files for vehicles and ships that are internal to IMAGE
 
 # IMAGE scenario files (total demand in Tkms & Pkms + vehicle shares)
-tonkms_Mtkms        = read_mym_df(image_output_path.joinpath("trp_frgt_Tkm.out"))              # The tonne kilometres of freight vehicles of the IMAGE/TIMER SSP2 (in Mega Tkm)
-passengerkms_Tpkms  = read_mym_df(image_output_path.joinpath("trp_trvl_pkm.out"))              # The passenger kilometres from the IMAGE/TIMER SSP2 (in Tera Pkm)
-buses_vshares       = read_mym_df(image_output_path.joinpath("trp_trvl_Vshare_bus.out"))       # The vehicle shares of buses of the SSP2                            MIND! FOR the BL this is still the OLD SSP2 file REPLACE LATER
-car_vshares         = read_mym_df(image_output_path.joinpath("trp_trvl_Vshare_car.out"))       # The vehicle shares of passenger cars of the SSP2 
-medtruck_vshares    = read_mym_df(image_output_path.joinpath("trp_frgt_Vshare_MedTruck.out"))  # The vehicle shares of trucks (medium) of the SSP2 
-hvytruck_vshares    = read_mym_df(image_output_path.joinpath("trp_frgt_Vshare_HvyTruck.out"))  # The vehicle shares of trucks (heavy) of the SSP2 
-loadfactor_car_data = read_mym_df(image_output_path.joinpath("trp_trvl_Load.out"))             # The loadfactor of passenger vehicles (occupation in nr of people/vehicle) in reference to the base loadfactor (see constants above)
+tonkms_Mtkms        = read_mym_df(image_folder.joinpath("trp_frgt_Tkm.out"))              # The tonne kilometres of freight vehicles of the IMAGE/TIMER SSP2 (in Mega Tkm)
+passengerkms_Tpkms  = read_mym_df(image_folder.joinpath("trp_trvl_pkm.out"))              # The passenger kilometres from the IMAGE/TIMER SSP2 (in Tera Pkm)
+buses_vshares       = read_mym_df(image_folder.joinpath("trp_trvl_Vshare_bus.out"))       # The vehicle shares of buses of the SSP2                            MIND! FOR the BL this is still the OLD SSP2 file REPLACE LATER
+car_vshares         = read_mym_df(image_folder.joinpath("trp_trvl_Vshare_car.out"))       # The vehicle shares of passenger cars of the SSP2 
+medtruck_vshares    = read_mym_df(image_folder.joinpath("trp_frgt_Vshare_MedTruck.out"))  # The vehicle shares of trucks (medium) of the SSP2 
+hvytruck_vshares    = read_mym_df(image_folder.joinpath("trp_frgt_Vshare_HvyTruck.out"))  # The vehicle shares of trucks (heavy) of the SSP2 
+loadfactor_car_data = read_mym_df(image_folder.joinpath("trp_trvl_Load.out"))             # The loadfactor of passenger vehicles (occupation in nr of people/vehicle) in reference to the base loadfactor (see constants above)
 
 #%%
 """
@@ -116,11 +94,11 @@ medtruck_vshares.set_index(["time", "DIM_1"], inplace=True)
 hvytruck_vshares.set_index(["time", "DIM_1"], inplace=True)
 
 # insert column descriptions
-tonkms_Mtkms.columns       = import_labels.tkms_label
-passengerkms_Tpkms.columns = import_labels.pkms_label
-medtruck_vshares.columns   = import_labels.truck_label
-hvytruck_vshares.columns   = import_labels.truck_label
-buses_vshares.columns      = import_labels.bus_label
+tonkms_Mtkms.columns       = tkms_label
+passengerkms_Tpkms.columns = pkms_label
+medtruck_vshares.columns   = truck_label
+hvytruck_vshares.columns   = truck_label
+buses_vshares.columns      = bus_label
 
 # aggregate car types into 5 car types
 BEV_collist  = [22, 24]
@@ -281,7 +259,7 @@ diff_ships_total = total_nr_of_ships.loc[list(range(2005,2018+1)), 28].div(nr_of
 # Export total global number of vehicles in the fleet (stock) as csv
 region_list = list(range(1,27))
 index = pd.MultiIndex.from_product([list(total_nr_of_ships.index), region_list], names = ["years","regions"])
-total_nr_vehicles = pd.DataFrame(index=index, columns=import_labels.columns_vehicle_output)
+total_nr_vehicles = pd.DataFrame(index=index, columns=columns_vehicle_output)
 total_nr_vehicles["Buses"]        = bus_regl_nr[region_list].stack() + bus_midi_nr[region_list].stack()
 total_nr_vehicles["Trains"]       = rail_reg_nr[region_list].stack()
 total_nr_vehicles["HST"]          = rail_hst_nr[region_list].stack()
@@ -298,7 +276,7 @@ total_nr_vehicles["Cargo Planes"] = air_freight_nr[region_list].stack()
 region_list = list(range(1,27))
 car_pkms.columns = list(range(1,27))      # remove region labels 
 index = pd.MultiIndex.from_product([list(total_nr_of_ships.index), region_list], names = ["years","regions"])
-total_pkm_tkm = pd.DataFrame(index=index, columns=import_labels.columns_vehicle_output)
+total_pkm_tkm = pd.DataFrame(index=index, columns=columns_vehicle_output)
 total_pkm_tkm["Buses"]        = (bus_regl_pkms[region_list].stack() + bus_midi_pkms[region_list].stack()) * 1000000000000
 total_pkm_tkm["Trains"]       = passengerkms_Tpkms["train"]   * 1000000000000                              
 total_pkm_tkm["HST"]          = passengerkms_Tpkms["hst"]     * 1000000000000
@@ -323,10 +301,10 @@ rail_freight_nr[[1,2,11,12,18,20,16]].loc[2016].sum()  # India, Canada, China, U
 #%% Save output
 # output to IRP
 # output transport drivers to output folder for 450 vs Bl comparisson in overarching figures later on
-tonkms_Mtkms.to_csv(OUTPUT_FOLDER + "/transport_tkms.csv", index=True)       # in Mega tkms
-passengerkms_Tpkms.to_csv(OUTPUT_FOLDER + "/transport_pkms.csv", index=True) # in Tera pkms
-vehicleshare_cars.to_csv(OUTPUT_FOLDER + "\\car_type_share_regional.csv", index=True)
-total_nr_vehicles.to_csv(OUTPUT_FOLDER +  "\\region_vehicle_nr.csv", index=True) # regional nr of vehicles 
-total_nr_vehicles.sum(axis=0, level=0).to_csv(OUTPUT_FOLDER + "\\global_vehicle_nr.csv", index=True) # total global nr of vehicles 
-total_pkm_tkm.sum(axis=0, level=0).to_csv(OUTPUT_FOLDER + "\\global_pkm_tkm.csv", index=True) # total global pkms & tkms 
-total_pkm_tkm.to_csv(OUTPUT_FOLDER + "\\region_pkm_tkm.csv", index=True)  # regional pkms & tkms 
+tonkms_Mtkms.to_csv(standard_output_folder.joinpath("transport_tkms.csv"), index=True)       # in Mega tkms
+passengerkms_Tpkms.to_csv(standard_output_folder.joinpath("transport_pkms.csv"), index=True) # in Tera pkms
+vehicleshare_cars.to_csv(standard_output_folder.joinpath("car_type_share_regional.csv"), index=True)
+total_nr_vehicles.to_csv(standard_output_folder.joinpath("region_vehicle_nr.csv"), index=True) # regional nr of vehicles 
+total_nr_vehicles.sum(axis=0, level=0).to_csv(standard_output_folder.joinpath("global_vehicle_nr.csv"), index=True) # total global nr of vehicles 
+total_pkm_tkm.sum(axis=0, level=0).to_csv(standard_output_folder.joinpath("global_pkm_tkm.csv"), index=True) # total global pkms & tkms 
+total_pkm_tkm.to_csv(standard_output_folder.joinpath("region_pkm_tkm.csv"), index=True)  # regional pkms & tkms 
