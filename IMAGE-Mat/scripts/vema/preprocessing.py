@@ -10,7 +10,6 @@ from pathlib import Path
 # from read_scripts.dynamic_stock_model_BM import DynamicStockModel as DSM
 from read_scripts.read_mym import read_mym_df
 from modelling_functions import interpolate, tkms_to_nr_of_vehicles_fixed
-from constants import *
 
 os.chdir("../../../IMAGE-Mat/scripts/vema")   # SET YOUR PATH HERE
 
@@ -308,3 +307,8 @@ total_nr_vehicles.to_csv(standard_output_folder.joinpath("region_vehicle_nr.csv"
 total_nr_vehicles.sum(axis=0, level=0).to_csv(standard_output_folder.joinpath("global_vehicle_nr.csv"), index=True) # total global nr of vehicles 
 total_pkm_tkm.sum(axis=0, level=0).to_csv(standard_output_folder.joinpath("global_pkm_tkm.csv"), index=True) # total global pkms & tkms 
 total_pkm_tkm.to_csv(standard_output_folder.joinpath("region_pkm_tkm.csv"), index=True)  # regional pkms & tkms 
+# Path fragments and constants
+from constants import PROJECT, SCEN, FOLDER, START_YEAR, END_YEAR, LOAD_FACTOR
+# Labels
+from constants import tkms_label, pkms_label, truck_label, bus_label, \
+    columns_vehicle_output
