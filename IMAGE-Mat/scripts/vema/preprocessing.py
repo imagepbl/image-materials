@@ -132,8 +132,6 @@ def preprocessing(base_dir=os.getcwd()):
     vehicleshare_cars.loc[idx[:,:],"BEV"]  = car_vshares[BEV_collist].sum(axis=1).to_numpy()
     vehicleshare_cars.loc[idx[:,:],"FCV"]  = car_vshares[FCV_collist].sum(axis=1).to_numpy()
 
-     
-
     # labels etc.
     # x_graphs        = [i for i in range(START_YEAR, END_YEAR, 1)]                           # this is used as an x-axis for the years in graphs
     # For dynamic variables, apply interpolation and extend over the whole timeframe
@@ -158,7 +156,6 @@ def preprocessing(base_dir=os.getcwd()):
     battery_shares     = interpolate(battery_shares_full)
 
     # same for lifetime data
-    
     lifetimes_vehicles = lifetimes_vehicles.rename_axis('mode', axis=1).stack()
     lifetimes_vehicles = lifetimes_vehicles[(lifetimes_vehicles.T != 0)]     
     lifetimes_vehicles = lifetimes_vehicles.unstack(['mode', 'data'])
@@ -177,7 +174,6 @@ def preprocessing(base_dir=os.getcwd()):
     trucks_min_LCV         = trucks_total_tkm - trucks_LCV_tkm
     trucks_MFT_tkm         = trucks_min_LCV.mul(MFT_percshare_tkm)                      
     trucks_HFT_tkm         = trucks_min_LCV.mul(HFT_percshare_tkm)
-    
 
     # demand for freight planes is reduced by 50% because about half of the air freight is transported as cargo on passenger planes 
     air_freight_tkms       = tonkms_Mtkms["air cargo"].unstack() * market_share["air_freight"].values[0]
@@ -200,7 +196,7 @@ def preprocessing(base_dir=os.getcwd()):
     #for label in ["air_pas", "rail_reg", "rail_hst", "bicycle"]:
     #    total_nr_vehicles_simple[label] = tkms_to_nr_of_vehicles_fixed(passengerkms_Tpkms[label].unstack(),    mileages[label],  load[label].values[0],    loadfactor[label].values[0])
 
-    # 
+    #
     # calculate the number of vehicles on the road 
     # (first passenger, then freight)
     air_pas_nr      = tkms_to_nr_of_vehicles_fixed(passengerkms_Tpkms["air"].unstack(),    mileages["air_pas"],  load["air_pas"].values[0],    loadfactor["air_pas"].values[0])
