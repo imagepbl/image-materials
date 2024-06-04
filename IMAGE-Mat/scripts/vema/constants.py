@@ -39,7 +39,7 @@ car_label = ["Conv. ICE(2000)", "Conv. ICE(2010)", "Adv. ICEOil",
 tkms_label = ["inland shipping", "freight train", "medium truck",
               "heavy truck", "air cargo", "international shipping", "empty",
               "total"]
-pkms_label = ["walking", "biking", "bus", "train", "car", "hst", "air",
+pkms_label = ["walking", "bicycle", "bus", "rail_reg", "car", "rail_hst", "air_pas",
               "total"]
 columns_vehicle_output = ["Buses", "Trains", "HST", "Cars", "Planes", "Bikes",
                           "Trucks", "Cargo Trains", "Ships", "Inland ships",
