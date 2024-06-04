@@ -1,3 +1,4 @@
+# %%
 import argparse
 import pandas as pd
 # import numpy as np
@@ -20,6 +21,8 @@ from constants import tkms_label, pkms_label, truck_label, bus_label, \
 def preprocessing(base_dir=os.getcwd()):
     """Wrapper function for the preprocessing part of the VEMA script.
     """
+    # %%
+    # base_dir=Path(os.getcwd())
     base_input_data_path = base_dir.joinpath("..", "..", "input", "vehicles")
     standard_input_data_path = base_input_data_path.joinpath("standard_data")
     image_folder = base_dir.joinpath("..", "..", "image", PROJECT, SCEN)
@@ -30,11 +33,11 @@ def preprocessing(base_dir=os.getcwd()):
 
     idx = pd.IndexSlice          # needed for slicing multi-index
 
-    #%% Reading all csv files for vehicles and ships that are external to IMAGE
+    # Reading all csv files for vehicles and ships that are external to IMAGE
 
 
     # 1) scenario independent data
-    load = pd.read_csv(standard_input_data_path.joinpath("load_pass_and_tonnes.csv"))             #TODO: add description again here!
+    load = pd.read_csv(standard_input_data_path.joinpath("load_pass_and_tonnes.csv"))             # TODO: add description again here!
     loadfactor = pd.read_csv(standard_input_data_path.joinpath("loadfactor_percentages.csv"))     # Percentage of the maximum load that is on average 
     market_share = pd.read_csv(standard_input_data_path.joinpath("fraction_tkm_pkm.csv"))         # Percentage of tonne-/passengerkilometres
     first_year_vehicle = pd.read_csv(standard_input_data_path.joinpath("first_year_vehicle.csv")) # first year of operation per vehicle-type
@@ -62,7 +65,7 @@ def preprocessing(base_dir=os.getcwd()):
     battery_weights = pd.read_csv(base_input_data_path.joinpath(FOLDER, "battery_weights_kg.csv"), index_col=[0,1])   # Using the 250 Wh/kg on the kWh of the various batteries a weight (in kg) of the battery per vehicle category is determined
     battery_materials = pd.read_csv(base_input_data_path.joinpath(FOLDER, "battery_materials.csv"), index_col=[0,1])   # The material fraction of storage technologies (used to get the vehicle battery composition)
 
-    #%% Reading all out files for vehicles and ships that are internal to IMAGE
+    # %% Reading all out files for vehicles and ships that are internal to IMAGE
 
     # IMAGE scenario files (total demand in Tkms & Pkms + vehicle shares)
     tonkms_Mtkms        = read_mym_df(image_folder.joinpath("trp_frgt_Tkm.out"))              # The tonne kilometres of freight vehicles of the IMAGE/TIMER SSP2 (in Mega Tkm)
@@ -133,10 +136,10 @@ def preprocessing(base_dir=os.getcwd()):
     #%% For dynamic variables, apply interpolation and extend over the whole timeframe
 
     # complete & interpolate the vehicle weight data
-    vehicle_weight_simple = interpolate(pd.DataFrame(vehicle_weight_kg_simple))
+    vehicle_weights_simple = interpolate(pd.DataFrame(vehicle_weight_kg_simple))
 
-    vehicle_weight_typical = vehicle_weight_kg_typical.rename_axis('mode', axis=1).stack().unstack(['mode', 'type'])
-    vehicle_weight_typical = interpolate(pd.DataFrame(vehicle_weight_typical))
+    vehicle_weights_typical = vehicle_weight_kg_typical.rename_axis('mode', axis=1).stack().unstack(['mode', 'type'])
+    vehicle_weights_typical = interpolate(pd.DataFrame(vehicle_weights_typical))
 
     # complete & interpolate the vehicle composition data (simple first)
     material_fractions_simple = material_fractions.rename_axis('mode', axis=1).rename_axis(['year','material'], axis=0).stack().unstack(['mode', 'material'])
@@ -147,9 +150,9 @@ def preprocessing(base_dir=os.getcwd()):
     material_fractions_typical = interpolate(pd.DataFrame(material_fractions_typical))
 
     # interpolate & complete series for battery weights, shares & composition too
-    battery_weights_full    = interpolate(battery_weights.unstack())
-    battery_materials_full  = interpolate(battery_materials.unstack())
-    battery_shares_full     = interpolate(battery_shares_full)
+    battery_weights_typical    = interpolate(battery_weights.unstack())
+    battery_materials  = interpolate(battery_materials.unstack())
+    battery_shares     = interpolate(battery_shares_full)
 
     # same for lifetime data
     lifetimes_vehicles_restructured = lifetimes_vehicles.rename_axis('mode', axis=1).stack().unstack(['mode', 'data'])
@@ -182,7 +185,14 @@ def preprocessing(base_dir=os.getcwd()):
     car_pkms.columns       = region_list                                  
 
     #%% Calculate the NUMBER OF VEHICLES (stock, on the road) to fulfull the ton-kilometers transport demand
-     
+
+    #passengerkms_Tpkms = passengerkms_Tpkms.unstack("DIM_1")
+    total_nr_vehicles_simple = pd.DataFrame().reindex_like(passengerkms_Tpkms)
+
+    for label in ["air_pas", "rail_reg", "rail_hst", "bicycle"]:
+        total_nr_vehicles_simple[label] = tkms_to_nr_of_vehicles_fixed(passengerkms_Tpkms[label].unstack(),    mileages[label],  load[label].values[0],    loadfactor[label].values[0])
+
+    #%%
     #calculate the number of vehicles on the road (first passenger, then freight)
     air_pas_nr      = tkms_to_nr_of_vehicles_fixed(passengerkms_Tpkms["air"].unstack(),    mileages["air_pas"],  load["air_pas"].values[0],    loadfactor["air_pas"].values[0])
     rail_reg_nr     = tkms_to_nr_of_vehicles_fixed(passengerkms_Tpkms["train"].unstack(),  mileages["rail_reg"], load["rail_reg"].values[0],   loadfactor["rail_reg"].values[0])
@@ -321,9 +331,12 @@ def preprocessing(base_dir=os.getcwd()):
     total_pkm_tkm.sum(axis=0, level=0).to_csv(standard_output_folder.joinpath("global_pkm_tkm.csv"), index=True) # total global pkms & tkms 
     total_pkm_tkm.to_csv(standard_output_folder.joinpath("region_pkm_tkm.csv"), index=True)  # regional pkms & tkms
 
-    return (total_nr_vehicles, material_fractions, vehicle_weights,
-            battery_weights, battery_materials, battery_shares,
-            lifetimes_vehicles)
+    return (total_nr_vehicles_simple, total_nr_vehicles_typical, 
+            material_fractions_simple, material_fractions_typical, 
+            vehicle_weights_simple, vehicle_weights_typical,
+            lifetimes_vehicles_simple, lifetimes_vehicles_typical,
+            battery_weights_typical, battery_materials, battery_shares
+            )
 
 
 if __name__ == "__main__":
@@ -339,6 +352,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Call preprocessing function and make output available in variables
-    (total_nr_vehicles, material_fractions, vehicle_weights, battery_weights,
-     battery_materials, battery_shares, lifetimes_vehicles) = \
+    (total_nr_vehicles_simple, total_nr_vehicles_typical, 
+        material_fractions_simple, material_fractions_typical, 
+        vehicle_weights_simple, vehicle_weights_typical,
+        lifetimes_vehicles_simple, lifetimes_vehicles_typical,
+        battery_weights_typical, battery_materials, battery_shares) = \
         preprocessing(base_dir=args.path)
+
+# %%
