@@ -19,14 +19,13 @@ from constants import tkms_label, pkms_label, truck_label, bus_label, \
     bus_label2, bus_label_ICE, bus_label_HEV, \
     truck_label2, truck_label_ICE, truck_label_HEV, truck_label_PHEV, \
     truck_label_BEV, truck_label_FCV, vshares_label
-    
 
 
 def preprocessing(base_dir=os.getcwd()):
     """Wrapper function for the preprocessing part of the VEMA script.
     """
     # %%
-    base_dir=Path(os.getcwd())
+    # base_dir=Path(os.getcwd())
     base_input_data_path = base_dir.joinpath("..", "..", "input", "vehicles")
     standard_input_data_path = base_input_data_path.joinpath("standard_data")
     image_folder = base_dir.joinpath("..", "..", "image", PROJECT, SCEN)
@@ -38,7 +37,6 @@ def preprocessing(base_dir=os.getcwd()):
     idx = pd.IndexSlice          # needed for slicing multi-index
 
     # Reading all csv files for vehicles and ships that are external to IMAGE
-
 
     # 1) scenario independent data
     load = pd.read_csv(standard_input_data_path.joinpath("load_pass_and_tonnes.csv"))             # TODO: add description again here!
@@ -70,7 +68,7 @@ def preprocessing(base_dir=os.getcwd()):
     battery_materials = pd.read_csv(base_input_data_path.joinpath(FOLDER, "battery_materials.csv"), index_col=[0,1])   # The material fraction of storage technologies (used to get the vehicle battery composition)
 
     #  Reading all out files for vehicles and ships that are internal to IMAGE
-    
+
     # IMAGE scenario files (total demand in Tkms & Pkms + vehicle shares)
     tonkms_Mtkms        = read_mym_df(image_folder.joinpath("trp_frgt_Tkm.out"))              # The tonne kilometres of freight vehicles of the IMAGE/TIMER SSP2 (in Mega Tkm)
     passengerkms_Tpkms  = read_mym_df(image_folder.joinpath("trp_trvl_pkm.out"))              # The passenger kilometres from the IMAGE/TIMER SSP2 (in Tera Pkm)
@@ -103,7 +101,6 @@ def preprocessing(base_dir=os.getcwd()):
     hvytruck_vshares    = hvytruck_vshares[hvytruck_vshares["time"].isin(list(range(START_YEAR, END_YEAR+1)))] 
     battery_shares_full = battery_shares_full.loc[list(range(START_YEAR, END_YEAR+1))]
 
-    
     # set multi-index based on the first two columns
     tonkms_Mtkms.set_index(["time", "DIM_1"], inplace=True)
     passengerkms_Tpkms.set_index(["time", "DIM_1"], inplace=True)
@@ -167,8 +164,6 @@ def preprocessing(base_dir=os.getcwd()):
     lifetimes_vehicles = lifetimes_vehicles.unstack(['mode', 'data'])
     lifetimes_vehicles = interpolate(pd.DataFrame(lifetimes_vehicles))
 
-
-
     #TODO align dataframe structures below to the now changed dataframe formats 
 
     # Caculating the tonnekilometres for all freight and passenger vehicle types (adjustments are made to: freight air, trucks, and buses)
@@ -194,9 +189,9 @@ def preprocessing(base_dir=os.getcwd()):
     # Select tkms of passenger cars (which will be adjusted to represent 5 types: ICE, HEV, PHEV, BEV & FCV)
     car_pkms               = passengerkms_Tpkms["car"].unstack()
     car_pkms               = car_pkms.drop([27, 28], axis=1)    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies  # in tera pkms                            
-    car_pkms.columns       = region_list                                  
-        # %% 
+    car_pkms.columns       = region_list
 
+    # %% 
     # Calculate the NUMBER OF VEHICLES (stock, on the road) to fulfull the ton-kilometers transport demand
 
     #passengerkms_Tpkms = passengerkms_Tpkms.unstack("DIM_1")
