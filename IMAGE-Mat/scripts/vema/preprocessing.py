@@ -16,9 +16,9 @@ from constants import PROJECT, SCEN, FOLDER, START_YEAR, END_YEAR, LOAD_FACTOR
 # Labels
 from constants import tkms_label, pkms_label, truck_label, bus_label, \
     columns_vehicle_output, \
-    bus_label2, bus_label_ICE, bus_label_HEV, \
-    truck_label2, truck_label_ICE, truck_label_HEV, truck_label_PHEV, \
-    truck_label_BEV, truck_label_FCV, vshares_label
+    bus_label_ICE, bus_label_HEV, \
+    truck_label_ICE, truck_label_HEV, truck_label_PHEV, \
+    truck_label_BEV, truck_label_FCV
 
 
 def preprocessing(base_dir=os.getcwd()):
