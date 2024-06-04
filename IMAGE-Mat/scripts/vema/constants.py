@@ -1,7 +1,5 @@
 """"Global constants for the VEMA model."""
 
-from pathlib import Path
-
 # --- Settings & constants
 
 # start year of historic IMAGE data
@@ -69,10 +67,3 @@ PROJECT = "mock_project"
 FOLDER = SCEN + "_" + VARIANT
 # TODO: deprecate this constant
 OUTPUT_FOLDER = "../../output/" + PROJECT + "/" + FOLDER
-
-# Settings paths - TODO: make this a command line parameter (?)
-# Maybe move this out of the constants file
-base_input_data_path = Path("..", "..", "input", "vehicles")
-standard_input_data_path = base_input_data_path.joinpath("standard_data")
-image_folder = Path("..", "..", "image", PROJECT, SCEN)
-standard_output_folder = Path("..", "..", "output", PROJECT, FOLDER)
