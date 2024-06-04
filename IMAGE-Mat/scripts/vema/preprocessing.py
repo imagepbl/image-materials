@@ -29,7 +29,7 @@ def preprocessing(base_dir=os.getcwd()):
     standard_output_folder = base_dir.joinpath("..", "..", "output", PROJECT,
                                                FOLDER)
 
-    st = time.time()
+    #st = time.time()
 
     idx = pd.IndexSlice          # needed for slicing multi-index
 
@@ -100,7 +100,7 @@ def preprocessing(base_dir=os.getcwd()):
     hvytruck_vshares    = hvytruck_vshares[hvytruck_vshares["time"].isin(list(range(START_YEAR, END_YEAR+1)))] 
     battery_shares_full = battery_shares_full.loc[list(range(START_YEAR, END_YEAR+1))]
 
-    #set multi-index based on the first two columns
+    # set multi-index based on the first two columns
     tonkms_Mtkms.set_index(["time", "DIM_1"], inplace=True)
     passengerkms_Tpkms.set_index(["time", "DIM_1"], inplace=True)
     buses_vshares.set_index(["time", "DIM_1"], inplace=True)
@@ -155,8 +155,11 @@ def preprocessing(base_dir=os.getcwd()):
     battery_shares     = interpolate(battery_shares_full)
 
     # same for lifetime data
-    lifetimes_vehicles_restructured = lifetimes_vehicles.rename_axis('mode', axis=1).stack().unstack(['mode', 'data'])
-    lifetimes_vehicles_int = interpolate(pd.DataFrame(lifetimes_vehicles_restructured))
+    
+    lifetimes_vehicles = lifetimes_vehicles.rename_axis('mode', axis=1).stack()
+    lifetimes_vehicles = lifetimes_vehicles[(lifetimes_vehicles.T != 0)]     
+    lifetimes_vehicles = lifetimes_vehicles.unstack(['mode', 'data'])
+    lifetimes_vehicles = interpolate(pd.DataFrame(lifetimes_vehicles))
 
     #TODO align dataframe structures below to the now changed dataframe formats 
 
@@ -192,8 +195,9 @@ def preprocessing(base_dir=os.getcwd()):
     for label in ["air_pas", "rail_reg", "rail_hst", "bicycle"]:
         total_nr_vehicles_simple[label] = tkms_to_nr_of_vehicles_fixed(passengerkms_Tpkms[label].unstack(),    mileages[label],  load[label].values[0],    loadfactor[label].values[0])
 
-    #%%
-    #calculate the number of vehicles on the road (first passenger, then freight)
+    # %%
+    # calculate the number of vehicles on the road 
+    # (first passenger, then freight)
     air_pas_nr      = tkms_to_nr_of_vehicles_fixed(passengerkms_Tpkms["air"].unstack(),    mileages["air_pas"],  load["air_pas"].values[0],    loadfactor["air_pas"].values[0])
     rail_reg_nr     = tkms_to_nr_of_vehicles_fixed(passengerkms_Tpkms["train"].unstack(),  mileages["rail_reg"], load["rail_reg"].values[0],   loadfactor["rail_reg"].values[0])
     rail_hst_nr     = tkms_to_nr_of_vehicles_fixed(passengerkms_Tpkms["hst"].unstack(),    mileages["rail_hst"], load["rail_hst"].values[0],   loadfactor["rail_hst"].values[0])
@@ -224,7 +228,7 @@ def preprocessing(base_dir=os.getcwd()):
     bus_midi_nr    = bus_midi_vkms.div(kilometrage_midi_bus)                         # total number of regular buses
 
 
-    #%% for INTERNATIONAL SHIPPING the number of vehicles is calculated differently 
+    # %% for INTERNATIONAL SHIPPING the number of vehicles is calculated differently 
 
     cap_adjustment  = [1, 1, 1, 1]
     mile_adjustment = [1, 1, 1, 1]
@@ -334,7 +338,7 @@ def preprocessing(base_dir=os.getcwd()):
     return (total_nr_vehicles_simple, total_nr_vehicles_typical, 
             material_fractions_simple, material_fractions_typical, 
             vehicle_weights_simple, vehicle_weights_typical,
-            lifetimes_vehicles_simple, lifetimes_vehicles_typical,
+            lifetimes_vehicles,
             battery_weights_typical, battery_materials, battery_shares
             )
 
@@ -355,7 +359,7 @@ if __name__ == "__main__":
     (total_nr_vehicles_simple, total_nr_vehicles_typical, 
         material_fractions_simple, material_fractions_typical, 
         vehicle_weights_simple, vehicle_weights_typical,
-        lifetimes_vehicles_simple, lifetimes_vehicles_typical,
+        lifetimes_vehicles,
         battery_weights_typical, battery_materials, battery_shares) = \
         preprocessing(base_dir=args.path)
 
