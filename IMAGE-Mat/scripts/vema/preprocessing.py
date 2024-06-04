@@ -15,14 +15,18 @@ from modelling_functions import interpolate, tkms_to_nr_of_vehicles_fixed
 from constants import PROJECT, SCEN, FOLDER, START_YEAR, END_YEAR, LOAD_FACTOR
 # Labels
 from constants import tkms_label, pkms_label, truck_label, bus_label, \
-    columns_vehicle_output
+    columns_vehicle_output, \
+    bus_label2, bus_label_ICE, bus_label_HEV, \
+    truck_label2, truck_label_ICE, truck_label_HEV, truck_label_PHEV, \
+    truck_label_BEV, truck_label_FCV, vshares_label
+    
 
 
 def preprocessing(base_dir=os.getcwd()):
     """Wrapper function for the preprocessing part of the VEMA script.
     """
     # %%
-    # base_dir=Path(os.getcwd())
+    base_dir=Path(os.getcwd())
     base_input_data_path = base_dir.joinpath("..", "..", "input", "vehicles")
     standard_input_data_path = base_input_data_path.joinpath("standard_data")
     image_folder = base_dir.joinpath("..", "..", "image", PROJECT, SCEN)
@@ -65,8 +69,8 @@ def preprocessing(base_dir=os.getcwd()):
     battery_weights = pd.read_csv(base_input_data_path.joinpath(FOLDER, "battery_weights_kg.csv"), index_col=[0,1])   # Using the 250 Wh/kg on the kWh of the various batteries a weight (in kg) of the battery per vehicle category is determined
     battery_materials = pd.read_csv(base_input_data_path.joinpath(FOLDER, "battery_materials.csv"), index_col=[0,1])   # The material fraction of storage technologies (used to get the vehicle battery composition)
 
-    # %% Reading all out files for vehicles and ships that are internal to IMAGE
-
+    #  Reading all out files for vehicles and ships that are internal to IMAGE
+    
     # IMAGE scenario files (total demand in Tkms & Pkms + vehicle shares)
     tonkms_Mtkms        = read_mym_df(image_folder.joinpath("trp_frgt_Tkm.out"))              # The tonne kilometres of freight vehicles of the IMAGE/TIMER SSP2 (in Mega Tkm)
     passengerkms_Tpkms  = read_mym_df(image_folder.joinpath("trp_trvl_pkm.out"))              # The passenger kilometres from the IMAGE/TIMER SSP2 (in Tera Pkm)
@@ -76,7 +80,6 @@ def preprocessing(base_dir=os.getcwd()):
     hvytruck_vshares    = read_mym_df(image_folder.joinpath("trp_frgt_Vshare_HvyTruck.out"))  # The vehicle shares of trucks (heavy) of the SSP2 
     loadfactor_car_data = read_mym_df(image_folder.joinpath("trp_trvl_Load.out"))             # The loadfactor of passenger vehicles (occupation in nr of people/vehicle) in reference to the base loadfactor (see constants above)
 
-    #%%
     """
     preprocessing of the IMAGE files & files with additional assumptions on vehcile materials (renaming, removing 27th region, adding labels etc.)
     """
@@ -100,6 +103,7 @@ def preprocessing(base_dir=os.getcwd()):
     hvytruck_vshares    = hvytruck_vshares[hvytruck_vshares["time"].isin(list(range(START_YEAR, END_YEAR+1)))] 
     battery_shares_full = battery_shares_full.loc[list(range(START_YEAR, END_YEAR+1))]
 
+    
     # set multi-index based on the first two columns
     tonkms_Mtkms.set_index(["time", "DIM_1"], inplace=True)
     passengerkms_Tpkms.set_index(["time", "DIM_1"], inplace=True)
@@ -131,9 +135,11 @@ def preprocessing(base_dir=os.getcwd()):
     vehicleshare_cars.loc[idx[:,:],"BEV"]  = car_vshares[BEV_collist].sum(axis=1).to_numpy()
     vehicleshare_cars.loc[idx[:,:],"FCV"]  = car_vshares[FCV_collist].sum(axis=1).to_numpy()
 
+     
+
     # labels etc.
-    #x_graphs        = [i for i in range(START_YEAR, END_YEAR, 1)]                           # this is used as an x-axis for the years in graphs
-    #%% For dynamic variables, apply interpolation and extend over the whole timeframe
+    # x_graphs        = [i for i in range(START_YEAR, END_YEAR, 1)]                           # this is used as an x-axis for the years in graphs
+    # For dynamic variables, apply interpolation and extend over the whole timeframe
 
     # complete & interpolate the vehicle weight data
     vehicle_weights_simple = interpolate(pd.DataFrame(vehicle_weight_kg_simple))
@@ -161,9 +167,11 @@ def preprocessing(base_dir=os.getcwd()):
     lifetimes_vehicles = lifetimes_vehicles.unstack(['mode', 'data'])
     lifetimes_vehicles = interpolate(pd.DataFrame(lifetimes_vehicles))
 
+
+
     #TODO align dataframe structures below to the now changed dataframe formats 
 
-    #%% Caculating the tonnekilometres for all freight and passenger vehicle types (adjustments are made to: freight air, trucks, and buses)
+    # Caculating the tonnekilometres for all freight and passenger vehicle types (adjustments are made to: freight air, trucks, and buses)
 
     # Trucks are calculated differently because the IMAGE model does not account for LCV trucks, which concerns a large portion of the material requirements of road freight
     # the total trucks Tkms remain the same, but a LCV fraction is substracted, and the remainder is re-assigned to medium and heavy trucks according to their original ratio
@@ -174,6 +182,7 @@ def preprocessing(base_dir=os.getcwd()):
     trucks_min_LCV         = trucks_total_tkm - trucks_LCV_tkm
     trucks_MFT_tkm         = trucks_min_LCV.mul(MFT_percshare_tkm)                      
     trucks_HFT_tkm         = trucks_min_LCV.mul(HFT_percshare_tkm)
+    
 
     # demand for freight planes is reduced by 50% because about half of the air freight is transported as cargo on passenger planes 
     air_freight_tkms       = tonkms_Mtkms["air cargo"].unstack() * market_share["air_freight"].values[0]
@@ -186,16 +195,17 @@ def preprocessing(base_dir=os.getcwd()):
     car_pkms               = passengerkms_Tpkms["car"].unstack()
     car_pkms               = car_pkms.drop([27, 28], axis=1)    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies  # in tera pkms                            
     car_pkms.columns       = region_list                                  
+        # %% 
 
-    #%% Calculate the NUMBER OF VEHICLES (stock, on the road) to fulfull the ton-kilometers transport demand
+    # Calculate the NUMBER OF VEHICLES (stock, on the road) to fulfull the ton-kilometers transport demand
 
     #passengerkms_Tpkms = passengerkms_Tpkms.unstack("DIM_1")
-    total_nr_vehicles_simple = pd.DataFrame().reindex_like(passengerkms_Tpkms)
+    #total_nr_vehicles_simple = pd.DataFrame().reindex_like(passengerkms_Tpkms)
 
-    for label in ["air_pas", "rail_reg", "rail_hst", "bicycle"]:
-        total_nr_vehicles_simple[label] = tkms_to_nr_of_vehicles_fixed(passengerkms_Tpkms[label].unstack(),    mileages[label],  load[label].values[0],    loadfactor[label].values[0])
+    #for label in ["air_pas", "rail_reg", "rail_hst", "bicycle"]:
+    #    total_nr_vehicles_simple[label] = tkms_to_nr_of_vehicles_fixed(passengerkms_Tpkms[label].unstack(),    mileages[label],  load[label].values[0],    loadfactor[label].values[0])
 
-    # %%
+    # 
     # calculate the number of vehicles on the road 
     # (first passenger, then freight)
     air_pas_nr      = tkms_to_nr_of_vehicles_fixed(passengerkms_Tpkms["air"].unstack(),    mileages["air_pas"],  load["air_pas"].values[0],    loadfactor["air_pas"].values[0])
@@ -211,6 +221,7 @@ def preprocessing(base_dir=os.getcwd()):
     rail_freight_nr = tkms_to_nr_of_vehicles_fixed(tonkms_Mtkms["freight train"].unstack()/1000000, mileages["rail_freight"], load["rail_freight"].values[0],         loadfactor["rail_freight"].values[0])
     inland_ship_nr  = tkms_to_nr_of_vehicles_fixed(tonkms_Mtkms["inland shipping"].unstack()/1000000, mileages["inland_shipping"], load["inland_shipping"].values[0], loadfactor["inland_shipping"].values[0])
 
+    # %%
     # passenger cars and buses are calculated separately (due to regional & changeing mileage & load), first the totals
     car_total_vkms  = car_pkms.div(car_loadfactor) * 1000000000000    # now in kms
     car_total_nr    = car_total_vkms.div(kilometrage)                 # total number of cars
@@ -227,8 +238,8 @@ def preprocessing(base_dir=os.getcwd()):
     bus_midi_vkms  = bus_midi_pkms.div(load["midi_bus"].values[0] * loadfactor["midi_bus"].values[0]) * 1000000000000   # now in kms
     bus_midi_nr    = bus_midi_vkms.div(kilometrage_midi_bus)                         # total number of regular buses
 
-
-    # %% for INTERNATIONAL SHIPPING the number of vehicles is calculated differently 
+    # %%
+    # for INTERNATIONAL SHIPPING the number of vehicles is calculated differently 
 
     cap_adjustment  = [1, 1, 1, 1]
     mile_adjustment = [1, 1, 1, 1]
@@ -279,6 +290,55 @@ def preprocessing(base_dir=os.getcwd()):
 
     total_nr_of_ships = ship_small_nr + ship_medium_nr + ship_large_nr + ship_vlarge_nr
     diff_ships_total = total_nr_of_ships.loc[list(range(2005,2018+1)), 28].div(nr_of_boats.sum(axis=1))
+
+    # %% BATTERY WEIGHT SECTION
+    # 1) BUSES: original vehcile shares are distributed into two vehicle types (regular and small midi buses)
+    # vehicle shares are grouped as: a) ICE, b) HEV, c) trolley, d) BEV, but trolley buses are not relevant for midi busses, so the midi shares are re-calculated based on the sum without trolleys
+
+    # Sum of all except Trolleys
+    midi_sum = buses_vshares[list(filter(lambda x: x != 'BusElecTrolley', bus_label))].sum(axis=1)
+
+    # Create the DataFrame with MultiIndex columns
+    buses_battery_weight = pd.DataFrame(index=buses_vshares.index, columns= \
+                                 pd.MultiIndex.from_product([['Regular', 'Midi'], vshares_label], names=['Type', 'Fuel']))
+
+    # Regular buses
+    buses_battery_weight[('Regular', 'ICE')] = buses_vshares[bus_label_ICE].sum(axis=1)
+    buses_battery_weight[('Regular', 'HEV')] = buses_vshares[bus_label_HEV].sum(axis=1)
+    buses_battery_weight[('Regular', 'BEV')] = buses_vshares['BusBattElectric']
+    buses_battery_weight[('Regular', 'Trolley')] = buses_vshares['BusElecTrolley']
+
+    # Midi buses
+    buses_battery_weight[('Midi', 'ICE')] = buses_vshares[bus_label_ICE].sum(axis=1).div(midi_sum)
+    buses_battery_weight[('Midi', 'HEV')] = buses_vshares[bus_label_HEV].sum(axis=1).div(midi_sum)
+    buses_battery_weight[('Midi', 'BEV')] = buses_vshares['BusBattElectric'].div(midi_sum)
+    buses_battery_weight[('Midi', 'Trolley')] = 0
+
+    buses_battery_weight.loc[:, pd.IndexSlice[:, ['FCV', 'PHEV']]] = 0 # TODO Is this needed?
+
+    # 2) TRUCKS
+    # vehicle shares are grouped as: a) ICE, b) HEV, c) PHEV, d) BEV, e) FCV
+    # LCV vehicle shares are determined based on the medium trucks (so not calculated explicitly)
+
+    multi_columns = pd.MultiIndex.from_product([['MFT', 'HFT'], vshares_label], names=['Type', 'Fuel'])
+
+    # Create the DataFrame with MultiIndex columns
+    trucks_battery_weight = pd.DataFrame(index=medtruck_vshares.index.union(hvytruck_vshares.index), columns=multi_columns)
+
+    # Define a dictionary for easy access
+    truck_data = {
+        'Medium Freight Truck': medtruck_vshares,
+        'Heavy Freight Truck': hvytruck_vshares
+    }
+
+    # Assign values for both MFT and HFT
+    for truck_type, truck_df in truck_data.items():
+        trucks_battery_weight[(truck_type, 'ICE')]     = truck_df[truck_label_ICE].sum(axis=1)
+        trucks_battery_weight[(truck_type, 'HEV')]     = truck_df[truck_label_HEV].sum(axis=1)
+        trucks_battery_weight[(truck_type, 'PHEV')]    = truck_df[truck_label_PHEV].sum(axis=1)
+        trucks_battery_weight[(truck_type, 'BEV')]     = truck_df[truck_label_BEV].sum(axis=1)
+        trucks_battery_weight[(truck_type, 'FCV')]     = truck_df[truck_label_FCV].sum(axis=1)
+        trucks_battery_weight[(truck_type, 'Trolley')] = 0  # No trolley trucks
 
     #%% Export intermediate indicators (a.o. files on nr. of vehicles, pkms/tkms)
 
@@ -340,6 +400,7 @@ def preprocessing(base_dir=os.getcwd()):
             vehicle_weights_simple, vehicle_weights_typical,
             lifetimes_vehicles,
             battery_weights_typical, battery_materials, battery_shares
+            buses_battery_weight, trucks_battery_weight
             )
 
 
