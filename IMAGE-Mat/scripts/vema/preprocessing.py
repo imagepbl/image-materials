@@ -194,9 +194,10 @@ def preprocessing(base_dir=os.getcwd()):
     total_nr_vehicles_simple = pd.DataFrame(
         index=list(range(START_YEAR, END_YEAR + 1)),
         columns=pd.MultiIndex.from_product(
-            [["reg_bus", "midi_bus", "Trains", "HST", "Planes", "Bikes",
-              "HFT", "MFT", "LCV", "Cargo Trains", "Ships", "Inland ships",
-              "Cargo Planes"],
+            [["Regular Buses", "Midi Buses", "Trains", "HST", "Planes",
+              "Bikes", "HFT", "MFT", "LCV", "Cargo Trains", "Small Ships",
+              "Medium Ships", "Large Ships", "Very Large Ships",
+              "Inland ships", "Cargo Planes"],
              list(range(1, 29))],
             names=["Type", "DIM_1"]
         )
@@ -263,15 +264,22 @@ def preprocessing(base_dir=os.getcwd()):
     car_total_nr.columns = list(range(1,27))                          # remove region labels (for use in functions later on)
 
     # for buses do the same, but first remove region 27 & 28 (empty & world total) & kilometrage column names
-    bus_regl_pkms  = bus_regl_pkms.drop([27, 28], axis=1) 
-    kilometrage_bus.columns = list(range(1,27))
+    # bus_regl_pkms  = bus_regl_pkms.drop([27, 28], axis=1)
+    # TODO: remove/change this hack!
+    kilometrage_bus[["Extra Column", "Extra Column 2"]] = 1
+    kilometrage_bus.columns = list(range(1,29))
     bus_regl_vkms  = bus_regl_pkms.div(load["reg_bus"].values[0] * loadfactor["reg_bus"].values[0]) * 1000000000000    # now in kms
-    bus_regl_nr    = bus_regl_vkms.div(kilometrage_bus)                              # total number of regular buses
+    print(bus_regl_vkms)
+    print(total_nr_vehicles_simple["Regular Buses"])
+    print(kilometrage_bus)
+    total_nr_vehicles_simple["Regular Buses"] = bus_regl_vkms.div(kilometrage_bus)
 
-    bus_midi_pkms  = bus_midi_pkms.drop([27, 28], axis=1) 
-    kilometrage_midi_bus.columns = list(range(1,27))   
+    # bus_midi_pkms  = bus_midi_pkms.drop([27, 28], axis=1)
+    # TODO: remove/change this hack!
+    kilometrage_midi_bus[["Extra Column", "Extra Column 2"]] = 1
+    kilometrage_midi_bus.columns = list(range(1,29))
     bus_midi_vkms  = bus_midi_pkms.div(load["midi_bus"].values[0] * loadfactor["midi_bus"].values[0]) * 1000000000000   # now in kms
-    bus_midi_nr    = bus_midi_vkms.div(kilometrage_midi_bus)                         # total number of regular buses
+    total_nr_vehicles_simple["Midi Buses"] = bus_midi_vkms.div(kilometrage_midi_bus)
 
 
     # %% for INTERNATIONAL SHIPPING the number of vehicles is calculated differently 
@@ -280,6 +288,7 @@ def preprocessing(base_dir=os.getcwd()):
     mile_adjustment = [1, 1, 1, 1]
 
     #pre-calculate the shares of the boats based on the number of boats, before adding history/future
+    # TODO: boats vs. ships?
     share_of_boats       = nr_of_boats.div(nr_of_boats.sum(axis=1), axis=0)
 
     share_of_boats_yrs    =  interpolate(share_of_boats,   change='yes')   # does change based on trend in original data
@@ -298,32 +307,30 @@ def preprocessing(base_dir=os.getcwd()):
     share_of_boats_tkm_all   = share_of_boats_yrs * cap_of_boats_yrs * loadfactor_boats_yrs * mileage_boats_yrs
     share_of_boats_tkm       = share_of_boats_tkm_all.div(share_of_boats_tkm_all.sum(axis=1), axis=0)
 
-    # 2) get the total tkms shipped by ship-type. (The shares are pre-calculated from 1900 onwards, so a selection from 1971-onwards is applied here)
-    ship_small_tkm  = tonkms_Mtkms["international shipping"].unstack().mul(share_of_boats_tkm["Small"].loc[START_YEAR:], axis=0)
-    ship_medium_tkm = tonkms_Mtkms["international shipping"].unstack().mul(share_of_boats_tkm["Medium"].loc[START_YEAR:], axis=0)
-    ship_large_tkm  = tonkms_Mtkms["international shipping"].unstack().mul(share_of_boats_tkm["Large"].loc[START_YEAR:], axis=0)
-    ship_vlarge_tkm = tonkms_Mtkms["international shipping"].unstack().mul(share_of_boats_tkm["Very Large"].loc[START_YEAR:], axis=0)
-
-    # 3) get the vehicle-kms by ship type (multiply by 1000000 to get from Mega-tkm to tkm)
-    ship_small_vehkm  = ship_small_tkm.mul(1000000).div(cap_of_boats_yrs["Small"].loc[START_YEAR:], axis=0)
-    ship_medium_vehkm = ship_medium_tkm.mul(1000000).div(cap_of_boats_yrs["Medium"].loc[START_YEAR:], axis=0)  
-    ship_large_vehkm  = ship_large_tkm.mul(1000000).div(cap_of_boats_yrs["Large"].loc[START_YEAR:], axis=0)  
-    ship_vlarge_vehkm = ship_vlarge_tkm.mul(1000000).div(cap_of_boats_yrs["Very Large"].loc[START_YEAR:], axis=0) 
-
-    # 4) get the number of ships (stock) by dividing with the mileage
-    ship_small_nr  = ship_small_vehkm.div(mileage_boats_yrs["Small"].loc[START_YEAR:], axis=0)
-    ship_medium_nr = ship_medium_vehkm.div(mileage_boats_yrs["Medium"].loc[START_YEAR:], axis=0)  
-    ship_large_nr  = ship_large_vehkm.div(mileage_boats_yrs["Large"].loc[START_YEAR:], axis=0)  
-    ship_vlarge_nr = ship_vlarge_vehkm.div(mileage_boats_yrs["Very Large"].loc[START_YEAR:], axis=0) 
-
     # for comparison, we find the difference of the known and the calculated nr of ships (global total) in the period 2005-2018
+    # TODO: is this used anywhere?
     diff_ships = pd.DataFrame().reindex_like(nr_of_boats)
-    diff_ships["Small"]      =  ship_small_nr.loc[list(range(2005,2018+1)), 28].div(nr_of_boats["Small"])
-    diff_ships["Medium"]     =  ship_medium_nr.loc[list(range(2005,2018+1)), 28].div(nr_of_boats["Medium"])
-    diff_ships["Large"]      =  ship_large_nr.loc[list(range(2005,2018+1)), 28].div(nr_of_boats["Large"])
-    diff_ships["Very Large"] =  ship_vlarge_nr.loc[list(range(2005,2018+1)), 28].div(nr_of_boats["Very Large"])
 
-    total_nr_of_ships = ship_small_nr + ship_medium_nr + ship_large_nr + ship_vlarge_nr
+    # TODO: it seems this calculation should be able to be simplified
+    for size in ["Small", "Medium", "Large", "Very Large"]:
+        total_nr_vehicles_simple[f"{size} Ships"] = \
+            tonkms_Mtkms["international shipping"].unstack().mul(
+                share_of_boats_tkm[size].loc[START_YEAR:], axis=0
+            ).mul(1000000).div(
+                cap_of_boats_yrs[size].loc[START_YEAR:], axis=0
+            ).div(
+                mileage_boats_yrs[size].loc[START_YEAR:], axis=0
+            )
+        diff_ships[size] = total_nr_vehicles_simple[f"{size} Ships"].loc[
+            list(range(2005,2018+1)),
+            28
+        ].div(nr_of_boats[size])
+
+    # TODO: remove this, this should be done differently somehow.
+    total_nr_of_ships = total_nr_vehicles_simple["Small Ships"] + \
+        total_nr_vehicles_simple["Medium Ships"] + \
+        total_nr_vehicles_simple["Large Ships"] + \
+        total_nr_vehicles_simple["Very Large Ships"]
     diff_ships_total = total_nr_of_ships.loc[list(range(2005,2018+1)), 28].div(nr_of_boats.sum(axis=1))
 
     #%% Export intermediate indicators (a.o. files on nr. of vehicles, pkms/tkms)
@@ -332,7 +339,7 @@ def preprocessing(base_dir=os.getcwd()):
     region_list = list(range(1,27))
     index = pd.MultiIndex.from_product([list(total_nr_of_ships.index), region_list], names = ["years","regions"])
     total_nr_vehicles = pd.DataFrame(index=index, columns=columns_vehicle_output)
-    total_nr_vehicles["Buses"]        = bus_regl_nr[region_list].stack() + bus_midi_nr[region_list].stack()
+    total_nr_vehicles["Buses"]        = total_nr_vehicles_simple["Regular Buses"][region_list].stack() + total_nr_vehicles_simple["Midi Buses"][region_list].stack()
     total_nr_vehicles["Trains"]       = total_nr_vehicles_simple["Trains"][region_list].stack()
     total_nr_vehicles["HST"]          = total_nr_vehicles_simple["HST"][region_list].stack()
     total_nr_vehicles["Cars"]         = car_total_nr[region_list].stack()
