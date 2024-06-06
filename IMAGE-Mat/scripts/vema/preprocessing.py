@@ -269,9 +269,6 @@ def preprocessing(base_dir=os.getcwd()):
     kilometrage_bus[["Extra Column", "Extra Column 2"]] = 1
     kilometrage_bus.columns = list(range(1,29))
     bus_regl_vkms  = bus_regl_pkms.div(load["reg_bus"].values[0] * loadfactor["reg_bus"].values[0]) * 1000000000000    # now in kms
-    print(bus_regl_vkms)
-    print(total_nr_vehicles_simple["Regular Buses"])
-    print(kilometrage_bus)
     total_nr_vehicles_simple["Regular Buses"] = bus_regl_vkms.div(kilometrage_bus)
 
     # bus_midi_pkms  = bus_midi_pkms.drop([27, 28], axis=1)
