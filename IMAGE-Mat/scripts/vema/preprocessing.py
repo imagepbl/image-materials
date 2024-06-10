@@ -189,28 +189,74 @@ def preprocessing(base_dir=os.getcwd()):
 
     # %% 
     # Calculate the NUMBER OF VEHICLES (stock, on the road) to fulfull the ton-kilometers transport demand
+    # TODO: exchange for proper region labels defined elsewhere
+    # TODO: look at vehicle type names
+    total_nr_vehicles_simple = pd.DataFrame(
+        index=list(range(START_YEAR, END_YEAR + 1)),
+        columns=pd.MultiIndex.from_product(
+            [["Regular Buses", "Midi Buses", "Trains", "HST", "Planes",
+              "Bikes", "HFT", "MFT", "LCV", "Cargo Trains", "Small Ships",
+              "Medium Ships", "Large Ships", "Very Large Ships",
+              "Inland ships", "Cargo Planes"],
+             list(range(1, 29))],
+            names=["Type", "DIM_1"]
+        )
+    )
+    total_nr_vehicles_simple.index.name = "time"
 
-    #passengerkms_Tpkms = passengerkms_Tpkms.unstack("DIM_1")
-    #total_nr_vehicles_simple = pd.DataFrame().reindex_like(passengerkms_Tpkms)
+    # Fill the vehicle types that need no conversion
+    for in_label, out_label in [
+        ("air_pas", "Planes"), ("rail_reg", "Trains"),
+        ("rail_hst", "HST"), ("bicycle", "Bikes")
+    ]:
+        total_nr_vehicles_simple[out_label] = tkms_to_nr_of_vehicles_fixed(
+            passengerkms_Tpkms[in_label].unstack(),
+            mileages[in_label].values[0],
+            load[in_label].values[0],
+            loadfactor[in_label].values[0]
+        )
 
-    #for label in ["air_pas", "rail_reg", "rail_hst", "bicycle"]:
-    #    total_nr_vehicles_simple[label] = tkms_to_nr_of_vehicles_fixed(passengerkms_Tpkms[label].unstack(),    mileages[label],  load[label].values[0],    loadfactor[label].values[0])
-
-    #
-    # calculate the number of vehicles on the road 
-    # (first passenger, then freight)
-    air_pas_nr      = tkms_to_nr_of_vehicles_fixed(passengerkms_Tpkms["air"].unstack(),    mileages["air_pas"],  load["air_pas"].values[0],    loadfactor["air_pas"].values[0])
-    rail_reg_nr     = tkms_to_nr_of_vehicles_fixed(passengerkms_Tpkms["train"].unstack(),  mileages["rail_reg"], load["rail_reg"].values[0],   loadfactor["rail_reg"].values[0])
-    rail_hst_nr     = tkms_to_nr_of_vehicles_fixed(passengerkms_Tpkms["hst"].unstack(),    mileages["rail_hst"], load["rail_hst"].values[0],   loadfactor["rail_hst"].values[0])
-    bikes_nr        = tkms_to_nr_of_vehicles_fixed(passengerkms_Tpkms["biking"].unstack(), mileages["bicycle"],  load["bicycle"].values[0],    loadfactor["bicycle"].values[0])
-
-    # original ton kilometers are in Mega-ton-kms, div by 1000000 to harmonize with pkms which are in Tera pkms
-    trucks_HFT_nr   = tkms_to_nr_of_vehicles_fixed(trucks_HFT_tkm/1000000,   mileages["HFT"],          load["HFT"].values[0],         loadfactor["HFT"].values[0])
-    trucks_MFT_nr   = tkms_to_nr_of_vehicles_fixed(trucks_MFT_tkm/1000000,   mileages["MFT"],          load["MFT"].values[0],         loadfactor["MFT"].values[0])
-    trucks_LCV_nr   = tkms_to_nr_of_vehicles_fixed(trucks_LCV_tkm/1000000,   mileages["LCV"],          load["LCV"].values[0],         loadfactor["LCV"].values[0])
-    air_freight_nr  = tkms_to_nr_of_vehicles_fixed(air_freight_tkms/1000000,  mileages["air_freight"], load["air_freight"].values[0], loadfactor["air_freight"].values[0])
-    rail_freight_nr = tkms_to_nr_of_vehicles_fixed(tonkms_Mtkms["freight train"].unstack()/1000000, mileages["rail_freight"], load["rail_freight"].values[0],         loadfactor["rail_freight"].values[0])
-    inland_ship_nr  = tkms_to_nr_of_vehicles_fixed(tonkms_Mtkms["inland shipping"].unstack()/1000000, mileages["inland_shipping"], load["inland_shipping"].values[0], loadfactor["inland_shipping"].values[0])
+    # %%
+    # Fill the vehicle types that need conversion from Mega-ton-kms
+    # TODO: loops later, just fill the data for now
+    # original ton kilometers are in Mega-ton-kms, div by 1000000 to
+    # harmonize with pkms which are in Tera pkms
+    total_nr_vehicles_simple["HFT"] = tkms_to_nr_of_vehicles_fixed(
+        trucks_HFT_tkm / 1000000,
+        mileages["HFT"].values[0],
+        load["HFT"].values[0],
+        loadfactor["HFT"].values[0]
+    )
+    total_nr_vehicles_simple["MFT"] = tkms_to_nr_of_vehicles_fixed(
+        trucks_MFT_tkm / 1000000,
+        mileages["MFT"].values[0],
+        load["MFT"].values[0],
+        loadfactor["MFT"].values[0]
+    )
+    total_nr_vehicles_simple["LCV"] = tkms_to_nr_of_vehicles_fixed(
+        trucks_LCV_tkm / 1000000,
+        mileages["LCV"].values[0],
+        load["LCV"].values[0],
+        loadfactor["LCV"].values[0]
+    )
+    total_nr_vehicles_simple["Cargo Planes"] = tkms_to_nr_of_vehicles_fixed(
+        air_freight_tkms / 1000000,
+        mileages["air_freight"].values[0],
+        load["air_freight"].values[0],
+        loadfactor["air_freight"].values[0]
+    )
+    total_nr_vehicles_simple["Cargo Trains"] = tkms_to_nr_of_vehicles_fixed(
+        tonkms_Mtkms["freight train"].unstack() / 1000000,
+        mileages["rail_freight"].values[0],
+        load["rail_freight"].values[0],
+        loadfactor["rail_freight"].values[0]
+    )
+    total_nr_vehicles_simple["Inland ships"] = tkms_to_nr_of_vehicles_fixed(
+        tonkms_Mtkms["inland shipping"].unstack() / 1000000,
+        mileages["inland_shipping"].values[0],
+        load["inland_shipping"].values[0],
+        loadfactor["inland_shipping"].values[0]
+    )
 
     # %%
     # passenger cars and buses are calculated separately (due to regional & changeing mileage & load), first the totals
@@ -219,15 +265,19 @@ def preprocessing(base_dir=os.getcwd()):
     car_total_nr.columns = list(range(1,27))                          # remove region labels (for use in functions later on)
 
     # for buses do the same, but first remove region 27 & 28 (empty & world total) & kilometrage column names
-    bus_regl_pkms  = bus_regl_pkms.drop([27, 28], axis=1) 
-    kilometrage_bus.columns = list(range(1,27))
+    # bus_regl_pkms  = bus_regl_pkms.drop([27, 28], axis=1)
+    # TODO: remove/change this hack!
+    kilometrage_bus[["Extra Column", "Extra Column 2"]] = 1
+    kilometrage_bus.columns = list(range(1,29))
     bus_regl_vkms  = bus_regl_pkms.div(load["reg_bus"].values[0] * loadfactor["reg_bus"].values[0]) * 1000000000000    # now in kms
-    bus_regl_nr    = bus_regl_vkms.div(kilometrage_bus)                              # total number of regular buses
+    total_nr_vehicles_simple["Regular Buses"] = bus_regl_vkms.div(kilometrage_bus)
 
-    bus_midi_pkms  = bus_midi_pkms.drop([27, 28], axis=1) 
-    kilometrage_midi_bus.columns = list(range(1,27))   
+    # bus_midi_pkms  = bus_midi_pkms.drop([27, 28], axis=1)
+    # TODO: remove/change this hack!
+    kilometrage_midi_bus[["Extra Column", "Extra Column 2"]] = 1
+    kilometrage_midi_bus.columns = list(range(1,29))
     bus_midi_vkms  = bus_midi_pkms.div(load["midi_bus"].values[0] * loadfactor["midi_bus"].values[0]) * 1000000000000   # now in kms
-    bus_midi_nr    = bus_midi_vkms.div(kilometrage_midi_bus)                         # total number of regular buses
+    total_nr_vehicles_simple["Midi Buses"] = bus_midi_vkms.div(kilometrage_midi_bus)
 
     # %%
     # for INTERNATIONAL SHIPPING the number of vehicles is calculated differently 
@@ -236,6 +286,7 @@ def preprocessing(base_dir=os.getcwd()):
     mile_adjustment = [1, 1, 1, 1]
 
     #pre-calculate the shares of the boats based on the number of boats, before adding history/future
+    # TODO: boats vs. ships?
     share_of_boats       = nr_of_boats.div(nr_of_boats.sum(axis=1), axis=0)
 
     share_of_boats_yrs    =  interpolate(share_of_boats,   change='yes')   # does change based on trend in original data
@@ -254,32 +305,30 @@ def preprocessing(base_dir=os.getcwd()):
     share_of_boats_tkm_all   = share_of_boats_yrs * cap_of_boats_yrs * loadfactor_boats_yrs * mileage_boats_yrs
     share_of_boats_tkm       = share_of_boats_tkm_all.div(share_of_boats_tkm_all.sum(axis=1), axis=0)
 
-    # 2) get the total tkms shipped by ship-type. (The shares are pre-calculated from 1900 onwards, so a selection from 1971-onwards is applied here)
-    ship_small_tkm  = tonkms_Mtkms["international shipping"].unstack().mul(share_of_boats_tkm["Small"].loc[START_YEAR:], axis=0)
-    ship_medium_tkm = tonkms_Mtkms["international shipping"].unstack().mul(share_of_boats_tkm["Medium"].loc[START_YEAR:], axis=0)
-    ship_large_tkm  = tonkms_Mtkms["international shipping"].unstack().mul(share_of_boats_tkm["Large"].loc[START_YEAR:], axis=0)
-    ship_vlarge_tkm = tonkms_Mtkms["international shipping"].unstack().mul(share_of_boats_tkm["Very Large"].loc[START_YEAR:], axis=0)
-
-    # 3) get the vehicle-kms by ship type (multiply by 1000000 to get from Mega-tkm to tkm)
-    ship_small_vehkm  = ship_small_tkm.mul(1000000).div(cap_of_boats_yrs["Small"].loc[START_YEAR:], axis=0)
-    ship_medium_vehkm = ship_medium_tkm.mul(1000000).div(cap_of_boats_yrs["Medium"].loc[START_YEAR:], axis=0)  
-    ship_large_vehkm  = ship_large_tkm.mul(1000000).div(cap_of_boats_yrs["Large"].loc[START_YEAR:], axis=0)  
-    ship_vlarge_vehkm = ship_vlarge_tkm.mul(1000000).div(cap_of_boats_yrs["Very Large"].loc[START_YEAR:], axis=0) 
-
-    # 4) get the number of ships (stock) by dividing with the mileage
-    ship_small_nr  = ship_small_vehkm.div(mileage_boats_yrs["Small"].loc[START_YEAR:], axis=0)
-    ship_medium_nr = ship_medium_vehkm.div(mileage_boats_yrs["Medium"].loc[START_YEAR:], axis=0)  
-    ship_large_nr  = ship_large_vehkm.div(mileage_boats_yrs["Large"].loc[START_YEAR:], axis=0)  
-    ship_vlarge_nr = ship_vlarge_vehkm.div(mileage_boats_yrs["Very Large"].loc[START_YEAR:], axis=0) 
-
     # for comparison, we find the difference of the known and the calculated nr of ships (global total) in the period 2005-2018
+    # TODO: is this used anywhere?
     diff_ships = pd.DataFrame().reindex_like(nr_of_boats)
-    diff_ships["Small"]      =  ship_small_nr.loc[list(range(2005,2018+1)), 28].div(nr_of_boats["Small"])
-    diff_ships["Medium"]     =  ship_medium_nr.loc[list(range(2005,2018+1)), 28].div(nr_of_boats["Medium"])
-    diff_ships["Large"]      =  ship_large_nr.loc[list(range(2005,2018+1)), 28].div(nr_of_boats["Large"])
-    diff_ships["Very Large"] =  ship_vlarge_nr.loc[list(range(2005,2018+1)), 28].div(nr_of_boats["Very Large"])
 
-    total_nr_of_ships = ship_small_nr + ship_medium_nr + ship_large_nr + ship_vlarge_nr
+    # TODO: it seems this calculation should be able to be simplified
+    for size in ["Small", "Medium", "Large", "Very Large"]:
+        total_nr_vehicles_simple[f"{size} Ships"] = \
+            tonkms_Mtkms["international shipping"].unstack().mul(
+                share_of_boats_tkm[size].loc[START_YEAR:], axis=0
+            ).mul(1000000).div(
+                cap_of_boats_yrs[size].loc[START_YEAR:], axis=0
+            ).div(
+                mileage_boats_yrs[size].loc[START_YEAR:], axis=0
+            )
+        diff_ships[size] = total_nr_vehicles_simple[f"{size} Ships"].loc[
+            list(range(2005,2018+1)),
+            28
+        ].div(nr_of_boats[size])
+
+    # TODO: remove this, this should be done differently somehow.
+    total_nr_of_ships = total_nr_vehicles_simple["Small Ships"] + \
+        total_nr_vehicles_simple["Medium Ships"] + \
+        total_nr_vehicles_simple["Large Ships"] + \
+        total_nr_vehicles_simple["Very Large Ships"]
     diff_ships_total = total_nr_of_ships.loc[list(range(2005,2018+1)), 28].div(nr_of_boats.sum(axis=1))
 
     # %% BATTERY WEIGHT SECTION
@@ -337,17 +386,17 @@ def preprocessing(base_dir=os.getcwd()):
     region_list = list(range(1,27))
     index = pd.MultiIndex.from_product([list(total_nr_of_ships.index), region_list], names = ["years","regions"])
     total_nr_vehicles = pd.DataFrame(index=index, columns=columns_vehicle_output)
-    total_nr_vehicles["Buses"]        = bus_regl_nr[region_list].stack() + bus_midi_nr[region_list].stack()
-    total_nr_vehicles["Trains"]       = rail_reg_nr[region_list].stack()
-    total_nr_vehicles["HST"]          = rail_hst_nr[region_list].stack()
+    total_nr_vehicles["Buses"]        = total_nr_vehicles_simple["Regular Buses"][region_list].stack() + total_nr_vehicles_simple["Midi Buses"][region_list].stack()
+    total_nr_vehicles["Trains"]       = total_nr_vehicles_simple["Trains"][region_list].stack()
+    total_nr_vehicles["HST"]          = total_nr_vehicles_simple["HST"][region_list].stack()
     total_nr_vehicles["Cars"]         = car_total_nr[region_list].stack()
-    total_nr_vehicles["Planes"]       = air_pas_nr[region_list].stack()
-    total_nr_vehicles["Bikes"]        = bikes_nr[region_list].stack()
-    total_nr_vehicles["Trucks"]       = trucks_HFT_nr[region_list].stack() + trucks_MFT_nr[region_list].stack() + trucks_LCV_nr[region_list].stack()
-    total_nr_vehicles["Cargo Trains"] = rail_freight_nr[region_list].stack()
+    total_nr_vehicles["Planes"]       = total_nr_vehicles_simple["Planes"][region_list].stack()
+    total_nr_vehicles["Bikes"]        = total_nr_vehicles_simple["Bikes"][region_list].stack()
+    total_nr_vehicles["Trucks"]       = total_nr_vehicles_simple["HFT"][region_list].stack() + total_nr_vehicles_simple["MFT"][region_list].stack() + total_nr_vehicles_simple["LCV"][region_list].stack()
+    total_nr_vehicles["Cargo Trains"] = total_nr_vehicles_simple["Cargo Trains"][region_list].stack()
     total_nr_vehicles["Ships"]        = total_nr_of_ships[region_list].stack()
-    total_nr_vehicles["Inland ships"] = inland_ship_nr[region_list].stack()  
-    total_nr_vehicles["Cargo Planes"] = air_freight_nr[region_list].stack() 
+    total_nr_vehicles["Inland ships"] = total_nr_vehicles_simple["Inland ships"][region_list].stack()  
+    total_nr_vehicles["Cargo Planes"] = total_nr_vehicles_simple["Cargo Planes"][region_list].stack() 
 
     # Generate csv output file on pkms & tkms (same format as files on number of vehicles (also used later on)), unit: pkm or tkm 
     region_list = list(range(1,27))
@@ -355,11 +404,11 @@ def preprocessing(base_dir=os.getcwd()):
     index = pd.MultiIndex.from_product([list(total_nr_of_ships.index), region_list], names = ["years","regions"])
     total_pkm_tkm = pd.DataFrame(index=index, columns=columns_vehicle_output)
     total_pkm_tkm["Buses"]        = (bus_regl_pkms[region_list].stack() + bus_midi_pkms[region_list].stack()) * 1000000000000
-    total_pkm_tkm["Trains"]       = passengerkms_Tpkms["train"]   * 1000000000000                              
-    total_pkm_tkm["HST"]          = passengerkms_Tpkms["hst"]     * 1000000000000
+    total_pkm_tkm["Trains"]       = passengerkms_Tpkms["rail_reg"]   * 1000000000000                              
+    total_pkm_tkm["HST"]          = passengerkms_Tpkms["rail_hst"]     * 1000000000000
     total_pkm_tkm["Cars"]         = car_pkms[region_list].stack() * 1000000000000
-    total_pkm_tkm["Planes"]       = passengerkms_Tpkms["air"]     * 1000000000000
-    total_pkm_tkm["Bikes"]        = passengerkms_Tpkms["biking"]  * 1000000000000
+    total_pkm_tkm["Planes"]       = passengerkms_Tpkms["air_pas"]     * 1000000000000
+    total_pkm_tkm["Bikes"]        = passengerkms_Tpkms["bicycle"]  * 1000000000000
     total_pkm_tkm["Trucks"]       = (trucks_HFT_tkm[region_list].stack() + trucks_MFT_tkm[region_list].stack() + trucks_LCV_tkm[region_list].stack()) * 1000000
     total_pkm_tkm["Cargo Trains"] = tonkms_Mtkms["freight train"] * 1000000
     total_pkm_tkm["Ships"]        = tonkms_Mtkms["international shipping"] * 1000000 
