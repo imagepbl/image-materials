@@ -1,5 +1,6 @@
 # %%
 import argparse
+from pathlib import Path
 import pandas as pd
 # import numpy as np
 # import matplotlib.pyplot as plt
@@ -14,16 +15,20 @@ from modelling_functions import interpolate, tkms_to_nr_of_vehicles_fixed
 # Path fragments and constants
 from constants import PROJECT, SCEN, FOLDER, START_YEAR, END_YEAR, LOAD_FACTOR
 # Labels
-from constants import tkms_label, pkms_label, truck_label, bus_label, \
-    columns_vehicle_output, \
-    bus_label_ICE, bus_label_HEV, \
-    truck_label_ICE, truck_label_HEV, truck_label_PHEV, \
-    truck_label_BEV, truck_label_FCV
+from constants import ( 
+                        tkms_label, pkms_label, truck_label, bus_label, 
+                        columns_vehicle_output, 
+                        bus_label_ICE, bus_label_HEV,
+                        truck_label_ICE, truck_label_HEV, truck_label_PHEV, 
+                        truck_label_BEV, truck_label_FCV, vshares_label
+                       )
 
 
 def preprocessing(base_dir=os.getcwd()):
     """Wrapper function for the preprocessing part of the VEMA script.
     """
+    print(base_dir)
+    base_dir = Path(base_dir)
     # %%
     # base_dir=Path(os.getcwd())
     base_input_data_path = base_dir.joinpath("..", "..", "input", "vehicles")
@@ -435,11 +440,11 @@ def preprocessing(base_dir=os.getcwd()):
     total_pkm_tkm.sum(axis=0, level=0).to_csv(standard_output_folder.joinpath("global_pkm_tkm.csv"), index=True) # total global pkms & tkms 
     total_pkm_tkm.to_csv(standard_output_folder.joinpath("region_pkm_tkm.csv"), index=True)  # regional pkms & tkms
 
-    return (total_nr_vehicles_simple, total_nr_vehicles_typical, 
+    return (total_nr_vehicles_simple, car_total_nr, 
             material_fractions_simple, material_fractions_typical, 
             vehicle_weights_simple, vehicle_weights_typical,
             lifetimes_vehicles,
-            battery_weights_typical, battery_materials, battery_shares
+            battery_weights_typical, battery_materials, battery_shares,
             buses_battery_weight, trucks_battery_weight
             )
 

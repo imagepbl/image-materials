@@ -74,7 +74,7 @@ truck_label_HEV  = ['ICE-HEV-gasoline', 'ICE-HEV-diesel oil', 'ICE-HEV-H2', 'ICE
 truck_label_PHEV = ['PEV-10 OilElec.', 'PEV-30 OilElec.', 'PEV-60 OilElec.', 'PEV-10 BioElec.', 'PEV-30 BioElec.', 'PEV-60 BioElec.']
 truck_label_BEV  = ['BEV Elec.', 'BEV Elec.', 'BEV Elec.']
 truck_label_FCV  = ['FCV Oil', 'FCV Bio', 'FCV H2']
-# vshares_label    = ['ICE', 'HEV', 'PHEV', 'BEV', 'FCV', 'Trolley']
+vshares_label    = ['ICE', 'HEV', 'PHEV', 'BEV', 'FCV', 'Trolley']
 
 # --- Paths
 
