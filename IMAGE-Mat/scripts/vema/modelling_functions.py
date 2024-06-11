@@ -1,5 +1,8 @@
 import pandas as pd
 
+from constants import FIRST_YEAR, END_YEAR, REGIONS
+
+
 # Generic interpolation function
 def interpolate(original: pd.DataFrame, first_year=[], change: str='no'):
     """
