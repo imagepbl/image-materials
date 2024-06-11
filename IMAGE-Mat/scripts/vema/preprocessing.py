@@ -13,7 +13,7 @@ from pathlib import Path
 from read_scripts.read_mym import read_mym_df
 from modelling_functions import interpolate, tkms_to_nr_of_vehicles_fixed
 # Path fragments and constants
-from constants import PROJECT, SCEN, FOLDER, START_YEAR, END_YEAR, LOAD_FACTOR
+from constants import PROJECT, SCEN, FOLDER, START_YEAR, END_YEAR, LOAD_FACTOR, REGIONS
 # Labels
 from constants import ( 
                         tkms_label, pkms_label, truck_label, bus_label, 
@@ -30,7 +30,7 @@ def preprocessing(base_dir=os.getcwd()):
     print(base_dir)
     base_dir = Path(base_dir)
     # %%
-    # base_dir=Path(os.getcwd())
+    base_dir=Path(os.getcwd())
     base_input_data_path = base_dir.joinpath("..", "..", "input", "vehicles")
     standard_input_data_path = base_input_data_path.joinpath("standard_data")
     image_folder = base_dir.joinpath("..", "..", "image", PROJECT, SCEN)
@@ -47,7 +47,7 @@ def preprocessing(base_dir=os.getcwd()):
     load = pd.read_csv(standard_input_data_path.joinpath("load_pass_and_tonnes.csv"))             # TODO: add description again here!
     loadfactor = pd.read_csv(standard_input_data_path.joinpath("loadfactor_percentages.csv"))     # Percentage of the maximum load that is on average 
     market_share = pd.read_csv(standard_input_data_path.joinpath("fraction_tkm_pkm.csv"))         # Percentage of tonne-/passengerkilometres
-    first_year_vehicle = pd.read_csv(standard_input_data_path.joinpath("first_year_vehicle.csv")) # first year of operation per vehicle-type
+    first_year_vehicle = pd.read_csv(standard_input_data_path.joinpath("first_year_vehicle.csv")) # first year of operation per vehicle-type - 1807 was originally in the dataframe
     battery_shares_full = pd.read_csv(standard_input_data_path.joinpath("battery_share_inflow.csv"), index_col=0)  # The share of the battery market (8 battery types used in vehicles), this data is based on a Multi-Nomial-Logit market model & costs in https://doi.org/10.1016/j.resconrec.2020.105200 - since this is scenario dependent it"s placed under the "IMAGE" scenario folder
 
     # Files related to the international shipping
@@ -199,10 +199,12 @@ def preprocessing(base_dir=os.getcwd()):
     total_nr_vehicles_simple = pd.DataFrame(
         index=list(range(START_YEAR, END_YEAR + 1)),
         columns=pd.MultiIndex.from_product(
-            [["Regular Buses", "Midi Buses", "Trains", "HST", "Planes",
-              "Bikes", "HFT", "MFT", "LCV", "Cargo Trains", "Small Ships",
+            [["Buses", "Midi Buses", "Trains", "High Speed Trains",
+              "Passenger Planes",
+              "Bikes", "Heavy Freight Truck", "Medium Freight Truck", 
+              "Light Commercial Vehicle", "Freight Trains", "Small Ships",
               "Medium Ships", "Large Ships", "Very Large Ships",
-              "Inland ships", "Cargo Planes"],
+              "Inland Ships", "Freight Planes"],
              list(range(1, 29))],
             names=["Type", "DIM_1"]
         )
@@ -211,8 +213,8 @@ def preprocessing(base_dir=os.getcwd()):
 
     # Fill the vehicle types that need no conversion
     for in_label, out_label in [
-        ("air_pas", "Planes"), ("rail_reg", "Trains"),
-        ("rail_hst", "HST"), ("bicycle", "Bikes")
+        ("air_pas", "Passenger Planes"), ("rail_reg", "Trains"),
+        ("rail_hst", "High Speed Trains"), ("bicycle", "Bikes")
     ]:
         total_nr_vehicles_simple[out_label] = tkms_to_nr_of_vehicles_fixed(
             passengerkms_Tpkms[in_label].unstack(),
@@ -226,37 +228,37 @@ def preprocessing(base_dir=os.getcwd()):
     # TODO: loops later, just fill the data for now
     # original ton kilometers are in Mega-ton-kms, div by 1000000 to
     # harmonize with pkms which are in Tera pkms
-    total_nr_vehicles_simple["HFT"] = tkms_to_nr_of_vehicles_fixed(
+    total_nr_vehicles_simple["Heavy Freight Truck"] = tkms_to_nr_of_vehicles_fixed(
         trucks_HFT_tkm / 1000000,
         mileages["HFT"].values[0],
         load["HFT"].values[0],
         loadfactor["HFT"].values[0]
     )
-    total_nr_vehicles_simple["MFT"] = tkms_to_nr_of_vehicles_fixed(
+    total_nr_vehicles_simple["Medium Freight Truck"] = tkms_to_nr_of_vehicles_fixed(
         trucks_MFT_tkm / 1000000,
         mileages["MFT"].values[0],
         load["MFT"].values[0],
         loadfactor["MFT"].values[0]
     )
-    total_nr_vehicles_simple["LCV"] = tkms_to_nr_of_vehicles_fixed(
+    total_nr_vehicles_simple["Light Commercial Vehicle"] = tkms_to_nr_of_vehicles_fixed(
         trucks_LCV_tkm / 1000000,
         mileages["LCV"].values[0],
         load["LCV"].values[0],
         loadfactor["LCV"].values[0]
     )
-    total_nr_vehicles_simple["Cargo Planes"] = tkms_to_nr_of_vehicles_fixed(
+    total_nr_vehicles_simple["Freight Planes"] = tkms_to_nr_of_vehicles_fixed(
         air_freight_tkms / 1000000,
         mileages["air_freight"].values[0],
         load["air_freight"].values[0],
         loadfactor["air_freight"].values[0]
     )
-    total_nr_vehicles_simple["Cargo Trains"] = tkms_to_nr_of_vehicles_fixed(
+    total_nr_vehicles_simple["Freight Trains"] = tkms_to_nr_of_vehicles_fixed(
         tonkms_Mtkms["freight train"].unstack() / 1000000,
         mileages["rail_freight"].values[0],
         load["rail_freight"].values[0],
         loadfactor["rail_freight"].values[0]
     )
-    total_nr_vehicles_simple["Inland ships"] = tkms_to_nr_of_vehicles_fixed(
+    total_nr_vehicles_simple["Inland Ships"] = tkms_to_nr_of_vehicles_fixed(
         tonkms_Mtkms["inland shipping"].unstack() / 1000000,
         mileages["inland_shipping"].values[0],
         load["inland_shipping"].values[0],
@@ -275,7 +277,7 @@ def preprocessing(base_dir=os.getcwd()):
     kilometrage_bus[["Extra Column", "Extra Column 2"]] = 1
     kilometrage_bus.columns = list(range(1,29))
     bus_regl_vkms  = bus_regl_pkms.div(load["reg_bus"].values[0] * loadfactor["reg_bus"].values[0]) * 1000000000000    # now in kms
-    total_nr_vehicles_simple["Regular Buses"] = bus_regl_vkms.div(kilometrage_bus)
+    total_nr_vehicles_simple["Buses"] = bus_regl_vkms.div(kilometrage_bus)
 
     # bus_midi_pkms  = bus_midi_pkms.drop([27, 28], axis=1)
     # TODO: remove/change this hack!
@@ -385,6 +387,10 @@ def preprocessing(base_dir=os.getcwd()):
         trucks_battery_weight[(truck_type, 'FCV')]     = truck_df[truck_label_FCV].sum(axis=1)
         trucks_battery_weight[(truck_type, 'Trolley')] = 0  # No trolley trucks
 
+    #%% Calculate historic tail
+    first_year = first_year_vehicle.drop(columns = ["Cars"])
+    interpolate(total_nr_vehicles_simple, first_year)
+    
     #%% Export intermediate indicators (a.o. files on nr. of vehicles, pkms/tkms)
 
     # Export total global number of vehicles in the fleet (stock) as csv
@@ -432,6 +438,7 @@ def preprocessing(base_dir=os.getcwd()):
     #%% Save output
     # output to IRP
     # output transport drivers to output folder for 450 vs Bl comparisson in overarching figures later on
+    """
     tonkms_Mtkms.to_csv(standard_output_folder.joinpath("transport_tkms.csv"), index=True)       # in Mega tkms
     passengerkms_Tpkms.to_csv(standard_output_folder.joinpath("transport_pkms.csv"), index=True) # in Tera pkms
     vehicleshare_cars.to_csv(standard_output_folder.joinpath("car_type_share_regional.csv"), index=True)
@@ -439,6 +446,8 @@ def preprocessing(base_dir=os.getcwd()):
     total_nr_vehicles.sum(axis=0, level=0).to_csv(standard_output_folder.joinpath("global_vehicle_nr.csv"), index=True) # total global nr of vehicles 
     total_pkm_tkm.sum(axis=0, level=0).to_csv(standard_output_folder.joinpath("global_pkm_tkm.csv"), index=True) # total global pkms & tkms 
     total_pkm_tkm.to_csv(standard_output_folder.joinpath("region_pkm_tkm.csv"), index=True)  # regional pkms & tkms
+
+    """
 
     res_dict = { 
                 'total_nr_vehicles_simple': total_nr_vehicles_simple,
@@ -457,6 +466,7 @@ def preprocessing(base_dir=os.getcwd()):
 
     return res_dict
 
+#%%
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="IMAGE Materials VEMA preprocessing script."
