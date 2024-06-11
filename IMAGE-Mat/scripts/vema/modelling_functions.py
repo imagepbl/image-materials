@@ -1,5 +1,7 @@
 import pandas as pd
 
+print('Hello')
+
 # Generic interpolation function
 def interpolate(original: pd.DataFrame, first_year=[], change: str='no'):
     """
