@@ -50,66 +50,6 @@ ship_medium_in,  ship_medium_out_coh,  ship_medium_stock_coh  = inflow_outflow_d
 ship_large_in,   ship_large_out_coh,   ship_large_stock_coh   = inflow_outflow_dynamic_np(ship_large_nr.to_numpy(),   lifetimes_vehicles_mean['sea_shipping_large'], lifetimes_vehicles_stdev['sea_shipping_large'], 'FoldedNormal')
 ship_vlarge_in,  ship_vlarge_out_coh,  ship_vlarge_stock_coh  = inflow_outflow_dynamic_np(ship_vlarge_nr.to_numpy(),  lifetimes_vehicles_mean['sea_shipping_vl'],    lifetimes_vehicles_stdev['sea_shipping_vl'],    'FoldedNormal')
 
-#%% BATTERY VEHICLE CALCULATIONS - Determine the fraction of the fleet that uses batteries, based on vehicle share files
-# Batteries are relevant for 1) BUSES 2) TRUCKS
-# We use fixed weight & material content assumptions, but we use the development of battery energy density (from the electricity storage calculations) to derive a changing battery capacity (and thus range)
-# Battery weight is assumed to be in-addition to the regular vehicle weight
-
-bus_label        = ['BusOil',	'BusBio',	'BusGas',	'BusElecTrolley',	'Bus Hybrid1',	'Bus Hybrid2',	'BusBattElectric', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
-bus_label_ICE    = ['BusOil',	'BusBio',	'BusGas']
-bus_label_HEV    = ['BusElecTrolley',	'Bus Hybrid1']
-truck_label      = ['Conv. ICE(2000)',	'Conv. ICE(2010)', 'Adv. ICEOil',	'Adv. ICEH2', 'Turbo-petrol IC', 'Diesel ICEOil', 'Diesel ICEBio', 'ICE-HEV-gasoline', 'ICE-HEV-diesel oil', 'ICE-HEV-H2', 'ICE-HEV-CNG Gas', 'ICE-HEV-diesel bio', 'FCV Oil', 'FCV Bio', 'FCV H2', 'PEV-10 OilElec.', 'PEV-30 OilElec.', 'PEV-60 OilElec.', 'PEV-10 BioElec.', 'PEV-30 BioElec.', 'PEV-60 BioElec.', 'BEV Elec.', 'BEV Elec.', 'BEV Elec.', 'BEV Elec.']
-truck_label_ICE  = ['Conv. ICE(2000)',	'Conv. ICE(2010)', 'Adv. ICEOil', 'Adv. ICEH2', 'Turbo-petrol IC', 'Diesel ICEOil', 'Diesel ICEBio']
-truck_label_HEV  = ['ICE-HEV-gasoline', 'ICE-HEV-diesel oil', 'ICE-HEV-H2', 'ICE-HEV-CNG Gas', 'ICE-HEV-diesel bio']
-truck_label_PHEV = ['PEV-10 OilElec.', 'PEV-30 OilElec.', 'PEV-60 OilElec.', 'PEV-10 BioElec.', 'PEV-30 BioElec.', 'PEV-60 BioElec.']
-truck_label_BEV  = ['BEV Elec.', 'BEV Elec.', 'BEV Elec.']
-truck_label_FCV  = ['FCV Oil', 'FCV Bio', 'FCV H2']
-vshares_label    = ['ICE', 'HEV', 'PHEV', 'BEV', 'FCV', 'Trolley']
-
-# 1) BUSES: original vehcile shares are distributed into two vehicle types (regular and small midi buses)
-# vehicle shares are grouped as: a) ICE, b) HEV, c) trolley, d) BEV, but trolley buses are not relevant for midi busses, so the midi shares are re-calculated based on the sum without trolleys
-midi_sum = buses_vshares[filter(lambda x: x != 'BusElecTrolley',bus_label)].sum(axis=1)     #sum of all except Trolleys
-
-# regular buses are just grouped
-buses_regl_vshares = pd.DataFrame(index=buses_vshares.index, columns=vshares_label)
-buses_regl_vshares['ICE']     = buses_vshares[bus_label_ICE].sum(axis=1)
-buses_regl_vshares['HEV']     = buses_vshares[bus_label_HEV].sum(axis=1)
-buses_regl_vshares['PHEV']    = pd.DataFrame(0, index=buses_vshares.index, columns=['PHEV'])
-buses_regl_vshares['BEV']     = buses_vshares['BusBattElectric']
-buses_regl_vshares['FCV']     = pd.DataFrame(0, index=buses_vshares.index, columns=['FCV'])
-buses_regl_vshares['Trolley'] = buses_vshares['BusElecTrolley']
-
-# midi buses are grouped & divided by the sum of ICE, HEV & BEV, to adjust for the fact that Trolleys (or FCV or PHEV) are not an option for midi buses
-buses_midi_vshares = pd.DataFrame(index=buses_vshares.index, columns=vshares_label)
-buses_midi_vshares['ICE']     = buses_vshares[bus_label_ICE].sum(axis=1).div(midi_sum)
-buses_midi_vshares['HEV']     = buses_vshares[bus_label_HEV].sum(axis=1).div(midi_sum)
-buses_midi_vshares['PHEV']    = pd.DataFrame(0, index=buses_vshares.index, columns=['PHEV'])
-buses_midi_vshares['BEV']     = buses_vshares['BusBattElectric'].div(midi_sum)
-buses_midi_vshares['FCV']     = pd.DataFrame(0, index=buses_vshares.index, columns=['FCV'])
-buses_midi_vshares['Trolley'] = pd.DataFrame(0, index=buses_vshares.index, columns=['Trolley'])
-
-# 2) TRUCKS
-# vehicle shares are grouped as: a) ICE, b) HEV, c) PHEV, d) BEV, e) FCV
-# LCV vehicle shares are determined based on the medium trucks (so not calculated explicitly)
-
-# medium trucks
-trucks_MFT_vshares = pd.DataFrame(index=medtruck_vshares.index, columns=vshares_label)
-trucks_MFT_vshares['ICE']     = medtruck_vshares[truck_label_ICE].sum(axis=1)
-trucks_MFT_vshares['HEV']     = medtruck_vshares[truck_label_HEV].sum(axis=1)
-trucks_MFT_vshares['PHEV']    = medtruck_vshares[truck_label_PHEV].sum(axis=1)
-trucks_MFT_vshares['BEV']     = medtruck_vshares[truck_label_BEV].sum(axis=1)
-trucks_MFT_vshares['FCV']     = medtruck_vshares[truck_label_FCV].sum(axis=1)
-trucks_MFT_vshares['Trolley'] = pd.DataFrame(0, index=index, columns=['Trolley'])                    # No trolley trucks 
-
-# heavy trucks
-trucks_HFT_vshares = pd.DataFrame(index=hvytruck_vshares.index, columns=vshares_label)
-trucks_HFT_vshares['ICE']     = hvytruck_vshares[truck_label_ICE].sum(axis=1)
-trucks_HFT_vshares['HEV']     = hvytruck_vshares[truck_label_HEV].sum(axis=1)
-trucks_HFT_vshares['PHEV']    = hvytruck_vshares[truck_label_PHEV].sum(axis=1)
-trucks_HFT_vshares['BEV']     = hvytruck_vshares[truck_label_BEV].sum(axis=1)
-trucks_HFT_vshares['FCV']     = hvytruck_vshares[truck_label_FCV].sum(axis=1)
-trucks_HFT_vshares['Trolley'] = pd.DataFrame(0, index=hvytruck_vshares.index, columns=['Trolley'])   # No trolley trucks 
-
 ### Then calculate the inflow & outflow for typical vehicles (vehicles with relevant sub types) as well (runtime appr. 1 min.)
 bus_regl_in,     bus_regl_out_coh,     bus_regl_stock_coh     = inflow_outflow_typical_np(bus_regl_nr,    lifetimes_vehicles_mean['reg_bus'],  lifetimes_vehicles_stdev['reg_bus'],  'FoldedNormal', buses_regl_vshares)
 bus_midi_in,     bus_midi_out_coh,     bus_midi_stock_coh     = inflow_outflow_typical_np(bus_midi_nr,    lifetimes_vehicles_mean['midi_bus'], lifetimes_vehicles_stdev['midi_bus'], 'FoldedNormal', buses_midi_vshares)
