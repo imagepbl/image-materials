@@ -440,14 +440,22 @@ def preprocessing(base_dir=os.getcwd()):
     total_pkm_tkm.sum(axis=0, level=0).to_csv(standard_output_folder.joinpath("global_pkm_tkm.csv"), index=True) # total global pkms & tkms 
     total_pkm_tkm.to_csv(standard_output_folder.joinpath("region_pkm_tkm.csv"), index=True)  # regional pkms & tkms
 
-    return (total_nr_vehicles_simple, car_total_nr, 
-            material_fractions_simple, material_fractions_typical, 
-            vehicle_weights_simple, vehicle_weights_typical,
-            lifetimes_vehicles,
-            battery_weights_typical, battery_materials, battery_shares,
-            buses_battery_weight, trucks_battery_weight
-            )
+    res_dict = { 
+                'total_nr_vehicles_simple': total_nr_vehicles_simple,
+                'car_total_nr': car_total_nr,
+                'material_fractions_simple': material_fractions_simple,
+                'material_fractions_typical': material_fractions_typical,
+                'vehicle_weights_simple': vehicle_weights_simple,
+                'vehicle_weights_typical': vehicle_weights_typical,
+                'lifetimes_vehicles': lifetimes_vehicles,
+                'battery_weights_typical': battery_weights_typical,
+                'battery_materials': battery_materials,
+                'battery_shares': battery_shares,
+                'buses_battery_weight': buses_battery_weight,
+                'trucks_battery_weight': trucks_battery_weight
+            }
 
+    return res_dict
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
