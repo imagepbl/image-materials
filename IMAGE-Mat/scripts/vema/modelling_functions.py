@@ -1,6 +1,7 @@
 import pandas as pd
-
+import numpy as np
 from constants import FIRST_YEAR, END_YEAR, REGIONS
+from read_scripts.dynamic_stock_model_BM import DynamicStockModel as DSM
 
 
 # Generic interpolation function
@@ -181,6 +182,11 @@ def nr_by_cohorts_to_materials_simple_np(inflow, outflow_cohort, stock_cohort, w
    outflow_mat = np.zeros((len(composition.columns), len(inflow[0]), len(inflow)))
    stock_mat   = np.zeros((len(composition.columns), len(inflow[0]), len(inflow)))
    
+   print("shapes")
+   print(f"inflow {inflow_mat.shape}")
+   print(f"outflow {outflow_mat.shape}")
+   print(f"stock {stock_mat.shape}")
+   
    for material in range(0, len(composition.columns)): 
       # before running, check if the material is at all relevant in the vehicle (save calculation time)
       if composition.iloc[:,material].sum() > 0.001:          
@@ -191,6 +197,8 @@ def nr_by_cohorts_to_materials_simple_np(inflow, outflow_cohort, stock_cohort, w
             stock_mat[material,region,:]   = np.multiply(np.multiply(stock_cohort[region,:,:], weight), composition_used).sum(axis=1)
       else:
          pass
+     
+   print(f"inflow after {inflow_mat.shape}")
 
    length_materials = len(composition.columns)
    length_time      = END_YEAR + 1 - (END_YEAR + 1 - len(inflow))
