@@ -470,11 +470,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Call preprocessing function and make output available in variables
-    (total_nr_vehicles_simple, total_nr_vehicles_typical, 
-        material_fractions_simple, material_fractions_typical, 
-        vehicle_weights_simple, vehicle_weights_typical,
-        lifetimes_vehicles,
-        battery_weights_typical, battery_materials, battery_shares) = \
-        preprocessing(base_dir=args.path)
+    output_preprocessing = preprocessing(base_dir=args.path)
 
 # %%
