@@ -12,28 +12,6 @@ import pandas as pd
 
 #%% INFLOW-OUTFLOW calculations using the ODYM Dynamic Stock Model (DSM) as a function
 
-# Calculate the historic tail (& reduce regions to 26)
-air_pas_nr     = interpolate(air_pas_nr[list(range(1,REGIONS+1))],  pd.DataFrame(first_year_vehicle['air_pas'].values[0], index=['0'], columns=list(range(1,REGIONS+1))), change='no')
-rail_reg_nr    = interpolate(rail_reg_nr[list(range(1,REGIONS+1))], pd.DataFrame(first_year_vehicle['rail_reg'].values[0], index=['0'], columns=list(range(1,REGIONS+1))), change='no')
-rail_hst_nr    = interpolate(rail_hst_nr[list(range(1,REGIONS+1))], pd.DataFrame(first_year_vehicle['rail_hst'].values[0], index=['0'], columns=list(range(1,REGIONS+1))), change='no')
-bikes_nr       = interpolate(bikes_nr[list(range(1,REGIONS+1))],    pd.DataFrame(first_year_vehicle['bicycle'].values[0], index=['0'], columns=list(range(1,REGIONS+1))), change='no')
-
-air_freight_nr  = interpolate(air_freight_nr[list(range(1, REGIONS+1))],  pd.DataFrame(first_year_vehicle['air_freight'].values[0], index=['0'], columns=list(range(1,REGIONS+1))),    change='no')
-rail_freight_nr = interpolate(rail_freight_nr[list(range(1, REGIONS+1))], pd.DataFrame(first_year_vehicle['rail_freight'].values[0], index=['0'], columns=list(range(1,REGIONS+1))),   change='no')
-inland_ship_nr  = interpolate(inland_ship_nr[list(range(1, REGIONS+1))],  pd.DataFrame(first_year_vehicle['inland_shipping'].values[0], index=['0'], columns=list(range(1,REGIONS+1))),change='no')
-ship_small_nr   = interpolate(ship_small_nr[list(range(1, REGIONS+1))],   pd.DataFrame(FIRST_YEAR_BOATS, index=['0'], columns=list(range(1,REGIONS+1))), change='no')
-ship_medium_nr  = interpolate(ship_medium_nr[list(range(1, REGIONS+1))],  pd.DataFrame(FIRST_YEAR_BOATS, index=['0'], columns=list(range(1,REGIONS+1))), change='no')
-ship_large_nr   = interpolate(ship_large_nr[list(range(1, REGIONS+1))],   pd.DataFrame(FIRST_YEAR_BOATS, index=['0'], columns=list(range(1,REGIONS+1))), change='no')
-ship_vlarge_nr  = interpolate(ship_vlarge_nr[list(range(1, REGIONS+1))],  pd.DataFrame(FIRST_YEAR_BOATS, index=['0'], columns=list(range(1,REGIONS+1))), change='no')
-
-bus_regl_nr     = interpolate(bus_regl_nr[list(range(1, REGIONS+1))],  pd.DataFrame(first_year_vehicle['reg_bus'].values[0], index=['0'], columns=list(range(1,REGIONS+1))), change='no')
-bus_midi_nr     = interpolate(bus_midi_nr[list(range(1, REGIONS+1))],  pd.DataFrame(first_year_vehicle['midi_bus'].values[0], index=['0'], columns=list(range(1,REGIONS+1))), change='no')
-car_total_nr    = interpolate(car_total_nr[list(range(1, REGIONS+1))], pd.DataFrame(first_year_vehicle['car'].values[0], index=['0'], columns=list(range(1,REGIONS+1))), change='no')
-
-trucks_HFT_nr   = interpolate(trucks_HFT_nr[list(range(1, REGIONS+1))], pd.DataFrame(first_year_vehicle['HFT'].values[0], index=['0'], columns=list(range(1,REGIONS+1))), change='no')
-trucks_MFT_nr   = interpolate(trucks_HFT_nr[list(range(1, REGIONS+1))], pd.DataFrame(first_year_vehicle['MFT'].values[0], index=['0'], columns=list(range(1,REGIONS+1))), change='no')
-trucks_LCV_nr   = interpolate(trucks_LCV_nr[list(range(1, REGIONS+1))], pd.DataFrame(first_year_vehicle['LCV'].values[0], index=['0'], columns=list(range(1,REGIONS+1))), change='no')
-
 ##################### DYNAMIC MODEL (runtime: ca. 30 sec) ########################################################################
 # Calculate the NUMBER of vehicles, total for inflow & by cohort for stock & outflow, first only for simple vehicles
 
