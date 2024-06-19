@@ -338,6 +338,9 @@ def preprocessing(base_dir=os.getcwd()):
         total_nr_vehicles_simple["Very Large Ships"]
     diff_ships_total = total_nr_of_ships.loc[list(range(2005,2018+1)), 28].div(nr_of_boats.sum(axis=1))
     
+    # capacity of boats is in tonnes, the weight - expressed as a fraction of the capacity - is calculated in in kgs here
+    weight_boats  = weight_frac_boats_yrs * cap_of_boats_yrs * 1000 
+    
     # %% BATTERY WEIGHT SECTION
     # 1) BUSES: original vehcile shares are distributed into two vehicle types (regular and small midi buses)
     # vehicle shares are grouped as: a) ICE, b) HEV, c) trolley, d) BEV, but trolley buses are not relevant for midi busses, so the midi shares are re-calculated based on the sum without trolleys
@@ -465,10 +468,11 @@ def preprocessing(base_dir=os.getcwd()):
                 'battery_materials': battery_materials,
                 'battery_shares': battery_shares,
                 'buses_battery_weight': buses_battery_weight,
-                'trucks_battery_weight': trucks_battery_weight
+                'trucks_battery_weight': trucks_battery_weight,
+                'weight_boats': weight_boats
             }
 
-return results_dict
+    return results_dict
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

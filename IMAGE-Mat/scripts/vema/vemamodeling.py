@@ -1,4 +1,11 @@
 import pandas as pd
+import numpy as np
+from preprocessing import preprocessing
+from modelling_functions import (
+                                inflow_outflow_dynamic_np,
+                                inflow_outflow_typical_np,
+                                nr_by_cohorts_to_materials_simple_np
+                                )
 
 # Core modelling of stock dynamics & material use, assumes input as pandas dataFrames
 # 1. Add assumptions on historic development
@@ -9,25 +16,50 @@ import pandas as pd
 # 4. Material calculations
 # 5. Preparing output
 
+idx = pd.IndexSlice
+preprocessing_results = preprocessing()
+
+all_keys = list(preprocessing_results['total_nr_vehicles_simple'].columns.levels[0].unique())
+
+key_map = {}
+key_map['Planes'] = 'air_pas'
+key_map['Bikes'] = 'bicycle'
+key_map['Freight Planes'] = 'air_freight'
+key_map['Freight Trains'] = 'rail_freight'  
+key_map['Heavy Freight Trucks'] = 'HFT'
+key_map['High Speed Trains'] = 'rail_hst'
+key_map['Inland Ships'] = 'inland_shipping'
+key_map['Large Ships'] = 'sea_shipping_large'
+key_map['Light Commercial Vehicles'] = 'LCV'
+key_map['Medium Freight Trucks'] = 'MFT'
+key_map['Medium Ships'] = 'sea_shipping_med'
+key_map['Midi Buses'] = 'midi_bus'
+key_map['Regular Buses'] = 'reg_bus'
+key_map['Small Ships'] = 'sea_shipping_small'
+key_map['Trains'] = 'rail_reg'
+key_map['Very Large Ships'] = 'sea_shipping_vl'
+
 
 #%% INFLOW-OUTFLOW calculations using the ODYM Dynamic Stock Model (DSM) as a function
 
 ##################### DYNAMIC MODEL (runtime: ca. 30 sec) ########################################################################
 # Calculate the NUMBER of vehicles, total for inflow & by cohort for stock & outflow, first only for simple vehicles
 
-air_pas_in,      air_pas_out_coh,      air_pas_stock_coh      = inflow_outflow_dynamic_np(air_pas_nr.to_numpy(),    lifetimes_vehicles_mean['air_pas'],  lifetimes_vehicles_stdev['air_pas'],  'FoldedNormal')
-rail_reg_in,     rail_reg_out_coh,     rail_reg_stock_coh     = inflow_outflow_dynamic_np(rail_reg_nr.to_numpy(),   lifetimes_vehicles_mean['rail_reg'], lifetimes_vehicles_stdev['rail_reg'], 'FoldedNormal')
-rail_hst_in,     rail_hst_out_coh,     rail_hst_stock_coh     = inflow_outflow_dynamic_np(rail_hst_nr.to_numpy(),   lifetimes_vehicles_mean['rail_hst'], lifetimes_vehicles_stdev['rail_hst'], 'FoldedNormal')
-bikes_in,        bikes_out_coh,        bikes_stock_coh        = inflow_outflow_dynamic_np(bikes_nr.to_numpy(),      lifetimes_vehicles_mean['bicycle'],  lifetimes_vehicles_stdev['bicycle'],  'FoldedNormal')
-
-air_freight_in,  air_freight_out_coh,  air_freight_stock_coh  = inflow_outflow_dynamic_np(air_freight_nr.to_numpy(),  lifetimes_vehicles_mean['air_freight'],        lifetimes_vehicles_stdev['air_freight'],        'FoldedNormal')
-rail_freight_in, rail_freight_out_coh, rail_freight_stock_coh = inflow_outflow_dynamic_np(rail_freight_nr.to_numpy(), lifetimes_vehicles_mean['rail_freight'],       lifetimes_vehicles_stdev['rail_freight'],       'FoldedNormal')
-inland_ship_in,  inland_ship_out_coh,  inland_ship_stock_coh  = inflow_outflow_dynamic_np(inland_ship_nr.to_numpy(),  lifetimes_vehicles_mean['inland_shipping'],    lifetimes_vehicles_stdev['inland_shipping'],    'FoldedNormal')
-ship_small_in,   ship_small_out_coh,   ship_small_stock_coh   = inflow_outflow_dynamic_np(ship_small_nr.to_numpy(),   lifetimes_vehicles_mean['sea_shipping_small'], lifetimes_vehicles_stdev['sea_shipping_small'], 'FoldedNormal')
-ship_medium_in,  ship_medium_out_coh,  ship_medium_stock_coh  = inflow_outflow_dynamic_np(ship_medium_nr.to_numpy(),  lifetimes_vehicles_mean['sea_shipping_med'],   lifetimes_vehicles_stdev['sea_shipping_med'],   'FoldedNormal')
-ship_large_in,   ship_large_out_coh,   ship_large_stock_coh   = inflow_outflow_dynamic_np(ship_large_nr.to_numpy(),   lifetimes_vehicles_mean['sea_shipping_large'], lifetimes_vehicles_stdev['sea_shipping_large'], 'FoldedNormal')
-ship_vlarge_in,  ship_vlarge_out_coh,  ship_vlarge_stock_coh  = inflow_outflow_dynamic_np(ship_vlarge_nr.to_numpy(),  lifetimes_vehicles_mean['sea_shipping_vl'],    lifetimes_vehicles_stdev['sea_shipping_vl'],    'FoldedNormal')
-
+vehicle_stock_simple = {}
+#TODO: move buses & trucks to typical for loop
+for key in key_map:
+    vehicle_stock_simple[key] = inflow_outflow_dynamic_np(preprocessing_results['total_nr_vehicles_simple'].loc[:, idx[key, :]].to_numpy(),
+                                                          preprocessing_results['lifetimes_vehicles'].loc[:, idx[key_map[key], 'mean']],
+                                                          preprocessing_results['lifetimes_vehicles'].loc[:, idx[key_map[key], 'stdev']],
+                                                          'FoldedNormal')
+#TODO: implement cars, buses & trucks
+vehicle_stock_typical = {}
+for key in ['Cars']:
+    vehicle_stock_typical[key] = inflow_outflow_typical_np(preprocessing_results['car_total_nr'].loc[:, idx[key, :]].to_numpy(),
+                                                          preprocessing_results['lifetimes_vehicles'].loc[:, idx[key_map[key], 'mean']],
+                                                          preprocessing_results['lifetimes_vehicles'].loc[:, idx[key_map[key], 'stdev']],
+                                                          'FoldedNormal')
+'''
 ### Then calculate the inflow & outflow for typical vehicles (vehicles with relevant sub types) as well (runtime appr. 1 min.)
 bus_regl_in,     bus_regl_out_coh,     bus_regl_stock_coh     = inflow_outflow_typical_np(bus_regl_nr,    lifetimes_vehicles_mean['reg_bus'],  lifetimes_vehicles_stdev['reg_bus'],  'FoldedNormal', buses_regl_vshares)
 bus_midi_in,     bus_midi_out_coh,     bus_midi_stock_coh     = inflow_outflow_typical_np(bus_midi_nr,    lifetimes_vehicles_mean['midi_bus'], lifetimes_vehicles_stdev['midi_bus'], 'FoldedNormal', buses_midi_vshares)
@@ -36,6 +68,7 @@ car_in,          car_out_coh,          car_stock_coh          = inflow_outflow_t
 trucks_HFT_in,   trucks_HFT_out_coh,   trucks_HFT_stock_coh   = inflow_outflow_typical_np(trucks_HFT_nr,  lifetimes_vehicles_mean['HFT'],     lifetimes_vehicles_stdev['HFT'],      'FoldedNormal',  trucks_HFT_vshares)
 trucks_MFT_in,   trucks_MFT_out_coh,   trucks_MFT_stock_coh   = inflow_outflow_typical_np(trucks_MFT_nr,  lifetimes_vehicles_mean['MFT'],     lifetimes_vehicles_stdev['MFT'],      'FoldedNormal',  trucks_MFT_vshares)
 trucks_LCV_in,   trucks_LCV_out_coh,   trucks_LCV_stock_coh   = inflow_outflow_typical_np(trucks_LCV_nr,  lifetimes_vehicles_mean['LCV'],     lifetimes_vehicles_stdev['LCV'],      'FoldedNormal',  trucks_MFT_vshares)  # Assumption: used MFT as a market-share for LCVs
+'''
 
 #%% Intermediate export of inflow & outflow of vehicles (for IRP database) ###############
 
@@ -75,11 +108,19 @@ total_nr_vehicles_out.to_csv(OUTPUT_FOLDER + '\\region_vehicle_out.csv', index=T
 
 #%% ################### MATERIAL CALCULATIONS ##########################################
 
-# capacity of boats is in tonnes, the weight - expressed as a fraction of the capacity - is calculated in in kgs here
-weight_boats  = weight_frac_boats_yrs * cap_of_boats_yrs * 1000 
-
 #%% ############################################# RUNNING THE DYNAMIC STOCK FUNCTIONS  (runtime ca. 10 sec)  ###############################################
 
+vehicle_materials_simple = {}
+# Buses and trucks are not yet in the vehicle weight & material fraction data yet
+for key in key_map:
+    if key_map[key] in preprocessing_results['vehicle_weights_simple'] and \
+       key_map[key] in preprocessing_results['material_fractions_simple']:
+        print(key)
+        data_in, data_out, stock_cohort = vehicle_stock_simple[key] 
+        vehicle_materials_simple[key] = nr_by_cohorts_to_materials_simple_np(
+                                        data_in,  data_out, stock_cohort, 
+                                        preprocessing_results['vehicle_weights_simple'][key_map[key]].to_numpy(),
+                                        preprocessing_results['material_fractions_simple'][key_map[key]])
 
 # run the simple material calculations on all vehicles                                                                                             # weight is passed as a series instead of a dataframe (pragmatic choice)
 air_pas_mat_in,      air_pas_mat_out,      air_pas_mat_stock        = nr_by_cohorts_to_materials_simple_np(air_pas_in,      air_pas_out_coh,      air_pas_stock_coh,      vehicle_weight_kg_air_pas["air_pas"].to_numpy(),             material_fractions_air_pas)
