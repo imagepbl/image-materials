@@ -483,7 +483,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Call preprocessing function and make output available in variables
-    results_dict = \
-    preprocessing(base_dir=args.path)
+    output_preprocessing = preprocessing(base_dir=args.path)
 
 # %%
