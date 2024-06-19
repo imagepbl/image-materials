@@ -8,7 +8,8 @@ START_YEAR = 1971
 # scratch, which needs to be the oldest year of any vehicle, all stock
 # calculations are initiated in this year, so this has an effect on
 # runtime)
-FIRST_YEAR = START_YEAR  # first_year_vehicle.values.min()
+# TODO: set FIRST_YEAR based on minimum value in data-files
+FIRST_YEAR = 1807  # first_year_vehicle.values.min()
 END_YEAR = 2060
 # year of output generation
 OUT_YEAR = 2060
@@ -41,9 +42,9 @@ tkms_label = ["inland shipping", "freight train", "medium truck",
               "total"]
 pkms_label = ["walking", "bicycle", "bus", "rail_reg", "car", "rail_hst", "air_pas",
               "total"]
-columns_vehicle_output = ["Buses", "Trains", "HST", "Cars", "Planes", "Bikes",
-                          "Trucks", "Cargo Trains", "Ships", "Inland ships",
-                          "Cargo Planes"]
+columns_vehicle_output = ["Buses", "Trains", "Hight Speed Trains", "Cars", "Planes", "Bikes",
+                          "Trucks", "Freight Trains", "Ships", "Inland Ships",
+                          "Freight Planes"]
 
 # Names used to shorten plots
 labels_pas = ["bicycle", "rail_reg", "rail_hst", "midi_bus", "reg_bus",
