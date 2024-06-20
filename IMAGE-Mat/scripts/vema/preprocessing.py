@@ -412,15 +412,15 @@ def preprocessing(base_dir=os.getcwd()):
     total_pkm_tkm = pd.DataFrame(index=index, columns=columns_vehicle_output)
     total_pkm_tkm["Buses"]        = (bus_regl_pkms[region_list].stack() + bus_midi_pkms[region_list].stack()) * 1000000000000
     total_pkm_tkm["Trains"]       = passengerkms_Tpkms["rail_reg"]   * 1000000000000                              
-    total_pkm_tkm["HST"]          = passengerkms_Tpkms["rail_hst"]     * 1000000000000
+    total_pkm_tkm["High Speed Trains"]          = passengerkms_Tpkms["rail_hst"]     * 1000000000000
     total_pkm_tkm["Cars"]         = car_pkms[region_list].stack() * 1000000000000
     total_pkm_tkm["Planes"]       = passengerkms_Tpkms["air_pas"]     * 1000000000000
     total_pkm_tkm["Bikes"]        = passengerkms_Tpkms["bicycle"]  * 1000000000000
     total_pkm_tkm["Trucks"]       = (trucks_HFT_tkm[region_list].stack() + trucks_MFT_tkm[region_list].stack() + trucks_LCV_tkm[region_list].stack()) * 1000000
-    total_pkm_tkm["Cargo Trains"] = tonkms_Mtkms["freight train"] * 1000000
+    total_pkm_tkm["Freight Trains"] = tonkms_Mtkms["freight train"] * 1000000
     total_pkm_tkm["Ships"]        = tonkms_Mtkms["international shipping"] * 1000000 
     total_pkm_tkm["Inland ships"] = tonkms_Mtkms["inland shipping"] * 1000000
-    total_pkm_tkm["Cargo Planes"] = air_freight_tkms[region_list].stack() * 1000000     # mind that these are the tkms flows with cargo planes, real demand for air cargo is higher due to 50% hitching with passenger flights
+    total_pkm_tkm["Freight Planes"] = air_freight_tkms[region_list].stack() * 1000000     # mind that these are the tkms flows with cargo planes, real demand for air cargo is higher due to 50% hitching with passenger flights
     
     # output to IRP
     # output transport drivers to output folder for 450 vs Bl comparisson in overarching figures later on
@@ -468,7 +468,7 @@ def preprocessing(base_dir=os.getcwd()):
                 'trucks_battery_weight': trucks_battery_weight
             }
 
-return results_dict
+    return results_dict
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
