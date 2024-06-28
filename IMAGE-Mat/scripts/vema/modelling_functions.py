@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from constants import FIRST_YEAR, END_YEAR, REGIONS
 from read_scripts.dynamic_stock_model_BM import DynamicStockModel as DSM
+idx = pd.IndexSlice
 
 
 # Generic interpolation function
@@ -125,39 +126,29 @@ def inflow_outflow_typical_np(stock, fact1, fact2, distribution, stock_share):
 
    This TYPICAL variant of the DSM calculates & returns the full unadjusted (cohort specific) matrix (time*time) for every region AND vehicle type (YES, very memory intensive, but neccesary for dynamic assesmment, i.e. changing vehicle weights & compositions)
    """
-   initial_year        = stock.first_valid_index()
-   initial_year_shares = stock_share.first_valid_index()[0]
 
    inflow              = np.zeros((len(stock_share.iloc[0]), len(stock.iloc[0]), len(stock)))
    outflow_cohort      = np.zeros((len(stock_share.iloc[0]), len(stock.iloc[0]), len(stock), len(stock)))
    stock_cohort        = np.zeros((len(stock_share.iloc[0]), len(stock.iloc[0]), len(stock), len(stock)))
 
-   index = pd.MultiIndex.from_product([stock_share.columns, stock.index], names=['type', 'time'])
-   stock_by_vtype      = pd.DataFrame(0, index=index, columns=stock.columns)
-   stock_share_used    = stock_share.unstack().stack(level=0).reorder_levels([1,0]).sort_index()
+   stock_by_vtype      = pd.DataFrame(0, index=stock_share.index, columns=stock_share.columns)
+   vtype_list  = list(stock_by_vtype.columns.unique('type'))
+   
+   # calculate the stocks of individual (vehicle) types (in nr of vehicles)
+   for vtype in vtype_list:
+      stock_by_vtype.loc[:,idx[vtype,:]] = stock.mul(stock_share.loc[:,idx[vtype,:]])
 
-   # before running the DSM:
-   # 1) extend the historic coverage of the stock shares (assuming constant pre-1971), and
-   for vtype in list(stock_share.columns):
-      stock_share_used.loc[idx[vtype, initial_year],:] = stock_share[vtype].unstack().loc[initial_year_shares]
-   stock_share_used = stock_share_used.reindex(index).interpolate()
+   vtype_count = list(range(0,len(stock_share.columns.levels[0])))
+   vtype_dict  = dict(zip(vtype_list, vtype_count))
 
-   # 2) calculate the stocks of individual (vehicle) types (in nr of vehicles)
-   for vtype in list(stock_share.columns):
-      stock_by_vtype.loc[idx[vtype,:],:] = stock.mul(stock_share_used.loc[idx[vtype,:],:])
+   # Then run the original DSM for each vehicle type & add it to the inflow, ouflow & stock containers, (for stock: index = time; columns = vtype, region)
+   for vtype in vtype_list:
+      if stock_share.loc[:, idx[vtype,:]].sum().sum() > 0.0001:
+         dsm_inflow, dsm_outflow_coh, dsm_stock_coh = inflow_outflow_dynamic_np(stock_by_vtype.loc[:,idx[vtype,:]].to_numpy(), fact1, fact2, distribution)
 
-   vtype_list  = list(stock_by_vtype.index.unique('type'))
-   vtype_count = list(range(0,len(stock_share.columns)))
-   vtype_dict   = dict(zip(vtype_count, vtype_list))
-
-   # Then run the original DSM for each vehicle type & add it to the inflow, ouflow & stock containers, (for stock: index = vtype, time; columns = region, time)
-   for vtype in range(0,len(stock_share.columns)):
-      if stock_share.iloc[:,vtype].sum() > 0.001:
-         dsm_inflow, dsm_outflow_coh, dsm_stock_coh = inflow_outflow_dynamic_np(stock_by_vtype.loc[idx[vtype_dict[vtype],:],:].to_numpy(), fact1, fact2, distribution)
-
-         inflow[vtype,:,:]           = dsm_inflow.T
-         outflow_cohort[vtype,:,:,:] = dsm_outflow_coh
-         stock_cohort[vtype,:,:,:]   = dsm_stock_coh
+         inflow[vtype_dict[vtype],:,:]           = dsm_inflow.T
+         outflow_cohort[vtype_dict[vtype],:,:,:] = dsm_outflow_coh
+         stock_cohort[vtype_dict[vtype],:,:,:]   = dsm_stock_coh
 
       else:
          pass
