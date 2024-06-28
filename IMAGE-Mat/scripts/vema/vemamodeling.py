@@ -21,54 +21,48 @@ preprocessing_results = preprocessing()
 
 all_keys = list(preprocessing_results['total_nr_vehicles_simple'].columns.levels[0].unique())
 
-key_map = {}
-key_map['Planes'] = 'air_pas'
-key_map['Bikes'] = 'bicycle'
-key_map['Freight Planes'] = 'air_freight'
-key_map['Freight Trains'] = 'rail_freight'  
-key_map['Heavy Freight Trucks'] = 'HFT'
-key_map['High Speed Trains'] = 'rail_hst'
-key_map['Inland Ships'] = 'inland_shipping'
-key_map['Large Ships'] = 'sea_shipping_large'
-key_map['Light Commercial Vehicles'] = 'LCV'
-key_map['Medium Freight Trucks'] = 'MFT'
-key_map['Medium Ships'] = 'sea_shipping_med'
-key_map['Midi Buses'] = 'midi_bus'
-key_map['Regular Buses'] = 'reg_bus'
-key_map['Small Ships'] = 'sea_shipping_small'
-key_map['Trains'] = 'rail_reg'
-key_map['Very Large Ships'] = 'sea_shipping_vl'
+key_map_simple = {}
+key_map_simple['Planes'] = 'air_pas'
+key_map_simple['Bikes'] = 'bicycle'
+key_map_simple['Freight Planes'] = 'air_freight'
+key_map_simple['Freight Trains'] = 'rail_freight'
+key_map_simple['High Speed Trains'] = 'rail_hst'
+key_map_simple['Inland Ships'] = 'inland_shipping'
+key_map_simple['Large Ships'] = 'sea_shipping_large'
+key_map_simple['Medium Ships'] = 'sea_shipping_med'
+key_map_simple['Small Ships'] = 'sea_shipping_small'
+key_map_simple['Trains'] = 'rail_reg'
+key_map_simple['Very Large Ships'] = 'sea_shipping_vl'
 
+key_map_typical = {}
+key_map_typical['Cars'] = 'car'
+key_map_typical['Light Commercial Vehicles'] = 'LCV'
+key_map_typical['Medium Freight Trucks'] = 'MFT'
+key_map_typical['Heavy Freight Trucks'] = 'HFT'
+key_map_typical['Midi Buses'] = 'midi_bus'
+key_map_typical['Regular Buses'] = 'reg_bus'
 
 #%% INFLOW-OUTFLOW calculations using the ODYM Dynamic Stock Model (DSM) as a function
 
 ##################### DYNAMIC MODEL (runtime: ca. 30 sec) ########################################################################
 # Calculate the NUMBER of vehicles, total for inflow & by cohort for stock & outflow, first only for simple vehicles
 
-vehicle_stock_simple = {}
-#TODO: move buses & trucks to typical for loop
-for key in key_map:
-    vehicle_stock_simple[key] = inflow_outflow_dynamic_np(preprocessing_results['total_nr_vehicles_simple'].loc[:, idx[key, :]].to_numpy(),
-                                                          preprocessing_results['lifetimes_vehicles'].loc[:, idx[key_map[key], 'mean']],
-                                                          preprocessing_results['lifetimes_vehicles'].loc[:, idx[key_map[key], 'stdev']],
-                                                          'FoldedNormal')
-#TODO: implement cars, buses & trucks
-vehicle_stock_typical = {}
-for key in ['Cars']:
-    vehicle_stock_typical[key] = inflow_outflow_typical_np(preprocessing_results['car_total_nr'].loc[:, idx[key, :]].to_numpy(),
-                                                          preprocessing_results['lifetimes_vehicles'].loc[:, idx[key_map[key], 'mean']],
-                                                          preprocessing_results['lifetimes_vehicles'].loc[:, idx[key_map[key], 'stdev']],
-                                                          'FoldedNormal')
-'''
-### Then calculate the inflow & outflow for typical vehicles (vehicles with relevant sub types) as well (runtime appr. 1 min.)
-bus_regl_in,     bus_regl_out_coh,     bus_regl_stock_coh     = inflow_outflow_typical_np(bus_regl_nr,    lifetimes_vehicles_mean['reg_bus'],  lifetimes_vehicles_stdev['reg_bus'],  'FoldedNormal', buses_regl_vshares)
-bus_midi_in,     bus_midi_out_coh,     bus_midi_stock_coh     = inflow_outflow_typical_np(bus_midi_nr,    lifetimes_vehicles_mean['midi_bus'], lifetimes_vehicles_stdev['midi_bus'], 'FoldedNormal', buses_midi_vshares)
-car_in,          car_out_coh,          car_stock_coh          = inflow_outflow_typical_np(car_total_nr,   lifetimes_vehicles_shape['car'],     lifetimes_vehicles_scale['car'],      'Weibull',      vehicleshare_cars)
+region_selection = list(range(1,27)) #TODO: Change to 26 or 28 regions, decide later (set to 26 for now)
 
-trucks_HFT_in,   trucks_HFT_out_coh,   trucks_HFT_stock_coh   = inflow_outflow_typical_np(trucks_HFT_nr,  lifetimes_vehicles_mean['HFT'],     lifetimes_vehicles_stdev['HFT'],      'FoldedNormal',  trucks_HFT_vshares)
-trucks_MFT_in,   trucks_MFT_out_coh,   trucks_MFT_stock_coh   = inflow_outflow_typical_np(trucks_MFT_nr,  lifetimes_vehicles_mean['MFT'],     lifetimes_vehicles_stdev['MFT'],      'FoldedNormal',  trucks_MFT_vshares)
-trucks_LCV_in,   trucks_LCV_out_coh,   trucks_LCV_stock_coh   = inflow_outflow_typical_np(trucks_LCV_nr,  lifetimes_vehicles_mean['LCV'],     lifetimes_vehicles_stdev['LCV'],      'FoldedNormal',  trucks_MFT_vshares)  # Assumption: used MFT as a market-share for LCVs
-'''
+vehicle_stock_simple = {}
+for key in key_map_simple:
+    vehicle_stock_simple[key] = inflow_outflow_dynamic_np(preprocessing_results['total_nr_vehicles_simple'].loc[:, idx[key, region_selection]].to_numpy(),
+                                                          preprocessing_results['lifetimes_vehicles'].loc[:, idx[key_map_simple[key], 'mean']],
+                                                          preprocessing_results['lifetimes_vehicles'].loc[:, idx[key_map_simple[key], 'stdev']],
+                                                          'FoldedNormal')
+
+vehicle_stock_typical = {}
+for key in key_map_typical:
+    vehicle_stock_typical[key] = inflow_outflow_typical_np(preprocessing_results['total_nr_vehicles_simple'].loc[:, idx[key, region_selection]].droplevel(0,axis=1),
+                                                          preprocessing_results['lifetimes_vehicles'].loc[:, idx[key_map_typical[key], 'mean']],
+                                                          preprocessing_results['lifetimes_vehicles'].loc[:, idx[key_map_typical[key], 'stdev']],
+                                                          'FoldedNormal',
+                                                          preprocessing_results['vehicle_shares_typical'][key])
 
 #%% Intermediate export of inflow & outflow of vehicles (for IRP database) ###############
 
@@ -76,32 +70,32 @@ region_list = list(range(1,27))
 last_years  = END_YEAR+1 - 1971
 index = pd.MultiIndex.from_product([list(total_nr_of_ships.index), region_list], names = ['years','regions'])
 total_nr_vehicles_in = pd.DataFrame(index=index, columns=columns_vehcile_output)
-total_nr_vehicles_in['Buses']        = bus_regl_in.sum(0)[:,-last_years:].flatten(order='F') + bus_midi_in.sum(0)[:,-last_years:].flatten(order='F')  #flattening a numpy array in the expected order (year columns first)
-total_nr_vehicles_in['Trains']       = rail_reg_in[-last_years:,:].flatten(order='C')  # for simple arrays (no vehicle types) the column order is reversed
-total_nr_vehicles_in['HST']          = rail_hst_in[-last_years:,:].flatten(order='C')
-total_nr_vehicles_in['Cars']         = car_in.sum(0)[:,-last_years:].flatten(order='F')
-total_nr_vehicles_in['Planes']       = air_pas_in[-last_years:,:].flatten(order='C')
-total_nr_vehicles_in['Bikes']        = bikes_in[-last_years:,:].flatten(order='C')
-total_nr_vehicles_in['Trucks']       = trucks_HFT_in.sum(0)[:,-last_years:].flatten(order='F') + trucks_MFT_in.sum(0)[:,-last_years:].flatten(order='F') + trucks_LCV_in.sum(0)[:,-last_years:].flatten(order='F')
-total_nr_vehicles_in['Cargo Trains'] = rail_freight_in[-last_years:,:].flatten(order='C')
-total_nr_vehicles_in['Ships']        = ship_small_in[-last_years:,:].flatten(order='C') + ship_medium_in[-last_years:,:].flatten(order='C') + ship_large_in[-last_years:,:].flatten(order='C') + ship_vlarge_in[-last_years:,:].flatten(order='C')
-total_nr_vehicles_in['Inland ships'] = inland_ship_in[-last_years:,:].flatten(order='C')  
-total_nr_vehicles_in['Cargo Planes'] = air_freight_in[-last_years:,:].flatten(order='C')
+total_nr_vehicles_in['Buses']        = vehicle_stock_typical['Regular Buses'][0].sum(0)[:,-last_years:].flatten(order='F') + vehicle_stock_typical['Midi Buses'][0].sum(0)[:,-last_years:].flatten(order='F')  #flattening a numpy array in the expected order (year columns first)
+total_nr_vehicles_in['Trains']       = vehicle_stock_simple['Trains'][0][-last_years:,:].flatten(order='C')  # for simple arrays (no vehicle types) the column order is reversed
+total_nr_vehicles_in['HST']          = vehicle_stock_simple['High Speed Trains'][0][-last_years:,:].flatten(order='C')
+total_nr_vehicles_in['Cars']         = vehicle_stock_typical['Cars'][0].sum(0)[:,-last_years:].flatten(order='F')
+total_nr_vehicles_in['Planes']       = vehicle_stock_simple['Planes'][0][-last_years:,:].flatten(order='C')
+total_nr_vehicles_in['Bikes']        = vehicle_stock_simple['Bikes'][0][-last_years:,:].flatten(order='C')
+total_nr_vehicles_in['Trucks']       = vehicle_stock_typical['Heavy Freight Trucks'][0].sum(0)[:,-last_years:].flatten(order='F') + vehicle_stock_typical['Medium Freight Trucks'][0].sum(0)[:,-last_years:].flatten(order='F') + vehicle_stock_typical['Light Commercial Vehicles'][0].sum(0)[:,-last_years:].flatten(order='F')
+total_nr_vehicles_in['Cargo Trains'] = vehicle_stock_simple['Freight Trains'][0][-last_years:,:].flatten(order='C')
+total_nr_vehicles_in['Ships']        = vehicle_stock_simple['Small Ships'][0][-last_years:,:].flatten(order='C') + vehicle_stock_simple['Medium Ships'][0][-last_years:,:].flatten(order='C') + vehicle_stock_simple['Large Ships'][0][-last_years:,:].flatten(order='C') + vehicle_stock_simple['Very Large Ships'][0][-last_years:,:].flatten(order='C')
+total_nr_vehicles_in['Inland ships'] = vehicle_stock_simple['Inland Ships'][0][-last_years:,:].flatten(order='C')  
+total_nr_vehicles_in['Cargo Planes'] = vehicle_stock_simple['Freight Planes'][0][-last_years:,:].flatten(order='C')
 
 total_nr_vehicles_in.to_csv(OUTPUT_FOLDER + '\\region_vehicle_in.csv', index=True) # regional nr of vehicles sold (annually)
 
 total_nr_vehicles_out = pd.DataFrame(index=index, columns=columns_vehcile_output)
-total_nr_vehicles_out['Buses']        = bus_regl_out_coh.sum(0).sum(-1)[:,-last_years:].flatten(order='F') + bus_midi_out_coh.sum(0).sum(-1)[:,-last_years:].flatten(order='F')  #flattening a numpy array in the expected order (year columns first)
-total_nr_vehicles_out['Trains']       = rail_reg_out_coh.sum(-1)[:,-last_years:].flatten(order='F')  # for simple arrays (no vehicle types) the column order is reversed
-total_nr_vehicles_out['HST']          = rail_hst_out_coh.sum(-1)[:,-last_years:].flatten(order='F')
-total_nr_vehicles_out['Cars']         = car_out_coh.sum(0).sum(-1)[:,-last_years:].flatten(order='F')
-total_nr_vehicles_out['Planes']       = air_pas_out_coh.sum(-1)[:,-last_years:].flatten(order='F')
-total_nr_vehicles_out['Bikes']        = bikes_out_coh.sum(-1)[:,-last_years:].flatten(order='F')
-total_nr_vehicles_out['Trucks']       = trucks_HFT_out_coh.sum(0).sum(-1)[:,-last_years:].flatten(order='F') + trucks_MFT_out_coh.sum(0).sum(-1)[:,-last_years:].flatten(order='F') + trucks_LCV_out_coh.sum(0).sum(-1)[:,-last_years:].flatten(order='F')
-total_nr_vehicles_out['Cargo Trains'] = rail_freight_out_coh.sum(-1)[:,-last_years:].flatten(order='F')
-total_nr_vehicles_out['Ships']        = ship_small_out_coh.sum(-1)[:,-last_years:].flatten(order='F') + ship_medium_out_coh.sum(-1)[:,-last_years:].flatten(order='F') + ship_large_out_coh.sum(-1)[:,-last_years:].flatten(order='F') + ship_vlarge_out_coh.sum(-1)[:,-last_years:].flatten(order='F')
-total_nr_vehicles_out['Inland ships'] = inland_ship_out_coh.sum(-1)[:,-last_years:].flatten(order='F')
-total_nr_vehicles_out['Cargo Planes'] = air_freight_out_coh.sum(-1)[:,-last_years:].flatten(order='F')
+total_nr_vehicles_out['Buses']        = vehicle_stock_typical['Regular Buses'][1].sum(0).sum(-1)[:,-last_years:].flatten(order='F') + vehicle_stock_typical['Midi Buses'][1].sum(0).sum(-1)[:,-last_years:].flatten(order='F')  #flattening a numpy array in the expected order (year columns first)
+total_nr_vehicles_out['Trains']       = vehicle_stock_simple['Trains'][1].sum(-1)[:,-last_years:].flatten(order='F')  # for simple arrays (no vehicle types) the column order is reversed
+total_nr_vehicles_out['HST']          = vehicle_stock_simple['High Speed Trains'][1].sum(-1)[:,-last_years:].flatten(order='F')
+total_nr_vehicles_out['Cars']         = vehicle_stock_typical['Cars'][1].sum(0).sum(-1)[:,-last_years:].flatten(order='F')
+total_nr_vehicles_out['Planes']       = vehicle_stock_simple['Planes'][1].sum(-1)[:,-last_years:].flatten(order='F')
+total_nr_vehicles_out['Bikes']        = vehicle_stock_simple['Bikes'][1].sum(-1)[:,-last_years:].flatten(order='F')
+total_nr_vehicles_out['Trucks']       = vehicle_stock_typical['Heavy Freight Trucks'][1].sum(0).sum(-1)[:,-last_years:].flatten(order='F') + vehicle_stock_typical['Medium Freight Trucks'][1].sum(0).sum(-1)[:,-last_years:].flatten(order='F') + vehicle_stock_typical['Light Commercial Vehicles'][1].sum(0).sum(-1)[:,-last_years:].flatten(order='F')
+total_nr_vehicles_out['Cargo Trains'] = vehicle_stock_simple['Freight Trains'][1].sum(-1)[:,-last_years:].flatten(order='F')
+total_nr_vehicles_out['Ships']        = vehicle_stock_simple['Small Ships'][1].sum(-1)[:,-last_years:].flatten(order='F') + vehicle_stock_simple['Medium Ships'][1].sum(-1)[:,-last_years:].flatten(order='F') + vehicle_stock_simple['Large Ships'][1].sum(-1)[:,-last_years:].flatten(order='F') + vehicle_stock_simple['Very Large Ships'][1].sum(-1)[:,-last_years:].flatten(order='F')
+total_nr_vehicles_out['Inland ships'] = vehicle_stock_simple['Inland Ships'][1].sum(-1)[:,-last_years:].flatten(order='F')
+total_nr_vehicles_out['Cargo Planes'] = vehicle_stock_simple['Freight Planes'][1].sum(-1)[:,-last_years:].flatten(order='F')
 
 total_nr_vehicles_out.to_csv(OUTPUT_FOLDER + '\\region_vehicle_out.csv', index=True) # regional nr of vehicles sold (annually)
 
@@ -112,15 +106,15 @@ total_nr_vehicles_out.to_csv(OUTPUT_FOLDER + '\\region_vehicle_out.csv', index=T
 
 vehicle_materials_simple = {}
 # Buses and trucks are not yet in the vehicle weight & material fraction data yet
-for key in key_map:
-    if key_map[key] in preprocessing_results['vehicle_weights_simple'] and \
-       key_map[key] in preprocessing_results['material_fractions_simple']:
+for key in key_map_simple:
+    if key_map_simple[key] in preprocessing_results['vehicle_weights_simple'] and \
+       key_map_simple[key] in preprocessing_results['material_fractions_simple']:
         print(key)
         data_in, data_out, stock_cohort = vehicle_stock_simple[key] 
         vehicle_materials_simple[key] = nr_by_cohorts_to_materials_simple_np(
                                         data_in,  data_out, stock_cohort, 
-                                        preprocessing_results['vehicle_weights_simple'][key_map[key]].to_numpy(),
-                                        preprocessing_results['material_fractions_simple'][key_map[key]])
+                                        preprocessing_results['vehicle_weights_simple'][key_map_simple[key]].to_numpy(),
+                                        preprocessing_results['material_fractions_simple'][key_map_simple[key]])
 
 # run the simple material calculations on all vehicles                                                                                             # weight is passed as a series instead of a dataframe (pragmatic choice)
 air_pas_mat_in,      air_pas_mat_out,      air_pas_mat_stock        = nr_by_cohorts_to_materials_simple_np(air_pas_in,      air_pas_out_coh,      air_pas_stock_coh,      vehicle_weight_kg_air_pas["air_pas"].to_numpy(),             material_fractions_air_pas)
