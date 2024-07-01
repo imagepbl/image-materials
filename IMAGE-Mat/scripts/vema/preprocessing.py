@@ -210,7 +210,7 @@ def preprocessing(base_dir=os.getcwd()):
     material_fractions_simple = interpolate(pd.DataFrame(material_fractions_simple))
     
     # complete & interpolate the vehicle composition data (by vehicle sub-type second)
-    material_fractions_typical = material_fractions_type.rename_axis(['mode','submode'], axis=1).rename_axis(['year','material'], axis=0).stack().stack().unstack(['mode','submode', 'material'])
+    material_fractions_typical = material_fractions_type.rename_axis(['mode','type'], axis=1).rename_axis(['year','material'], axis=0).stack().stack().unstack(['mode','type', 'material'])
     material_fractions_typical = interpolate(pd.DataFrame(material_fractions_typical))
     
     # interpolate & complete series for battery weights, shares & composition too
@@ -510,8 +510,8 @@ def preprocessing(base_dir=os.getcwd()):
                 'battery_weights_typical': battery_weights_typical,
                 'battery_materials': battery_materials,
                 'battery_shares': battery_shares,
-                'buses_battery_weight': buses_battery_weight,
-                'trucks_battery_weight': trucks_battery_weight,
+                'buses_battery_weight': buses_battery_weight,             # Can be removed, right?
+                'trucks_battery_weight': trucks_battery_weight,           # Can be removed, right?
                 'weight_boats': weight_boats,
                 'vehicle_shares_typical': vehicle_shares_typical
             }

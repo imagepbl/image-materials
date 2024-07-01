@@ -127,9 +127,9 @@ def inflow_outflow_typical_np(stock, fact1, fact2, distribution, stock_share):
    This TYPICAL variant of the DSM calculates & returns the full unadjusted (cohort specific) matrix (time*time) for every region AND vehicle type (YES, very memory intensive, but neccesary for dynamic assesmment, i.e. changing vehicle weights & compositions)
    """
 
-   inflow              = np.zeros((len(stock_share.iloc[0]), len(stock.iloc[0]), len(stock)))
-   outflow_cohort      = np.zeros((len(stock_share.iloc[0]), len(stock.iloc[0]), len(stock), len(stock)))
-   stock_cohort        = np.zeros((len(stock_share.iloc[0]), len(stock.iloc[0]), len(stock), len(stock)))
+   inflow              = np.zeros((len(stock_share.columns.levels[0]), len(stock.iloc[0]), len(stock)))
+   outflow_cohort      = np.zeros((len(stock_share.columns.levels[0]), len(stock.iloc[0]), len(stock), len(stock)))
+   stock_cohort        = np.zeros((len(stock_share.columns.levels[0]), len(stock.iloc[0]), len(stock), len(stock)))
 
    stock_by_vtype      = pd.DataFrame(0, index=stock_share.index, columns=stock_share.columns)
    vtype_list  = list(stock_by_vtype.columns.unique('type'))
@@ -172,12 +172,7 @@ def nr_by_cohorts_to_materials_simple_np(inflow, outflow_cohort, stock_cohort, w
    inflow_mat  = np.zeros((len(composition.columns), len(inflow[0]), len(inflow)))
    outflow_mat = np.zeros((len(composition.columns), len(inflow[0]), len(inflow)))
    stock_mat   = np.zeros((len(composition.columns), len(inflow[0]), len(inflow)))
-   
-   print("shapes")
-   print(f"inflow {inflow_mat.shape}")
-   print(f"outflow {outflow_mat.shape}")
-   print(f"stock {stock_mat.shape}")
-   
+     
    for material in range(0, len(composition.columns)): 
       # before running, check if the material is at all relevant in the vehicle (save calculation time)
       if composition.iloc[:,material].sum() > 0.001:          
@@ -189,8 +184,6 @@ def nr_by_cohorts_to_materials_simple_np(inflow, outflow_cohort, stock_cohort, w
       else:
          pass
      
-   print(f"inflow after {inflow_mat.shape}")
-
    length_materials = len(composition.columns)
    length_time      = END_YEAR + 1 - (END_YEAR + 1 - len(inflow))
 
@@ -204,53 +197,52 @@ def nr_by_cohorts_to_materials_simple_np(inflow, outflow_cohort, stock_cohort, w
 
 # Material calculations for vehicles with only multiple sub-types
 def nr_by_cohorts_to_materials_typical_np(inflow, outflow_cohort, stock_cohort, weight, composition):
-   """
-   for those vehicles with multiple sub-type, we calculate the material stocks & flows in the same way, so:
-   Nr * weight (kg) * composition (%) - but using data on specific vehicle sub-types
-   """
-   inflow_mat  = np.zeros((len(inflow), len(composition.columns.levels[1]), len(inflow[0]), len(inflow[0][0])))
-   outflow_mat = np.zeros((len(inflow), len(composition.columns.levels[1]), len(inflow[0]), len(inflow[0][0])))
-   stock_mat   = np.zeros((len(inflow), len(composition.columns.levels[1]), len(inflow[0]), len(inflow[0][0])))
-   
-   composition.columns.names = ['type', 'material']
-   
-   # get two dictionaries to keep tarck of the order of materials & vtypes while using numpy
-   vtype_list   = list(composition.columns.unique('type'))  # columns.unique() keeps the original order, which is important here (same for materials)
-   vtype_count  = list(range(0,len(inflow))) 
-   vtype_dict   = dict(zip(vtype_count, vtype_list))
-   print(vtype_dict)
-   mater_list   = list(composition.columns.unique('material'))
-   mater_count  = list(range(0,len(composition.columns.levels[1]))) 
-   mater_dict   = dict(zip(mater_count, mater_list))
-   print(mater_dict)
-   
-   for vtype in range(0, len(inflow)): 
-      # before running, check if the vehicle type is at all relevant in the vehicle (save calculation time)
-      weight_used = weight.loc[:,vtype_dict[vtype]].values
-      if stock_cohort[vtype].sum() > 0.001:  
-         for material in range(0, len(mater_list)): 
-            composition_used = composition.loc[:,idx[vtype_dict[vtype],mater_dict[material]]].values
-            # before running, check if the material is at all relevant in the vehicle (save calculation time)
-            if composition_used.sum() > 0.001:          
-               for region in range(0, len(inflow[0])):
-                  inflow_mat[vtype, material, region, :]  = (inflow[vtype, region, :] * weight_used) * composition_used
-                  outflow_mat[vtype, material, region, :] = np.multiply(np.multiply(outflow_cohort[vtype, region, :, :].T, weight_used), composition_used).T.sum(axis=1)
-                  stock_mat[vtype, material, region, :]   = np.multiply(np.multiply(stock_cohort[vtype, region, :, :], weight_used), composition_used).sum(axis=1)
-   
-            else:
-               pass
-      else:
-         pass
-   
-   length_materials = len(composition.columns.levels[1])
-   length_time      = END_YEAR + 1 - (END_YEAR + 1 - len(inflow[0][0]))
-   
-   #return as pandas dataframe, just once
-   index          = pd.MultiIndex.from_product([mater_list, list(range((END_YEAR + 1 - len(inflow[0][0])), END_YEAR + 1))], names=['material', 'time'])
-   columns        = pd.MultiIndex.from_product([vtype_list, range(1,REGIONS+1)],      names=['type', 'region'])
-   pd_inflow_mat  = pd.DataFrame(inflow_mat.transpose(1,3,0,2).reshape((length_materials * length_time), (len(inflow) * REGIONS)), index=index, columns=columns)
-   pd_outflow_mat = pd.DataFrame(outflow_mat.transpose(1,3,0,2).reshape((length_materials * length_time),(len(inflow) * REGIONS)), index=index, columns=columns)
-   pd_stock_mat   = pd.DataFrame(stock_mat.transpose(1,3,0,2).reshape((length_materials * length_time),  (len(inflow) * REGIONS)), index=index, columns=columns)
-         
-   return pd_inflow_mat, pd_outflow_mat, pd_stock_mat
+    """
+    for those vehicles with multiple sub-type, we calculate the material stocks & flows in the same way, so:
+        Nr * weight (kg) * composition (%) - but using data on specific vehicle sub-types
+    """
+    inflow_mat  = np.zeros((len(inflow), len(composition.columns.levels[1]), len(inflow[0]), len(inflow[0][0])))
+    outflow_mat = np.zeros((len(inflow), len(composition.columns.levels[1]), len(inflow[0]), len(inflow[0][0])))
+    stock_mat   = np.zeros((len(inflow), len(composition.columns.levels[1]), len(inflow[0]), len(inflow[0][0])))
+    
+    #composition.columns.names = ['type', 'material']
+    
+    # get two dictionaries to keep tarck of the order of materials & vtypes while using numpy
+    vtype_list   = list(composition.columns.unique('type'))  # columns.unique() keeps the original order, which is important here (same for materials)
+    vtype_count  = list(range(0,len(vtype_list))) 
+    vtype_dict   = dict(zip(vtype_count, vtype_list))
+    
+    mater_list   = list(composition.columns.unique('material'))
+    mater_count  = list(range(0,len(composition.columns.levels[1]))) 
+    mater_dict   = dict(zip(mater_count, mater_list))
+        
+    for vtype in range(0, len(vtype_list)): 
+       # before running, check if the vehicle type is at all relevant in the vehicle (save calculation time)
+       weight_used = weight.loc[:,vtype_dict[vtype]].values
+       if stock_cohort[vtype].sum() > 0.001:  
+          for material in range(0, len(mater_list)): 
+             composition_used = composition.loc[:,idx[vtype_dict[vtype],mater_dict[material]]].values
+             # before running, check if the material is at all relevant in the vehicle (save calculation time)
+             if composition_used.sum() > 0.001:          
+                for region in range(0, len(inflow[0])):
+                   inflow_mat[vtype, material, region, :]  = (inflow[vtype, region, :] * weight_used) * composition_used
+                   outflow_mat[vtype, material, region, :] = np.multiply(np.multiply(outflow_cohort[vtype, region, :, :].T, weight_used), composition_used).T.sum(axis=1)
+                   stock_mat[vtype, material, region, :]   = np.multiply(np.multiply(stock_cohort[vtype, region, :, :], weight_used), composition_used).sum(axis=1)
+    
+             else:
+                pass
+       else:
+          pass
+    
+    length_materials = len(composition.columns.levels[1])
+    length_time      = END_YEAR + 1 - (END_YEAR + 1 - len(inflow[0][0]))
+    
+    #return as pandas dataframe, just once
+    index          = pd.MultiIndex.from_product([mater_list, list(range((END_YEAR + 1 - len(inflow[0][0])), END_YEAR + 1))], names=['material', 'time'])
+    columns        = pd.MultiIndex.from_product([vtype_list, range(1,REGIONS+1)],      names=['type', 'region'])
+    pd_inflow_mat  = pd.DataFrame(inflow_mat.transpose(1,3,0,2).reshape((length_materials * length_time), (len(inflow) * REGIONS)), index=index, columns=columns)
+    pd_outflow_mat = pd.DataFrame(outflow_mat.transpose(1,3,0,2).reshape((length_materials * length_time),(len(inflow) * REGIONS)), index=index, columns=columns)
+    pd_stock_mat   = pd.DataFrame(stock_mat.transpose(1,3,0,2).reshape((length_materials * length_time),  (len(inflow) * REGIONS)), index=index, columns=columns)
+          
+    return pd_inflow_mat, pd_outflow_mat, pd_stock_mat
 
