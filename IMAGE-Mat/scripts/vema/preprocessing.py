@@ -8,8 +8,6 @@ import pandas as pd
 import time
 import os
 
-from pathlib import Path
-# from read_scripts.dynamic_stock_model_BM import DynamicStockModel as DSM
 from read_scripts.read_mym import read_mym_df
 from modelling_functions import interpolate, tkms_to_nr_of_vehicles_fixed
 # Path fragments and constants

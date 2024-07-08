@@ -11,7 +11,8 @@ from modelling_functions import (
 from constants import ( 
                         START_YEAR, FIRST_YEAR, END_YEAR,
                         columns_vehicle_output,
-                        OUTPUT_FOLDER, PROJECT, FOLDER
+                        OUTPUT_FOLDER,
+                        REGIONS
                        )
 
 # Core modelling of stock dynamics & material use, assumes input as pandas dataFrames
@@ -89,7 +90,7 @@ total_nr_vehicles_in['Ships']        = vehicle_stocks_and_flows_simple['Small Sh
 total_nr_vehicles_in['Inland ships'] = vehicle_stocks_and_flows_simple['Inland Ships'][0][-last_years:,:].flatten(order='C')  
 total_nr_vehicles_in['Cargo Planes'] = vehicle_stocks_and_flows_simple['Freight Planes'][0][-last_years:,:].flatten(order='C')
 
-total_nr_vehicles_in.to_csv(OUTPUT_FOLDER + '\\region_vehicle_in.csv', index=True) # regional nr of vehicles sold (annually)
+total_nr_vehicles_in.to_csv(OUTPUT_FOLDER.joinpath('region_vehicle_in.csv'), index=True) # regional nr of vehicles sold (annually)
 
 total_nr_vehicles_out = pd.DataFrame(index=index, columns=columns_vehicle_output)
 total_nr_vehicles_out['Buses']        = vehicle_stocks_and_flows_typical['Regular Buses'][1].sum(0).sum(-1)[:,-last_years:].flatten(order='F') + vehicle_stocks_and_flows_typical['Midi Buses'][1].sum(0).sum(-1)[:,-last_years:].flatten(order='F')  #flattening a numpy array in the expected order (year columns first)
@@ -104,7 +105,7 @@ total_nr_vehicles_out['Ships']        = vehicle_stocks_and_flows_simple['Small S
 total_nr_vehicles_out['Inland ships'] = vehicle_stocks_and_flows_simple['Inland Ships'][1].sum(-1)[:,-last_years:].flatten(order='F')
 total_nr_vehicles_out['Cargo Planes'] = vehicle_stocks_and_flows_simple['Freight Planes'][1].sum(-1)[:,-last_years:].flatten(order='F')
 
-total_nr_vehicles_out.to_csv(OUTPUT_FOLDER + '\\region_vehicle_out.csv', index=True) # regional nr of vehicles sold (annually)
+total_nr_vehicles_out.to_csv(OUTPUT_FOLDER.joinpath('region_vehicle_out.csv'), index=True) # regional nr of vehicles sold (annually)
 
 
 #%% ################### MATERIAL CALCULATIONS ##########################################
@@ -206,8 +207,8 @@ for vtype in list(preprocessing_results['battery_weights_typical'].columns.level
         battery_weight_total_in.loc[idx[key_map_typical[key],:],vtype]    = battery_materials_typical[key][0].loc[idx[:,:],idx[vtype,:]].sum(level=1).sum(axis=1, level=0).values
         battery_weight_total_stock.loc[idx[key_map_typical[key],:],vtype] = battery_materials_typical[key][2].loc[idx[:,:],idx[vtype,:]].sum(level=1).sum(axis=1, level=0).values
         
-battery_weight_total_in.to_csv(OUTPUT_FOLDER + '\\battery_weight_kg_in.csv', index=True)       # in kg
-battery_weight_total_stock.to_csv(OUTPUT_FOLDER + '\\battery_weight_kg_stock.csv', index=True) # in kg
+battery_weight_total_in.to_csv(OUTPUT_FOLDER.joinpath('battery_weight_kg_in.csv'), index=True)       # in kg
+battery_weight_total_stock.to_csv(OUTPUT_FOLDER.joinpath('battery_weight_kg_stock.csv'), index=True) # in kg
 
 # Regional battery weight (only the accounted materials), used in graph later on
 
@@ -217,3 +218,5 @@ for key in key_map_typical:
     battery_weight_regional_stock += battery_materials_typical[key][2].sum(axis=0,level=1).sum(axis=1,level=1) # stock = 3rd output
     
 
+
+# %%
