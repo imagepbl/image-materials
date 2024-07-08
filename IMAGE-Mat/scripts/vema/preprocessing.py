@@ -28,7 +28,7 @@ from constants import (
 def preprocessing(base_dir=os.getcwd()):
     """Wrapper function for the preprocessing part of the VEMA script.
     """
-    #base_dir=os.getcwd()
+    base_dir=os.getcwd()
     print(base_dir)
     base_dir = Path(base_dir)
     # %%
@@ -326,6 +326,7 @@ def preprocessing(base_dir=os.getcwd()):
     car_total_vkms  = car_pkms.div(car_loadfactor) * 1000000000000    # now in kms
     car_total_nr    = car_total_vkms.div(kilometrage)                 # total number of cars
     car_total_nr.columns = list(range(1,27))                          # remove region labels (for use in functions later on)
+    car_total_nr[["Extra Column", "Extra Column 2"]] = 1
     total_nr_vehicles_simple["Cars"] = car_total_nr
     
     # for buses do the same, but first remove region 27 & 28 (empty & world total) & kilometrage column names
