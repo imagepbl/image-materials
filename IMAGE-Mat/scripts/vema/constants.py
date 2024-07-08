@@ -1,4 +1,8 @@
 """"Global constants for the VEMA model."""
+from pathlib import Path
+import os
+
+base_dir = Path(os.getcwd())
 
 # --- Settings & constants
 
@@ -85,5 +89,4 @@ SCEN = "SSP2"
 VARIANT = "2D_RE"
 PROJECT = "mock_project"
 FOLDER = SCEN + "_" + VARIANT
-# TODO: deprecate this constant
-OUTPUT_FOLDER = "../../output/" + PROJECT + "/" + FOLDER
+OUTPUT_FOLDER = base_dir.joinpath("..", "..", "output", PROJECT, FOLDER)
