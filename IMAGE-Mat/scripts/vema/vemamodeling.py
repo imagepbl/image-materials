@@ -1,3 +1,4 @@
+# %%
 import pandas as pd
 import numpy as np
 from preprocessing import preprocessing
@@ -22,6 +23,7 @@ from constants import (
 # 4. Material calculations
 # 5. Preparing output
 
+# %%
 idx = pd.IndexSlice
 preprocessing_results = preprocessing()
 
