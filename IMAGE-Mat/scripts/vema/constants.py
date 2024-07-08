@@ -23,6 +23,14 @@ FIRST_YEAR_BOATS = 1900
 # relative to this BASE loadfcator (persons/car))
 LOAD_FACTOR = 1.6
 
+LIGHT_COMMERCIAL_VEHICLE_SHARE = 0.04 # 0.04 is the fraction of the tkms driven by light commercial vehicles according to the IEA
+
+MEGA_TO_TERA = 1_000_000  # 1 Tera = 1,000,000 Mega
+PKMS_TO_VKMS = 1_000_000_000_000
+TONNES_TO_KGS = 1000
+
+SHIPS_YEARS_RANGE = list(range(2005,2018+1))
+
 # --- Labels
 bus_label = ["BusOil", "BusBio", "BusGas", "BusElecTrolley", "Bus Hybrid1",
              "Bus Hybrid2", "BusBattElectric", "", "", "", "", "", "", "", "",
@@ -46,7 +54,7 @@ tkms_label = ["inland shipping", "freight train", "medium truck",
               "total"]
 pkms_label = ["walking", "bicycle", "bus", "rail_reg", "car", "rail_hst", "air_pas",
               "total"]
-columns_vehicle_output = ["Buses", "Trains", "Hight Speed Trains", "Cars", "Planes", "Bikes",
+columns_vehicle_output = ["Buses", "Trains", "High Speed Trains", "Cars", "Planes", "Bikes",
                           "Trucks", "Freight Trains", "Ships", "Inland Ships",
                           "Freight Planes"]
 
