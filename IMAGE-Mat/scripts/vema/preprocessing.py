@@ -28,7 +28,7 @@ from constants import (
 def preprocessing(base_dir=os.getcwd()):
     """Wrapper function for the preprocessing part of the VEMA script.
     """
-    base_dir=os.getcwd()
+    #base_dir=os.getcwd()
     print(base_dir)
     base_dir = Path(base_dir)
     # %%
