@@ -1,3 +1,4 @@
+# %%
 import pandas as pd
 from preprocessing import preprocessing
 from modelling_functions import (
@@ -29,7 +30,7 @@ preprocessing_results = preprocessing()
 all_keys = list(preprocessing_results['total_nr_vehicles_simple'].columns.levels[0].unique())
 
 key_map_simple = {}
-key_map_simple['Planes'] = 'air_pas'
+key_map_simple['Passenger Planes'] = 'air_pas'
 key_map_simple['Bikes'] = 'bicycle'
 key_map_simple['Freight Planes'] = 'air_freight'
 key_map_simple['Freight Trains'] = 'rail_freight'
@@ -74,6 +75,7 @@ for key in key_map_typical:
             'FoldedNormal', preprocessing_results['vehicle_shares_typical'][key])
 
 #%% Intermediate export of inflow & outflow of vehicles (for IRP database) ###############
+""" TODO move to postprocessing?
 
 region_list = list(range(1,27))
 last_years  = END_YEAR+1 - START_YEAR
@@ -81,24 +83,24 @@ index = pd.MultiIndex.from_product([list(range(START_YEAR, END_YEAR+1)), region_
 total_nr_vehicles_in = pd.DataFrame(index=index, columns=columns_vehicle_output)
 total_nr_vehicles_in['Buses']        = vehicle_stocks_and_flows_typical['Regular Buses'][0].sum(0)[:,-last_years:].flatten(order='F') + vehicle_stocks_and_flows_typical['Midi Buses'][0].sum(0)[:,-last_years:].flatten(order='F')  #flattening a numpy array in the expected order (year columns first)
 total_nr_vehicles_in['Trains']       = vehicle_stocks_and_flows_simple['Trains'][0][-last_years:,:].flatten(order='C')  # for simple arrays (no vehicle types) the column order is reversed
-total_nr_vehicles_in['HST']          = vehicle_stocks_and_flows_simple['High Speed Trains'][0][-last_years:,:].flatten(order='C')
+total_nr_vehicles_in['High Speed Trains']          = vehicle_stocks_and_flows_simple['High Speed Trains'][0][-last_years:,:].flatten(order='C')
 total_nr_vehicles_in['Cars']         = vehicle_stocks_and_flows_typical['Cars'][0].sum(0)[:,-last_years:].flatten(order='F')
-total_nr_vehicles_in['Planes']       = vehicle_stocks_and_flows_simple['Planes'][0][-last_years:,:].flatten(order='C')
+total_nr_vehicles_in['Passenger Planes']       = vehicle_stocks_and_flows_simple['Planes'][0][-last_years:,:].flatten(order='C')
 total_nr_vehicles_in['Bikes']        = vehicle_stocks_and_flows_simple['Bikes'][0][-last_years:,:].flatten(order='C')
 total_nr_vehicles_in['Trucks']       = vehicle_stocks_and_flows_typical['Heavy Freight Trucks'][0].sum(0)[:,-last_years:].flatten(order='F') + vehicle_stocks_and_flows_typical['Medium Freight Trucks'][0].sum(0)[:,-last_years:].flatten(order='F') + vehicle_stocks_and_flows_typical['Light Commercial Vehicles'][0].sum(0)[:,-last_years:].flatten(order='F')
-total_nr_vehicles_in['Cargo Trains'] = vehicle_stocks_and_flows_simple['Freight Trains'][0][-last_years:,:].flatten(order='C')
-total_nr_vehicles_in['Ships']        = vehicle_stocks_and_flows_simple['Small Ships'][0][-last_years:,:].flatten(order='C') + vehicle_stocks_and_flows_simple['Medium Ships'][0][-last_years:,:].flatten(order='C') + vehicle_stocks_and_flows_simple['Large Ships'][0][-last_years:,:].flatten(order='C') + vehicle_stocks_and_flows_simple['Very Large Ships'][0][-last_years:,:].flatten(order='C')
+total_nr_vehicles_in['Freight Trains'] = vehicle_stocks_and_flows_simple['Freight Trains'][0][-last_years:,:].flatten(order='C')
+total_nr_vehicles_in['Small Ships']        = vehicle_stocks_and_flows_simple['Small Ships'][0][-last_years:,:].flatten(order='C') + vehicle_stocks_and_flows_simple['Medium Ships'][0][-last_years:,:].flatten(order='C') + vehicle_stocks_and_flows_simple['Large Ships'][0][-last_years:,:].flatten(order='C') + vehicle_stocks_and_flows_simple['Very Large Ships'][0][-last_years:,:].flatten(order='C')
 total_nr_vehicles_in['Inland ships'] = vehicle_stocks_and_flows_simple['Inland Ships'][0][-last_years:,:].flatten(order='C')  
-total_nr_vehicles_in['Cargo Planes'] = vehicle_stocks_and_flows_simple['Freight Planes'][0][-last_years:,:].flatten(order='C')
+total_nr_vehicles_in['Freight Planes'] = vehicle_stocks_and_flows_simple['Freight Planes'][0][-last_years:,:].flatten(order='C')
 
-total_nr_vehicles_in.to_csv(OUTPUT_FOLDER + '\\region_vehicle_in.csv', index=True) # regional nr of vehicles sold (annually)
+total_nr_vehicles_in.to_csv(OUTPUT_FOLDER.joinpath('region_vehicle_in.csv'), index=True) # regional nr of vehicles sold (annually)
 
 total_nr_vehicles_out = pd.DataFrame(index=index, columns=columns_vehicle_output)
 total_nr_vehicles_out['Buses']        = vehicle_stocks_and_flows_typical['Regular Buses'][1].sum(0).sum(-1)[:,-last_years:].flatten(order='F') + vehicle_stocks_and_flows_typical['Midi Buses'][1].sum(0).sum(-1)[:,-last_years:].flatten(order='F')  #flattening a numpy array in the expected order (year columns first)
 total_nr_vehicles_out['Trains']       = vehicle_stocks_and_flows_simple['Trains'][1].sum(-1)[:,-last_years:].flatten(order='F')  # for simple arrays (no vehicle types) the column order is reversed
-total_nr_vehicles_out['HST']          = vehicle_stocks_and_flows_simple['High Speed Trains'][1].sum(-1)[:,-last_years:].flatten(order='F')
+total_nr_vehicles_out['High Speed Trains']          = vehicle_stocks_and_flows_simple['High Speed Trains'][1].sum(-1)[:,-last_years:].flatten(order='F')
 total_nr_vehicles_out['Cars']         = vehicle_stocks_and_flows_typical['Cars'][1].sum(0).sum(-1)[:,-last_years:].flatten(order='F')
-total_nr_vehicles_out['Planes']       = vehicle_stocks_and_flows_simple['Planes'][1].sum(-1)[:,-last_years:].flatten(order='F')
+total_nr_vehicles_out['Passenger Planes']       = vehicle_stocks_and_flows_simple['Planes'][1].sum(-1)[:,-last_years:].flatten(order='F')
 total_nr_vehicles_out['Bikes']        = vehicle_stocks_and_flows_simple['Bikes'][1].sum(-1)[:,-last_years:].flatten(order='F')
 total_nr_vehicles_out['Trucks']       = vehicle_stocks_and_flows_typical['Heavy Freight Trucks'][1].sum(0).sum(-1)[:,-last_years:].flatten(order='F') + vehicle_stocks_and_flows_typical['Medium Freight Trucks'][1].sum(0).sum(-1)[:,-last_years:].flatten(order='F') + vehicle_stocks_and_flows_typical['Light Commercial Vehicles'][1].sum(0).sum(-1)[:,-last_years:].flatten(order='F')
 total_nr_vehicles_out['Cargo Trains'] = vehicle_stocks_and_flows_simple['Freight Trains'][1].sum(-1)[:,-last_years:].flatten(order='F')
@@ -106,9 +108,9 @@ total_nr_vehicles_out['Ships']        = vehicle_stocks_and_flows_simple['Small S
 total_nr_vehicles_out['Inland ships'] = vehicle_stocks_and_flows_simple['Inland Ships'][1].sum(-1)[:,-last_years:].flatten(order='F')
 total_nr_vehicles_out['Cargo Planes'] = vehicle_stocks_and_flows_simple['Freight Planes'][1].sum(-1)[:,-last_years:].flatten(order='F')
 
-total_nr_vehicles_out.to_csv(OUTPUT_FOLDER + '\\region_vehicle_out.csv', index=True) # regional nr of vehicles sold (annually)
+total_nr_vehicles_out.to_csv(OUTPUT_FOLDER.joinpath('region_vehicle_out.csv'), index=True) # regional nr of vehicles sold (annually)
 
-
+"""
 #%% ################### MATERIAL CALCULATIONS ##########################################
 
 #%% ############################################# RUNNING THE DYNAMIC STOCK FUNCTIONS  (runtime ca. 10 sec)  ###############################################
@@ -208,8 +210,8 @@ for vtype in list(preprocessing_results['battery_weights_typical'].columns.level
         battery_weight_total_in.loc[idx[key_map_typical[key],:],vtype] = battery_materials_typical[key][0].loc[idx[:,:],idx[vtype,:]].sum(level=1).sum(axis=1, level=0).values
         battery_weight_total_stock.loc[idx[key_map_typical[key],:],vtype] = battery_materials_typical[key][2].loc[idx[:,:],idx[vtype,:]].sum(level=1).sum(axis=1, level=0).values
         
-battery_weight_total_in.to_csv(OUTPUT_FOLDER + '\\battery_weight_kg_in.csv', index=True) # in kg
-battery_weight_total_stock.to_csv(OUTPUT_FOLDER + '\\battery_weight_kg_stock.csv', index=True) # in kg
+battery_weight_total_in.to_csv(OUTPUT_FOLDER / 'battery_weight_kg_in.csv', index=True)       # in kg
+battery_weight_total_stock.to_csv(OUTPUT_FOLDER / 'battery_weight_kg_stock.csv', index=True) # in kg
 
 # Regional battery weight (only the accounted materials), used in graph later on
 
@@ -219,3 +221,5 @@ for key in key_map_typical:
     battery_weight_regional_stock += battery_materials_typical[key][2].sum(axis=0,level=1).sum(axis=1,level=1) # stock = 3rd output
     
 
+
+# %%
