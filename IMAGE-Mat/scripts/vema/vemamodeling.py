@@ -1,6 +1,5 @@
 # %%
 import pandas as pd
-import numpy as np
 from preprocessing import preprocessing
 from modelling_functions import (
                                 inflow_outflow_dynamic_np,
@@ -9,9 +8,10 @@ from modelling_functions import (
                                 nr_by_cohorts_to_materials_typical_np
                                 )
 from constants import ( 
-                        START_YEAR, FIRST_YEAR, END_YEAR,
+                        START_YEAR, END_YEAR,
                         columns_vehicle_output,
-                        OUTPUT_FOLDER, PROJECT, FOLDER
+                        REGIONS,
+                        OUTPUT_FOLDER
                        )
 
 # Core modelling of stock dynamics & material use, assumes input as pandas dataFrames
@@ -52,24 +52,27 @@ key_map_typical['Regular Buses'] = 'reg_bus'
 
 #%% INFLOW-OUTFLOW calculations using the ODYM Dynamic Stock Model (DSM) as a function
 
-##################### DYNAMIC MODEL (runtime: ca. 30 sec) ########################################################################
-# Calculate the NUMBER of vehicles, total for inflow & by cohort for stock & outflow, first only for simple vehicles
+##################### DYNAMIC MODEL (runtime: ca. 30 sec) #######################################
+# Calculate the NUMBER of vehicles, total for inflow & by cohort for stock & outflow
+# first only for simple vehicles
 
 region_selection = list(range(1,27)) #TODO: Change to 26 or 28 regions, decide later (set to 26 for now)
 
 vehicle_stocks_and_flows_simple = {}
 for key in key_map_simple:
-    vehicle_stocks_and_flows_simple[key] = inflow_outflow_dynamic_np(preprocessing_results['total_nr_vehicles_simple'].loc[:, idx[key, region_selection]].to_numpy(),
-                                                          preprocessing_results['lifetimes_vehicles'].loc[:, idx[key_map_simple[key], 'mean']],
-                                                          preprocessing_results['lifetimes_vehicles'].loc[:, idx[key_map_simple[key], 'stdev']],
-                                                          'FoldedNormal')
+    vehicle_stocks_and_flows_simple[key] = inflow_outflow_dynamic_np(
+            preprocessing_results['total_nr_vehicles_simple'].loc[:, idx[key, region_selection]].to_numpy(),
+            preprocessing_results['lifetimes_vehicles'].loc[:, idx[key_map_simple[key], 'mean']],
+            preprocessing_results['lifetimes_vehicles'].loc[:, idx[key_map_simple[key], 'stdev']],
+            'FoldedNormal')
+
 vehicle_stocks_and_flows_typical = {}
 for key in key_map_typical:
-    vehicle_stocks_and_flows_typical[key] = inflow_outflow_typical_np(preprocessing_results['total_nr_vehicles_simple'].loc[:, idx[key, region_selection]].droplevel(0,axis=1),
-                                                          preprocessing_results['lifetimes_vehicles'].loc[:, idx[key_map_typical[key], 'mean']],
-                                                          preprocessing_results['lifetimes_vehicles'].loc[:, idx[key_map_typical[key], 'stdev']],
-                                                          'FoldedNormal',
-                                                          preprocessing_results['vehicle_shares_typical'][key])
+    vehicle_stocks_and_flows_typical[key] = inflow_outflow_typical_np(
+            preprocessing_results['total_nr_vehicles_simple'].loc[:, idx[key, region_selection]].droplevel(0,axis=1),
+            preprocessing_results['lifetimes_vehicles'].loc[:, idx[key_map_typical[key], 'mean']],
+            preprocessing_results['lifetimes_vehicles'].loc[:, idx[key_map_typical[key], 'stdev']],
+            'FoldedNormal', preprocessing_results['vehicle_shares_typical'][key])
 
 #%% Intermediate export of inflow & outflow of vehicles (for IRP database) ###############
 
@@ -203,10 +206,10 @@ trucks_LCV_bat_in,   trucks_LCV_bat_out,   trucks_LCV_bat_stock     = nr_by_coho
 # Sum the weight of the accounted materials (! so not total weight) in batteries by vehicle & vehicle type, output for figures
 for vtype in list(preprocessing_results['battery_weights_typical'].columns.levels[1]):
     for key in key_map_typical: 
-        battery_weight_total_in.loc[idx[key_map_typical[key],:],vtype]    = battery_materials_typical[key][0].loc[idx[:,:],idx[vtype,:]].sum(level=1).sum(axis=1, level=0).values
+        battery_weight_total_in.loc[idx[key_map_typical[key],:],vtype] = battery_materials_typical[key][0].loc[idx[:,:],idx[vtype,:]].sum(level=1).sum(axis=1, level=0).values
         battery_weight_total_stock.loc[idx[key_map_typical[key],:],vtype] = battery_materials_typical[key][2].loc[idx[:,:],idx[vtype,:]].sum(level=1).sum(axis=1, level=0).values
         
-battery_weight_total_in.to_csv(OUTPUT_FOLDER + '\\battery_weight_kg_in.csv', index=True)       # in kg
+battery_weight_total_in.to_csv(OUTPUT_FOLDER + '\\battery_weight_kg_in.csv', index=True) # in kg
 battery_weight_total_stock.to_csv(OUTPUT_FOLDER + '\\battery_weight_kg_stock.csv', index=True) # in kg
 
 # Regional battery weight (only the accounted materials), used in graph later on
