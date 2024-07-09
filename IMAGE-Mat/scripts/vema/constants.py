@@ -2,7 +2,7 @@
 from pathlib import Path
 import os
 
-base_dir = Path(os.getcwd())
+base_dir = Path.cwd()
 
 # --- Settings & constants
 

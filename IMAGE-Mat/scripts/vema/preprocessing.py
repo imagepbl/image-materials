@@ -393,7 +393,7 @@ def preprocessing(base_dir=os.getcwd()):
                 mileage_boats_yrs[size].loc[START_YEAR:], axis=0
             )
         diff_ships[size] = total_nr_vehicles_simple[f"{size} Ships"].loc[
-            SHIPS_YEARS_RANGE,                                       #TODO Mka eyears flexible
+            SHIPS_YEARS_RANGE,   # TODO Make years flexible
             28
         ].div(nr_of_boats[size])
     

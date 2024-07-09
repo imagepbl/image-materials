@@ -30,7 +30,7 @@ preprocessing_results = preprocessing()
 all_keys = list(preprocessing_results['total_nr_vehicles_simple'].columns.levels[0].unique())
 
 key_map_simple = {}
-key_map_simple['Planes'] = 'air_pas'
+key_map_simple['Passenger Planes'] = 'air_pas'
 key_map_simple['Bikes'] = 'bicycle'
 key_map_simple['Freight Planes'] = 'air_freight'
 key_map_simple['Freight Trains'] = 'rail_freight'
@@ -210,8 +210,8 @@ for vtype in list(preprocessing_results['battery_weights_typical'].columns.level
         battery_weight_total_in.loc[idx[key_map_typical[key],:],vtype] = battery_materials_typical[key][0].loc[idx[:,:],idx[vtype,:]].sum(level=1).sum(axis=1, level=0).values
         battery_weight_total_stock.loc[idx[key_map_typical[key],:],vtype] = battery_materials_typical[key][2].loc[idx[:,:],idx[vtype,:]].sum(level=1).sum(axis=1, level=0).values
         
-battery_weight_total_in.to_csv(OUTPUT_FOLDER.joinpath('battery_weight_kg_in.csv'), index=True)       # in kg
-battery_weight_total_stock.to_csv(OUTPUT_FOLDER.joinpath('battery_weight_kg_stock.csv'), index=True) # in kg
+battery_weight_total_in.to_csv(OUTPUT_FOLDER / 'battery_weight_kg_in.csv', index=True)       # in kg
+battery_weight_total_stock.to_csv(OUTPUT_FOLDER / 'battery_weight_kg_stock.csv', index=True) # in kg
 
 # Regional battery weight (only the accounted materials), used in graph later on
 
