@@ -14,7 +14,6 @@ END_YEAR = 2060
 # year of output generation
 OUT_YEAR = 2060
 REGIONS = 26
-FIRST_YEAR_BOATS = 1900
 # reference loadfactor of cars in TIMER (the trp_trvl_Load.out file is
 # relative to this BASE loadfcator (persons/car))
 LOAD_FACTOR = 1.6
