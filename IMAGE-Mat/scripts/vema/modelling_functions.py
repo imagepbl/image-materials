@@ -41,7 +41,7 @@ def interpolate(original: pd.DataFrame, first_year=[], change: str='no'):
     
     # IF there is a first_year defined, add these as 0
     # TODO: Test if columns of first_year & original are the same
-    if isinstance(first_year, list):
+    if not isinstance(first_year, list):
         for item in list(original.columns):
             reindexed.loc[first_year[item],item] = 0
     else:

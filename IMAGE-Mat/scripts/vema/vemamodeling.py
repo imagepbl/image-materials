@@ -1,4 +1,3 @@
-# %%
 import pandas as pd
 from preprocessing import preprocessing
 from modelling_functions import (
