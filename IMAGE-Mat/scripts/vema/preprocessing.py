@@ -78,13 +78,13 @@ def preprocessing(base_dir=os.getcwd()):
     #  Reading all out files for vehicles and ships that are internal to IMAGE
     
     # IMAGE scenario files (total demand in Tkms & Pkms + vehicle shares)
-    tonkms_Mtkms        = read_mym_df(image_folder.joinpath("trp_frgt_Tkm.out"))              # The tonne kilometres of freight vehicles of the IMAGE/TIMER SSP2 (in Mega Tkm)
-    passengerkms_Tpkms  = read_mym_df(image_folder.joinpath("trp_trvl_pkm.out"))              # The passenger kilometres from the IMAGE/TIMER SSP2 (in Tera Pkm)
-    buses_vshares       = read_mym_df(image_folder.joinpath("trp_trvl_Vshare_bus.out"))       # The vehicle shares of buses of the SSP2                            MIND! FOR the BL this is still the OLD SSP2 file REPLACE LATER
-    car_vshares         = read_mym_df(image_folder.joinpath("trp_trvl_Vshare_car.out"))       # The vehicle shares of passenger cars of the SSP2 
-    medtruck_vshares    = read_mym_df(image_folder.joinpath("trp_frgt_Vshare_MedTruck.out"))  # The vehicle shares of trucks (medium) of the SSP2 
-    hvytruck_vshares    = read_mym_df(image_folder.joinpath("trp_frgt_Vshare_HvyTruck.out"))  # The vehicle shares of trucks (heavy) of the SSP2 
-    loadfactor_car_data = read_mym_df(image_folder.joinpath("trp_trvl_Load.out"))             # The loadfactor of passenger vehicles (occupation in nr of people/vehicle) in reference to the base loadfactor (see constants above)
+    tonkms_Mtkms        = read_mym_df(image_folder.joinpath("trp_frgt_Tkm.out")).rename(columns={"DIM_1":"region"})              # The tonne kilometres of freight vehicles of the IMAGE/TIMER SSP2 (in Mega Tkm)
+    passengerkms_Tpkms  = read_mym_df(image_folder.joinpath("trp_trvl_pkm.out")).rename(columns={"DIM_1":"region"})              # The passenger kilometres from the IMAGE/TIMER SSP2 (in Tera Pkm)
+    buses_vshares       = read_mym_df(image_folder.joinpath("trp_trvl_Vshare_bus.out")).rename(columns={"DIM_1":"region"})       # The vehicle shares of buses of the SSP2                            MIND! FOR the BL this is still the OLD SSP2 file REPLACE LATER
+    car_vshares         = read_mym_df(image_folder.joinpath("trp_trvl_Vshare_car.out")).rename(columns={"DIM_1":"region"})       # The vehicle shares of passenger cars of the SSP2 
+    medtruck_vshares    = read_mym_df(image_folder.joinpath("trp_frgt_Vshare_MedTruck.out")).rename(columns={"DIM_1":"region"})  # The vehicle shares of trucks (medium) of the SSP2 
+    hvytruck_vshares    = read_mym_df(image_folder.joinpath("trp_frgt_Vshare_HvyTruck.out")).rename(columns={"DIM_1":"region"})  # The vehicle shares of trucks (heavy) of the SSP2 
+    loadfactor_car_data = read_mym_df(image_folder.joinpath("trp_trvl_Load.out")).rename(columns={"DIM_1":"region"})             # The loadfactor of passenger vehicles (occupation in nr of people/vehicle) in reference to the base loadfactor (see constants above)
     
     """
     preprocessing of the IMAGE files & files with additional assumptions on vehcile materials (renaming, removing 27th region, adding labels etc.)
@@ -95,6 +95,7 @@ def preprocessing(base_dir=os.getcwd()):
     region_list          = list(kilometrage.columns.values)     # get a list with region names TODO: turn this into a proper mapping based on ...
     
     # select loadfactor for cars
+    loadfactor_car_data.rename(columns={"DIM_1":"region"}, inplace = True)
     car_loadfactor = loadfactor_car_data[["time","region", 5]].pivot_table(index="time", columns="region").droplevel(level=0, axis=1)  * LOAD_FACTOR # loadfactor for cars (in persons per vehicle) * LOAD_FACTOR to correct with te TIMER reference
     car_loadfactor = car_loadfactor.apply(lambda x: [y if y >= 1 else 1 for y in x])                      # To avoid car load (person/vehicle) values ever going below 1, replace all values below 1 with 1
     car_loadfactor = car_loadfactor.loc[list(range(START_YEAR, END_YEAR+1)),:]     # remove years beyond LAST_YEAR
@@ -264,10 +265,10 @@ def preprocessing(base_dir=os.getcwd()):
         columns=pd.MultiIndex.from_product(
             [["Regular Buses", "Midi Buses", "Trains", "High Speed Trains",
               "Passenger Planes",
-              "Bikes", "Heavy Freight Truck", "Medium Freight Truck", 
-              "Light Commercial Vehicle", "Freight Trains", "Small Ships",
+              "Bikes", "Heavy Freight Trucks", "Medium Freight Trucks", 
+              "Light Commercial Vehicles", "Freight Trains", "Small Ships",
               "Medium Ships", "Large Ships", "Very Large Ships",
-              "Inland Ships", "Freight Planes"], #TODO should Cars be added?
+              "Inland Ships", "Freight Planes","Cars"], #TODO should Cars be added?
              list(range(1, REGIONS+3))],
             names=["Type", "Region"]
         )
@@ -292,7 +293,7 @@ def preprocessing(base_dir=os.getcwd()):
     # original ton kilometers are in Mega-ton-kms, div by MEGA_TO_TERA to
     # harmonize with pkms which are in Tera pkms
     total_nr_vehicles_simple["Heavy Freight Trucks"] = tkms_to_nr_of_vehicles_fixed(
-        trucks_HFT_tkm / MEGA_TO_TERA,
+        trucks_HFT_tkm  / MEGA_TO_TERA,
         mileages["HFT"].values[0],
         load["HFT"].values[0],
         loadfactor["HFT"].values[0]
@@ -453,8 +454,8 @@ def preprocessing(base_dir=os.getcwd()):
         trucks_battery_weight[(truck_type, 'Trolley')] = 0  # No trolley trucks
 
     #%% Calculate historic tail
-    first_year = first_year_vehicle.drop(columns = ["Cars"])
-    interpolate(total_nr_vehicles_simple, first_year)   #TODO what is this for?
+    #first_year = first_year_vehicle.drop(columns = ["Cars"])
+    #interpolate(total_nr_vehicles_simple, first_year)   #TODO what is this for?
     
     #%% Export intermediate indicators (a.o. files on nr. of vehicles, pkms/tkms)
     # Export total global number of vehicles in the fleet (stock) as csv
@@ -465,7 +466,7 @@ def preprocessing(base_dir=os.getcwd()):
     total_nr_vehicles["Trains"]       = total_nr_vehicles_simple["Trains"][region_list].stack()
     total_nr_vehicles["High Speed Trains"]          = total_nr_vehicles_simple["High Speed Trains"][region_list].stack()
     total_nr_vehicles["Cars"]         = car_total_nr[region_list].stack()
-    total_nr_vehicles["Planes"]       = total_nr_vehicles_simple["Planes"][region_list].stack()
+    total_nr_vehicles["Passenger Planes"]       = total_nr_vehicles_simple["Passenger Planes"][region_list].stack()
     total_nr_vehicles["Bikes"]        = total_nr_vehicles_simple["Bikes"][region_list].stack()
     total_nr_vehicles["Trucks"]       = total_nr_vehicles_simple["Heavy Freight Trucks"][region_list].stack() + total_nr_vehicles_simple["Medium Freight Trucks"][region_list].stack() + total_nr_vehicles_simple["Light Commercial Vehicles"][region_list].stack()
     total_nr_vehicles["Freight Trains"] = total_nr_vehicles_simple["Freight Trains"][region_list].stack()
@@ -482,7 +483,7 @@ def preprocessing(base_dir=os.getcwd()):
     total_pkm_tkm["Trains"]       = passengerkms_Tpkms["rail_reg"]   * PKMS_TO_VKMS                              
     total_pkm_tkm["High Speed Trains"]          = passengerkms_Tpkms["rail_hst"]     * PKMS_TO_VKMS
     total_pkm_tkm["Cars"]         = car_pkms[region_list].stack() * PKMS_TO_VKMS
-    total_pkm_tkm["Planes"]       = passengerkms_Tpkms["air_pas"]     * PKMS_TO_VKMS
+    total_pkm_tkm["Passenger Planes"]       = passengerkms_Tpkms["air_pas"]     * PKMS_TO_VKMS
     total_pkm_tkm["Bikes"]        = passengerkms_Tpkms["bicycle"]  * PKMS_TO_VKMS
     total_pkm_tkm["Trucks"]       = (trucks_HFT_tkm[region_list].stack() + trucks_MFT_tkm[region_list].stack() + trucks_LCV_tkm[region_list].stack()) * MEGA_TO_TERA
     total_pkm_tkm["Freight Trains"] = tonkms_Mtkms["freight train"] * MEGA_TO_TERA
@@ -492,7 +493,9 @@ def preprocessing(base_dir=os.getcwd()):
     
     # output to IRP
     # output transport drivers to output folder for 450 vs Bl comparisson in overarching figures later on
-    """
+
+    """ TODO move to to post processing?
+    
     tonkms_Mtkms.to_csv(standard_output_folder.joinpath("transport_tkms.csv"), index=True)       # in Mega tkms
     passengerkms_Tpkms.to_csv(standard_output_folder.joinpath("transport_pkms.csv"), index=True) # in Tera pkms
     vehicleshare_cars.to_csv(standard_output_folder.joinpath("car_type_share_regional.csv"), index=True)
@@ -500,7 +503,7 @@ def preprocessing(base_dir=os.getcwd()):
     total_nr_vehicles.sum(axis=0, level=0).to_csv(standard_output_folder.joinpath("global_vehicle_nr.csv"), index=True) # total global nr of vehicles 
     total_pkm_tkm.sum(axis=0, level=0).to_csv(standard_output_folder.joinpath("global_pkm_tkm.csv"), index=True) # total global pkms & tkms 
     total_pkm_tkm.to_csv(standard_output_folder.joinpath("region_pkm_tkm.csv"), index=True)  # regional pkms & tkms
-    
+    """
     #%% Interpolate to complete data for the entire model period (including a historic tail to set up the dynamic stock calculations)
     
     # reformatting lifetime data (because input is not yet region-specific)
