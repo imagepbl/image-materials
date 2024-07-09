@@ -123,21 +123,77 @@ def preprocessing(base_dir=os.getcwd()):
     hvytruck_vshares.columns   = truck_label
     buses_vshares.columns      = bus_label
     
+    #%% Vehicle shares of typical vehicles (i.e. specified different drivetrains)
+    
+    # CARS    
     # aggregate car types into 5 car types
     BEV_collist  = [22, 24]
     PHEV_collist = [23, 21, 20, 19, 18, 17, 16]
     ICE_collist  = [1,2,3,4,5,6,7,25]             # Gas car is considered ICE
     HEV_collist  = [8,9,10,11,12]
     FCV_collist  = [13,14,15]
-    car_types = ["ICE","HEV","PHEV","BEV","FCV"]
+    car_types = ["ICE","HEV","PHEV","BEV","FCV","Trolley"]
     
     index = pd.MultiIndex.from_product([list(range(START_YEAR, END_YEAR+1)), list(range(1,27))], names=["time", "DIM_1"])
-    vehicleshare_cars = pd.DataFrame(index=index, columns=car_types)
+    vehicleshare_cars = pd.DataFrame(0, index=index, columns=car_types)
     vehicleshare_cars.loc[idx[:,:],"ICE"]  = car_vshares[ICE_collist].sum(axis=1).to_numpy()
     vehicleshare_cars.loc[idx[:,:],"HEV"]  = car_vshares[HEV_collist].sum(axis=1).to_numpy()
     vehicleshare_cars.loc[idx[:,:],"PHEV"] = car_vshares[PHEV_collist].sum(axis=1).to_numpy()
     vehicleshare_cars.loc[idx[:,:],"BEV"]  = car_vshares[BEV_collist].sum(axis=1).to_numpy()
     vehicleshare_cars.loc[idx[:,:],"FCV"]  = car_vshares[FCV_collist].sum(axis=1).to_numpy()
+    
+    # BUSES
+    # Sum of all buses except Trolleys
+    midi_sum = buses_vshares[list(filter(lambda x: x != 'BusElecTrolley', bus_label))].sum(axis=1)
+    
+    # regular buses are just grouped
+    buses_regl_vshares = pd.DataFrame(index=buses_vshares.index, columns=vshares_label)
+    buses_regl_vshares['ICE']     = buses_vshares[bus_label_ICE].sum(axis=1)
+    buses_regl_vshares['HEV']     = buses_vshares[bus_label_HEV].sum(axis=1)
+    buses_regl_vshares['PHEV']    = pd.DataFrame(0, index=buses_vshares.index, columns=['PHEV'])
+    buses_regl_vshares['BEV']     = buses_vshares['BusBattElectric']
+    buses_regl_vshares['FCV']     = pd.DataFrame(0, index=buses_vshares.index, columns=['FCV'])
+    buses_regl_vshares['Trolley'] = buses_vshares['BusElecTrolley']
+    
+    # midi buses are grouped & divided by the sum of ICE, HEV & BEV, to adjust for the fact that Trolleys (or FCV or PHEV) are not an option for midi buses
+    buses_midi_vshares = pd.DataFrame(index=buses_vshares.index, columns=vshares_label)
+    buses_midi_vshares['ICE']     = buses_vshares[bus_label_ICE].sum(axis=1).div(midi_sum)
+    buses_midi_vshares['HEV']     = buses_vshares[bus_label_HEV].sum(axis=1).div(midi_sum)
+    buses_midi_vshares['PHEV']    = pd.DataFrame(0, index=buses_vshares.index, columns=['PHEV'])
+    buses_midi_vshares['BEV']     = buses_vshares['BusBattElectric'].div(midi_sum)
+    buses_midi_vshares['FCV']     = pd.DataFrame(0, index=buses_vshares.index, columns=['FCV'])
+    buses_midi_vshares['Trolley'] = pd.DataFrame(0, index=buses_vshares.index, columns=['Trolley'])
+    
+    # TRUCKS
+    # vehicle shares are grouped as: a) ICE, b) HEV, c) PHEV, d) BEV, e) FCV
+    # LCV vehicle shares are determined based on the medium trucks (so not calculated explicitly)
+    
+    # medium trucks
+    trucks_MFT_vshares = pd.DataFrame(index=medtruck_vshares.index, columns=vshares_label)
+    trucks_MFT_vshares['ICE']     = medtruck_vshares[truck_label_ICE].sum(axis=1)
+    trucks_MFT_vshares['HEV']     = medtruck_vshares[truck_label_HEV].sum(axis=1)
+    trucks_MFT_vshares['PHEV']    = medtruck_vshares[truck_label_PHEV].sum(axis=1)
+    trucks_MFT_vshares['BEV']     = medtruck_vshares[truck_label_BEV].sum(axis=1)
+    trucks_MFT_vshares['FCV']     = medtruck_vshares[truck_label_FCV].sum(axis=1)
+    trucks_MFT_vshares['Trolley'] = pd.DataFrame(0, index=index, columns=['Trolley'])                    # No trolley trucks 
+    
+    # heavy trucks
+    trucks_HFT_vshares = pd.DataFrame(index=hvytruck_vshares.index, columns=vshares_label)
+    trucks_HFT_vshares['ICE']     = hvytruck_vshares[truck_label_ICE].sum(axis=1)
+    trucks_HFT_vshares['HEV']     = hvytruck_vshares[truck_label_HEV].sum(axis=1)
+    trucks_HFT_vshares['PHEV']    = hvytruck_vshares[truck_label_PHEV].sum(axis=1)
+    trucks_HFT_vshares['BEV']     = hvytruck_vshares[truck_label_BEV].sum(axis=1)
+    trucks_HFT_vshares['FCV']     = hvytruck_vshares[truck_label_FCV].sum(axis=1)
+    trucks_HFT_vshares['Trolley'] = pd.DataFrame(0, index=hvytruck_vshares.index, columns=['Trolley'])   # No trolley trucks 
+
+    columns = pd.MultiIndex.from_product([['Cars', 'Regular Buses', 'Midi Buses', 'Heavy Freight Trucks', 'Medium Freight Trucks', 'Light Commercial Vehicles'], car_types, list(range(1,27))], names=["vehicle", "type", "DIM_1"])
+    vehicle_shares_typical         = pd.DataFrame(0, index=list(range(START_YEAR, END_YEAR+1)), columns=columns)
+    vehicle_shares_typical['Cars']                  = vehicleshare_cars.unstack()
+    vehicle_shares_typical['Regular Buses']         = buses_regl_vshares.unstack()
+    vehicle_shares_typical['Midi Buses']            = buses_midi_vshares.unstack()
+    vehicle_shares_typical['Heavy Freight Trucks']  = trucks_HFT_vshares.unstack()
+    vehicle_shares_typical['Medium Freight Trucks'] = trucks_MFT_vshares.unstack()
+    vehicle_shares_typical['Light Commercial Vehicles'] = trucks_MFT_vshares.unstack() # MIND Assumption: used MFT as a market-share for LCVs   
     
     # labels etc.
     # x_graphs        = [i for i in range(START_YEAR, END_YEAR, 1)]                           # this is used as an x-axis for the years in graphs
@@ -154,7 +210,7 @@ def preprocessing(base_dir=os.getcwd()):
     material_fractions_simple = interpolate(pd.DataFrame(material_fractions_simple))
     
     # complete & interpolate the vehicle composition data (by vehicle sub-type second)
-    material_fractions_typical = material_fractions_type.rename_axis(['mode','submode'], axis=1).rename_axis(['year','material'], axis=0).stack().stack().unstack(['mode','submode', 'material'])
+    material_fractions_typical = material_fractions_type.rename_axis(['mode','type'], axis=1).rename_axis(['year','material'], axis=0).stack().stack().unstack(['mode','type', 'material'])
     material_fractions_typical = interpolate(pd.DataFrame(material_fractions_typical))
     
     # interpolate & complete series for battery weights, shares & composition too
@@ -204,7 +260,7 @@ def preprocessing(base_dir=os.getcwd()):
             [["Regular Buses", "Midi Buses", "Trains", "High Speed Trains", "Planes",
               "Bikes", "Heavy Freight Trucks", "Medium Freight Trucks", "Light Commercial Vehicles", "Freight Trains", "Small Ships",
               "Medium Ships", "Large Ships", "Very Large Ships",
-              "Inland Ships", "Freight Planes"],
+              "Inland Ships", "Freight Planes", "Cars"],
              list(range(1, 29))],
             names=["Type", "DIM_1"]
         )
@@ -270,6 +326,8 @@ def preprocessing(base_dir=os.getcwd()):
     car_total_vkms  = car_pkms.div(car_loadfactor) * 1000000000000    # now in kms
     car_total_nr    = car_total_vkms.div(kilometrage)                 # total number of cars
     car_total_nr.columns = list(range(1,27))                          # remove region labels (for use in functions later on)
+    car_total_nr[["Extra Column", "Extra Column 2"]] = 1
+    total_nr_vehicles_simple["Cars"] = car_total_nr
     
     # for buses do the same, but first remove region 27 & 28 (empty & world total) & kilometrage column names
     # bus_regl_pkms  = bus_regl_pkms.drop([27, 28], axis=1)
@@ -338,12 +396,12 @@ def preprocessing(base_dir=os.getcwd()):
         total_nr_vehicles_simple["Very Large Ships"]
     diff_ships_total = total_nr_of_ships.loc[list(range(2005,2018+1)), 28].div(nr_of_boats.sum(axis=1))
     
+    # capacity of boats is in tonnes, the weight - expressed as a fraction of the capacity - is calculated in in kgs here
+    weight_boats  = weight_frac_boats_yrs * cap_of_boats_yrs * 1000 
+    
     # %% BATTERY WEIGHT SECTION
     # 1) BUSES: original vehcile shares are distributed into two vehicle types (regular and small midi buses)
     # vehicle shares are grouped as: a) ICE, b) HEV, c) trolley, d) BEV, but trolley buses are not relevant for midi busses, so the midi shares are re-calculated based on the sum without trolleys
-    
-    # Sum of all except Trolleys
-    midi_sum = buses_vshares[list(filter(lambda x: x != 'BusElecTrolley', bus_label))].sum(axis=1)
     
     # Create the DataFrame with MultiIndex columns
     buses_battery_weight = pd.DataFrame(index=buses_vshares.index, columns= \
@@ -441,21 +499,10 @@ def preprocessing(base_dir=os.getcwd()):
     
     # Doing the interpolation & assigning a starting point for the vehicle stock time series based on first_year_vehicle
     total_nr_vehicles_simple = interpolate(total_nr_vehicles_simple, first_year_vehicle_regionalized, change='no')
-    car_total_nr             = interpolate(car_total_nr, pd.DataFrame(first_year_vehicle['Cars'].values[0], index=['0'], columns=car_total_nr.columns), change='no')
-    
-    '''  
-    # Buses & Trucks are not yet assigned a engine type, so interpolation of typical dataframe may still need to be done
-    bus_regl_nr     = interpolate(bus_regl_nr[list(range(1, REGIONS+1))],  pd.DataFrame(first_year_vehicle['reg_bus'].values[0], index=['0'], columns=list(range(1,REGIONS+1))), change='no')
-    bus_midi_nr     = interpolate(bus_midi_nr[list(range(1, REGIONS+1))],  pd.DataFrame(first_year_vehicle['midi_bus'].values[0], index=['0'], columns=list(range(1,REGIONS+1))), change='no')
-    
-    trucks_HFT_nr   = interpolate(trucks_HFT_nr[list(range(1, REGIONS+1))], pd.DataFrame(first_year_vehicle['HFT'].values[0], index=['0'], columns=list(range(1,REGIONS+1))), change='no')
-    trucks_MFT_nr   = interpolate(trucks_HFT_nr[list(range(1, REGIONS+1))], pd.DataFrame(first_year_vehicle['MFT'].values[0], index=['0'], columns=list(range(1,REGIONS+1))), change='no')
-    trucks_LCV_nr   = interpolate(trucks_LCV_nr[list(range(1, REGIONS+1))], pd.DataFrame(first_year_vehicle['LCV'].values[0], index=['0'], columns=list(range(1,REGIONS+1))), change='no')
-    '''
+    vehicle_shares_typical   = interpolate(vehicle_shares_typical, change='no')  
     
     results_dict = { 
                 'total_nr_vehicles_simple': total_nr_vehicles_simple,
-                'car_total_nr': car_total_nr,
                 'material_fractions_simple': material_fractions_simple,
                 'material_fractions_typical': material_fractions_typical,
                 'vehicle_weights_simple': vehicle_weights_simple,
@@ -464,8 +511,10 @@ def preprocessing(base_dir=os.getcwd()):
                 'battery_weights_typical': battery_weights_typical,
                 'battery_materials': battery_materials,
                 'battery_shares': battery_shares,
-                'buses_battery_weight': buses_battery_weight,
-                'trucks_battery_weight': trucks_battery_weight
+                'buses_battery_weight': buses_battery_weight,             # Can be removed, right?
+                'trucks_battery_weight': trucks_battery_weight,           # Can be removed, right?
+                'weight_boats': weight_boats,
+                'vehicle_shares_typical': vehicle_shares_typical
             }
 
     return results_dict
