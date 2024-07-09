@@ -1,4 +1,8 @@
 """"Global constants for the VEMA model."""
+from pathlib import Path
+import os
+
+base_dir = Path.cwd()
 
 # --- Settings & constants
 
@@ -17,6 +21,14 @@ REGIONS = 26
 # reference loadfactor of cars in TIMER (the trp_trvl_Load.out file is
 # relative to this BASE loadfcator (persons/car))
 LOAD_FACTOR = 1.6
+
+LIGHT_COMMERCIAL_VEHICLE_SHARE = 0.04 # 0.04 is the fraction of the tkms driven by light commercial vehicles according to the IEA
+
+MEGA_TO_TERA = 1_000_000  # 1 Tera = 1,000,000 Mega
+PKMS_TO_VKMS = 1_000_000_000_000
+TONNES_TO_KGS = 1000
+
+SHIPS_YEARS_RANGE = list(range(2005,2018+1))
 
 # --- Labels
 bus_label = ["BusOil", "BusBio", "BusGas", "BusElecTrolley", "Bus Hybrid1",
@@ -41,7 +53,7 @@ tkms_label = ["inland shipping", "freight train", "medium truck",
               "total"]
 pkms_label = ["walking", "bicycle", "bus", "rail_reg", "car", "rail_hst", "air_pas",
               "total"]
-columns_vehicle_output = ["Buses", "Trains", "Hight Speed Trains", "Cars", "Planes", "Bikes",
+columns_vehicle_output = ["Buses", "Trains", "High Speed Trains", "Cars", "Planes", "Bikes",
                           "Trucks", "Freight Trains", "Ships", "Inland Ships",
                           "Freight Planes"]
 
@@ -84,5 +96,4 @@ SCEN = "SSP2"
 VARIANT = "2D_RE"
 PROJECT = "mock_project"
 FOLDER = SCEN + "_" + VARIANT
-# TODO: deprecate this constant
-OUTPUT_FOLDER = "../../output/" + PROJECT + "/" + FOLDER
+OUTPUT_FOLDER = base_dir.joinpath("..", "..", "output", PROJECT, FOLDER)
