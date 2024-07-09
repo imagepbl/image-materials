@@ -108,7 +108,7 @@ total_nr_vehicles_out['Ships']        = vehicle_stocks_and_flows_simple['Small S
 total_nr_vehicles_out['Inland ships'] = vehicle_stocks_and_flows_simple['Inland Ships'][1].sum(-1)[:,-last_years:].flatten(order='F')
 total_nr_vehicles_out['Cargo Planes'] = vehicle_stocks_and_flows_simple['Freight Planes'][1].sum(-1)[:,-last_years:].flatten(order='F')
 
-total_nr_vehicles_out.to_csv(OUTPUT_FOLDER.joinpath('region_vehicle_out.csv'), index=True) # regional nr of vehicles sold (annually)
+total_nr_vehicles_out.to_csv(OUTPUT_FOLDER / 'region_vehicle_out.csv', index=True) # regional nr of vehicles sold (annually)
 
 """
 #%% ################### MATERIAL CALCULATIONS ##########################################
