@@ -48,10 +48,10 @@ car_label = ["Conv. ICE(2000)", "Conv. ICE(2010)", "Adv. ICEOil",
              "FCV Bio", "FCV H2", "PEV-10 OilElec.", "PEV-30 OilElec.",
              "PEV-60 OilElec.", "PEV-10 BioElec.", "PEV-30 BioElec.",
              "PEV-60 BioElec.", "BEV Elec.", "PHEV_BEV", "BEV", "Gas car"]
-tkms_label = ["inland shipping", "freight train", "medium truck",
-              "heavy truck", "air cargo", "international shipping", "empty",
+tkms_label = ["Inland Ships", "Freight Trains", "Medium Freight Trucks",
+              "Heavy Freight Trucks", "Freight Planes", "international shipping", "empty",
               "total"]
-pkms_label = ["walking", "bicycle", "bus", "rail_reg", "car", "rail_hst", "air_pas",
+pkms_label = ["walking", "Bikes", "Buses", "Trains", "Cars", "High Speed Trains", "Passenger Planes",
               "total"]
 columns_vehicle_output = ["Buses", "Trains", "High Speed Trains", "Cars", "Planes", "Bikes",
                           "Trucks", "Freight Trains", "Ships", "Inland Ships",
