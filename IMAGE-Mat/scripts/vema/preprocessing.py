@@ -208,7 +208,7 @@ def preprocessing(base_dir=os.getcwd()):
     trucks_HFT_tkm         = trucks_min_LCV.mul(HFT_percshare_tkm)
     
     # demand for freight planes is reduced by 50% because about half of the air freight is transported as cargo on passenger planes 
-    air_freight_tkms       = tonkms_Mtkms["air cargo"].unstack() * market_share["air_freight"].values[0]             
+    air_freight_tkms       = tonkms_Mtkms["air cargo"].unstack() * market_share["air_freight"].values[0]
     
     # Buses are adjusted to account for the higher material intensity of mini-buses
     bus_regl_pkms          = passengerkms_Tpkms["bus"].unstack() * market_share["reg_bus"].values[0]   # in tera pkms
