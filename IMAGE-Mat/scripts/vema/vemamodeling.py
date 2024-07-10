@@ -11,7 +11,8 @@ from constants import (
                         START_YEAR, END_YEAR,
                         columns_vehicle_output,
                         REGIONS,
-                        OUTPUT_FOLDER
+                        OUTPUT_FOLDER,
+                        key_map_simple, key_map_typical
                        )
 
 # Core modelling of stock dynamics & material use, assumes input as pandas dataFrames
@@ -28,27 +29,6 @@ idx = pd.IndexSlice
 preprocessing_results = preprocessing()
 
 all_keys = list(preprocessing_results['total_nr_vehicles_simple'].columns.levels[0].unique())
-
-key_map_simple = {}
-key_map_simple['Passenger Planes'] = 'air_pas'
-key_map_simple['Bikes'] = 'bicycle'
-key_map_simple['Freight Planes'] = 'air_freight'
-key_map_simple['Freight Trains'] = 'rail_freight'
-key_map_simple['High Speed Trains'] = 'rail_hst'
-key_map_simple['Inland Ships'] = 'inland_shipping'
-key_map_simple['Large Ships'] = 'sea_shipping_large'
-key_map_simple['Medium Ships'] = 'sea_shipping_med'
-key_map_simple['Small Ships'] = 'sea_shipping_small'
-key_map_simple['Trains'] = 'rail_reg'
-key_map_simple['Very Large Ships'] = 'sea_shipping_vl'
-
-key_map_typical = {}
-key_map_typical['Cars'] = 'car'
-key_map_typical['Light Commercial Vehicles'] = 'LCV'
-key_map_typical['Medium Freight Trucks'] = 'MFT'
-key_map_typical['Heavy Freight Trucks'] = 'HFT'
-key_map_typical['Midi Buses'] = 'midi_bus'
-key_map_typical['Regular Buses'] = 'reg_bus'
 
 #%% INFLOW-OUTFLOW calculations using the ODYM Dynamic Stock Model (DSM) as a function
 
