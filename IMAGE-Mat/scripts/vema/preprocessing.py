@@ -205,7 +205,7 @@ def preprocessing(base_dir=os.getcwd()):
     HFT_percshare_tkm      = tonkms_Mtkms["heavy truck"].unstack() / trucks_total_tkm   # the HFT fraction of the total 
     trucks_min_LCV         = trucks_total_tkm - trucks_LCV_tkm
     trucks_MFT_tkm         = trucks_min_LCV.mul(MFT_percshare_tkm)             #Used in loop below       
-    trucks_HFT_tkm         = trucks_min_LCV.mul(HFT_percshare_tkm)             
+    trucks_HFT_tkm         = trucks_min_LCV.mul(HFT_percshare_tkm)
     
     # demand for freight planes is reduced by 50% because about half of the air freight is transported as cargo on passenger planes 
     air_freight_tkms       = tonkms_Mtkms["air cargo"].unstack() * market_share["air_freight"].values[0]             
