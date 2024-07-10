@@ -454,7 +454,7 @@ def preprocessing(base_dir=os.getcwd()):
     #first_year = first_year_vehicle.drop(columns = ["Cars"])
     #interpolate(total_nr_vehicles_simple, first_year)   #TODO what is this for?
     
-    #%% Export intermediate indicators (a.o. files on nr. of vehicles, pkms/tkms)
+    #Export intermediate indicators (a.o. files on nr. of vehicles, pkms/tkms)
     # Export total global number of vehicles in the fleet (stock) as csv
     region_list = list(range(1,REGIONS+1))
     index = pd.MultiIndex.from_product([list(total_nr_of_ships.index), region_list], names = ["years","regions"])
