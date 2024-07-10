@@ -362,7 +362,92 @@ def postprocess(OUTPUT_FOLDER
         vehicle_materials_outflow_freight.loc[idx[:,:, part, material],'MFT']         = trucks_MFT_bat_out.loc[idx[material,year_select],:].sum(axis=1, level=1).stack().reorder_levels([1,2,0]).values 
         vehicle_materials_outflow_freight.loc[idx[:,:, part, material],'HFT']         = trucks_HFT_bat_out.loc[idx[material,year_select],:].sum(axis=1, level=1).stack().reorder_levels([1,2,0]).values 
 
+        #Export intermediate indicators (a.o. files on nr. of vehicles, pkms/tkms)
+        # Export total global number of vehicles in the fleet (stock) as csv
+        region_list = list(range(1,REGIONS+1))
+        index = pd.MultiIndex.from_product([list(total_nr_of_ships.index), region_list], names = ["years","regions"])
+        total_nr_vehicles = pd.DataFrame(index=index, columns=columns_vehicle_output)
+        total_nr_vehicles["Buses"]        = total_nr_vehicles_simple["Regular Buses"][region_list].stack() + total_nr_vehicles_simple["Midi Buses"][region_list].stack()
+        total_nr_vehicles["Trains"]       = total_nr_vehicles_simple["Trains"][region_list].stack()
+        total_nr_vehicles["High Speed Trains"]          = total_nr_vehicles_simple["High Speed Trains"][region_list].stack()
+        total_nr_vehicles["Cars"]         = car_total_nr[region_list].stack()
+        total_nr_vehicles["Passenger Planes"]       = total_nr_vehicles_simple["Passenger Planes"][region_list].stack()
+        total_nr_vehicles["Bikes"]        = total_nr_vehicles_simple["Bikes"][region_list].stack()
+        total_nr_vehicles["Trucks"]       = total_nr_vehicles_simple["Heavy Freight Trucks"][region_list].stack() + total_nr_vehicles_simple["Medium Freight Trucks"][region_list].stack() + total_nr_vehicles_simple["Light Commercial Vehicles"][region_list].stack()
+        total_nr_vehicles["Freight Trains"] = total_nr_vehicles_simple["Freight Trains"][region_list].stack()
+        total_nr_vehicles["Ships"]        = total_nr_of_ships[region_list].stack()
+        total_nr_vehicles["Inland Ships"] = total_nr_vehicles_simple["Inland Ships"][region_list].stack()  
+        total_nr_vehicles["Freight Planes"] = total_nr_vehicles_simple["Freight Planes"][region_list].stack() 
+        
+        """ TODO move to to post processing?
+        # Generate csv output file on pkms & tkms (same format as files on number of vehicles (also used later on)), unit: pkm or tkm 
+        region_list = list(range(1,REGIONS+1))
+        car_pkms.columns = region_list     # remove region labels 
+        index = pd.MultiIndex.from_product([list(total_nr_of_ships.index), region_list], names = ["years","regions"])
+        total_pkm_tkm = pd.DataFrame(index=index, columns=columns_vehicle_output)
+        total_pkm_tkm["Buses"]        = (bus_regl_pkms[region_list].stack() + bus_midi_pkms[region_list].stack()) * PKMS_TO_VKMS
+        total_pkm_tkm["Trains"]       = passengerkms_Tpkms["rail_reg"]   * PKMS_TO_VKMS                              
+        total_pkm_tkm["High Speed Trains"]          = passengerkms_Tpkms["rail_hst"]     * PKMS_TO_VKMS
+        total_pkm_tkm["Cars"]         = car_pkms[region_list].stack() * PKMS_TO_VKMS
+        total_pkm_tkm["Passenger Planes"]       = passengerkms_Tpkms["air_pas"]     * PKMS_TO_VKMS
+        total_pkm_tkm["Bikes"]        = passengerkms_Tpkms["bicycle"]  * PKMS_TO_VKMS
+        total_pkm_tkm["Trucks"]       = (trucks_HFT_tkm[region_list].stack() + trucks_MFT_tkm[region_list].stack() + trucks_LCV_tkm[region_list].stack()) * MEGA_TO_TERA
+        total_pkm_tkm["Freight Trains"] = tonkms_Mtkms["freight train"] * MEGA_TO_TERA
+        total_pkm_tkm["Ships"]        = tonkms_Mtkms["international shipping"] * MEGA_TO_TERA 
+        total_pkm_tkm["Inland ships"] = tonkms_Mtkms["inland shipping"] * MEGA_TO_TERA
+        total_pkm_tkm["Freight Planes"] = air_freight_tkms[region_list].stack() * MEGA_TO_TERA     # mind that these are the tkms flows with cargo planes, real demand for air cargo is higher due to 50% hitching with passenger flights
+        
+        # output to IRP
+        # output transport drivers to output folder for 450 vs Bl comparisson in overarching figures later on
 
+        
+        
+        tonkms_Mtkms.to_csv(standard_output_folder.joinpath("transport_tkms.csv"), index=True)       # in Mega tkms
+        passengerkms_Tpkms.to_csv(standard_output_folder.joinpath("transport_pkms.csv"), index=True) # in Tera pkms
+        vehicleshare_cars.to_csv(standard_output_folder.joinpath("car_type_share_regional.csv"), index=True)
+        total_nr_vehicles.to_csv(standard_output_folder.joinpath("region_vehicle_nr.csv"), index=True) # regional nr of vehicles 
+        total_nr_vehicles.sum(axis=0, level=0).to_csv(standard_output_folder.joinpath("global_vehicle_nr.csv"), index=True) # total global nr of vehicles 
+        total_pkm_tkm.sum(axis=0, level=0).to_csv(standard_output_folder.joinpath("global_pkm_tkm.csv"), index=True) # total global pkms & tkms 
+        total_pkm_tkm.to_csv(standard_output_folder.joinpath("region_pkm_tkm.csv"), index=True)  # regional pkms & tkms
+        """
+
+        #%% Intermediate export of inflow & outflow of vehicles (for IRP database) ###############
+        """ TODO move to postprocessing?
+
+        region_list = list(range(1,27))
+        last_years  = END_YEAR+1 - START_YEAR
+        index = pd.MultiIndex.from_product([list(range(START_YEAR, END_YEAR+1)), region_list], names = ['years','regions'])
+        total_nr_vehicles_in = pd.DataFrame(index=index, columns=columns_vehicle_output)
+        total_nr_vehicles_in['Buses']        = vehicle_stocks_and_flows_typical['Regular Buses'][0].sum(0)[:,-last_years:].flatten(order='F') + vehicle_stocks_and_flows_typical['Midi Buses'][0].sum(0)[:,-last_years:].flatten(order='F')  #flattening a numpy array in the expected order (year columns first)
+        total_nr_vehicles_in['Trains']       = vehicle_stocks_and_flows_simple['Trains'][0][-last_years:,:].flatten(order='C')  # for simple arrays (no vehicle types) the column order is reversed
+        total_nr_vehicles_in['High Speed Trains']          = vehicle_stocks_and_flows_simple['High Speed Trains'][0][-last_years:,:].flatten(order='C')
+        total_nr_vehicles_in['Cars']         = vehicle_stocks_and_flows_typical['Cars'][0].sum(0)[:,-last_years:].flatten(order='F')
+        total_nr_vehicles_in['Passenger Planes']       = vehicle_stocks_and_flows_simple['Planes'][0][-last_years:,:].flatten(order='C')
+        total_nr_vehicles_in['Bikes']        = vehicle_stocks_and_flows_simple['Bikes'][0][-last_years:,:].flatten(order='C')
+        total_nr_vehicles_in['Trucks']       = vehicle_stocks_and_flows_typical['Heavy Freight Trucks'][0].sum(0)[:,-last_years:].flatten(order='F') + vehicle_stocks_and_flows_typical['Medium Freight Trucks'][0].sum(0)[:,-last_years:].flatten(order='F') + vehicle_stocks_and_flows_typical['Light Commercial Vehicles'][0].sum(0)[:,-last_years:].flatten(order='F')
+        total_nr_vehicles_in['Freight Trains'] = vehicle_stocks_and_flows_simple['Freight Trains'][0][-last_years:,:].flatten(order='C')
+        total_nr_vehicles_in['Small Ships']        = vehicle_stocks_and_flows_simple['Small Ships'][0][-last_years:,:].flatten(order='C') + vehicle_stocks_and_flows_simple['Medium Ships'][0][-last_years:,:].flatten(order='C') + vehicle_stocks_and_flows_simple['Large Ships'][0][-last_years:,:].flatten(order='C') + vehicle_stocks_and_flows_simple['Very Large Ships'][0][-last_years:,:].flatten(order='C')
+        total_nr_vehicles_in['Inland ships'] = vehicle_stocks_and_flows_simple['Inland Ships'][0][-last_years:,:].flatten(order='C')  
+        total_nr_vehicles_in['Freight Planes'] = vehicle_stocks_and_flows_simple['Freight Planes'][0][-last_years:,:].flatten(order='C')
+
+        total_nr_vehicles_in.to_csv(OUTPUT_FOLDER.joinpath('region_vehicle_in.csv'), index=True) # regional nr of vehicles sold (annually)
+
+        total_nr_vehicles_out = pd.DataFrame(index=index, columns=columns_vehicle_output)
+        total_nr_vehicles_out['Buses']        = vehicle_stocks_and_flows_typical['Regular Buses'][1].sum(0).sum(-1)[:,-last_years:].flatten(order='F') + vehicle_stocks_and_flows_typical['Midi Buses'][1].sum(0).sum(-1)[:,-last_years:].flatten(order='F')  #flattening a numpy array in the expected order (year columns first)
+        total_nr_vehicles_out['Trains']       = vehicle_stocks_and_flows_simple['Trains'][1].sum(-1)[:,-last_years:].flatten(order='F')  # for simple arrays (no vehicle types) the column order is reversed
+        total_nr_vehicles_out['High Speed Trains']          = vehicle_stocks_and_flows_simple['High Speed Trains'][1].sum(-1)[:,-last_years:].flatten(order='F')
+        total_nr_vehicles_out['Cars']         = vehicle_stocks_and_flows_typical['Cars'][1].sum(0).sum(-1)[:,-last_years:].flatten(order='F')
+        total_nr_vehicles_out['Passenger Planes']       = vehicle_stocks_and_flows_simple['Planes'][1].sum(-1)[:,-last_years:].flatten(order='F')
+        total_nr_vehicles_out['Bikes']        = vehicle_stocks_and_flows_simple['Bikes'][1].sum(-1)[:,-last_years:].flatten(order='F')
+        total_nr_vehicles_out['Trucks']       = vehicle_stocks_and_flows_typical['Heavy Freight Trucks'][1].sum(0).sum(-1)[:,-last_years:].flatten(order='F') + vehicle_stocks_and_flows_typical['Medium Freight Trucks'][1].sum(0).sum(-1)[:,-last_years:].flatten(order='F') + vehicle_stocks_and_flows_typical['Light Commercial Vehicles'][1].sum(0).sum(-1)[:,-last_years:].flatten(order='F')
+        total_nr_vehicles_out['Cargo Trains'] = vehicle_stocks_and_flows_simple['Freight Trains'][1].sum(-1)[:,-last_years:].flatten(order='F')
+        total_nr_vehicles_out['Ships']        = vehicle_stocks_and_flows_simple['Small Ships'][1].sum(-1)[:,-last_years:].flatten(order='F') + vehicle_stocks_and_flows_simple['Medium Ships'][1].sum(-1)[:,-last_years:].flatten(order='F') + vehicle_stocks_and_flows_simple['Large Ships'][1].sum(-1)[:,-last_years:].flatten(order='F') + vehicle_stocks_and_flows_simple['Very Large Ships'][1].sum(-1)[:,-last_years:].flatten(order='F')
+        total_nr_vehicles_out['Inland ships'] = vehicle_stocks_and_flows_simple['Inland Ships'][1].sum(-1)[:,-last_years:].flatten(order='F')
+        total_nr_vehicles_out['Cargo Planes'] = vehicle_stocks_and_flows_simple['Freight Planes'][1].sum(-1)[:,-last_years:].flatten(order='F')
+
+        total_nr_vehicles_out.to_csv(OUTPUT_FOLDER.joinpath('region_vehicle_out.csv'), index=True) # regional nr of vehicles sold (annually)
+
+        """
 
 
     # combine dataframes for output
