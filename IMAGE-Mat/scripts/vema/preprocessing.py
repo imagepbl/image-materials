@@ -113,10 +113,11 @@ def preprocessing(base_dir=os.getcwd()):
     }
 
     for df_name, labels in dataframes_info.items():
-        globals()[df_name] = globals()[df_name][globals()[df_name]["time"].isin(years_range)]
-        globals()[df_name].set_index(["time", "region"], inplace=True)
+        locals()[df_name] = locals()[df_name][locals()[df_name]["time"].isin(years_range)]
+        locals()[df_name].set_index(["time", "region"], inplace=True)
         if labels is not None:
-            globals()[df_name].columns = labels
+            locals()[df_name].columns = labels
+
 
     battery_shares_full = battery_shares_full.loc[years_range]
     
