@@ -22,7 +22,9 @@ from constants import (
                         END_YEAR,
                         REGIONS, LIGHT_COMMERCIAL_VEHICLE_SHARE,
                         MEGA_TO_TERA, PKMS_TO_VKMS, TONNES_TO_KGS,
-                        SHIPS_YEARS_RANGE
+                        SHIPS_YEARS_RANGE,
+                        car_collists,
+                        drive_trains, typical_modes, simple_modes
                        )
 base_dir=Path(os.getcwd())
 
@@ -125,34 +127,13 @@ def preprocessing(base_dir=os.getcwd()):
     hvytruck_vshares.columns   = truck_label
     buses_vshares.columns      = bus_label
     
-    #%% Vehicle shares of typical vehicles (i.e. specified different drivetrains)
-    drive_trains = ['ICE', 'HEV', 'PHEV', 'BEV', 'FCV', 'Trolley']
-    typical_modes = ['Cars', 'Regular Buses', 'Midi Buses', 
-                    'Heavy Freight Trucks', 'Medium Freight Trucks', 
-                    'Light Commercial Vehicles']
-    
+    #%% Vehicle shares of typical vehicles (i.e. specified different drivetrains)    
     columns = pd.MultiIndex.from_product([typical_modes , drive_trains, 
                                            list(range(1,REGIONS+1))], 
-                                           names=["vehicle", "type", "region"])
+                                           names=["type", "fuel", "region"])
     vehicle_shares_typical         = pd.DataFrame(0, index=list(range(START_YEAR, END_YEAR+1)), columns=columns)
-    # Define the labels
-    #
 
     # CARS    
-    # aggregate car types into 5 car types
-    BEV_collist  = [22, 24]
-    PHEV_collist = [23, 21, 20, 19, 18, 17, 16]
-    ICE_collist  = [1,2,3,4,5,6,7,25]             # Gas car is considered ICE
-    HEV_collist  = [8,9,10,11,12]
-    FCV_collist  = [13,14,15]
-    car_collists = {
-        'BEV': BEV_collist,
-        'PHEV': PHEV_collist,
-        'ICE': ICE_collist,
-        'HEV': HEV_collist,
-        'FCV': FCV_collist
-    }
-
     # Aggregate car types into the vehicle_shares DataFrame
     for fuel, collist in car_collists.items():
         vehicle_shares_typical[('Cars', fuel)] = car_vshares[collist].sum(axis=1).unstack()
@@ -193,12 +174,8 @@ def preprocessing(base_dir=os.getcwd()):
         vehicle_shares_typical[(truck_type, 'Trolley')] = 0
 
 
-    #vehicle_shares_typical['Cars']                  = vehicleshare_cars.unstack()
 
-    #%% 
-    # labels etc.
-    # x_graphs        = [i for i in range(START_YEAR, END_YEAR, 1)]                           # this is used as an x-axis for the years in graphs
-    # For dynamic variables, apply interpolation and extend over the whole timeframe
+    #%% For dynamic variables, apply interpolation and extend over the whole timeframe
     
     # complete & interpolate the vehicle weight data
     vehicle_weights_simple = interpolate(pd.DataFrame(vehicle_weight_kg_simple))
@@ -251,8 +228,7 @@ def preprocessing(base_dir=os.getcwd()):
     car_pkms               = car_pkms.drop([27, 28], axis=1)    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies  # in tera pkms                            
     car_pkms.columns       = region_list
     
-    # %% 
-    # Calculate the NUMBER OF VEHICLES (stock, on the road) to fulfull the ton-kilometers transport demand
+    # %% Calculate the NUMBER OF VEHICLES (stock, on the road) to fulfull the ton-kilometers transport demand
     # TODO: exchange for proper region labels defined elsewhere
     # TODO: look at vehicle type names
     total_nr_vehicles_simple = pd.DataFrame(
@@ -263,7 +239,7 @@ def preprocessing(base_dir=os.getcwd()):
               "Bikes", "Heavy Freight Trucks", "Medium Freight Trucks", 
               "Light Commercial Vehicles", "Freight Trains", "Small Ships",
               "Medium Ships", "Large Ships", "Very Large Ships",
-              "Inland Ships", "Freight Planes","Cars"], #TODO should Cars be added?
+              "Inland Ships", "Freight Planes","Cars"], 
              list(range(1, REGIONS+3))],
             names=["Type", "Region"]
         )
@@ -347,8 +323,7 @@ def preprocessing(base_dir=os.getcwd()):
     bus_midi_vkms  = bus_midi_pkms.div(load["midi_bus"].values[0] * loadfactor["midi_bus"].values[0]) * PKMS_TO_VKMS   # now in kms
     total_nr_vehicles_simple["Midi Buses"] = bus_midi_vkms.div(kilometrage_midi_bus)
     
-    # %%
-    # for INTERNATIONAL SHIPPING the number of vehicles is calculated differently 
+    # %% for INTERNATIONAL SHIPPING the number of vehicles is calculated differently 
     
     cap_adjustment  = [1, 1, 1, 1]
     mile_adjustment = [1, 1, 1, 1]
@@ -400,108 +375,12 @@ def preprocessing(base_dir=os.getcwd()):
     diff_ships_total = total_nr_of_ships.loc[SHIPS_YEARS_RANGE, 28].div(nr_of_boats.sum(axis=1))
     
     # capacity of boats is in tonnes, the weight - expressed as a fraction of the capacity - is calculated in in kgs here
-    weight_boats  = weight_frac_boats_yrs * cap_of_boats_yrs * TONNES_TO_KGS 
-    
-    # %% BATTERY WEIGHT SECTION
-    # 1) BUSES: original vehcile shares are distributed into two vehicle types (regular and small midi buses)
-    # vehicle shares are grouped as: a) ICE, b) HEV, c) trolley, d) BEV, but trolley buses are not relevant for midi busses, so the midi shares are re-calculated based on the sum without trolleys
-    
-    # Create the DataFrame with MultiIndex columns
-    buses_battery_weight = pd.DataFrame(index=buses_vshares.index, columns= \
-                                 pd.MultiIndex.from_product([['Regular', 'Midi'], vshares_label], names=['Type', 'Fuel']))
-    
-    # Regular buses
-    buses_battery_weight[('Regular', 'ICE')] = buses_vshares[bus_label_ICE].sum(axis=1)
-    buses_battery_weight[('Regular', 'HEV')] = buses_vshares[bus_label_HEV].sum(axis=1)
-    buses_battery_weight[('Regular', 'BEV')] = buses_vshares['BusBattElectric']
-    buses_battery_weight[('Regular', 'Trolley')] = buses_vshares['BusElecTrolley']
-    
-    # Midi buses
-    buses_battery_weight[('Midi', 'ICE')] = buses_vshares[bus_label_ICE].sum(axis=1).div(midi_sum)
-    buses_battery_weight[('Midi', 'HEV')] = buses_vshares[bus_label_HEV].sum(axis=1).div(midi_sum)
-    buses_battery_weight[('Midi', 'BEV')] = buses_vshares['BusBattElectric'].div(midi_sum)
-    buses_battery_weight[('Midi', 'Trolley')] = 0
-    
-    buses_battery_weight.loc[:, pd.IndexSlice[:, ['FCV', 'PHEV']]] = 0 # TODO Is this needed?
-    
-    # 2) TRUCKS
-    # vehicle shares are grouped as: a) ICE, b) HEV, c) PHEV, d) BEV, e) FCV
-    # LCV vehicle shares are determined based on the medium trucks (so not calculated explicitly)
-    
-    multi_columns = pd.MultiIndex.from_product([['MFT', 'HFT'], vshares_label], names=['Type', 'Fuel'])
-    
-    # Create the DataFrame with MultiIndex columns
-    trucks_battery_weight = pd.DataFrame(index=medtruck_vshares.index.union(hvytruck_vshares.index), columns=multi_columns)
-    
-    # Define a dictionary for easy access
-    truck_data = {
-        'Medium Freight Truck': medtruck_vshares,
-        'Heavy Freight Truck': hvytruck_vshares
-    }
-    
-    # Assign values for both MFT and HFT
-    for truck_type, truck_df in truck_data.items():
-        trucks_battery_weight[(truck_type, 'ICE')]     = truck_df[truck_label_ICE].sum(axis=1)
-        trucks_battery_weight[(truck_type, 'HEV')]     = truck_df[truck_label_HEV].sum(axis=1)
-        trucks_battery_weight[(truck_type, 'PHEV')]    = truck_df[truck_label_PHEV].sum(axis=1)
-        trucks_battery_weight[(truck_type, 'BEV')]     = truck_df[truck_label_BEV].sum(axis=1)
-        trucks_battery_weight[(truck_type, 'FCV')]     = truck_df[truck_label_FCV].sum(axis=1)
-        trucks_battery_weight[(truck_type, 'Trolley')] = 0  # No trolley trucks
+    weight_boats  = weight_frac_boats_yrs * cap_of_boats_yrs * TONNES_TO_KGS     
 
-    
-
-    #%% Calculate historic tail
+    #Calculate historic tail
     #first_year = first_year_vehicle.drop(columns = ["Cars"])
-    #interpolate(total_nr_vehicles_simple, first_year)   #TODO what is this for?
+    #interpolate(total_nr_vehicles_simple, first_year)   #TODO what is this for? 
     
-    #Export intermediate indicators (a.o. files on nr. of vehicles, pkms/tkms)
-    # Export total global number of vehicles in the fleet (stock) as csv
-    region_list = list(range(1,REGIONS+1))
-    index = pd.MultiIndex.from_product([list(total_nr_of_ships.index), region_list], names = ["years","regions"])
-    total_nr_vehicles = pd.DataFrame(index=index, columns=columns_vehicle_output)
-    total_nr_vehicles["Buses"]        = total_nr_vehicles_simple["Regular Buses"][region_list].stack() + total_nr_vehicles_simple["Midi Buses"][region_list].stack()
-    total_nr_vehicles["Trains"]       = total_nr_vehicles_simple["Trains"][region_list].stack()
-    total_nr_vehicles["High Speed Trains"]          = total_nr_vehicles_simple["High Speed Trains"][region_list].stack()
-    total_nr_vehicles["Cars"]         = car_total_nr[region_list].stack()
-    total_nr_vehicles["Passenger Planes"]       = total_nr_vehicles_simple["Passenger Planes"][region_list].stack()
-    total_nr_vehicles["Bikes"]        = total_nr_vehicles_simple["Bikes"][region_list].stack()
-    total_nr_vehicles["Trucks"]       = total_nr_vehicles_simple["Heavy Freight Trucks"][region_list].stack() + total_nr_vehicles_simple["Medium Freight Trucks"][region_list].stack() + total_nr_vehicles_simple["Light Commercial Vehicles"][region_list].stack()
-    total_nr_vehicles["Freight Trains"] = total_nr_vehicles_simple["Freight Trains"][region_list].stack()
-    total_nr_vehicles["Ships"]        = total_nr_of_ships[region_list].stack()
-    total_nr_vehicles["Inland Ships"] = total_nr_vehicles_simple["Inland Ships"][region_list].stack()  
-    total_nr_vehicles["Freight Planes"] = total_nr_vehicles_simple["Freight Planes"][region_list].stack() 
-    
-    """ TODO move to to post processing?
-    # Generate csv output file on pkms & tkms (same format as files on number of vehicles (also used later on)), unit: pkm or tkm 
-    region_list = list(range(1,REGIONS+1))
-    car_pkms.columns = region_list     # remove region labels 
-    index = pd.MultiIndex.from_product([list(total_nr_of_ships.index), region_list], names = ["years","regions"])
-    total_pkm_tkm = pd.DataFrame(index=index, columns=columns_vehicle_output)
-    total_pkm_tkm["Buses"]        = (bus_regl_pkms[region_list].stack() + bus_midi_pkms[region_list].stack()) * PKMS_TO_VKMS
-    total_pkm_tkm["Trains"]       = passengerkms_Tpkms["rail_reg"]   * PKMS_TO_VKMS                              
-    total_pkm_tkm["High Speed Trains"]          = passengerkms_Tpkms["rail_hst"]     * PKMS_TO_VKMS
-    total_pkm_tkm["Cars"]         = car_pkms[region_list].stack() * PKMS_TO_VKMS
-    total_pkm_tkm["Passenger Planes"]       = passengerkms_Tpkms["air_pas"]     * PKMS_TO_VKMS
-    total_pkm_tkm["Bikes"]        = passengerkms_Tpkms["bicycle"]  * PKMS_TO_VKMS
-    total_pkm_tkm["Trucks"]       = (trucks_HFT_tkm[region_list].stack() + trucks_MFT_tkm[region_list].stack() + trucks_LCV_tkm[region_list].stack()) * MEGA_TO_TERA
-    total_pkm_tkm["Freight Trains"] = tonkms_Mtkms["freight train"] * MEGA_TO_TERA
-    total_pkm_tkm["Ships"]        = tonkms_Mtkms["international shipping"] * MEGA_TO_TERA 
-    total_pkm_tkm["Inland ships"] = tonkms_Mtkms["inland shipping"] * MEGA_TO_TERA
-    total_pkm_tkm["Freight Planes"] = air_freight_tkms[region_list].stack() * MEGA_TO_TERA     # mind that these are the tkms flows with cargo planes, real demand for air cargo is higher due to 50% hitching with passenger flights
-    
-    # output to IRP
-    # output transport drivers to output folder for 450 vs Bl comparisson in overarching figures later on
-
-    
-    
-    tonkms_Mtkms.to_csv(standard_output_folder.joinpath("transport_tkms.csv"), index=True)       # in Mega tkms
-    passengerkms_Tpkms.to_csv(standard_output_folder.joinpath("transport_pkms.csv"), index=True) # in Tera pkms
-    vehicleshare_cars.to_csv(standard_output_folder.joinpath("car_type_share_regional.csv"), index=True)
-    total_nr_vehicles.to_csv(standard_output_folder.joinpath("region_vehicle_nr.csv"), index=True) # regional nr of vehicles 
-    total_nr_vehicles.sum(axis=0, level=0).to_csv(standard_output_folder.joinpath("global_vehicle_nr.csv"), index=True) # total global nr of vehicles 
-    total_pkm_tkm.sum(axis=0, level=0).to_csv(standard_output_folder.joinpath("global_pkm_tkm.csv"), index=True) # total global pkms & tkms 
-    total_pkm_tkm.to_csv(standard_output_folder.joinpath("region_pkm_tkm.csv"), index=True)  # regional pkms & tkms
-    """
     #%% Interpolate to complete data for the entire model period (including a historic tail to set up the dynamic stock calculations)
     
     # reformatting lifetime data (because input is not yet region-specific)
@@ -523,8 +402,6 @@ def preprocessing(base_dir=os.getcwd()):
                 'battery_weights_typical': battery_weights_typical,
                 'battery_materials': battery_materials,
                 'battery_shares': battery_shares,
-                'buses_battery_weight': buses_battery_weight,             # Can be removed, right?
-                'trucks_battery_weight': trucks_battery_weight,           # Can be removed, right?
                 'weight_boats': weight_boats,
                 'vehicle_shares_typical': vehicle_shares_typical
             }
@@ -546,5 +423,3 @@ if __name__ == "__main__":
 
     # Call preprocessing function and make output available in variables
     output_preprocessing = preprocessing(base_dir=args.path)
-
-# %%

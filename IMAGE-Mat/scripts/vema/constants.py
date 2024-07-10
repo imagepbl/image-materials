@@ -90,6 +90,30 @@ key_map_typical['Heavy Freight Trucks'] = 'HFT'
 key_map_typical['Midi Buses'] = 'midi_bus'
 key_map_typical['Regular Buses'] = 'reg_bus'
 
+# aggregate car types into 5 car types
+BEV_collist  = [22, 24]
+PHEV_collist = [23, 21, 20, 19, 18, 17, 16]
+ICE_collist  = [1,2,3,4,5,6,7,25]             # Gas car is considered ICE
+HEV_collist  = [8,9,10,11,12]
+FCV_collist  = [13,14,15]
+car_collists = {
+    'BEV': BEV_collist,
+    'PHEV': PHEV_collist,
+    'ICE': ICE_collist,
+    'HEV': HEV_collist,
+    'FCV': FCV_collist
+}
+
+drive_trains = ['ICE', 'HEV', 'PHEV', 'BEV', 'FCV', 'Trolley']
+typical_modes = ['Cars', 'Regular Buses', 'Midi Buses', 
+                'Heavy Freight Trucks', 'Medium Freight Trucks', 
+                'Light Commercial Vehicles']
+simple_modes = ["Trains", "High Speed Trains", "Freight Trains",
+              "Passenger Planes",
+              "Bikes",  "Small Ships",
+              "Medium Ships", "Large Ships", "Very Large Ships",
+              "Inland Ships", "Freight Planes"]
+
 #%% BATTERY VEHICLE CALCULATIONS - Determine the fraction of the fleet that uses batteries, based on vehicle share files
 # Batteries are relevant for 1) BUSES 2) TRUCKS
 # We use fixed weight & material content assumptions, but we use the development of battery energy density (from the electricity storage calculations) to derive a changing battery capacity (and thus range)
