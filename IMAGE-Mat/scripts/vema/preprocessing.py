@@ -126,7 +126,18 @@ def preprocessing(base_dir=os.getcwd()):
     buses_vshares.columns      = bus_label
     
     #%% Vehicle shares of typical vehicles (i.e. specified different drivetrains)
+    drive_trains = ['ICE', 'HEV', 'PHEV', 'BEV', 'FCV', 'Trolley']
+    typical_modes = ['Cars', 'Regular Buses', 'Midi Buses', 
+                    'Heavy Freight Trucks', 'Medium Freight Trucks', 
+                    'Light Commercial Vehicles']
     
+    columns = pd.MultiIndex.from_product([typical_modes , drive_trains, 
+                                           list(range(1,REGIONS+1))], 
+                                           names=["vehicle", "type", "region"])
+    vehicle_shares_typical         = pd.DataFrame(0, index=list(range(START_YEAR, END_YEAR+1)), columns=columns)
+    # Define the labels
+    #
+
     # CARS    
     # aggregate car types into 5 car types
     BEV_collist  = [22, 24]
@@ -134,73 +145,57 @@ def preprocessing(base_dir=os.getcwd()):
     ICE_collist  = [1,2,3,4,5,6,7,25]             # Gas car is considered ICE
     HEV_collist  = [8,9,10,11,12]
     FCV_collist  = [13,14,15]
-    car_types = ["ICE","HEV","PHEV","BEV","FCV","Trolley"]
+    car_collists = {
+        'BEV': BEV_collist,
+        'PHEV': PHEV_collist,
+        'ICE': ICE_collist,
+        'HEV': HEV_collist,
+        'FCV': FCV_collist
+    }
+
+    # Aggregate car types into the vehicle_shares DataFrame
+    for fuel, collist in car_collists.items():
+        vehicle_shares_typical[('Cars', fuel)] = car_vshares[collist].sum(axis=1).unstack()
+
+    vehicle_shares_typical[('Cars', 'Trolley')] = 0  # Assuming no trolley cars
     
-    index = pd.MultiIndex.from_product([list(range(START_YEAR, END_YEAR+1)), list(range(1,REGIONS+1))], names=["time", "region"])
-    vehicleshare_cars = pd.DataFrame(0, index=index, columns=car_types)
-    vehicleshare_cars.loc[idx[:,:],"ICE"]  = car_vshares[ICE_collist].sum(axis=1).to_numpy()
-    vehicleshare_cars.loc[idx[:,:],"HEV"]  = car_vshares[HEV_collist].sum(axis=1).to_numpy()
-    vehicleshare_cars.loc[idx[:,:],"PHEV"] = car_vshares[PHEV_collist].sum(axis=1).to_numpy()
-    vehicleshare_cars.loc[idx[:,:],"BEV"]  = car_vshares[BEV_collist].sum(axis=1).to_numpy()
-    vehicleshare_cars.loc[idx[:,:],"FCV"]  = car_vshares[FCV_collist].sum(axis=1).to_numpy()
-    
-    # BUSES
+    # BUSES and TRUCKS
     # Sum of all buses except Trolleys
     midi_sum = buses_vshares[list(filter(lambda x: x != 'BusElecTrolley', bus_label))].sum(axis=1)
-    
-    # regular buses are just grouped
-    buses_regl_vshares = pd.DataFrame(index=buses_vshares.index, columns=vshares_label)
-    buses_regl_vshares['ICE']     = buses_vshares[bus_label_ICE].sum(axis=1)
-    buses_regl_vshares['HEV']     = buses_vshares[bus_label_HEV].sum(axis=1)
-    buses_regl_vshares['PHEV']    = pd.DataFrame(0, index=buses_vshares.index, columns=['PHEV'])
-    buses_regl_vshares['BEV']     = buses_vshares['BusBattElectric']
-    buses_regl_vshares['FCV']     = pd.DataFrame(0, index=buses_vshares.index, columns=['FCV'])
-    buses_regl_vshares['Trolley'] = buses_vshares['BusElecTrolley']
-    
-    # midi buses are grouped & divided by the sum of ICE, HEV & BEV, to adjust for the fact that Trolleys (or FCV or PHEV) are not an option for midi buses
-    buses_midi_vshares = pd.DataFrame(index=buses_vshares.index, columns=vshares_label)
-    buses_midi_vshares['ICE']     = buses_vshares[bus_label_ICE].sum(axis=1).div(midi_sum)
-    buses_midi_vshares['HEV']     = buses_vshares[bus_label_HEV].sum(axis=1).div(midi_sum)
-    buses_midi_vshares['PHEV']    = pd.DataFrame(0, index=buses_vshares.index, columns=['PHEV'])
-    buses_midi_vshares['BEV']     = buses_vshares['BusBattElectric'].div(midi_sum)
-    buses_midi_vshares['FCV']     = pd.DataFrame(0, index=buses_vshares.index, columns=['FCV'])
-    buses_midi_vshares['Trolley'] = pd.DataFrame(0, index=buses_vshares.index, columns=['Trolley'])
-    
-    # TRUCKS
-    # vehicle shares are grouped as: a) ICE, b) HEV, c) PHEV, d) BEV, e) FCV
-    # LCV vehicle shares are determined based on the medium trucks (so not calculated explicitly)
-    
-    # medium trucks
-    trucks_MFT_vshares = pd.DataFrame(index=medtruck_vshares.index, columns=vshares_label)
-    trucks_MFT_vshares['ICE']     = medtruck_vshares[truck_label_ICE].sum(axis=1)
-    trucks_MFT_vshares['HEV']     = medtruck_vshares[truck_label_HEV].sum(axis=1)
-    trucks_MFT_vshares['PHEV']    = medtruck_vshares[truck_label_PHEV].sum(axis=1)
-    trucks_MFT_vshares['BEV']     = medtruck_vshares[truck_label_BEV].sum(axis=1)
-    trucks_MFT_vshares['FCV']     = medtruck_vshares[truck_label_FCV].sum(axis=1)
-    trucks_MFT_vshares['Trolley'] = pd.DataFrame(0, index=index, columns=['Trolley'])                    # No trolley trucks 
-    
-    # heavy trucks
-    trucks_HFT_vshares = pd.DataFrame(index=hvytruck_vshares.index, columns=vshares_label)
-    trucks_HFT_vshares['ICE']     = hvytruck_vshares[truck_label_ICE].sum(axis=1)
-    trucks_HFT_vshares['HEV']     = hvytruck_vshares[truck_label_HEV].sum(axis=1)
-    trucks_HFT_vshares['PHEV']    = hvytruck_vshares[truck_label_PHEV].sum(axis=1)
-    trucks_HFT_vshares['BEV']     = hvytruck_vshares[truck_label_BEV].sum(axis=1)
-    trucks_HFT_vshares['FCV']     = hvytruck_vshares[truck_label_FCV].sum(axis=1)
-    trucks_HFT_vshares['Trolley'] = pd.DataFrame(0, index=hvytruck_vshares.index, columns=['Trolley'])   # No trolley trucks 
 
-    columns = pd.MultiIndex.from_product([['Cars', 'Regular Buses', 'Midi Buses', 
-                                           'Heavy Freight Trucks', 'Medium Freight Trucks', 
-                                           'Light Commercial Vehicles'], car_types, 
-                                           list(range(1,REGIONS+1))], 
-                                           names=["vehicle", "type", "region"])
-    vehicle_shares_typical         = pd.DataFrame(0, index=list(range(START_YEAR, END_YEAR+1)), columns=columns)
-    vehicle_shares_typical['Cars']                  = vehicleshare_cars.unstack()
-    vehicle_shares_typical['Regular Buses']         = buses_regl_vshares.unstack()
-    vehicle_shares_typical['Midi Buses']            = buses_midi_vshares.unstack()
-    vehicle_shares_typical['Heavy Freight Trucks']  = trucks_HFT_vshares.unstack()
-    vehicle_shares_typical['Medium Freight Trucks'] = trucks_MFT_vshares.unstack()
-    vehicle_shares_typical['Light Commercial Vehicles'] = trucks_MFT_vshares.unstack() # MIND Assumption: used MFT as a market-share for LCVs   
-    
+
+    # Fill the DataFrame with bus data
+    vehicle_shares_typical[('Regular Buses', 'ICE')] = buses_vshares[bus_label_ICE].sum(axis=1).unstack()
+    vehicle_shares_typical[('Regular Buses', 'HEV')] = buses_vshares[bus_label_HEV].sum(axis=1).unstack()
+    vehicle_shares_typical[('Regular Buses', 'BEV')] = buses_vshares['BusBattElectric'].unstack()
+    vehicle_shares_typical[('Regular Buses', 'Trolley')] = buses_vshares['BusElecTrolley'].unstack()
+
+    vehicle_shares_typical[('Midi Buses', 'ICE')] = buses_vshares[bus_label_ICE].sum(axis=1).div(midi_sum).unstack()
+    vehicle_shares_typical[('Midi Buses', 'HEV')] = buses_vshares[bus_label_HEV].sum(axis=1).div(midi_sum).unstack()
+    vehicle_shares_typical[('Midi Buses', 'BEV')] = buses_vshares['BusBattElectric'].div(midi_sum).unstack()
+    vehicle_shares_typical[('Midi Buses', 'Trolley')] = 0
+
+    vehicle_shares_typical.loc[:, pd.IndexSlice[['Regular Buses', 'Midi Buses'], ['FCV', 'PHEV']]] = 0
+
+    # Fill the DataFrame with truck data
+    truck_data = {
+        'Medium Freight Trucks': medtruck_vshares,
+        'Heavy Freight Trucks': hvytruck_vshares,
+        'Light Commercial Vehicles': medtruck_vshares   # MIND Assumption: used MFT as a market-share for LCVs   
+    }
+
+    for truck_type, truck_df in truck_data.items():
+        vehicle_shares_typical[(truck_type, 'ICE')] = truck_df[truck_label_ICE].sum(axis=1).unstack()
+        vehicle_shares_typical[(truck_type, 'HEV')] = truck_df[truck_label_HEV].sum(axis=1).unstack()
+        vehicle_shares_typical[(truck_type, 'PHEV')] = truck_df[truck_label_PHEV].sum(axis=1).unstack()
+        vehicle_shares_typical[(truck_type, 'BEV')] = truck_df[truck_label_BEV].sum(axis=1).unstack()
+        vehicle_shares_typical[(truck_type, 'FCV')] = truck_df[truck_label_FCV].sum(axis=1).unstack()
+        vehicle_shares_typical[(truck_type, 'Trolley')] = 0
+
+
+    #vehicle_shares_typical['Cars']                  = vehicleshare_cars.unstack()
+
+    #%% 
     # labels etc.
     # x_graphs        = [i for i in range(START_YEAR, END_YEAR, 1)]                           # this is used as an x-axis for the years in graphs
     # For dynamic variables, apply interpolation and extend over the whole timeframe
@@ -453,6 +448,8 @@ def preprocessing(base_dir=os.getcwd()):
         trucks_battery_weight[(truck_type, 'FCV')]     = truck_df[truck_label_FCV].sum(axis=1)
         trucks_battery_weight[(truck_type, 'Trolley')] = 0  # No trolley trucks
 
+    
+
     #%% Calculate historic tail
     #first_year = first_year_vehicle.drop(columns = ["Cars"])
     #interpolate(total_nr_vehicles_simple, first_year)   #TODO what is this for?
@@ -474,6 +471,7 @@ def preprocessing(base_dir=os.getcwd()):
     total_nr_vehicles["Inland Ships"] = total_nr_vehicles_simple["Inland Ships"][region_list].stack()  
     total_nr_vehicles["Freight Planes"] = total_nr_vehicles_simple["Freight Planes"][region_list].stack() 
     
+    """ TODO move to to post processing?
     # Generate csv output file on pkms & tkms (same format as files on number of vehicles (also used later on)), unit: pkm or tkm 
     region_list = list(range(1,REGIONS+1))
     car_pkms.columns = region_list     # remove region labels 
@@ -494,7 +492,7 @@ def preprocessing(base_dir=os.getcwd()):
     # output to IRP
     # output transport drivers to output folder for 450 vs Bl comparisson in overarching figures later on
 
-    """ TODO move to to post processing?
+    
     
     tonkms_Mtkms.to_csv(standard_output_folder.joinpath("transport_tkms.csv"), index=True)       # in Mega tkms
     passengerkms_Tpkms.to_csv(standard_output_folder.joinpath("transport_pkms.csv"), index=True) # in Tera pkms
