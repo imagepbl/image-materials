@@ -87,7 +87,7 @@ def tkms_to_nr_of_vehicles_fixed(tkms, mileage, load, loadfactor, unit_conversio
     elif unit_conversion == None:
        pass
     else:
-       raise Exception("This unit conversion input is not supported.") 
+       raise Exception(f"This unit conversion input '{unit_conversion}' is not supported.") 
        
     # if unit is None, assume tkms is already in km
 
