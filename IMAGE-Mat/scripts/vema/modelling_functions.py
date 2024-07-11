@@ -84,6 +84,11 @@ def tkms_to_nr_of_vehicles_fixed(tkms, mileage, load, loadfactor, unit_conversio
         tkms = tkms * 1e6  # Convert Mega km to km
     elif unit_conversion == 'k':
         tkms = tkms * 1e3  # Convert kilo km to km
+    elif unit_conversion == None:
+       pass
+    else:
+       raise Exception("This unit conversion input is not supported.") 
+       
     # if unit is None, assume tkms is already in km
 
     # then get the vehicle kilometers required to fulfill the transport demand
