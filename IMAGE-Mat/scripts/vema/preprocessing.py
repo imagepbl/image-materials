@@ -103,21 +103,44 @@ def preprocessing(base_dir=os.getcwd()):
     car_loadfactor.columns = region_list
     
     # Define a list of DataFrames and their respective column labels
-    dataframes_info = {
+    df_dict = {
+        'tonkms_Mtkms': tonkms_Mtkms,
+        'passengerkms_Tpkms': passengerkms_Tpkms,
+        'buses_vshares': buses_vshares,
+        'car_vshares': car_vshares,
+        'medtruck_vshares': medtruck_vshares,
+        'hvytruck_vshares': hvytruck_vshares
+    }
+
+    labels_dict = {
         'tonkms_Mtkms': tkms_label,
         'passengerkms_Tpkms': pkms_label,
         'buses_vshares': bus_label,
-        'car_vshares': None,
         'medtruck_vshares': truck_label,
         'hvytruck_vshares': truck_label
     }
 
-    for df_name, labels in dataframes_info.items():
-        locals()[df_name] = locals()[df_name][locals()[df_name]["time"].isin(years_range)]
-        locals()[df_name].set_index(["time", "region"], inplace=True)
-        if labels is not None:
-            locals()[df_name].columns = labels
+    for df_name, df in df_dict.items():
+        if df is not None:
+            # Filter DataFrame for the output years
+            df = df[df["time"].isin(years_range)]
+            
+            # Set multi-index based on the first two columns
+            df.set_index(["time", "region"], inplace=True)
+            
+            # Insert column descriptions if available
+            if df_name in labels_dict:
+                df.columns = labels_dict[df_name]
+            
+            # Update the DataFrame in the dictionary
+            df_dict[df_name] = df
 
+    tonkms_Mtkms = df_dict['tonkms_Mtkms']
+    passengerkms_Tpkms = df_dict['passengerkms_Tpkms']
+    buses_vshares = df_dict['buses_vshares']
+    car_vshares = df_dict['car_vshares']
+    medtruck_vshares = df_dict['medtruck_vshares']
+    hvytruck_vshares = df_dict['hvytruck_vshares']
 
     battery_shares_full = battery_shares_full.loc[years_range]
     
@@ -250,19 +273,22 @@ def preprocessing(base_dir=os.getcwd()):
     # harmonize with pkms which are in Tera pkms
     # Define the input data for vehicles requiring conversion
     # Define the input data for vehicles requiring conversion
+
     vehicle_data = {
-        "Heavy Freight Trucks": ("trucks_HFT_tkm", "HFT", 'M'),
-        "Medium Freight Trucks": ("trucks_MFT_tkm", "MFT", 'M'),
-        "Light Commercial Vehicles": ("trucks_LCV_tkm", "LCV", 'M'),
-        "Freight Planes": ("air_freight_tkms", "air_freight", 'M'),
-        "Freight Trains": ("tonkms_Mtkms['freight train'].unstack()", "rail_freight", 'M'),
-        "Inland Ships": ("tonkms_Mtkms['inland shipping'].unstack()", "inland_shipping", 'M')
+        "Heavy Freight Trucks": (trucks_HFT_tkm, "HFT", 'M'),
+        "Medium Freight Trucks": (trucks_MFT_tkm, "MFT", 'M'),
+        "Light Commercial Vehicles": (trucks_LCV_tkm, "LCV", 'M'),
+        "Freight Planes": (air_freight_tkms, "air_freight", 'M'),
+        "Freight Trains": (tonkms_Mtkms['freight train'].unstack(), "rail_freight", 'M'),
+        "Inland Ships": (tonkms_Mtkms['inland shipping'].unstack(), "inland_shipping", 'M')
     }
 
+    # %%
+
     # Handle the vehicle types that need conversion from Mega km to Tera km
-    for out_label, (in_label, key, unit) in vehicle_data.items():
+    for out_label, (df, key, unit) in vehicle_data.items():
         total_nr_vehicles_simple[out_label] = tkms_to_nr_of_vehicles_fixed(
-            eval(in_label),  # Evaluate the string to get the actual DataFrame
+            df,  # Evaluate the string to get the actual DataFrame
             mileages[key].values[0],
             load[key].values[0],
             loadfactor[key].values[0],
