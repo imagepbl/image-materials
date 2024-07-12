@@ -11,20 +11,19 @@ import os
 from read_scripts.read_mym import read_mym_df
 from modelling_functions import interpolate, tkms_to_nr_of_vehicles_fixed
 # Path fragments and constants
-from constants import PROJECT, SCEN, FOLDER, START_YEAR, END_YEAR, LOAD_FACTOR, REGIONS
-# Labels
-from constants import ( 
-                        tkms_label, pkms_label, truck_label, bus_label, 
-                        columns_vehicle_output, 
-                        bus_label_ICE, bus_label_HEV,
-                        truck_label_ICE, truck_label_HEV, truck_label_PHEV, 
-                        truck_label_BEV, truck_label_FCV, vshares_label,
-                        END_YEAR,
+from constants import ( PROJECT, SCEN, FOLDER, START_YEAR, END_YEAR, LOAD_FACTOR, REGIONS, END_YEAR,
                         REGIONS, LIGHT_COMMERCIAL_VEHICLE_SHARE,
                         MEGA_TO_TERA, PKMS_TO_VKMS, TONNES_TO_KGS,
-                        SHIPS_YEARS_RANGE,
+                        SHIPS_YEARS_RANGE )
+# Labels
+from constants import ( tkms_label, pkms_label, truck_label, bus_label, 
+                        bus_label_ICE, bus_label_HEV,
+                        truck_label_ICE, truck_label_HEV, truck_label_PHEV, 
+                        truck_label_BEV, truck_label_FCV,                         
                         car_collists,
-                        drive_trains, typical_modes, simple_modes
+                        drive_trains, typical_modes, simple_modes, all_modes,
+                        cap_adjustment, mile_adjustment,
+                        years_range
                        )
 base_dir=Path(os.getcwd())
 
@@ -39,8 +38,8 @@ def preprocessing(base_dir=os.getcwd()):
     base_input_data_path = base_dir.joinpath("..", "..", "input", "vehicles")
     standard_input_data_path = base_input_data_path.joinpath("standard_data")
     image_folder = base_dir.joinpath("..", "..", "image", PROJECT, SCEN)
-    standard_output_folder = base_dir.joinpath("..", "..", "output", PROJECT,
-                                               FOLDER)
+    #standard_output_folder = base_dir.joinpath("..", "..", "output", PROJECT,
+    #                                           FOLDER)
     
     #st = time.time()
     
@@ -92,7 +91,7 @@ def preprocessing(base_dir=os.getcwd()):
     preprocessing of the IMAGE files & files with additional assumptions on vehcile materials (renaming, removing 27th region, adding labels etc.)
     """
     for dataframe in [kilometrage, kilometrage_bus, kilometrage_midi_bus, mileages]:
-        dataframe = dataframe.reindex(list(range(START_YEAR, END_YEAR + 1))).interpolate(limit_direction="both")
+        dataframe = dataframe.reindex(years_range).interpolate(limit_direction="both")
     
     region_list          = list(kilometrage.columns.values)     # get a list with region names TODO: turn this into a proper mapping based on ...
     
@@ -103,29 +102,39 @@ def preprocessing(base_dir=os.getcwd()):
     car_loadfactor = car_loadfactor.loc[list(range(START_YEAR, END_YEAR+1)),:]     # remove years beyond LAST_YEAR
     car_loadfactor.columns = region_list
     
-    # select data only for requested output years
-    tonkms_Mtkms        = tonkms_Mtkms[tonkms_Mtkms["time"].isin(list(range(START_YEAR, END_YEAR+1)))]
-    passengerkms_Tpkms  = passengerkms_Tpkms[passengerkms_Tpkms["time"].isin(list(range(START_YEAR, END_YEAR+1)))] 
-    buses_vshares       = buses_vshares[buses_vshares["time"].isin(list(range(START_YEAR, END_YEAR+1)))] 
-    car_vshares         = car_vshares[car_vshares["time"].isin(list(range(START_YEAR, END_YEAR+1)))] 
-    medtruck_vshares    = medtruck_vshares[medtruck_vshares["time"].isin(list(range(START_YEAR, END_YEAR+1)))] 
-    hvytruck_vshares    = hvytruck_vshares[hvytruck_vshares["time"].isin(list(range(START_YEAR, END_YEAR+1)))] 
-    battery_shares_full = battery_shares_full.loc[list(range(START_YEAR, END_YEAR+1))]
-    
-    # set multi-index based on the first two columns
-    tonkms_Mtkms.set_index(["time", "region"], inplace=True)
-    passengerkms_Tpkms.set_index(["time", "region"], inplace=True)
-    buses_vshares.set_index(["time", "region"], inplace=True)
-    car_vshares.set_index(["time", "region"], inplace=True)
-    medtruck_vshares.set_index(["time", "region"], inplace=True)
-    hvytruck_vshares.set_index(["time", "region"], inplace=True)
-    
-    # insert column descriptions
-    tonkms_Mtkms.columns       = tkms_label
-    passengerkms_Tpkms.columns = pkms_label
-    medtruck_vshares.columns   = truck_label
-    hvytruck_vshares.columns   = truck_label
-    buses_vshares.columns      = bus_label
+    # Define a list of DataFrames and their respective column labels
+    df_dict = {
+        'tonkms_Mtkms': (tonkms_Mtkms, tkms_label),
+        'passengerkms_Tpkms': (passengerkms_Tpkms, pkms_label),
+        'buses_vshares': (buses_vshares, bus_label),
+        'car_vshares': (car_vshares, None),  # No labels for car_vshares
+        'medtruck_vshares': (medtruck_vshares, truck_label),
+        'hvytruck_vshares': (hvytruck_vshares, truck_label)
+    }
+
+    for df_name, (df, label) in df_dict.items():
+        if df is not None:
+            # Filter DataFrame for the output years
+            df = df[df["time"].isin(years_range)]
+            
+            # Set multi-index based on the first two columns
+            df.set_index(["time", "region"], inplace=True)
+            
+            # Insert column descriptions if available
+            if label is not None:
+                df.columns = label
+            
+            # Update the DataFrame in the dictionary
+            df_dict[df_name] = df
+
+    tonkms_Mtkms = df_dict['tonkms_Mtkms']
+    passengerkms_Tpkms = df_dict['passengerkms_Tpkms']
+    buses_vshares = df_dict['buses_vshares']
+    car_vshares = df_dict['car_vshares']
+    medtruck_vshares = df_dict['medtruck_vshares']
+    hvytruck_vshares = df_dict['hvytruck_vshares']
+
+    battery_shares_full = battery_shares_full.loc[years_range]
     
     #%% Vehicle shares of typical vehicles (i.e. specified different drivetrains)    
     columns = pd.MultiIndex.from_product([typical_modes , drive_trains, 
@@ -143,7 +152,6 @@ def preprocessing(base_dir=os.getcwd()):
     # BUSES and TRUCKS
     # Sum of all buses except Trolleys
     midi_sum = buses_vshares[list(filter(lambda x: x != 'BusElecTrolley', bus_label))].sum(axis=1)
-
 
     # Fill the DataFrame with bus data
     vehicle_shares_typical[('Regular Buses', 'ICE')] = buses_vshares[bus_label_ICE].sum(axis=1).unstack()
@@ -172,8 +180,6 @@ def preprocessing(base_dir=os.getcwd()):
         vehicle_shares_typical[(truck_type, 'BEV')] = truck_df[truck_label_BEV].sum(axis=1).unstack()
         vehicle_shares_typical[(truck_type, 'FCV')] = truck_df[truck_label_FCV].sum(axis=1).unstack()
         vehicle_shares_typical[(truck_type, 'Trolley')] = 0
-
-
 
     #%% For dynamic variables, apply interpolation and extend over the whole timeframe
     
@@ -213,7 +219,7 @@ def preprocessing(base_dir=os.getcwd()):
     MFT_percshare_tkm      = tonkms_Mtkms["medium truck"].unstack() / trucks_total_tkm  # the MFT fraction of the total 
     HFT_percshare_tkm      = tonkms_Mtkms["heavy truck"].unstack() / trucks_total_tkm   # the HFT fraction of the total 
     trucks_min_LCV         = trucks_total_tkm - trucks_LCV_tkm
-    trucks_MFT_tkm         = trucks_min_LCV.mul(MFT_percshare_tkm)                      
+    trucks_MFT_tkm         = trucks_min_LCV.mul(MFT_percshare_tkm)             #Used in loop below       
     trucks_HFT_tkm         = trucks_min_LCV.mul(HFT_percshare_tkm)
     
     # demand for freight planes is reduced by 50% because about half of the air freight is transported as cargo on passenger planes 
@@ -232,14 +238,8 @@ def preprocessing(base_dir=os.getcwd()):
     # TODO: exchange for proper region labels defined elsewhere
     # TODO: look at vehicle type names
     total_nr_vehicles_simple = pd.DataFrame(
-        index=list(range(START_YEAR, END_YEAR + 1)),
-        columns=pd.MultiIndex.from_product(
-            [["Regular Buses", "Midi Buses", "Trains", "High Speed Trains",
-              "Passenger Planes",
-              "Bikes", "Heavy Freight Trucks", "Medium Freight Trucks", 
-              "Light Commercial Vehicles", "Freight Trains", "Small Ships",
-              "Medium Ships", "Large Ships", "Very Large Ships",
-              "Inland Ships", "Freight Planes","Cars"], 
+        index=years_range,
+        columns=pd.MultiIndex.from_product([all_modes, 
              list(range(1, REGIONS+3))],
             names=["Type", "Region"]
         )
@@ -263,42 +263,28 @@ def preprocessing(base_dir=os.getcwd()):
     # TODO: loops later, just fill the data for now
     # original ton kilometers are in Mega-ton-kms, div by MEGA_TO_TERA to
     # harmonize with pkms which are in Tera pkms
-    total_nr_vehicles_simple["Heavy Freight Trucks"] = tkms_to_nr_of_vehicles_fixed(
-        trucks_HFT_tkm  / MEGA_TO_TERA,
-        mileages["HFT"].values[0],
-        load["HFT"].values[0],
-        loadfactor["HFT"].values[0]
-    )
-    total_nr_vehicles_simple["Medium Freight Trucks"] = tkms_to_nr_of_vehicles_fixed(
-        trucks_MFT_tkm / MEGA_TO_TERA,
-        mileages["MFT"].values[0],
-        load["MFT"].values[0],
-        loadfactor["MFT"].values[0]
-    )
-    total_nr_vehicles_simple["Light Commercial Vehicles"] = tkms_to_nr_of_vehicles_fixed(
-        trucks_LCV_tkm / MEGA_TO_TERA,
-        mileages["LCV"].values[0],
-        load["LCV"].values[0],
-        loadfactor["LCV"].values[0]
-    )
-    total_nr_vehicles_simple["Freight Planes"] = tkms_to_nr_of_vehicles_fixed(
-        air_freight_tkms / MEGA_TO_TERA,
-        mileages["air_freight"].values[0],
-        load["air_freight"].values[0],
-        loadfactor["air_freight"].values[0]
-    )
-    total_nr_vehicles_simple["Freight Trains"] = tkms_to_nr_of_vehicles_fixed(
-        tonkms_Mtkms["freight train"].unstack() / MEGA_TO_TERA,
-        mileages["rail_freight"].values[0],
-        load["rail_freight"].values[0],
-        loadfactor["rail_freight"].values[0]
-    )
-    total_nr_vehicles_simple["Inland Ships"] = tkms_to_nr_of_vehicles_fixed(
-        tonkms_Mtkms["inland shipping"].unstack() / MEGA_TO_TERA,
-        mileages["inland_shipping"].values[0],
-        load["inland_shipping"].values[0],
-        loadfactor["inland_shipping"].values[0]
-    )
+    # Define the input data for vehicles requiring conversion
+
+    vehicle_data = {
+        "Heavy Freight Trucks": (trucks_HFT_tkm, "HFT", 'M'),
+        "Medium Freight Trucks": (trucks_MFT_tkm, "MFT", 'M'),
+        "Light Commercial Vehicles": (trucks_LCV_tkm, "LCV", 'M'),
+        "Freight Planes": (air_freight_tkms, "air_freight", 'M'),
+        "Freight Trains": (tonkms_Mtkms['freight train'].unstack(), "rail_freight", 'M'),
+        "Inland Ships": (tonkms_Mtkms['inland shipping'].unstack(), "inland_shipping", 'M')
+    }
+
+    # %%
+
+    # Handle the vehicle types that need conversion from Mega km to Tera km
+    for out_label, (df, key, unit) in vehicle_data.items():
+        total_nr_vehicles_simple[out_label] = tkms_to_nr_of_vehicles_fixed(
+            df,  
+            mileages[key].values[0],
+            load[key].values[0],
+            loadfactor[key].values[0],
+            unit_conversion=unit
+        )
     
     # %%
     # passenger cars and buses are calculated separately (due to regional & changeing mileage & load), first the totals
@@ -324,9 +310,6 @@ def preprocessing(base_dir=os.getcwd()):
     total_nr_vehicles_simple["Midi Buses"] = bus_midi_vkms.div(kilometrage_midi_bus)
     
     # %% for INTERNATIONAL SHIPPING the number of vehicles is calculated differently 
-    
-    cap_adjustment  = [1, 1, 1, 1]
-    mile_adjustment = [1, 1, 1, 1]
     
     #pre-calculate the shares of the boats based on the number of boats, before adding history/future
     # TODO: boats vs. ships?
@@ -367,12 +350,13 @@ def preprocessing(base_dir=os.getcwd()):
             28
         ].div(nr_of_boats[size])
     
+    #TODO what is this for? 
     # TODO: remove this, this should be done differently somehow.
-    total_nr_of_ships = total_nr_vehicles_simple["Small Ships"] + \
-        total_nr_vehicles_simple["Medium Ships"] + \
-        total_nr_vehicles_simple["Large Ships"] + \
-        total_nr_vehicles_simple["Very Large Ships"]
-    diff_ships_total = total_nr_of_ships.loc[SHIPS_YEARS_RANGE, 28].div(nr_of_boats.sum(axis=1))
+    #total_nr_of_ships = total_nr_vehicles_simple["Small Ships"] + \
+    #    total_nr_vehicles_simple["Medium Ships"] + \
+    #    total_nr_vehicles_simple["Large Ships"] + \
+    #    total_nr_vehicles_simple["Very Large Ships"]
+    #diff_ships_total = total_nr_of_ships.loc[SHIPS_YEARS_RANGE, 28].div(nr_of_boats.sum(axis=1))
     
     # capacity of boats is in tonnes, the weight - expressed as a fraction of the capacity - is calculated in in kgs here
     weight_boats  = weight_frac_boats_yrs * cap_of_boats_yrs * TONNES_TO_KGS     

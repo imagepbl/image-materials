@@ -109,10 +109,16 @@ typical_modes = ['Cars', 'Regular Buses', 'Midi Buses',
                 'Heavy Freight Trucks', 'Medium Freight Trucks', 
                 'Light Commercial Vehicles']
 simple_modes = ["Trains", "High Speed Trains", "Freight Trains",
-              "Passenger Planes",
+              "Passenger Planes", "Freight Planes",
               "Bikes",  "Small Ships",
               "Medium Ships", "Large Ships", "Very Large Ships",
-              "Inland Ships", "Freight Planes"]
+              "Inland Ships"]
+all_modes = typical_modes + simple_modes
+
+cap_adjustment  = [1, 1, 1, 1]
+mile_adjustment = [1, 1, 1, 1]
+
+years_range = list(range(START_YEAR, END_YEAR + 1))
 
 #%% BATTERY VEHICLE CALCULATIONS - Determine the fraction of the fleet that uses batteries, based on vehicle share files
 # Batteries are relevant for 1) BUSES 2) TRUCKS
