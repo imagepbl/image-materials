@@ -272,7 +272,6 @@ def preprocessing(base_dir=os.getcwd()):
     # original ton kilometers are in Mega-ton-kms, div by MEGA_TO_TERA to
     # harmonize with pkms which are in Tera pkms
     # Define the input data for vehicles requiring conversion
-    # Define the input data for vehicles requiring conversion
 
     vehicle_data = {
         "Heavy Freight Trucks": (trucks_HFT_tkm, "HFT", 'M'),
