@@ -104,23 +104,15 @@ def preprocessing(base_dir=os.getcwd()):
     
     # Define a list of DataFrames and their respective column labels
     df_dict = {
-        'tonkms_Mtkms': tonkms_Mtkms,
-        'passengerkms_Tpkms': passengerkms_Tpkms,
-        'buses_vshares': buses_vshares,
-        'car_vshares': car_vshares,
-        'medtruck_vshares': medtruck_vshares,
-        'hvytruck_vshares': hvytruck_vshares
+        'tonkms_Mtkms': (tonkms_Mtkms, tkms_label),
+        'passengerkms_Tpkms': (passengerkms_Tpkms, pkms_label),
+        'buses_vshares': (buses_vshares, bus_label),
+        'car_vshares': (car_vshares, None),  # No labels for car_vshares
+        'medtruck_vshares': (medtruck_vshares, truck_label),
+        'hvytruck_vshares': (hvytruck_vshares, truck_label)
     }
 
-    labels_dict = {
-        'tonkms_Mtkms': tkms_label,
-        'passengerkms_Tpkms': pkms_label,
-        'buses_vshares': bus_label,
-        'medtruck_vshares': truck_label,
-        'hvytruck_vshares': truck_label
-    }
-
-    for df_name, df in df_dict.items():
+    for df_name, (df, label) in df_dict.items():
         if df is not None:
             # Filter DataFrame for the output years
             df = df[df["time"].isin(years_range)]
@@ -129,8 +121,8 @@ def preprocessing(base_dir=os.getcwd()):
             df.set_index(["time", "region"], inplace=True)
             
             # Insert column descriptions if available
-            if df_name in labels_dict:
-                df.columns = labels_dict[df_name]
+            if label is not None:
+                df.columns = label
             
             # Update the DataFrame in the dictionary
             df_dict[df_name] = df
@@ -288,7 +280,7 @@ def preprocessing(base_dir=os.getcwd()):
     # Handle the vehicle types that need conversion from Mega km to Tera km
     for out_label, (df, key, unit) in vehicle_data.items():
         total_nr_vehicles_simple[out_label] = tkms_to_nr_of_vehicles_fixed(
-            df,  # Evaluate the string to get the actual DataFrame
+            df,  
             mileages[key].values[0],
             load[key].values[0],
             loadfactor[key].values[0],
