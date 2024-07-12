@@ -1,11 +1,17 @@
 # %%
 import pandas as pd
+import xarray as xr
+import pint
+import pint_xarray
+
 from preprocessing import preprocessing
+
 from modelling_functions import (
                                 inflow_outflow_dynamic_np,
                                 inflow_outflow_typical_np,
                                 nr_by_cohorts_to_materials_simple_np,
-                                nr_by_cohorts_to_materials_typical_np
+                                nr_by_cohorts_to_materials_typical_np,
+                                preprocess_to_xarray
                                 )
 from constants import ( 
                         START_YEAR, END_YEAR,
@@ -25,10 +31,24 @@ from constants import (
 # 5. Preparing output
 
 # %%
+# Create a pint UnitRegistry
+ureg = pint.UnitRegistry()
+pint.set_application_registry(ureg)
 idx = pd.IndexSlice
 preprocessing_results = preprocessing()
+preprocessing_results_xarray = preprocessing_results.copy()
 
 all_keys = list(preprocessing_results['total_nr_vehicles_simple'].columns.levels[0].unique())
+
+for key  in preprocessing_results.keys():
+    preprocessing_results_xarray[key] = preprocessing_results[key].to_xarray()
+
+for key, df in preprocessing_results.items():
+    ds = df.to_xarray()
+    preprocessing_results_xarray[key] = ds.pint.quantify()
+
+# Convert to xarray with units
+preprocessing_results_xarray = preprocess_to_xarray(preprocessing_results, unit_mapping)
 
 #%% INFLOW-OUTFLOW calculations using the ODYM Dynamic Stock Model (DSM) as a function
 

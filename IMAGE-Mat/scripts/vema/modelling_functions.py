@@ -278,3 +278,14 @@ def nr_by_cohorts_to_materials_typical_np(inflow, outflow_cohort, stock_cohort, 
           
     return pd_inflow_mat, pd_outflow_mat, pd_stock_mat
 
+def preprocess_to_xarray(preprocessing_results, unit_mapping):
+    preprocessing_results_xarray = {}
+    
+    for key, df in preprocessing_results.items():
+        ds = df.to_xarray()
+        if key in unit_mapping:
+            ds = ds.assign_attrs({name: unit for name, unit in unit_mapping[key]['columns'].items()})
+            ds = ds.pint.quantify()
+        preprocessing_results_xarray[key] = ds
+    
+    return preprocessing_results_xarray
