@@ -22,7 +22,8 @@ REGIONS = 26
 # relative to this BASE loadfcator (persons/car))
 LOAD_FACTOR = 1.6
 
-LIGHT_COMMERCIAL_VEHICLE_SHARE = 0.04 # 0.04 is the fraction of the tkms driven by light commercial vehicles according to the IEA
+LIGHT_COMMERCIAL_VEHICLE_SHARE = 0.04 
+# 0.04 is the fraction of the tkms driven by light commercial vehicles according to the IEA
 
 MEGA_TO_TERA = 1_000_000  # 1 Tera = 1,000,000 Mega
 PKMS_TO_VKMS = 1_000_000_000_000
@@ -51,11 +52,11 @@ car_label = ["Conv. ICE(2000)", "Conv. ICE(2010)", "Adv. ICEOil",
 tkms_label = ["inland shipping", "freight train", "medium truck",
               "heavy truck", "air cargo", "international shipping", "empty",
               "total"]
-pkms_label = ["walking", "bicycle", "bus", "rail_reg", "car", "rail_hst", "air_pas",
-              "total"]
-columns_vehicle_output = ["Buses", "Trains", "High Speed Trains", "Cars", "Planes", "Bikes",
-                          "Trucks", "Freight Trains", "Ships", "Inland Ships",
-                          "Freight Planes"]
+pkms_label = ["walking", "bicycle", "bus", "rail_reg", "car", "rail_hst", 
+              "air_pas", "total"]
+columns_vehicle_output = ["Buses", "Trains", "High Speed Trains", "Cars", 
+                          "Planes", "Bikes", "Trucks", "Freight Trains", 
+                          "Ships", "Inland Ships", "Freight Planes"]
 
 # Names used to shorten plots
 labels_pas = ["bicycle", "rail_reg", "rail_hst", "midi_bus", "reg_bus",
@@ -122,7 +123,8 @@ years_range = list(range(START_YEAR, END_YEAR + 1))
 
 #%% BATTERY VEHICLE CALCULATIONS - Determine the fraction of the fleet that uses batteries, based on vehicle share files
 # Batteries are relevant for 1) BUSES 2) TRUCKS
-# We use fixed weight & material content assumptions, but we use the development of battery energy density (from the electricity storage calculations) to derive a changing battery capacity (and thus range)
+# We use fixed weight & material content assumptions, but we use the development of battery energy density 
+# (from the electricity storage calculations) to derive a changing battery capacity (and thus range)
 # Battery weight is assumed to be in-addition to the regular vehicle weight
 
 bus_label_ICE    = ['BusOil',	'BusBio',	'BusGas']
@@ -132,9 +134,11 @@ bus_label_HEV    = ['BusElecTrolley',	'Bus Hybrid1']
 #                    'ICE-HEV-CNG Gas', 'ICE-HEV-diesel bio', 'FCV Oil', 'FCV Bio', 'FCV H2', 'PEV-10 OilElec.', \
 #                    'PEV-30 OilElec.', 'PEV-60 OilElec.', 'PEV-10 BioElec.', 'PEV-30 BioElec.', 'PEV-60 BioElec.', \ 
 #                    'BEV Elec.', 'BEV Elec.', 'BEV Elec.', 'BEV Elec.']
-truck_label_ICE  = ['Conv. ICE(2000)',	'Conv. ICE(2010)', 'Adv. ICEOil', 'Adv. ICEH2', 'Turbo-petrol IC', 'Diesel ICEOil', 'Diesel ICEBio']
+truck_label_ICE  = ['Conv. ICE(2000)',	'Conv. ICE(2010)', 'Adv. ICEOil', 'Adv. ICEH2', 'Turbo-petrol IC', 
+                    'Diesel ICEOil', 'Diesel ICEBio']
 truck_label_HEV  = ['ICE-HEV-gasoline', 'ICE-HEV-diesel oil', 'ICE-HEV-H2', 'ICE-HEV-CNG Gas', 'ICE-HEV-diesel bio']
-truck_label_PHEV = ['PEV-10 OilElec.', 'PEV-30 OilElec.', 'PEV-60 OilElec.', 'PEV-10 BioElec.', 'PEV-30 BioElec.', 'PEV-60 BioElec.']
+truck_label_PHEV = ['PEV-10 OilElec.', 'PEV-30 OilElec.', 'PEV-60 OilElec.', 'PEV-10 BioElec.', 'PEV-30 BioElec.', 
+                    'PEV-60 BioElec.']
 truck_label_BEV  = ['BEV Elec.', 'BEV Elec.', 'BEV Elec.']
 truck_label_FCV  = ['FCV Oil', 'FCV Bio', 'FCV H2']
 vshares_label    = ['ICE', 'HEV', 'PHEV', 'BEV', 'FCV', 'Trolley']
