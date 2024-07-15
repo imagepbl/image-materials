@@ -8,14 +8,17 @@ Returns:
 """
 
 import pandas as pd
-import numpy as np
-from constants import FIRST_YEAR, END_YEAR, REGIONS
+#import numpy as np
+from typing import Union, Optional
+from constants import FIRST_YEAR, END_YEAR
 from read_scripts.dynamic_stock_model_BM import DynamicStockModel as DSM
 idx = pd.IndexSlice
 
 
 # Generic interpolation function
-def interpolate(original: pd.DataFrame, first_year: int = [], change: str = 'no'):
+def interpolate(original: pd.DataFrame, 
+                first_year: Optional[pd.DataFrame]= None, 
+                change: str = 'no'):
     """
     Generic linear interpolation function that interpolates between given years in the original data. With 2 additional
     functionalities:
@@ -85,13 +88,16 @@ def interpolate(original: pd.DataFrame, first_year: int = [], change: str = 'no'
         # then apply the average annual growth rate to the last historic year
         for row in range(end+1, END_YEAR + 1):
             reindexed_filled.loc[row] = reindexed_filled.loc[row-1].values * \
-            (1+growthrate)
+                (1+growthrate)
 
     return reindexed_filled
 
 
-def tkms_to_nr_of_vehicles_fixed(tkms, mileage, load, loadfactor,
-                                 unit_conversion=None):
+def tkms_to_nr_of_vehicles_fixed(tkms: Union[pd.DataFrame, pd.Series],
+                                 mileage: Union[pd.DataFrame, pd.Series],
+                                 load: float,
+                                 loadfactor: float,
+                                 unit_conversion: Optional[str] = None):
     """
     This function translates ton kilometers (by year & by region) to nr of vehicles (same dimms) 
     using fixed indicators on mileage, load capacity and load factor
@@ -112,7 +118,7 @@ def tkms_to_nr_of_vehicles_fixed(tkms, mileage, load, loadfactor,
     elif unit_conversion == None:
         pass
     else:
-        raise Exception(
+        raise ValueError(
             f"This unit conversion input '{unit_conversion}' is not supported.")
 
     # if unit is None, assume tkms is already in km
@@ -126,7 +132,10 @@ def tkms_to_nr_of_vehicles_fixed(tkms, mileage, load, loadfactor,
 # apply the dynamic stock model
 
 
-def inflow_outflow_dynamic_np(stock, fact1, fact2, distribution):
+def inflow_outflow_dynamic_np(stock: pd.DataFrame, 
+                              fact1: pd.DataFrame, 
+                              fact2: pd.DataFrame, 
+                              distribution: pd.DataFrame):
     """
     In this function the stock-driven DSM is applied to return inflow & outflow for all regions
     IN: stock as a dataframe (nr of vehicles by year & region), lifetime (in years), stdev_mult (multiplier to derive 
@@ -184,7 +193,11 @@ def inflow_outflow_dynamic_np(stock, fact1, fact2, distribution):
 # Pre-calculate the inflow (aka. market-)share corresponding to the (known) share of vehicles in stock (from IMAGE)
 
 
-def inflow_outflow_typical_np(stock, fact1, fact2, distribution, stock_share):
+def inflow_outflow_typical_np(stock: pd.DataFrame, 
+                              fact1: pd.DataFrame, 
+                              fact2: pd.DataFrame, 
+                              distribution: pd.DataFrame, 
+                              stock_share: pd.DataFrame):
     """
     In this function the dynamic inflow & outflow calculations are applied to vehicles with sub-types. To return inflow 
     & outflow for all regions & vehicle types
@@ -199,7 +212,7 @@ def inflow_outflow_typical_np(stock, fact1, fact2, distribution, stock_share):
 
     inflow = np.zeros((len(stock_share.columns.levels[0]),
                        len(stock.iloc[0]), len(stock)))
-    outflow_cohort = np.zeros((len(stock_share.columns.levels[0]), 
+    outflow_cohort = np.zeros((len(stock_share.columns.levels[0]),
                                len(stock.iloc[0]), len(stock), len(stock)))
     stock_cohort = np.zeros((len(stock_share.columns.levels[0]),
                              len(stock.iloc[0]), len(stock), len(stock)))
@@ -210,7 +223,7 @@ def inflow_outflow_typical_np(stock, fact1, fact2, distribution, stock_share):
 
     # calculate the stocks of individual (vehicle) types (in nr of vehicles)
     for vtype in vtype_list:
-        stock_by_vtype.loc[:, idx[vtype, :]] = stock.mul(stock_share. \
+        stock_by_vtype.loc[:, idx[vtype, :]] = stock.mul(stock_share.
                                                          loc[:, idx[vtype, :]])
 
     vtype_count = list(range(0, len(stock_share.columns.levels[0])))
@@ -327,21 +340,21 @@ def nr_by_cohorts_to_materials_typical_np(inflow, outflow_cohort, stock_cohort, 
         weight_used = weight.loc[:, vtype_dict[vtype]].values
         if stock_cohort[vtype].sum() > 0.001:
             for material in range(0, len(mater_list)):
-                composition_used = composition.loc[:,  idx[vtype_dict[vtype], 
-                                   mater_dict[material]]].values
+                composition_used = composition.loc[:,  idx[vtype_dict[vtype],
+                                                           mater_dict[material]]].values
                 # before running, check if the material is at all relevant in the vehicle (save calculation time)
                 if composition_used.sum() > 0.001:
                     for region in range(0, len(inflow[0])):
                         inflow_mat[vtype, material, region, :] = (
                             inflow[vtype, region, :] * weight_used) * \
-                        composition_used
+                            composition_used
                         outflow_mat[vtype, material, region, :] = np.multiply(
-                            np.multiply(outflow_cohort[vtype, region, :, :].T, 
+                            np.multiply(outflow_cohort[vtype, region, :, :].T,
                                         weight_used),
                             composition_used).T.sum(axis=1)
                         stock_mat[vtype, material, region, :] = \
-                        np.multiply(np.multiply(
-                            stock_cohort[vtype, region, :, :], weight_used), 
+                            np.multiply(np.multiply(
+                                stock_cohort[vtype, region, :, :], weight_used),
                             composition_used).sum(axis=1)
 
                 else:

@@ -74,7 +74,7 @@ for key in key_map_typical:
 vehicle_materials_simple = {}
 for key in key_map_simple:
     if key_map_simple[key] in preprocessing_results['vehicle_weights_simple'] \
-        and
+        and \
     key_map_simple[key] in preprocessing_results['material_fractions_simple']:
         data_in, data_out, stock_cohort = vehicle_stocks_and_flows_simple[key]
         vehicle_materials_simple[key] = nr_by_cohorts_to_materials_simple_np(
@@ -89,7 +89,7 @@ for key in key_map_simple:
 vehicle_materials_typical = {}
 for key in key_map_typical:
     if key_map_typical[key] in preprocessing_results['vehicle_weights_typical'] \
-        and
+        and \
     key_map_typical[key] in preprocessing_results['material_fractions_typical']:
         data_in, data_out, stock_cohort = vehicle_stocks_and_flows_typical[key]
         vehicle_materials_typical[key] = nr_by_cohorts_to_materials_typical_np(
