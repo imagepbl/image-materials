@@ -92,37 +92,13 @@ def interpolate(original: pd.DataFrame,
 
     return reindexed_filled
 
-
-def tkms_to_nr_of_vehicles_fixed(tkms: Union[pd.DataFrame, pd.Series],
-                                 mileage: Union[pd.DataFrame, pd.Series],
-                                 load: float,
-                                 loadfactor: float,
-                                 unit_conversion: Optional[str] = None):
+def tkms_to_nr_of_vehicles_fixed(tera_tkms, mileage, load, loadfactor):
     """
     This function translates ton kilometers (by year & by region) to nr of vehicles (same dimms) 
     using fixed indicators on mileage, load capacity and load factor
-
-    Parameters:
-    - tkms: DataFrame containing ton kilometers.
-    - mileage: DataFrame or Series containing the mileage of vehicles.
-    - load: The load capacity of the vehicles.
-    - loadfactor: The load factor of the vehicles.
-    - unit: The unit of tkms ('T' for Tera km, 'k' for km).
     """
-    if unit_conversion == 'T':
-        tkms = tkms * 1e12  # Convert Tera km to km
-    elif unit_conversion == 'M':
-        tkms = tkms * 1e6  # Convert Mega km to km
-    elif unit_conversion == 'k':
-        tkms = tkms * 1e3  # Convert kilo km to km
-    elif unit_conversion == None:
-        pass
-    else:
-        raise ValueError(
-            f"This unit conversion input '{unit_conversion}' is not supported.")
-
-    # if unit is None, assume tkms is already in km
-
+    # first_translate Tera ton/person- kms into person/ton-kms
+    tkms = tera_tkms * 1000000000000  
     # then get the vehicle kilometers required to fulfill the transport demand
     vkms = tkms/(load*loadfactor)
     # then get the number of vehicles by dividing by the mileage
