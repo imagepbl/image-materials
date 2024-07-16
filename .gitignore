@@ -171,3 +171,4 @@ cython_debug/
 *.his
 
 IMAGE-Mat/output/
+IMAGE-Mat_old_version/IMAGE-Mat/output
