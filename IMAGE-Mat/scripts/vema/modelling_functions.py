@@ -63,7 +63,7 @@ def interpolate(original: pd.DataFrame,
 
     # IF there is a first_year defined, add these as 0
     # TODO: Test if columns of first_year & original are the same
-    if not isinstance(first_year, list):
+    if first_year is not None:
         for item in list(original.columns):
             reindexed.loc[first_year[item], item] = 0
     else:
@@ -386,3 +386,15 @@ def nr_by_cohorts_to_materials_typical_np(inflow, outflow_cohort, stock_cohort, 
         index=index, columns=columns)
 
     return pd_inflow_mat, pd_outflow_mat, pd_stock_mat
+=======
+def preprocess_to_xarray(preprocessing_results, unit_mapping):
+    preprocessing_results_xarray = {}
+    
+    for key, df in preprocessing_results.items():
+        ds = df.to_xarray()
+        if key in unit_mapping:
+            ds = ds.assign_attrs({name: unit for name, unit in unit_mapping[key]['columns'].items()})
+            ds = ds.pint.quantify()
+        preprocessing_results_xarray[key] = ds
+    
+    return preprocessing_results_xarray
