@@ -1,12 +1,15 @@
 import pandas as pd
 import numpy as np
+from typing import Union, Optional
 from constants import FIRST_YEAR, END_YEAR, REGIONS
 from read_scripts.dynamic_stock_model_BM import DynamicStockModel as DSM
 idx = pd.IndexSlice
 
 
 # Generic interpolation function
-def interpolate(original: pd.DataFrame, first_year=[], change: str='no'):
+def interpolate(original: pd.DataFrame, 
+                first_year: Optional[pd.DataFrame]= None, 
+                change: str = 'no'):
     """
     Generic linear interpolation function that interpolates between given years in the original data. With 2 additional functionalities:
     1) Function allows to indicate the first year of operation based on optional first_year argument (i.e. when was the time-series initiated with 0 as a value)

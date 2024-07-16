@@ -39,7 +39,7 @@ all_keys = list(preprocessing_results['total_nr_vehicles_simple'].columns.levels
 # Create a pint UnitRegistry
 ureg = pint.UnitRegistry(force_ndarray_like=True)
 pint.set_application_registry(ureg)
-preprocessing_results_xarray = preprocessing_results.copy()
+#preprocessing_results_xarray = preprocessing_results.copy()
 
 
 # Convert the DataFrames to xarray Datasets and apply units
