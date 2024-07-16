@@ -2,7 +2,12 @@
 """
 # %%
 import pandas as pd
+import xarray as xr
+import pint
+import pint_xarray
+
 from preprocessing import preprocessing
+
 from modelling_functions import (
     inflow_outflow_dynamic_np,
     inflow_outflow_typical_np,
@@ -26,14 +31,29 @@ from constants import (
 # 4. Material calculations
 # 5. Preparing output
 
-# %%
 idx = pd.IndexSlice
 preprocessing_results = preprocessing()
+all_keys = list(preprocessing_results['total_nr_vehicles_simple'].columns.levels[0].unique())
 
-all_keys = list(preprocessing_results['total_nr_vehicles_simple'] \
-                .columns.levels[0].unique())
+# %%
+# Create a pint UnitRegistry
+ureg = pint.UnitRegistry(force_ndarray_like=True)
+pint.set_application_registry(ureg)
+#preprocessing_results_xarray = preprocessing_results.copy()
 
-# %% INFLOW-OUTFLOW calculations using the ODYM Dynamic Stock Model (DSM) as a function
+
+# Convert the DataFrames to xarray Datasets and apply units
+preprocessing_results_xarray = {}
+
+for df_name, df in preprocessing_results.items():
+    ds = df.to_xarray()
+    # Apply units to each dimension
+    for dim in ds.dims:
+        if dim in unit_mapping:
+            ds[dim].attrs['units'] = unit_mapping[dim]
+    preprocessing_results_xarray[df_name] = ds.pint.quantify()
+
+#%% INFLOW-OUTFLOW calculations using the ODYM Dynamic Stock Model (DSM) as a function
 
 ##################### DYNAMIC MODEL (runtime: ca. 30 sec) #######################################
 # Calculate the NUMBER of vehicles, total for inflow & by cohort for stock & outflow
