@@ -279,7 +279,7 @@ def preprocessing(base_dir=os.getcwd()):
     # Handle the vehicle types that need conversion from Mega km to Tera km
     for out_label, (df, key, unit) in vehicle_data.items():
         total_nr_vehicles_simple[out_label] = tkms_to_nr_of_vehicles_fixed(
-            df,  
+            df / MEGA_TO_TERA,  
             mileages[key].values[0],
             load[key].values[0],
             loadfactor[key].values[0],
