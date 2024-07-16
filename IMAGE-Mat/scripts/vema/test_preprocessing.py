@@ -29,7 +29,6 @@ import numpy as np
 import pandas as pd
 from preprocessing import preprocessing
 
-
 output_preprocessing = preprocessing()
 
 # Get the current directory
@@ -187,14 +186,14 @@ for vehicle_type in total_vehicles_new.columns:
 
 
 #%%
+
 # LCV vehicle shares are determined based on the medium trucks (so not calculated explicitly) --> at the moment all 0, how to deal with that?
 
 
 for vehicle in output_preprocessing['vehicle_shares_typical'].columns.get_level_values(0).unique():
     # if vehicle in {}: 
     #     continue
-    print(vehicle)
-    
+  
     # get new vshare variable per vehicle
     new_value = output_preprocessing['vehicle_shares_typical'][vehicle]
     
@@ -206,8 +205,9 @@ for vehicle in output_preprocessing['vehicle_shares_typical'].columns.get_level_
     old_key = old_key.replace("Heavy Freight Trucks", "trucks_HFT_vshares")
     old_key = old_key.replace("Medium Freight Trucks", "trucks_MFT_vshares")
     # comment from old VEMA: LCV vehicle shares are determined based on the medium trucks (so not calculated explicitly)
+
     old_key = old_key.replace("Light Commercial Vehicles", "trucks_MFT_vshares")
-    
+ 
     old_value = globals()[old_key]
     
     # ensure that only data is compared that is available for both (1971 and later)
@@ -223,14 +223,13 @@ for vehicle in output_preprocessing['vehicle_shares_typical'].columns.get_level_
     new_value = new_value.sort_index(axis = 1)
     
     # exlude Trolley for cars from comparison
+
     if vehicle == 'Cars':
         new_value = new_value.loc[:, :'PHEV']
 
     # print(old_value_pivot)
     # print(new_value)    
     assert np.isclose(old_value_pivot, new_value).all().all()
-
-    
 
 #%% 
 # vehicle_weights_simple
