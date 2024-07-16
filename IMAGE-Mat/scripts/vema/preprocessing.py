@@ -282,8 +282,7 @@ def preprocessing(base_dir=os.getcwd()):
             df / MEGA_TO_TERA,  
             mileages[key].values[0],
             load[key].values[0],
-            loadfactor[key].values[0],
-            unit_conversion=unit
+            loadfactor[key].values[0]
         )
     
     # %%
