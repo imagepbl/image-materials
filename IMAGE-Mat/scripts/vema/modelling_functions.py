@@ -17,7 +17,7 @@ idx = pd.IndexSlice
 
 # Generic interpolation function
 def interpolate(original: pd.DataFrame, 
-                first_year: Optional[pd.DataFrame]= None, 
+                first_year: Optional[pd.DataFrame] = None, 
                 change: str = 'no'):
     """
     Generic linear interpolation function that interpolates between given years in the original data. With 2 additional
