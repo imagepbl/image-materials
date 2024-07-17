@@ -16,13 +16,14 @@ from constants import (
                        )
 
 # Core modelling of stock dynamics & material use, assumes input as pandas dataFrames
-# 1. Add assumptions on historic development
-# 2. Run stock calculations, inflow and outflow and stocks by cohort
+# 1. Run stock calculations, inflow and outflow and stocks by cohort
 #    Input:  stock and lifetimes
 #    Output: inflow and outflow and stocks by cohort
-# 3. Intermediate export of results
-# 4. Material calculations
-# 5. Preparing output
+# 2. Material calculations
+#    INPUT:  stock, inflow & outflow as calculated above (in pieces)
+#    OUTPUT: total material content of the stock, inflow & outflow (in kg)
+#    distinguishes (1) vehicles without drivetrain type, i.e simple vehicles, (2) vehicles with drivetrain sub-types & (3) battery materials
+
 
 # %%
 idx = pd.IndexSlice

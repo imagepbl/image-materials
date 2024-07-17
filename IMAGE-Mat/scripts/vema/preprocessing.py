@@ -90,8 +90,11 @@ def preprocessing(base_dir=os.getcwd()):
     """
     preprocessing of the IMAGE files & files with additional assumptions on vehcile materials (renaming, removing 27th region, adding labels etc.)
     """
-    for dataframe in [kilometrage, kilometrage_bus, kilometrage_midi_bus, mileages]:
-        dataframe = dataframe.reindex(years_range).interpolate(limit_direction="both")
+    # Interpolate kilometrage & mileage data (over the range of original IMAGE data years, so the generic interpolation function is not used here as that would extend the historic tail)
+    kilometrage          = kilometrage.reindex(years_range).interpolate(limit_direction='both')
+    kilometrage_bus      = kilometrage_bus.reindex(years_range).interpolate(limit_direction='both')
+    kilometrage_midi_bus = kilometrage_midi_bus.reindex(years_range).interpolate(limit_direction='both')
+    mileages             = mileages.reindex(years_range).interpolate(limit_direction='both')
     
     region_list          = list(kilometrage.columns.values)     # get a list with region names TODO: turn this into a proper mapping based on ...
     
