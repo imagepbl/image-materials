@@ -187,20 +187,12 @@ for vehicle_type in total_vehicles_new.columns:
 
 
 #%%
-# vehicles_shares_typical
-# Compare the following
-
-# Cars: give assertion errors for ICE (not all, seems marginal)
-# Midi Buses give assertion errors for some ICE as well 
 # LCV vehicle shares are determined based on the medium trucks (so not calculated explicitly) --> at the moment all 0, how to deal with that?
 
-# (['Cars', 'Regular Buses', 'Midi Buses', 'Heavy Freight Trucks',
-  # 'Medium Freight Trucks', 'Light Commercial Vehicles']
 
 for vehicle in output_preprocessing['vehicle_shares_typical'].columns.get_level_values(0).unique():
-    if vehicle in {'Cars', 'Midi Buses', 'Light Commercial Vehicles'}: # give assertion errors at the moment
-    
-        continue
+    # if vehicle in {}: 
+    #     continue
     print(vehicle)
     
     # get new vshare variable per vehicle
@@ -214,9 +206,7 @@ for vehicle in output_preprocessing['vehicle_shares_typical'].columns.get_level_
     old_key = old_key.replace("Heavy Freight Trucks", "trucks_HFT_vshares")
     old_key = old_key.replace("Medium Freight Trucks", "trucks_MFT_vshares")
     # comment from old VEMA: LCV vehicle shares are determined based on the medium trucks (so not calculated explicitly)
-    old_key = old_key.replace("Light Commercial Vehicles", "buses_midi_vsharesv")
-    
-    
+    old_key = old_key.replace("Light Commercial Vehicles", "trucks_MFT_vshares")
     
     old_value = globals()[old_key]
     
@@ -233,16 +223,14 @@ for vehicle in output_preprocessing['vehicle_shares_typical'].columns.get_level_
     new_value = new_value.sort_index(axis = 1)
     
     # exlude Trolley for cars from comparison
-    if key == 'Cars':
+    if vehicle == 'Cars':
         new_value = new_value.loc[:, :'PHEV']
-    print(old_value_pivot)
-    print(new_value)    
-    assert (old_value_pivot == new_value).all().all()
+
+    # print(old_value_pivot)
+    # print(new_value)    
+    assert np.isclose(old_value_pivot, new_value).all().all()
 
     
-    
-
-# old value has no values for Trolley #TODO
 
 #%% 
 # vehicle_weights_simple
