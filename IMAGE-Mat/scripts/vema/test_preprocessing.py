@@ -22,10 +22,17 @@ Created on Wed Jun 19 13:39:52 2024
 # - 'weight boats'  done no assertion error 11-07-2024
 
 
+
 import os
 import numpy as np
 import pandas as pd
 from preprocessing import preprocessing
+
+#ignore warnings in console
+import warnings
+warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 
 # get new values form preprocessing script
 output_preprocessing = preprocessing()
@@ -141,79 +148,9 @@ for key in output_preprocessing['material_fractions_typical'].columns.get_level_
     # print(highest_val, new_value.index[0], old_value.index[0])
     assert (old_value.loc[highest_val:].sort_index(axis = 1) == new_value.loc[highest_val:].sort_index(axis = 1)).all().all()
 
-<<<<<<< HEAD
-=======
-#%% total nr of vehicles simple
-
-total_nr_vehicles.columns.name = 'type'
-
-total_nr_vehicles = total_nr_vehicles.rename(columns={'Cargo Planes': 'Freight Planes',
-                                                      'Cargo Trains' : 'Freight Trains',
-                                                      'HST': 'High Speed Trains',
-                                                      'Inland ships': 'Inland Ships'})
-
-
-# bring total_nr_vehicles_simple from output preprocessing in same format as old data format
-total_vehicles_new = output_preprocessing['total_nr_vehicles_simple']
-total_vehicles_new = total_vehicles_new.melt(var_name = ['Type', 'DIM_1'], ignore_index = False).reset_index(names=['time']) #melt to be able to pivot
-total_vehicles_new = total_vehicles_new.pivot(index=['time', 'DIM_1'], columns='Type').loc[1971:]  # pivot to same structure as total_nr_vehicles
-total_vehicles_new = total_vehicles_new.droplevel(0, axis = 1) # drop uneseccary level
-total_vehicles_new = total_vehicles_new.drop([27, 28], level=1)
-
-for vehicle_type in total_vehicles_new.columns:
-    #TODO: these are not in total nr simple vehicles (are also not outputted yet to main)
-    if vehicle_type in {'Light Commercial Vehicles', 'Medium Freight Trucks', 
-                        'Medium Ships', 'Heavy Freight Trucks', 
-                        'Light Commercial Vehicles', 'Large Ships',
-                        'Midi Buses', 'Regular Buses', 'Small Ships',
-                        'Very Large Ships'}:
-        continue
-    
-    print(vehicle_type)
-    #TODO: these give assertion errors at the moment (comment line out to test if they still do!)
-    if vehicle_type in {}:
-        continue
-    
-
-    print(total_vehicles_new[vehicle_type])
-    print(total_nr_vehicles[vehicle_type])
-    
-    assert (total_vehicles_new[vehicle_type] == total_nr_vehicles[vehicle_type]).all().all()
-
-# cant check: Midi Buses, 'Heavy Freight Trucks', 'Large Ships',
-# 'Light Commercial Vehicles', 'Medium Freight Trucks', 'Medium Ships',
-# 'Midi Buses', 'Small Ships', ('Regular Buses') ???
-
-
-#%%
-<<<<<<< HEAD
-# LCV vehicle shares are determined based on the medium trucks (so not calculated explicitly) --> at the moment all 0, how to deal with that?
->>>>>>> 73d478a62b346083eb19fb68ab4e31e88c92cca6
-
 #%% vehicle shares typical
 
 for vehicle in output_preprocessing['vehicle_shares_typical'].columns.get_level_values(0).unique():
-<<<<<<< HEAD
-=======
-    # if vehicle in {}: 
-    #     continue
-=======
-# vehicles_shares_typical
-# Compare the following
-
-# Cars: give assertion errors for ICE (not all, seems marginal)
-# Midi Buses give assertion errors for some ICE as well 
-# LCV vehicle shares are determined based on the medium trucks (so not calculated explicitly) --> at the moment all 0, how to deal with that?
-
-# (['Cars', 'Regular Buses', 'Midi Buses', 'Heavy Freight Trucks',
-  # 'Medium Freight Trucks', 'Light Commercial Vehicles']
-
-for vehicle in output_preprocessing['vehicle_shares_typical'].columns.get_level_values(0).unique():
-    if vehicle in {'Cars', 'Midi Buses', 'Light Commercial Vehicles'}: # give assertion errors at the moment
-    
-        continue
->>>>>>> bf873870215fba16d2e96919ef9eb9a7f6ec29c8
->>>>>>> 73d478a62b346083eb19fb68ab4e31e88c92cca6
     print(vehicle)
   
     # get new vshare variable per vehicle
@@ -227,24 +164,14 @@ for vehicle in output_preprocessing['vehicle_shares_typical'].columns.get_level_
     old_key = old_key.replace("Heavy Freight Trucks", "trucks_HFT_vshares")
     old_key = old_key.replace("Medium Freight Trucks", "trucks_MFT_vshares")
     # comment from old VEMA: LCV vehicle shares are determined based on the medium trucks (so not calculated explicitly)
-<<<<<<< HEAD
+
     old_key = old_key.replace("Light Commercial Vehicles", "trucks_MFT_vshares")
-<<<<<<< HEAD
- 
-=======
-=======
-    old_key = old_key.replace("Light Commercial Vehicles", "buses_midi_vsharesv")
-    
-    
->>>>>>> bf873870215fba16d2e96919ef9eb9a7f6ec29c8
-    
->>>>>>> 73d478a62b346083eb19fb68ab4e31e88c92cca6
     old_value = globals()[old_key]
-    
+
     # ensure that only data is compared that is available for both (1971 and later)
     new_value = new_value.loc[old_value.index.get_level_values(0).min():, ]
     
-    # me;t and pivot old variable to bring it to same format as new variable 
+    # melt and pivot old variable to bring it to same format as new variable 
     old_value_pivot = old_value.melt(ignore_index = False).reset_index(names=['time', 'DIM_1'])
     old_value_pivot = old_value_pivot.pivot(index = 'time', columns = ['variable', 'DIM_1'])
     old_value_pivot = old_value_pivot.droplevel(0, axis = 1)
@@ -253,27 +180,13 @@ for vehicle in output_preprocessing['vehicle_shares_typical'].columns.get_level_
     old_value_pivot = old_value_pivot.sort_index(axis = 1)
     new_value = new_value.sort_index(axis = 1)
     
-    # exlude Trolley for cars from comparison
-<<<<<<< HEAD
     if vehicle == 'Cars':
         new_value = new_value.loc[:, :'PHEV']
 
     # print(old_value_pivot)
     # print(new_value)    
     assert np.isclose(old_value_pivot, new_value).all().all()
-    
-=======
-    if key == 'Cars':
-        new_value = new_value.loc[:, :'PHEV']
-    print(old_value_pivot)
-    print(new_value)    
-    assert (old_value_pivot == new_value).all().all()
 
-    
-    
-
-# old value has no values for Trolley #TODO
->>>>>>> bf873870215fba16d2e96919ef9eb9a7f6ec29c8
 
 #%% vehicle_weights_simple
 
