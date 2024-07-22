@@ -1,18 +1,25 @@
 # %%
 import pandas as pd
+import xarray as xr
+import pint
+import pint_xarray
+
 from preprocessing import preprocessing
+
 from modelling_functions import (
                                 inflow_outflow_dynamic_np,
                                 inflow_outflow_typical_np,
                                 nr_by_cohorts_to_materials_simple_np,
-                                nr_by_cohorts_to_materials_typical_np
+                                nr_by_cohorts_to_materials_typical_np,
+                                pandas_to_xarray
                                 )
 from constants import ( 
                         START_YEAR, END_YEAR,
                         columns_vehicle_output,
                         REGIONS,
                         OUTPUT_FOLDER,
-                        key_map_simple, key_map_typical
+                        key_map_simple, key_map_typical,
+                        unit_mapping
                        )
 
 # Core modelling of stock dynamics & material use, assumes input as pandas dataFrames
@@ -25,11 +32,22 @@ from constants import (
 #    distinguishes (1) vehicles without drivetrain type, i.e simple vehicles, (2) vehicles with drivetrain sub-types & (3) battery materials
 
 
-# %%
 idx = pd.IndexSlice
 preprocessing_results = preprocessing()
-
 all_keys = list(preprocessing_results['total_nr_vehicles_simple'].columns.levels[0].unique())
+
+# %%
+# Create a pint UnitRegistry
+ureg = pint.UnitRegistry(force_ndarray_like=True)
+pint.set_application_registry(ureg)
+#preprocessing_results_xarray = preprocessing_results.copy()
+
+
+# Convert the DataFrames to xarray Datasets and apply units
+preprocessing_results_xarray = {}
+
+for df_name in preprocessing_results:
+    preprocessing_results_xarray[df_name] = pandas_to_xarray(preprocessing_results[df_name], unit_mapping)
 
 #%% INFLOW-OUTFLOW calculations using the ODYM Dynamic Stock Model (DSM) as a function
 
