@@ -141,7 +141,7 @@ def inflow_outflow_typical_np(stock, fact1, fact2, distribution, stock_share):
    stock_cohort   = np.zeros((len(stock_share.columns.levels[0]), len(stock.iloc[0]), len(stock), len(stock)))
 
    stock_by_vtype = pd.DataFrame(0, index=stock_share.index, columns=stock_share.columns)
-   vtype_list     = list(stock_by_vtype.columns.unique('type'))
+   vtype_list     = list(stock_by_vtype.columns.get_level_values(0).unique())
    
    # calculate the stocks of individual (vehicle) types (in nr of vehicles)
    for vtype in vtype_list:
@@ -228,7 +228,7 @@ def nr_by_cohorts_to_materials_typical_np(inflow, outflow_cohort, stock_cohort, 
     #composition.columns.names = ['type', 'material']
     
     # get two dictionaries to keep tarck of the order of materials & vtypes while using numpy
-    vtype_list   = list(composition.columns.get_level_values(0).unique())  # columns.unique() keeps the original order, which is important here (same for materials)
+    vtype_list   = list(composition.columns.unique('type'))  # columns.unique() keeps the original order, which is important here (same for materials)
     vtype_count  = list(range(0,len(vtype_list))) 
     vtype_dict   = dict(zip(vtype_count, vtype_list))
     
