@@ -8,12 +8,15 @@ Returns:
 """
 
 import pandas as pd
-#import numpy as np
+import numpy as np
 from typing import Union, Optional
 from constants import FIRST_YEAR, END_YEAR
 from read_scripts.dynamic_stock_model_BM import DynamicStockModel as DSM
 idx = pd.IndexSlice
 
+from constants import (
+    REGIONS
+)
 
 # Generic interpolation function
 def interpolate(original: pd.DataFrame, 
@@ -219,7 +222,7 @@ def inflow_outflow_typical_np(stock: pd.DataFrame,
 
     stock_by_vtype = pd.DataFrame(0, index=stock_share.index,
                                   columns=stock_share.columns)
-    vtype_list = list(stock_by_vtype.columns.unique('type'))
+    vtype_list = list(stock_by_vtype.columns.unique('fuel'))
 
     # calculate the stocks of individual (vehicle) types (in nr of vehicles)
     for vtype in vtype_list:
@@ -386,7 +389,7 @@ def nr_by_cohorts_to_materials_typical_np(inflow, outflow_cohort, stock_cohort, 
         index=index, columns=columns)
 
     return pd_inflow_mat, pd_outflow_mat, pd_stock_mat
-=======
+
 def preprocess_to_xarray(preprocessing_results, unit_mapping):
     preprocessing_results_xarray = {}
     

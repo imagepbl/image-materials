@@ -1,6 +1,7 @@
 """_summary_
 """
 # %%
+import numpy as np
 import pandas as pd
 import xarray as xr
 import pint
@@ -19,7 +20,8 @@ from constants import (
     columns_vehicle_output,
     REGIONS,
     OUTPUT_FOLDER,
-    key_map_simple, key_map_typical
+    key_map_simple, key_map_typical,
+    unit_mapping
 )
 
 # Core modelling of stock dynamics & material use, assumes input as pandas dataFrames
@@ -33,13 +35,14 @@ from constants import (
 
 idx = pd.IndexSlice
 preprocessing_results = preprocessing()
-all_keys = list(preprocessing_results['total_nr_vehicles_simple'].columns.levels[0].unique())
+all_keys = list(
+    preprocessing_results['total_nr_vehicles_simple'].columns.levels[0].unique())
 
 # %%
 # Create a pint UnitRegistry
 ureg = pint.UnitRegistry(force_ndarray_like=True)
 pint.set_application_registry(ureg)
-#preprocessing_results_xarray = preprocessing_results.copy()
+# preprocessing_results_xarray = preprocessing_results.copy()
 
 
 # Convert the DataFrames to xarray Datasets and apply units
@@ -53,9 +56,9 @@ for df_name, df in preprocessing_results.items():
             ds[dim].attrs['units'] = unit_mapping[dim]
     preprocessing_results_xarray[df_name] = ds.pint.quantify()
 
-#%% INFLOW-OUTFLOW calculations using the ODYM Dynamic Stock Model (DSM) as a function
+# %% INFLOW-OUTFLOW calculations using the ODYM Dynamic Stock Model (DSM) as a function
 
-##################### DYNAMIC MODEL (runtime: ca. 30 sec) #######################################
+# DYNAMIC MODEL (runtime: ca. 30 sec
 # Calculate the NUMBER of vehicles, total for inflow & by cohort for stock & outflow
 # first only for simple vehicles
 
@@ -65,59 +68,46 @@ region_selection = list(range(1, 27))
 vehicle_stocks_and_flows_simple = {}
 for key in key_map_simple:
     vehicle_stocks_and_flows_simple[key] = inflow_outflow_dynamic_np(
-        preprocessing_results['total_nr_vehicles_simple']
-        .loc[:, idx[key, region_selection]].to_numpy(),
-        preprocessing_results['lifetimes_vehicles']
-        .loc[:, idx[key_map_simple[key], 'mean']],
-        preprocessing_results['lifetimes_vehicles']
-        .loc[:, idx[key_map_simple[key], 'stdev']],
+        preprocessing_results['total_nr_vehicles_simple'].loc[:, idx[key, region_selection]].to_numpy(),
+        preprocessing_results['lifetimes_vehicles'].loc[:, idx[key_map_simple[key], 'mean']],
+        preprocessing_results['lifetimes_vehicles'].loc[:, idx[key_map_simple[key], 'stdev']],
         'FoldedNormal')
 
 vehicle_stocks_and_flows_typical = {}
 for key in key_map_typical:
     vehicle_stocks_and_flows_typical[key] = inflow_outflow_typical_np(
-        preprocessing_results['total_nr_vehicles_simple']
-        .loc[:, idx[key, region_selection]].droplevel(0, axis=1),
-        preprocessing_results['lifetimes_vehicles']
-        .loc[:, idx[key_map_typical[key], 'mean']],
-        preprocessing_results['lifetimes_vehicles']
-        .loc[:, idx[key_map_typical[key], 'stdev']],
+        preprocessing_results['total_nr_vehicles_simple'].loc[:, idx[key, region_selection]].droplevel(0, axis=1),
+        preprocessing_results['lifetimes_vehicles'].loc[:, idx[key_map_typical[key], 'mean']],
+        preprocessing_results['lifetimes_vehicles'].loc[:, idx[key_map_typical[key], 'stdev']],
         'FoldedNormal',
         preprocessing_results['vehicle_shares_typical'][key])
 
 
-# %% ################### MATERIAL CALCULATIONS ##################################
+# %% ########################################### MATERIAL CALCULATIONS ###
 
 # %% ######## RUNNING THE DYNAMIC STOCK FUNCTIONS  (runtime ca. 10 sec)  ########
 
 # run the material calculations on simple vehicles
 vehicle_materials_simple = {}
 for key in key_map_simple:
-    if key_map_simple[key] in preprocessing_results['vehicle_weights_simple'] \
-        and \
-    key_map_simple[key] in preprocessing_results['material_fractions_simple']:
+    if (key_map_simple[key] in preprocessing_results['vehicle_weights_simple'] and 
+       key_map_simple[key] in preprocessing_results['material_fractions_simple']):
         data_in, data_out, stock_cohort = vehicle_stocks_and_flows_simple[key]
         vehicle_materials_simple[key] = nr_by_cohorts_to_materials_simple_np(
-            data_in,  data_out, stock_cohort,
-            preprocessing_results['vehicle_weights_simple'] \
-                [key_map_simple[key]].to_numpy(
-            ),
-            preprocessing_results['material_fractions_simple'] \
-                [key_map_simple[key]])
+            data_in, data_out, stock_cohort,
+            preprocessing_results['vehicle_weights_simple'][key_map_simple[key]].to_numpy(),
+            preprocessing_results['material_fractions_simple'][key_map_simple[key]])
 
 # run the material calculations on typical vehicles
 vehicle_materials_typical = {}
 for key in key_map_typical:
-    if key_map_typical[key] in preprocessing_results['vehicle_weights_typical'] \
-        and \
-    key_map_typical[key] in preprocessing_results['material_fractions_typical']:
+    if (key_map_typical[key] in preprocessing_results['vehicle_weights_typical'] and 
+       key_map_typical[key] in preprocessing_results['material_fractions_typical']):
         data_in, data_out, stock_cohort = vehicle_stocks_and_flows_typical[key]
         vehicle_materials_typical[key] = nr_by_cohorts_to_materials_typical_np(
-            data_in,  data_out, stock_cohort,
-            preprocessing_results['vehicle_weights_typical']
-            [key_map_typical[key]],
-            preprocessing_results['material_fractions_typical']
-            [key_map_typical[key]])
+            data_in, data_out, stock_cohort,
+            preprocessing_results['vehicle_weights_typical'][key_map_typical[key]],
+            preprocessing_results['material_fractions_typical'][key_map_typical[key]])
 
 # Buses and trucks are not yet in the vehicle weight & material fraction data yet
 '''
@@ -136,10 +126,10 @@ ship_medium_mat_in,  ship_medium_mat_out,  ship_medium_mat_stock    = nr_by_coho
 ship_large_mat_in,   ship_large_mat_out,   ship_large_mat_stock     = nr_by_cohorts_to_materials_simple_np(ship_large_in,   ship_large_out_coh,   ship_large_stock_coh,   weight_boats['Large'].to_numpy(),                            material_fractions_ship_large)
 ship_vlarge_mat_in,  ship_vlarge_mat_out,  ship_vlarge_mat_stock    = nr_by_cohorts_to_materials_simple_np(ship_vlarge_in,  ship_vlarge_out_coh,  ship_vlarge_stock_coh,  weight_boats['Very Large'].to_numpy(),                       material_fractions_ship_vlarge)
 
-# Calculate the weight of materials in the vehicles with sub-types: stock, inflow & outflow 
+# Calculate the weight of materials in the vehicles with sub-types: stock, inflow & outflow
 bus_regl_mat_in,     bus_regl_mat_out,     bus_regl_mat_stock       = nr_by_cohorts_to_materials_typical_np(bus_regl_in,   bus_regl_out_coh,   bus_regl_stock_coh,   vehicle_weight_kg_bus,   material_fractions_bus_reg)
 bus_midi_mat_in,     bus_midi_mat_out,     bus_midi_mat_stock       = nr_by_cohorts_to_materials_typical_np(bus_midi_in,   bus_midi_out_coh,   bus_midi_stock_coh,   vehicle_weight_kg_midi,  material_fractions_bus_midi)
-car_total_mat_in,    car_total_mat_out,    car_total_mat_stock      = nr_by_cohorts_to_materials_typical_np(car_in,        car_out_coh,        car_stock_coh,        vehicle_weight_kg_car,   material_fractions_car)    
+car_total_mat_in,    car_total_mat_out,    car_total_mat_stock      = nr_by_cohorts_to_materials_typical_np(car_in,        car_out_coh,        car_stock_coh,        vehicle_weight_kg_car,   material_fractions_car)
 
 trucks_HFT_mat_in,   trucks_HFT_mat_out,   trucks_HFT_mat_stock     = nr_by_cohorts_to_materials_typical_np(trucks_HFT_in, trucks_HFT_out_coh, trucks_HFT_stock_coh, vehicle_weight_kg_HFT,   material_fractions_truck_HFT)
 trucks_MFT_mat_in,   trucks_MFT_mat_out,   trucks_MFT_mat_stock     = nr_by_cohorts_to_materials_typical_np(trucks_MFT_in, trucks_MFT_out_coh, trucks_MFT_stock_coh, vehicle_weight_kg_MFT,   material_fractions_truck_MFT)
@@ -154,45 +144,72 @@ trucks_LCV_mat_in,   trucks_LCV_mat_out,   trucks_LCV_mat_stock     = nr_by_coho
 # & battery share)
 # In doing so, we are no longer able to know the battery share per vehicle sub-type
 
-battery_material_composition = pd.DataFrame(index=pd.MultiIndex.from_product(
-    [list(preprocessing_results['battery_weights_typical'].columns.levels[0]),
-     preprocessing_results['battery_materials'].index]),
-    columns=pd.MultiIndex.from_product([
-        preprocessing_results['battery_weights_typical'].columns.levels[1],
-        preprocessing_results['battery_materials'].columns.levels[0]],
-    names=['type', 'material']))
-battery_weight_total_in = pd.DataFrame(0, index=pd.MultiIndex.from_product(
-    [list(preprocessing_results['battery_weights_typical'].columns.levels[0]),
-     preprocessing_results['battery_materials'].index]), 
-     columns=preprocessing_results['battery_weights_typical'].columns.levels[1])
-battery_weight_total_stock = pd.DataFrame(0, index=pd.MultiIndex.from_product(
-    [list(preprocessing_results['battery_weights_typical'].columns.levels[0]),
-     preprocessing_results['battery_materials'].index]), 
-     columns=preprocessing_results['battery_weights_typical'].columns.levels[1])
-battery_weight_regional_in = pd.DataFrame(
-    0, index=preprocessing_results['battery_materials'].index,
-    columns=list(range(1, REGIONS+1)))
-battery_weight_regional_out = pd.DataFrame(
-    0, index=preprocessing_results['battery_materials'].index,
-    columns=list(range(1, REGIONS+1)))
-battery_weight_regional_stock = pd.DataFrame(
-    0, index=preprocessing_results['battery_materials'].index,
-    columns=list(range(1, REGIONS+1)))
+battery_index = preprocessing_results['battery_weights_typical'].columns.levels[0]
 
-# for now, 1 global battery market is assumed (so no difference between battery types for different vehicle sub-types),
-# so the composition is duplicated over all vtypes
-for vehicle in list(preprocessing_results['battery_weights_typical']
-                    .columns.levels[0]):
-    for vtype in list(preprocessing_results['battery_weights_typical']
-                      .columns.levels[1]):
-        for material in list(preprocessing_results['battery_materials']
-                             .columns.levels[0]):
-            battery_material_composition.loc[idx[vehicle, :],
-                                             idx[vtype, material]] =
-            preprocessing_results['battery_shares'].mul(
-                preprocessing_results['battery_materials']
-                .loc[:, idx[material, :]].droplevel(0, axis=1)) \
-                .sum(axis=1).values
+
+battery_material_composition = pd.DataFrame(
+    index=pd.MultiIndex.from_product(
+        [
+            list(
+                preprocessing_results['battery_weights_typical'].columns.levels[0]),
+            preprocessing_results['battery_materials'].index]),
+    columns=pd.MultiIndex.from_product(
+        [
+            preprocessing_results['battery_weights_typical'].columns.levels[1],
+            preprocessing_results['battery_materials'].columns.levels[0]],
+        names=[
+            'type',
+            'material']))
+battery_weight_total_in = pd.DataFrame(
+    0,
+    index=pd.MultiIndex.from_product(
+        [
+            list(
+                preprocessing_results['battery_weights_typical'].columns.levels[0]),
+            preprocessing_results['battery_materials'].index]),
+    columns=preprocessing_results['battery_weights_typical'].columns.levels[1])
+battery_weight_total_stock = pd.DataFrame(
+    0,
+    index=pd.MultiIndex.from_product(
+        [
+            list(
+                preprocessing_results['battery_weights_typical'].columns.levels[0]),
+            preprocessing_results['battery_materials'].index]),
+    columns=preprocessing_results['battery_weights_typical'].columns.levels[1])
+battery_weight_regional_in = pd.DataFrame(
+    0,
+    index=preprocessing_results['battery_materials'].index,
+    columns=list(
+        range(
+            1,
+            REGIONS +
+            1)))
+battery_weight_regional_out = pd.DataFrame(
+    0,
+    index=preprocessing_results['battery_materials'].index,
+    columns=list(
+        range(
+            1,
+            REGIONS +
+            1)))
+battery_weight_regional_stock = pd.DataFrame(
+    0,
+    index=preprocessing_results['battery_materials'].index,
+    columns=list(
+        range(
+            1,
+            REGIONS +
+            1)))
+
+
+# for now, 1 global battery market is assumed (so no difference between
+# battery types for different vehicle sub-types), so the composition is
+# duplicated over all vtypes
+for vehicle in list(preprocessing_results['battery_weights_typical'].columns.levels[0]):
+    for vtype in list(preprocessing_results['battery_weights_typical'].columns.levels[1]):
+        for material in list(preprocessing_results['battery_materials'].columns.levels[0]):
+            battery_material_composition.loc[idx[vehicle, :], idx[vtype, material]] = preprocessing_results['battery_shares'].mul(
+                preprocessing_results['battery_materials'].loc[:, idx[material, :]].droplevel(0, axis=1)).sum(axis=1).values
 
 
 # run the material calculations on typical vehicles
@@ -201,14 +218,12 @@ for key in key_map_typical:
     if key_map_typical[key] in preprocessing_results['battery_weights_typical']:
         data_in, data_out, stock_cohort = vehicle_stocks_and_flows_typical[key]
         battery_materials_typical[key] = nr_by_cohorts_to_materials_typical_np(
-            data_in,  data_out, stock_cohort,
-            preprocessing_results['battery_weights_typical']
-            [key_map_typical[key]],
-            battery_material_composition.loc[idx[key_map_typical[key], :], :]
-            .droplevel(0))
+            data_in, data_out, stock_cohort,
+            preprocessing_results['battery_weights_typical'][key_map_typical[key]],
+            battery_material_composition.loc[idx[key_map_typical[key], :], :].droplevel(0))
 
 '''
-# Battery material calculations 
+# Battery material calculations
 bus_regl_bat_in,     bus_regl_bat_out,     bus_regl_bat_stock       = nr_by_cohorts_to_materials_typical_np(bus_regl_in,  bus_regl_out_coh, bus_regl_stock_coh, battery_weights_full['reg_bus'],   battery_material_composition.loc[idx['reg_bus',:],:].droplevel(0))
 bus_midi_bat_in,     bus_midi_bat_out,     bus_midi_bat_stock       = nr_by_cohorts_to_materials_typical_np(bus_midi_in,  bus_midi_out_coh, bus_midi_stock_coh, battery_weights_full['midi_bus'],  battery_material_composition.loc[idx['midi_bus',:],:].droplevel(0))
 car_total_bat_in,    car_total_bat_out,    car_total_bat_stock      = nr_by_cohorts_to_materials_typical_np(car_in,       car_out_coh,      car_stock_coh,      battery_weights_full['car'],       battery_material_composition.loc[idx['car',:],idx[car_types,:]].droplevel(0))    #mind that cars don't have Trolleys, hence the additional selection
@@ -218,16 +233,25 @@ trucks_MFT_bat_in,   trucks_MFT_bat_out,   trucks_MFT_bat_stock     = nr_by_coho
 trucks_LCV_bat_in,   trucks_LCV_bat_out,   trucks_LCV_bat_stock     = nr_by_cohorts_to_materials_typical_np(trucks_LCV_in, trucks_LCV_out_coh, trucks_LCV_stock_coh, battery_weights_full['LCV'],  battery_material_composition.loc[idx['LCV',:],:].droplevel(0))
 '''
 
-# Sum the weight of the accounted materials (! so not total weight) in batteries by vehicle & vehicle type,
-# output for figures
+# Sum the weight of the accounted materials (! so not total weight) in
+# batteries by vehicle & vehicle type, output for figures
 for vtype in list(preprocessing_results['battery_weights_typical'].columns.levels[1]):
     for key in key_map_typical:
-        battery_weight_total_in.loc[idx[key_map_typical[key], :], vtype] =
-        battery_materials_typical[key][0].loc[idx[:, :], idx[vtype, :]].sum(
-            level=1).sum(axis=1, level=0).values
-        battery_weight_total_stock.loc[idx[key_map_typical[key], :], vtype] =
-        battery_materials_typical[key][2].loc[idx[:, :], idx[vtype, :]].sum(
-            level=1).sum(axis=1, level=0).values
+        battery_weight_total_in.loc[idx[key_map_typical[key],
+                                        :],
+                                    vtype] = battery_materials_typical[key][0].loc[idx[:,
+                                                                                       :],
+                                                                                   idx[vtype,
+                                                                                       :]].sum(level=1).sum(axis=1,
+                                                                                                            level=0).values
+        battery_weight_total_stock.loc[idx[key_map_typical[key],
+                                           :],
+                                       vtype] = battery_materials_typical[key][2].loc[idx[:,
+                                                                                          :],
+                                                                                      idx[vtype,
+                                                                                          :]].sum(level=1).sum(axis=1,
+                                                                                                               level=0).values
+
 
 battery_weight_total_in.to_csv(
     OUTPUT_FOLDER / 'battery_weight_kg_in.csv', index=True)       # in kg
@@ -238,8 +262,14 @@ battery_weight_total_stock.to_csv(
 
 for key in key_map_typical:
     battery_weight_regional_in += battery_materials_typical[key][0].sum(
-        axis=0, level=1).sum(axis=1, level=1)  # inflow = 1st output
+        axis=0, level=1).sum(
+        axis=1, level=1)
+    # inflow = 1st output
     battery_weight_regional_out += battery_materials_typical[key][1].sum(
-        axis=0, level=1).sum(axis=1, level=1)  # outflow = 2nd output
+        axis=0, level=1).sum(
+        axis=1, level=1)
+    # outflow = 2nd output
     battery_weight_regional_stock += battery_materials_typical[key][2].sum(
-        axis=0, level=1).sum(axis=1, level=1)  # stock = 3rd output
+        axis=0, level=1).sum(
+        axis=1, level=1)
+    # stock = 3rd output
