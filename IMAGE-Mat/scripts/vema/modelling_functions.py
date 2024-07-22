@@ -141,11 +141,14 @@ def inflow_outflow_typical_np(stock, fact1, fact2, distribution, stock_share):
    stock_cohort   = np.zeros((len(stock_share.columns.levels[0]), len(stock.iloc[0]), len(stock), len(stock)))
 
    stock_by_vtype = pd.DataFrame(0, index=stock_share.index, columns=stock_share.columns)
-   vtype_list     = list(stock_by_vtype.columns.unique('type'))
+   vtype_list     = list(stock_by_vtype.columns.get_level_values(0).unique())
    
    # calculate the stocks of individual (vehicle) types (in nr of vehicles)
    for vtype in vtype_list:
-      stock_by_vtype.loc[:,idx[vtype,:]] = stock.mul(stock_share.loc[:,idx[vtype,:]])
+    stock_share_vtype = stock_share.loc[:, idx[vtype, :]]
+    stock_share_vtype.columns = stock_share_vtype.columns.droplevel('fuel')
+    # Multiply the aligned DataFrames
+    stock_by_vtype.loc[:, idx[vtype, :]] = stock.mul(stock_share_vtype)
 
    vtype_count = list(range(0,len(stock_share.columns.levels[0])))
    vtype_dict  = dict(zip(vtype_list, vtype_count))
