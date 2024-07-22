@@ -11,7 +11,7 @@ from modelling_functions import (
                                 inflow_outflow_typical_np,
                                 nr_by_cohorts_to_materials_simple_np,
                                 nr_by_cohorts_to_materials_typical_np,
-                                preprocess_to_xarray
+                                pandas_to_xarray
                                 )
 from constants import ( 
                         START_YEAR, END_YEAR,
@@ -45,13 +45,8 @@ pint.set_application_registry(ureg)
 # Convert the DataFrames to xarray Datasets and apply units
 preprocessing_results_xarray = {}
 
-for df_name, df in preprocessing_results.items():
-    ds = df.to_xarray()
-    # Apply units to each dimension
-    for dim in ds.dims:
-        if dim in unit_mapping:
-            ds[dim].attrs['units'] = unit_mapping[dim]
-    preprocessing_results_xarray[df_name] = ds.pint.quantify()
+for df_name in preprocessing_results:
+    preprocessing_results_xarray[df_name] = pandas_to_xarray(preprocessing_results[df_name], unit_mapping)
 
 #%% INFLOW-OUTFLOW calculations using the ODYM Dynamic Stock Model (DSM) as a function
 

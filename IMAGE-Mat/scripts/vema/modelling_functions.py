@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from typing import Union, Optional
+from typing import Optional
 from constants import FIRST_YEAR, END_YEAR, REGIONS
 from read_scripts.dynamic_stock_model_BM import DynamicStockModel as DSM
 idx = pd.IndexSlice
@@ -87,7 +87,7 @@ def tkms_to_nr_of_vehicles_fixed(tkms, mileage, load, loadfactor, unit_conversio
         tkms = tkms * 1e6  # Convert Mega km to km
     elif unit_conversion == 'k':
         tkms = tkms * 1e3  # Convert kilo km to km
-    elif unit_conversion == None:
+    elif unit_conversion is None:
        pass
     else:
        raise Exception(f"This unit conversion input '{unit_conversion}' is not supported.") 
@@ -162,12 +162,16 @@ def inflow_outflow_typical_np(stock, fact1, fact2, distribution, stock_share):
    stock_cohort   = np.zeros((len(stock_share.columns.levels[0]), len(stock.iloc[0]), len(stock), len(stock)))
 
    stock_by_vtype = pd.DataFrame(0, index=stock_share.index, columns=stock_share.columns)
-   vtype_list     = list(stock_by_vtype.columns.unique('type'))
-   
+   #vtype_list     = list(stock_by_vtype.columns.unique('type'))
+   vtype_list     = list(stock_by_vtype.columns.get_level_values(0).unique())
+
    # calculate the stocks of individual (vehicle) types (in nr of vehicles)
    for vtype in vtype_list:
-      stock_by_vtype.loc[:,idx[vtype,:]] = stock.mul(stock_share.loc[:,idx[vtype,:]])
-
+        #stock_by_vtype.loc[:,idx[vtype,:]] = stock.mul(stock_share.loc[:,idx[vtype,:]])
+        stock_share_vtype = stock_share.loc[:, idx[vtype, :]]
+        stock_share_vtype.columns = stock_share_vtype.columns.droplevel('fuel')
+        # Multiply the aligned DataFrames
+        stock_by_vtype.loc[:, idx[vtype, :]] = stock.mul(stock_share_vtype)
    vtype_count = list(range(0,len(stock_share.columns.levels[0])))
    vtype_dict  = dict(zip(vtype_list, vtype_count))
 
@@ -299,14 +303,10 @@ def nr_by_cohorts_to_materials_typical_np(inflow, outflow_cohort, stock_cohort, 
           
     return pd_inflow_mat, pd_outflow_mat, pd_stock_mat
 
-def preprocess_to_xarray(preprocessing_results, unit_mapping):
-    preprocessing_results_xarray = {}
-    
-    for key, df in preprocessing_results.items():
-        ds = df.to_xarray()
-        if key in unit_mapping:
-            ds = ds.assign_attrs({name: unit for name, unit in unit_mapping[key]['columns'].items()})
-            ds = ds.pint.quantify()
-        preprocessing_results_xarray[key] = ds
-    
-    return preprocessing_results_xarray
+def pandas_to_xarray(df, unit_mapping):
+    ds = df.to_xarray()
+    # Apply units to each dimension
+    for dim in ds.dims:
+        if dim in unit_mapping:
+            ds[dim].attrs['units'] = unit_mapping[dim]
+    return ds.pint.quantify()
