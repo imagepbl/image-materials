@@ -1,12 +1,15 @@
 import pandas as pd
 import numpy as np
+from typing import Optional
 from constants import FIRST_YEAR, END_YEAR, REGIONS
 from read_scripts.dynamic_stock_model_BM import DynamicStockModel as DSM
 idx = pd.IndexSlice
 
 
 # Generic interpolation function
-def interpolate(original: pd.DataFrame, first_year=[], change: str='no'):
+def interpolate(original: pd.DataFrame, 
+                first_year: Optional[pd.DataFrame]= None, 
+                change: str = 'no'):
     """
     Generic linear interpolation function that interpolates between given years in the original data. With 2 additional functionalities:
     1) Function allows to indicate the first year of operation based on optional first_year argument (i.e. when was the time-series initiated with 0 as a value)
@@ -37,11 +40,11 @@ def interpolate(original: pd.DataFrame, first_year=[], change: str='no'):
     end   = original.last_valid_index()
     
     # reindexing from model start year to end year (i.e. the entire model period, adding NaN values for non-existing years)
-    reindexed = original[:].reindex(list(range(FIRST_YEAR,END_YEAR+1)))
+    reindexed = original.reindex(index=list(range(FIRST_YEAR,END_YEAR+1)))
     
     # IF there is a first_year defined, add these as 0
     # TODO: Test if columns of first_year & original are the same
-    if not isinstance(first_year, list):
+    if first_year is not None:
         for item in list(original.columns):
             reindexed.loc[first_year[item],item] = 0
     else:
@@ -71,8 +74,6 @@ def tkms_to_nr_of_vehicles_fixed(tera_tkms, mileage, load, loadfactor):
     This function translates ton kilometers (by year & by region) to nr of vehicles (same dimms) 
     using fixed indicators on mileage, load capacity and load factor
     """
-    # first_translate Tera ton/person- kms into person/ton-kms
-    tkms = tera_tkms * 1000000000000  
     # then get the vehicle kilometers required to fulfill the transport demand
     vkms = tkms/(load*loadfactor)
     # then get the number of vehicles by dividing by the mileage
@@ -141,15 +142,16 @@ def inflow_outflow_typical_np(stock, fact1, fact2, distribution, stock_share):
    stock_cohort   = np.zeros((len(stock_share.columns.levels[0]), len(stock.iloc[0]), len(stock), len(stock)))
 
    stock_by_vtype = pd.DataFrame(0, index=stock_share.index, columns=stock_share.columns)
+   #vtype_list     = list(stock_by_vtype.columns.unique('type'))
    vtype_list     = list(stock_by_vtype.columns.get_level_values(0).unique())
-   
+
    # calculate the stocks of individual (vehicle) types (in nr of vehicles)
    for vtype in vtype_list:
-    stock_share_vtype = stock_share.loc[:, idx[vtype, :]]
-    stock_share_vtype.columns = stock_share_vtype.columns.droplevel('fuel')
-    # Multiply the aligned DataFrames
-    stock_by_vtype.loc[:, idx[vtype, :]] = stock.mul(stock_share_vtype)
-
+        #stock_by_vtype.loc[:,idx[vtype,:]] = stock.mul(stock_share.loc[:,idx[vtype,:]])
+        stock_share_vtype = stock_share.loc[:, idx[vtype, :]]
+        stock_share_vtype.columns = stock_share_vtype.columns.droplevel('fuel')
+        # Multiply the aligned DataFrames
+        stock_by_vtype.loc[:, idx[vtype, :]] = stock.mul(stock_share_vtype)
    vtype_count = list(range(0,len(stock_share.columns.levels[0])))
    vtype_dict  = dict(zip(vtype_list, vtype_count))
 
@@ -281,3 +283,10 @@ def nr_by_cohorts_to_materials_typical_np(inflow, outflow_cohort, stock_cohort, 
           
     return pd_inflow_mat, pd_outflow_mat, pd_stock_mat
 
+def pandas_to_xarray(df, unit_mapping):
+    ds = df.to_xarray()
+    # Apply units to each dimension
+    for dim in ds.dims:
+        if dim in unit_mapping:
+            ds[dim].attrs['units'] = unit_mapping[dim]
+    return ds.pint.quantify()

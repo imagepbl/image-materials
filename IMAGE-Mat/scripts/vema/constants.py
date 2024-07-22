@@ -1,6 +1,9 @@
 """"Global constants for the VEMA model."""
 from pathlib import Path
+import pint
 import os
+
+ureg = pint.UnitRegistry(force_ndarray_like=True)
 
 base_dir = Path.cwd()
 
@@ -89,6 +92,16 @@ key_map_typical['Medium Freight Trucks'] = 'MFT'
 key_map_typical['Heavy Freight Trucks'] = 'HFT'
 key_map_typical['Midi Buses'] = 'midi_bus'
 key_map_typical['Regular Buses'] = 'reg_bus'
+
+# Define the units for each dimension
+unit_mapping = {
+    'time': ureg.year,
+    'year': ureg.year,
+    'kg': ureg.kilogram,
+    'yr': ureg.year,
+    '%': ureg.percent,
+    't': ureg.tonne,
+}
 
 # aggregate car types into 5 car types
 BEV_collist  = [22, 24]
