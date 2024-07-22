@@ -228,7 +228,7 @@ def nr_by_cohorts_to_materials_typical_np(inflow, outflow_cohort, stock_cohort, 
     #composition.columns.names = ['type', 'material']
     
     # get two dictionaries to keep tarck of the order of materials & vtypes while using numpy
-    vtype_list   = list(composition.columns.unique('type'))  # columns.unique() keeps the original order, which is important here (same for materials)
+    vtype_list   = list(composition.columns.get_level_values(0).unique())  # columns.unique() keeps the original order, which is important here (same for materials)
     vtype_count  = list(range(0,len(vtype_list))) 
     vtype_dict   = dict(zip(vtype_count, vtype_list))
     
