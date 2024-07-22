@@ -194,7 +194,7 @@ def preprocessing(base_dir=os.getcwd()):
     material_fractions_simple = interpolate(pd.DataFrame(material_fractions_simple))
     
     # complete & interpolate the vehicle composition data (by vehicle sub-type second)
-    material_fractions_typical = material_fractions_type.rename_axis(['mode','type'], axis=1).rename_axis(['year','material'], axis=0).stack().stack().unstack(['mode','type', 'material'])
+    material_fractions_typical = material_fractions_type.rename_axis(['mode','type'], axis=1).rename_axis(['year','material'], axis=0).stack(future_stack=True).stack(future_stack=True).unstack(['mode','type', 'material'])
     material_fractions_typical = interpolate(pd.DataFrame(material_fractions_typical))
     
     # interpolate & complete series for battery weights, shares & composition too
