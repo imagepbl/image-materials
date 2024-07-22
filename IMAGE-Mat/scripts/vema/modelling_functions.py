@@ -40,7 +40,7 @@ def interpolate(original: pd.DataFrame,
     end   = original.last_valid_index()
     
     # reindexing from model start year to end year (i.e. the entire model period, adding NaN values for non-existing years)
-    reindexed = original[:].reindex(list(range(FIRST_YEAR,END_YEAR+1)))
+    reindexed = original.reindex(index=list(range(FIRST_YEAR,END_YEAR+1)))
     
     # IF there is a first_year defined, add these as 0
     # TODO: Test if columns of first_year & original are the same
