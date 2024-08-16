@@ -1,8 +1,5 @@
-import prism
-from prism import Q_
 import numpy as np
 import scipy
-
 
 # surv[t_idx, cohort_idx]
 
@@ -50,6 +47,13 @@ def weibull_survival(num_timesteps, cohort_idx, shape, scale):
                 scale=scale[cohort_idx],
     )
 
+def folded_normal(num_timesteps, cohort_idx, mean, std):
+    return scipy.stats.foldnorm.sf(
+        np.arange(num_timesteps-cohort_idx),
+        c=mean[cohort_idx]/std[cohort_idx],
+        loc=0,
+        scale=std[cohort_idx],
+    )
 # TODO: add folded normal
 
 # Remove
@@ -71,8 +75,7 @@ class WeibullSurvival(StaticSurvival):
         super().__init__(survival_matrix)
 
 
-# To be removed
-@prism.interface
+
 class FoldedNormalSurvival(Survival):
     mean: float
     std: float
@@ -89,49 +92,3 @@ class FoldedNormalSurvival(Survival):
             )
         super().__init__(survival_matrix)
 
-
-class Stock:
-    def __init__():
-        pass
-    
-
-    def compute(
-            self,
-            time: prism.Time,
-            input_stock: prism.Array['count'],
-            survival: Survival):
-        t = time.t
-        dt = time.dt
-
-        # determine inflow from mass balance
-        stockDiff = input_stock - self.stock_cohort[t].sum('cohort') # Sum remainder of previous cohorts left in this timestep
-        self.inflow[t] = prism.switch(
-            stockDiff > 0,
-            stockDiff / self.survival.loc[{Cohort.dim_label: t, Year.dim_label: t}], 
-            # if less than all survives increase inflow to fulfill demand in first year
-            default = prism.Array['count'](0.0) # TODO should this be a single number or should this have a dimenaion?
-        )
-        self.stock_cohort[t] = self.inflow[t] * self.survival.loc[{Cohort.dim_label: t}] # depreciation of inflow at this timestep
-        # TODO consider calculating survival for past stocks not future
-        self.outflow_cohort[t] = -1 * np.diff(self.stock_cohort[t], dt, axis=0, prepend=0) # TODO potential improvement use np.tril to not include what is above the diagonal
-        #TODO check if this results in a negative of positive number
-
-class Survival:
-
-
-    def compute(lifetime_parameters: dict, timesteps: int):
-        survival = np.zeros((timesteps, timesteps))
-
-        unfolded_years = np.arange(0, timesteps)[:, np.newaxis]
-        if lifetime_parameters["Type"] == 'FoldedNormal_vector' and lifetime_parameters['Mean'] != 0:  
-            # For products with lifetime of 0, sf == 0
-            # Folded normal distribution, cf. https://en.wikipedia.org/wiki/Folded_normal_distribution
-            # Vectorized calculation for Folded Normal
-            survival[:timesteps, :] = scipy.stats.foldnorm.sf(
-                unfolded_years,
-                lifetime_parameters['Mean'] / lifetime_parameters['StdDev'],
-                0,
-                scale=lifetime_parameters['StdDev'][:timesteps]
-            )
-
-        return survival
