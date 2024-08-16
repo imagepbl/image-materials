@@ -273,7 +273,7 @@ def stock_share_calc(stock, market_share, init_tech, techlist):
             for tech in inflow_by_tech.columns:
                 # apply the known market share to the inflow
                 inflow_by_tech.loc[idx[region,year],tech] = inflow * market_share.loc[year,tech]
-                # first calculate the survival (based on lifetimes specific to the year of inflow)
+                # first calculate the  (based on lifetimes specific to the year of inflow)
                 survival = scipy.stats.foldnorm.sf(np.arange(0,(outyear+1)-year), storage_lifetime_interpol.loc[year,tech]/(storage_lifetime_interpol.loc[year,tech]*0.2), 0, scale=storage_lifetime_interpol.loc[year,tech]*0.2)           
                 # then apply the survival to the inflow in current cohort, both the inflow & the survival are entered into the stock_cohort dataframe in 1 step
                 stock_cohorts_list.append(inflow_by_tech.loc[idx[region,year],tech]  *  survival)
