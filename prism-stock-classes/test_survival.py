@@ -1,6 +1,8 @@
 # Example on how to create a survival class instance:
 #
 from survival import Survival, weibull_survival, folded_normal
+import scipy
+import scipy.stats
 import numpy as np
 
 def test_survival_random():
