@@ -6,6 +6,7 @@ from globals.constants import (
 )
 import preprocessing
 import prism
+import Survival from survival
 
 @prism.interface
 class VehicleMaterialDemand(prism.Model):
