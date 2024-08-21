@@ -1,3 +1,7 @@
+import prism
+from survival import Survival
+import pint
+
 def dynamic_stock_model(
         self,
         time: prism.Time,
@@ -18,3 +22,10 @@ def dynamic_stock_model(
     # TODO consider calculating survival for past stocks not future
     self.outflow_cohort[t] = -1 * np.diff(self.stock_cohort[t], dt, axis=0, prepend=0) # TODO potential improvement use np.tril to not include what is above the diagonal
     #TODO check if this results in a negative of positive number
+
+    # Alternative:
+    # """Compute stock inflow and outflow based on previous stock and survival rate."""
+    # inflow = np.maximum(0, stock_diff)
+    # outflow = stock_prev * (1 - survival_rate)
+    # new_stock = stock_prev + inflow - outflow
+    # return new_stock, inflow, outflow
