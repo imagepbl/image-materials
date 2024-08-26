@@ -1,6 +1,7 @@
 import prism
 from survival import Survival
 import pint
+import numpy as np
 
 def dynamic_stock_model(
         self,
