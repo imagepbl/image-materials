@@ -9,10 +9,7 @@ from collections import defaultdict
 class SurvivalMatrix:
     def __init__(self, survival):
         # TODO: Add docstrings
-        self.survival_matrix = xr.DataArray(0.0, dims=("time", "cohort", "mode"),
-                                            coords={"time": survival.time_series.to_numpy(),
-                                                    "cohort": survival.time_series.to_numpy(),
-                                                    "mode": survival.modes})
+        self.survival_matrix = survival.new_matrix()
         self._cached_timesteps = set()
         self.num_timesteps = len(survival.time_series)
         self.survival = survival
@@ -68,8 +65,6 @@ class FoldedNormalDistribution():
     @staticmethod
     def get_param(param_dict):
         mean, stdev = param_dict["mean"], param_dict["stdev"]
-        # mean = self.lifetime_parameters[mode, "mean"].loc[cohort]
-        # stdev = self.lifetime_parameters[mode, "stdev"].loc[cohort]
         return {"c": mean/stdev, "scale": stdev, "loc": 0}
 
     @staticmethod
@@ -80,48 +75,46 @@ class FoldedNormalDistribution():
 
 
 class ScipySurvival(ABC):
-    distributions = {"weibull": WeibullDistribution,
-                     "folded_norm": FoldedNormalDistribution}
-
     def __init__(self, lifetime_parameters):
         self.lifetime_parameters = lifetime_parameters
-        mode_param = defaultdict(list)
-        for mode, par in self.lifetime_parameters.data_vars:
-            mode_param[mode].append(par)
-    
-        self.dist_mode = defaultdict(list)
-        for dist_name, dist in self.distributions.items():
-            for mode, param in mode_param.items():
-                if dist.has_param(param):
-                    self.dist_mode[dist_name].append(mode)
+
+    def new_matrix(self):
+        return xr.DataArray(
+            0.0, dims=("time", "cohort", "mode"),
+            coords={"time": self.time_series.to_numpy(),
+                    "cohort": self.time_series.to_numpy(),
+                    "mode": self.modes})
 
     def compute_survival(self, cohort):
         n_coords_left = len(self.time_series.loc[cohort:])
-        for dist_name, mode_list in self.dist_mode.items():
-            if len(mode_list) == 0:
-                continue
-            dist = self.distributions[dist_name]
-            scipy_param = {"c": [], "scale": [], "loc": []}
-            for mode in mode_list:
-                mode_param = {param: self.lifetime_parameters[mode, param].loc[cohort]
-                              for param in dist.param}
-                cur_scipy_param = dist.get_param(**mode_param)
-                # for param in dist.param:
-                    # scipy_param[]
-                    
-            
-        return self._method(
-            np.arange(n_coords_left),
-            **self.get_param(mode, cohort)
-        )
+        res_arrays = []
+        for param_dict_array, method in self.lifetime_parameters.values():
+            first_array = list(param_dict_array.values())[0]
+            n_modes = first_array.shape[1]
+            index_array = np.empty((n_coords_left, n_modes))
+            index_array[:, :] = np.arange(n_coords_left).reshape(-1, 1)
+            params = {param_name: (full_array.loc[cohort, :] if isinstance(full_array, xr.DataArray) else full_array)
+                      for param_name, full_array in param_dict_array.items()
+                      }
+            res_numpy_array = method(index_array, **params)
+            res_arrays.append(xr.DataArray(res_numpy_array, dims=("time", "mode"),
+                                           coords={"time": self.time_series.loc[cohort:],
+                                                   "mode": first_array.coords["mode"]}))
+        return xr.concat(res_arrays, dim="mode")
 
     @cached_property
     def modes(self):
-        return np.unique([x[0] for x in self.lifetime_parameters.data_vars])
+        all_modes = []
+        for param_dict_array, _ in self.lifetime_parameters.values():
+            first_array = list(param_dict_array.values())[0]
+            all_modes.extend(str(x) for x in first_array.coords["mode"].to_numpy())
+        return all_modes
 
     @property
     def time_series(self):
-        return self.lifetime_parameters.coords["year"]
+        first_dict = list(self.lifetime_parameters.values())[0][0]
+        first_array = list(first_dict.values())[0]
+        return first_array.coords["time"]
 
 
 def _is_iterable(val):
@@ -130,3 +123,37 @@ def _is_iterable(val):
         return True
     except TypeError:
         return False
+
+ALL_DISTRIBUTIONS = [WeibullDistribution, FoldedNormalDistribution]
+NAME_TO_DIST = {dist.name: dist for dist in ALL_DISTRIBUTIONS}
+
+def convert_life_time_vehicles(life_time_vehicles):
+    life_time_vehicles = life_time_vehicles.rename({"year": "time"})
+    mode_param = defaultdict(list)
+    for mode, par in life_time_vehicles.data_vars:
+        mode_param[mode].append(par)
+
+    dist_mode = defaultdict(list)
+    modes_done = set()
+    for dist in ALL_DISTRIBUTIONS:
+        for mode, param in mode_param.items():
+            if mode not in modes_done and dist.has_param(param):
+                dist_mode[dist.name].append(mode)
+                modes_done.add(mode)
+
+    scipy_params = {}
+    for dist_name, mode_list in dist_mode.items():
+        dist = NAME_TO_DIST[dist_name]
+
+        param_arrays = {}
+        for param in dist.params:
+            array = xr.DataArray(
+                0.0, dims=("time", "mode"),
+                coords={
+                    "time": life_time_vehicles.coords["time"].to_numpy(),
+                    "mode": mode_list})
+            for mode in mode_list:
+                array.loc[:, str(mode)] = life_time_vehicles.data_vars[str(mode), param]
+            param_arrays[param] = array
+        scipy_params[dist_name] = (dist.get_param(param_arrays), dist.method)
+    return scipy_params
