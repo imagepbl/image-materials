@@ -3,6 +3,8 @@ import scipy
 from itertools import islice
 import xarray as xr
 from abc import abstractmethod, ABC
+from functools import cached_property
+from collections import defaultdict
 
 class SurvivalMatrix:
     def __init__(self, survival):
@@ -34,28 +36,86 @@ class SurvivalMatrix:
                 # Compute the survival matrix for the current cohort_idx
                 # The survival coeficients are only relevant for future times t
                 # So the values are created in column cohort_idx, for t_idx=cohort_idx, cohort_idx+1, ...
-                for mode in self.survival.modes:
-                    self.survival_matrix.loc[cur_cohort:, cur_cohort, mode] = self.survival.compute_survival(mode, cur_cohort)
+                self.survival_matrix.loc[cur_cohort:, cur_cohort] = self.survival.compute_survival(cur_cohort)
                 self._cached_timesteps.add(cur_cohort)
         return self.survival_matrix.loc[t, cohort]
 
+class WeibullDistribution():
+    name = "weibull"
+    method = scipy.stats.weibull_min.sf
+    params = ["shape", "scale"]
+
+    @staticmethod
+    def get_param(param_dict):
+        return {
+            "c": param_dict["shape"],
+            "scale": param_dict["scale"],
+            "loc": 0
+        }
+
+    @staticmethod
+    def has_param(param):
+        if "shape" in param and "scale" in param:
+            return True
+        return False
+
+
+class FoldedNormalDistribution():
+    method = scipy.stats.foldnorm.sf
+    params = ["mean", "stdev"]
+    name = "folded_norm"
+
+    @staticmethod
+    def get_param(param_dict):
+        mean, stdev = param_dict["mean"], param_dict["stdev"]
+        # mean = self.lifetime_parameters[mode, "mean"].loc[cohort]
+        # stdev = self.lifetime_parameters[mode, "stdev"].loc[cohort]
+        return {"c": mean/stdev, "scale": stdev, "loc": 0}
+
+    @staticmethod
+    def has_param(param):
+        if "mean" in param and "stdev" in param:
+            return True
+        return False
+
 
 class ScipySurvival(ABC):
+    distributions = {"weibull": WeibullDistribution,
+                     "folded_norm": FoldedNormalDistribution}
+
     def __init__(self, lifetime_parameters):
         self.lifetime_parameters = lifetime_parameters
+        mode_param = defaultdict(list)
+        for mode, par in self.lifetime_parameters.data_vars:
+            mode_param[mode].append(par)
+    
+        self.dist_mode = defaultdict(list)
+        for dist_name, dist in self.distributions.items():
+            for mode, param in mode_param.items():
+                if dist.has_param(param):
+                    self.dist_mode[dist_name].append(mode)
 
-    def compute_survival(self, mode, cohort):
+    def compute_survival(self, cohort):
         n_coords_left = len(self.time_series.loc[cohort:])
+        for dist_name, mode_list in self.dist_mode.items():
+            if len(mode_list) == 0:
+                continue
+            dist = self.distributions[dist_name]
+            scipy_param = {"c": [], "scale": [], "loc": []}
+            for mode in mode_list:
+                mode_param = {param: self.lifetime_parameters[mode, param].loc[cohort]
+                              for param in dist.param}
+                cur_scipy_param = dist.get_param(**mode_param)
+                # for param in dist.param:
+                    # scipy_param[]
+                    
+            
         return self._method(
             np.arange(n_coords_left),
             **self.get_param(mode, cohort)
         )
 
-    @abstractmethod
-    def get_param(self, mode, cohort):
-        raise NotImplementedError()
-
-    @property
+    @cached_property
     def modes(self):
         return np.unique([x[0] for x in self.lifetime_parameters.data_vars])
 
@@ -63,24 +123,6 @@ class ScipySurvival(ABC):
     def time_series(self):
         return self.lifetime_parameters.coords["year"]
 
-class WeibullSurvival(ScipySurvival):
-    _method = scipy.stats.weibull_min.sf
-
-    def get_param(self, mode, cohort):
-        return {
-            "c": self.lifetime_parameters[mode, "shape"].loc[cohort],
-            "scale": self.lifetime_parameters[mode, "scale"].loc[cohort],
-            "loc": 0
-        }
-
-
-class FoldedNormalSurvival(ScipySurvival):
-    _method = scipy.stats.foldnorm.sf
-
-    def get_param(self, mode, cohort):
-        mean = self.lifetime_parameters[mode, "mean"].loc[cohort]
-        stdev = self.lifetime_parameters[mode, "stdev"].loc[cohort]
-        return {"c": mean/stdev, "scale": stdev, "loc": 0}
 
 def _is_iterable(val):
     try:
