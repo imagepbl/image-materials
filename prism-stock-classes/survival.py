@@ -2,9 +2,10 @@ import numpy as np
 import scipy
 from itertools import islice
 import xarray as xr
-from abc import abstractmethod, ABC
+from abc import ABC
 from functools import cached_property
 from collections import defaultdict
+
 
 class SurvivalMatrix:
     def __init__(self, survival):
@@ -124,8 +125,10 @@ def _is_iterable(val):
     except TypeError:
         return False
 
+
 ALL_DISTRIBUTIONS = [WeibullDistribution, FoldedNormalDistribution]
 NAME_TO_DIST = {dist.name: dist for dist in ALL_DISTRIBUTIONS}
+
 
 def convert_life_time_vehicles(life_time_vehicles):
     life_time_vehicles = life_time_vehicles.rename({"year": "time"})
