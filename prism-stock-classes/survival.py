@@ -26,7 +26,7 @@ class SurvivalMatrix:
         if isinstance(cohort, slice):
             comp_list = islice(self.survival_matrix.indexes["cohort"], *cohort.indices(self.num_timesteps))
         else:
-            comp_list = [cohort]
+            comp_list = [int(cohort)]
 
         # Is the column already computed?
         for cur_cohort in comp_list:
