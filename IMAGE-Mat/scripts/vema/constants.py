@@ -52,15 +52,26 @@ car_label = ["Conv. ICE(2000)", "Conv. ICE(2010)", "Adv. ICEOil",
              "FCV Bio", "FCV H2", "PEV-10 OilElec.", "PEV-30 OilElec.",
              "PEV-60 OilElec.", "PEV-10 BioElec.", "PEV-30 BioElec.",
              "PEV-60 BioElec.", "BEV Elec.", "PHEV_BEV", "BEV", "Gas car"]
-tkms_label = ["inland shipping", "freight train", "medium truck",
-              "heavy truck", "air cargo", "international shipping", "empty",
+
+# lables of original IMAGE input files, Capital Letters are used 1-on-1 lower case modes are either ignored or disaggregated
+tkms_label = ["Inland Ships", "Freight Trains", "Medium Freight Trucks",
+              "Heavy Freight Trucks", "Freight Planes", "international shipping", "empty",
               "total"]
-pkms_label = ["walking", "bicycle", "bus", "rail_reg", "car", "rail_hst", 
-              "air_pas", "total"]
+pkms_label = ["walking", "Bikes", "bus", "Trains", "Cars", "High Speed Trains", 
+              "Passenger Planes", "total"]
+
+labels_simple  = ['Passenger Planes', 'Bikes', 'Freight Planes','Freight Trains', 
+                  'High Speed Trains', 'Inland Ships', 'Large Ships', 'Medium Ships', 
+                  'Small Ships', 'Trains', 'Very Large Ships']
+labels_typical = ['Cars', 'Light Commercial Vehicles', 'Medium Freight Trucks',
+                  'Heavy Freight Trucks', 'Midi Buses', 'Regular Buses']
+
+# Output labels differ from the main code, because buses & planes & trucks & ships are summed
 columns_vehicle_output = ["Buses", "Trains", "High Speed Trains", "Cars", 
                           "Planes", "Bikes", "Trucks", "Freight Trains", 
                           "Ships", "Inland Ships", "Freight Planes"]
 
+# TODO: plot labels should be reconsidered
 # Names used to shorten plots
 labels_pas = ["bicycle", "rail_reg", "rail_hst", "midi_bus", "reg_bus",
               "air_pas", "ICE", "HEV", "PHEV", "BEV", "FCV"]
@@ -73,26 +84,10 @@ labels_materials = ["Steel", "Aluminium", "Cu", "Plastics", "Glass", "Ti",
 labels_ev_batt = ["NiMH", "LMO", "NMC", "NCA", "LFP", "Lithium Sulfur",
                   "Lithium Ceramic", "Lithium-air"]
 
-key_map_simple = {}
-key_map_simple['Passenger Planes'] = 'air_pas'
-key_map_simple['Bikes'] = 'bicycle'
-key_map_simple['Freight Planes'] = 'air_freight'
-key_map_simple['Freight Trains'] = 'rail_freight'
-key_map_simple['High Speed Trains'] = 'rail_hst'
-key_map_simple['Inland Ships'] = 'inland_shipping'
-key_map_simple['Large Ships'] = 'sea_shipping_large'
-key_map_simple['Medium Ships'] = 'sea_shipping_med'
-key_map_simple['Small Ships'] = 'sea_shipping_small'
-key_map_simple['Trains'] = 'rail_reg'
-key_map_simple['Very Large Ships'] = 'sea_shipping_vl'
 
-key_map_typical = {}
-key_map_typical['Cars'] = 'car'
-key_map_typical['Light Commercial Vehicles'] = 'LCV'
-key_map_typical['Medium Freight Trucks'] = 'MFT'
-key_map_typical['Heavy Freight Trucks'] = 'HFT'
-key_map_typical['Midi Buses'] = 'midi_bus'
-key_map_typical['Regular Buses'] = 'reg_bus'
+# define #TODO Roel is that fine?
+ureg = pint.UnitRegistry(force_ndarray_like=True)
+ureg.define('percent = dimensionless * 100 = %')
 
 # Define the units for each dimension
 unit_mapping = {
