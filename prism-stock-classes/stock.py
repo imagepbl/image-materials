@@ -1,31 +1,23 @@
-import prism
-from prism import Q_
-import numpy as np
-import scipy
+import xarray as xr
 
 
-class Stock:
-    def __init__():
-        pass
-    
+def compute_historic(input_stock, survival, start_simulation, stock_by_cohort, inflow,
+                     outflow_by_cohort, stock_function):
+    first_year = input_stock.coords["time"][0]
+    for t in input_stock.coords["time"].loc[first_year+1:start_simulation]:
+        # We assume zeros for all variables in the first year 
+        stock_function(input_stock, stock_by_cohort, inflow, outflow_by_cohort, survival, t)
 
-    def compute(
-            self,
-            time: prism.Time,
-            input_stock: prism.Array['count'],
-            survival: Survival):
-        t = time.t
-        dt = time.dt
+def compute_dynamic_stock_driven(stock, stock_by_cohort, inflow, outflow_by_cohort, survival, t):
+    input_stock = stock
+    stock_diff = input_stock.loc[t] - stock_by_cohort[t].sum("cohort")
+    stock_diff = xr.where(stock_diff>0, stock_diff/survival[t, t], 0)
+    inflow[t] = stock_diff
+    stock_by_cohort[t] = inflow[t]*survival[t, :]
+    outflow_by_cohort[t] = stock_by_cohort[t]-stock_by_cohort[t-1]
 
-        # determine inflow from mass balance
-        stockDiff = input_stock - self.stock_cohort[t].sum('cohort') # Sum remainder of previous cohorts left in this timestep
-        self.inflow[t] = prism.switch(
-            stockDiff > 0,
-            stockDiff / self.survival.loc[{Cohort.dim_label: t, Year.dim_label: t}], 
-            # if less than all survives increase inflow to fulfill demand in first year
-            default = prism.Array['count'](0.0) # TODO should this be a single number or should this have a dimenaion?
-        )
-        self.stock_cohort[t] = self.inflow[t] * self.survival.loc[{Cohort.dim_label: t}] # depreciation of inflow at this timestep
-        # TODO consider calculating survival for past stocks not future
-        self.outflow_cohort[t] = -1 * np.diff(self.stock_cohort[t], dt, axis=0, prepend=0) # TODO potential improvement use np.tril to not include what is above the diagonal
-        #TODO check if this results in a negative of positive number
+def compute_dynamic_inflow_driven(stock, stock_by_cohort, inflow, outflow_by_cohort, survival, t):
+    input_inflow = inflow
+    stock_by_cohort[t] = input_inflow[t] * survival[t, :]
+    stock[t] = stock_by_cohort[t].sum("cohort")
+    outflow_by_cohort[t] = stock_by_cohort[t]-stock_by_cohort[t-1]
