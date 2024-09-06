@@ -21,7 +21,6 @@ from constants import (
     columns_vehicle_output,
     REGIONS,
     OUTPUT_FOLDER,
-    unit_mapping,
     labels_simple,
     labels_typical
 ) 
@@ -38,20 +37,10 @@ from constants import (
 
 
 idx = pd.IndexSlice
-preprocessing_results = preprocessing()
+preprocessing_results, preprocessing_results_xarray = preprocessing()
 
 # %%
-# Create a pint UnitRegistry
-ureg = pint.UnitRegistry(force_ndarray_like=True)
-pint.set_application_registry(ureg)
-# preprocessing_results_xarray = preprocessing_results.copy()
 
-
-# Convert the DataFrames to xarray Datasets and apply units
-preprocessing_results_xarray = {}
-
-for df_name in preprocessing_results:
-    preprocessing_results_xarray[df_name] = pandas_to_xarray(preprocessing_results[df_name], unit_mapping)
 
 # %% INFLOW-OUTFLOW calculations using the ODYM Dynamic Stock Model (DSM) as a function
 

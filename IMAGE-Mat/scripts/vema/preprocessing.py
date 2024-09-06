@@ -8,9 +8,11 @@ import os
 import argparse
 from pathlib import Path
 import pandas as pd
+import pint
+import pint_xarray
 
 from read_scripts.read_mym import read_mym_df
-from modelling_functions import interpolate, tkms_to_nr_of_vehicles_fixed
+from modelling_functions import interpolate, tkms_to_nr_of_vehicles_fixed, pandas_to_xarray
 # Path fragments and constants
 from constants import (
     PROJECT,
@@ -24,7 +26,8 @@ from constants import (
     MEGA_TO_TERA,
     PKMS_TO_VKMS,
     TONNES_TO_KGS,
-    SHIPS_YEARS_RANGE)
+    SHIPS_YEARS_RANGE,
+    unit_mapping)
 # Labels
 from constants import (tkms_label, pkms_label, truck_label, bus_label,
                        bus_label_ICE, bus_label_HEV,
@@ -586,8 +589,22 @@ def preprocessing(base_dir: str = os.getcwd()):
         'weight_boats': weight_boats,
         'vehicle_shares_typical': vehicle_shares_typical
     }
+    
+    
+    # Create a pint UnitRegistry
+    ureg = pint.UnitRegistry(force_ndarray_like=True)
+    pint.set_application_registry(ureg)
+    # preprocessing_results_xarray = preprocessing_results.copy()
+    
+    
+    # Convert the DataFrames to xarray Datasets and apply units
+    preprocessing_results_xarray = {}
+    
+    for df_name in results_dict:
+        preprocessing_results_xarray[df_name] = pandas_to_xarray(results_dict[df_name], unit_mapping)
 
-    return results_dict
+    # TODO: vemamodelling.py works with dict of dfs and not only dict of xarrays, therefore now both are returned (for now)
+    return results_dict, preprocessing_results_xarray
 
 
 # %%
@@ -605,3 +622,4 @@ if __name__ == "__main__":
 
     # Call preprocessing function and make output available in variables
     output_preprocessing = preprocessing(base_dir=args.path)
+
