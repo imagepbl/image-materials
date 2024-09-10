@@ -1,4 +1,4 @@
-time,type,LCV,MFT,HFT,midi_bus,reg_bus,car
+time,type,Light Commercial Vehicles,Medium Freight Trucks,Heavy Freight Trucks,Midi Buses,Regular Buses,Cars
 2020,ICE,0,0,0,0,0,0
 2020,HEV,25.7,39,64.3,35.3,90.2,20.8
 2020,PHEV,55.2,84,138.4,76,194.1,44.8

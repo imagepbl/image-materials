@@ -8,9 +8,11 @@ import os
 import argparse
 from pathlib import Path
 import pandas as pd
+import pint
+import pint_xarray
 
 from read_scripts.read_mym import read_mym_df
-from modelling_functions import interpolate, tkms_to_nr_of_vehicles_fixed
+from modelling_functions import interpolate, tkms_to_nr_of_vehicles_fixed, pandas_to_xarray
 # Path fragments and constants
 from constants import (
     PROJECT,
@@ -24,7 +26,8 @@ from constants import (
     MEGA_TO_TERA,
     PKMS_TO_VKMS,
     TONNES_TO_KGS,
-    SHIPS_YEARS_RANGE)
+    SHIPS_YEARS_RANGE,
+    unit_mapping)
 # Labels
 from constants import (tkms_label, pkms_label, truck_label, bus_label,
                        bus_label_ICE, bus_label_HEV,
@@ -144,7 +147,7 @@ def preprocessing(base_dir: str = os.getcwd()):
     mileages: pd.DataFrame = pd.read_csv(
         base_input_data_path. joinpath(
             FOLDER,
-            "mileages_km_per_year.csv"),
+            "kilometrage_per_year.csv"),
         index_col="t")  # Km/year of all the vehicles (buses & cars have region-specific files)
 
     # weight and materials related data
@@ -396,26 +399,26 @@ def preprocessing(base_dir: str = os.getcwd()):
     # portion of the material requirements of road freight
     # the total trucks Tkms remain the same, but a LCV fraction is substracted, and the remainder is re-assigned to
     # medium and heavy trucks according to their original ratio
-    trucks_total_tkm = tonkms_Mtkms["medium truck"].unstack() + tonkms_Mtkms["heavy truck"].unstack()
+    trucks_total_tkm = tonkms_Mtkms["Medium Freight Trucks"].unstack() + tonkms_Mtkms["Heavy Freight Trucks"].unstack()
     trucks_LCV_tkm = trucks_total_tkm * LIGHT_COMMERCIAL_VEHICLE_SHARE
-    MFT_percshare_tkm = tonkms_Mtkms["medium truck"].unstack() / trucks_total_tkm  # the MFT fraction of the total
-    HFT_percshare_tkm = tonkms_Mtkms["heavy truck"].unstack() / trucks_total_tkm   # the HFT fraction of the total
+    MFT_percshare_tkm = tonkms_Mtkms["Medium Freight Trucks"].unstack() / trucks_total_tkm  # the MFT fraction of the total
+    HFT_percshare_tkm = tonkms_Mtkms["Heavy Freight Trucks"].unstack() / trucks_total_tkm   # the HFT fraction of the total
     trucks_min_LCV = trucks_total_tkm - trucks_LCV_tkm
     trucks_MFT_tkm = trucks_min_LCV.mul(MFT_percshare_tkm)             # Used in loop below
     trucks_HFT_tkm = trucks_min_LCV.mul(HFT_percshare_tkm)
 
     # demand for freight planes is reduced by 50% because about half of the air freight is transported as cargo on
     # passenger planes
-    air_freight_tkms = tonkms_Mtkms["air cargo"].unstack() * market_share["air_freight"].values[0]
+    air_freight_tkms = tonkms_Mtkms["Freight Planes"].unstack() * market_share["Passenger Planes"].values[0]
 
     # Buses are adjusted to account for the higher material intensity of
     # mini-buses
-    bus_regl_pkms = passengerkms_Tpkms["bus"].unstack() * market_share["reg_bus"].values[0]   # in tera pkms
-    bus_midi_pkms = passengerkms_Tpkms["bus"].unstack() * market_share["midi_bus"].values[0]  # in tera pkms
+    bus_regl_pkms = passengerkms_Tpkms["bus"].unstack() * market_share["Regular Buses"].values[0]   # in tera pkms
+    bus_midi_pkms = passengerkms_Tpkms["bus"].unstack() * market_share["Midi Buses"].values[0]  # in tera pkms
 
     # Select tkms of passenger cars (which will be adjusted to represent 5
     # types: ICE, HEV, PHEV, BEV & FCV)
-    car_pkms = passengerkms_Tpkms["car"].unstack()
+    car_pkms = passengerkms_Tpkms["Cars"].unstack()
     # exclude region 27 & 28 (empty & global total), mind
     car_pkms = car_pkms.drop([27, 28], axis=1)
     # that the columns represent generation technologies  # in tera pkms
@@ -433,17 +436,15 @@ def preprocessing(base_dir: str = os.getcwd()):
     )
     total_nr_vehicles_simple.index.name = "time"
 
-    # Fill the vehicle types that need no conversion
-    for in_label, out_label in [
-        ("air_pas", "Passenger Planes"), ("rail_reg", "Trains"),
-        ("rail_hst", "High Speed Trains"), ("bicycle", "Bikes")
-    ]:
-        total_nr_vehicles_simple[out_label] = tkms_to_nr_of_vehicles_fixed(
-            passengerkms_Tpkms[in_label].unstack(),
-            mileages[in_label].values[0],
-            load[in_label].values[0],
-            loadfactor[in_label].values[0]
+    # Fill the vehicle types that need no conversion    
+    for label in ["Passenger Planes", "Trains", "High Speed Trains", "Bikes" ]:
+        total_nr_vehicles_simple[label] = tkms_to_nr_of_vehicles_fixed(
+            passengerkms_Tpkms[label].unstack(),
+            mileages[label].values[0],
+            load[label].values[0],
+            loadfactor[label].values[0]
         )
+        
 
     # %%
     # Fill the vehicle types that need conversion from Mega-ton-kms
@@ -451,14 +452,14 @@ def preprocessing(base_dir: str = os.getcwd()):
     # original ton kilometers are in Mega-ton-kms, div by MEGA_TO_TERA to
     # harmonize with pkms which are in Tera pkms
     # Define the input data for vehicles requiring conversion
-
+    # what does the "M" stand for?
     vehicle_data = {
-        "Heavy Freight Trucks":         (trucks_HFT_tkm, "HFT", 'M'),
-        "Medium Freight Trucks":        (trucks_MFT_tkm, "MFT", 'M'),
-        "Light Commercial Vehicles":    (trucks_LCV_tkm, "LCV", 'M'),
-        "Freight Planes":               (air_freight_tkms, "air_freight", 'M'),
-        "Freight Trains":               (tonkms_Mtkms['freight train'].unstack(), "rail_freight", 'M'),
-        "Inland Ships":                 (tonkms_Mtkms['inland shipping'].unstack(), "inland_shipping", 'M')
+        "Heavy Freight Trucks":         (trucks_HFT_tkm, "Heavy Freight Trucks", 'M'),
+        "Medium Freight Trucks":        (trucks_MFT_tkm, "Medium Freight Trucks", 'M'),
+        "Light Commercial Vehicles":    (trucks_LCV_tkm, "Light Commercial Vehicles", 'M'),
+        "Freight Planes":               (air_freight_tkms, "Light Commercial Vehicles", 'M'),
+        "Freight Trains":               (tonkms_Mtkms['Freight Trains'].unstack(), "Freight Trains", 'M'),
+        "Inland Ships":                 (tonkms_Mtkms['Inland Ships'].unstack(), "Inland Ships", 'M')
     }
 
     # %%
@@ -487,8 +488,8 @@ def preprocessing(base_dir: str = os.getcwd()):
     # TODO: remove/change this hack!
     kilometrage_bus[["Extra Column", "Extra Column 2"]] = 1
     kilometrage_bus.columns = list(range(1, REGIONS + 3))
-    bus_regl_vkms = bus_regl_pkms.div(load["reg_bus"].values[0]
-                                      * loadfactor["reg_bus"].values[0]) * PKMS_TO_VKMS
+    bus_regl_vkms = bus_regl_pkms.div(load["Regular Buses"].values[0]
+                                      * loadfactor["Regular Buses"].values[0]) * PKMS_TO_VKMS
     # now in kms
     total_nr_vehicles_simple["Regular Buses"] = bus_regl_vkms.div(
         kilometrage_bus)
@@ -497,7 +498,7 @@ def preprocessing(base_dir: str = os.getcwd()):
     # TODO: remove/change this hack!
     kilometrage_midi_bus[["Extra Column", "Extra Column 2"]] = 1
     kilometrage_midi_bus.columns = list(range(1, REGIONS + 3))
-    bus_midi_vkms = bus_midi_pkms.div(load["midi_bus"].values[0] * loadfactor["midi_bus"].values[0]) * PKMS_TO_VKMS
+    bus_midi_vkms = bus_midi_pkms.div(load["Midi Buses"].values[0] * loadfactor["Midi Buses"].values[0]) * PKMS_TO_VKMS
     # now in kms
     total_nr_vehicles_simple["Midi Buses"] = bus_midi_vkms.div( kilometrage_midi_bus)
 
@@ -588,8 +589,22 @@ def preprocessing(base_dir: str = os.getcwd()):
         'weight_boats': weight_boats,
         'vehicle_shares_typical': vehicle_shares_typical
     }
+    
+    
+    # Create a pint UnitRegistry
+    ureg = pint.UnitRegistry(force_ndarray_like=True)
+    pint.set_application_registry(ureg)
+    # preprocessing_results_xarray = preprocessing_results.copy()
+    
+    
+    # Convert the DataFrames to xarray Datasets and apply units
+    preprocessing_results_xarray = {}
+    
+    for df_name in results_dict:
+        preprocessing_results_xarray[df_name] = pandas_to_xarray(results_dict[df_name], unit_mapping)
 
-    return results_dict
+    # TODO: vemamodelling.py works with dict of dfs and not only dict of xarrays, therefore now both are returned (for now)
+    return results_dict, preprocessing_results_xarray
 
 
 # %%
@@ -607,3 +622,4 @@ if __name__ == "__main__":
 
     # Call preprocessing function and make output available in variables
     output_preprocessing = preprocessing(base_dir=args.path)
+
