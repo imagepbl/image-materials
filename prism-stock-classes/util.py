@@ -6,7 +6,8 @@ def convert_vehicles(vehicle_nr):
         xr_vehicles_orig = vehicle_nr.to_xarray()
         time_series = xr_vehicles_orig.coords["time"]
         modes = np.unique([x[0] for x in xr_vehicles_orig.data_vars])
-        region_dim = np.unique([x[1] for x in xr_vehicles_orig.data_vars])
+        region_int = np.sort(np.unique([x[1] for x in xr_vehicles_orig.data_vars]))
+        region_dim = np.array([str(x) for x in region_int])
 
 
         xr_vehicles = xr.DataArray(0.0, dims=("time", "mode", "region"),
@@ -14,6 +15,6 @@ def convert_vehicles(vehicle_nr):
                         "mode": modes,
                         "region": region_dim})
         for dv in xr_vehicles_orig.data_vars:
-                xr_vehicles.loc[:, dv[0], dv[1]] = xr_vehicles_orig.data_vars[dv]
+                xr_vehicles.loc[:, dv[0], str(dv[1])] = xr_vehicles_orig.data_vars[dv]
         return xr_vehicles
 
