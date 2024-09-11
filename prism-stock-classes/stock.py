@@ -11,7 +11,8 @@ def compute_historic(input_stock, survival, start_simulation, stock_by_cohort, i
 def compute_dynamic_stock_driven(stock, stock_by_cohort, inflow, outflow_by_cohort, survival, t):
     input_stock = stock
     stock_diff = input_stock.loc[t] - stock_by_cohort[t].sum("cohort")
-    stock_diff = xr.where(stock_diff>0, stock_diff/survival[t, t], 0)
+    # Drop dimension cohort
+    stock_diff = xr.where(stock_diff>0, stock_diff/survival[t, t].drop("cohort"), 0)
     inflow[t] = stock_diff
     stock_by_cohort[t] = inflow[t]*survival[t, :]
     outflow_by_cohort[t] = stock_by_cohort[t]-stock_by_cohort[t-1]
