@@ -19,6 +19,15 @@ import xarray as xr
 #         return xr_vehicles
 
 
+def pandas_to_xarray(df, unit_mapping):
+    ds = df.to_xarray()
+    # Apply units to each dimension
+    for dim in ds.dims:
+        if dim in unit_mapping:
+            ds[dim].attrs['units'] = unit_mapping[dim]
+    return ds.pint.quantify()
+
+
 def dataset_to_array(xar_dataset, extra_dims):
     coords = {}
     for coor_name in xar_dataset.coords.keys():

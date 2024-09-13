@@ -12,7 +12,9 @@ import pint
 import pint_xarray
 
 from read_scripts.read_mym import read_mym_df
-from modelling_functions import interpolate, tkms_to_nr_of_vehicles_fixed, pandas_to_xarray
+from modelling_functions import interpolate, tkms_to_nr_of_vehicles_fixed
+from util import pandas_to_xarray, dataset_to_array
+
 # Path fragments and constants
 from constants import (
     PROJECT,
@@ -601,7 +603,14 @@ def preprocessing(base_dir: str = os.getcwd()):
     preprocessing_results_xarray = {}
     
     for df_name in results_dict:
-        preprocessing_results_xarray[df_name] = pandas_to_xarray(results_dict[df_name], unit_mapping)
+        print(df_name)
+        # TOD): set column names for these ones and check if label is fine
+        if df_name in ['vehicle_weights_simple', 'battery_weights_typical', 
+                       'battery_materials', 'battery_shares', 'weight_boats']:
+            continue
+        data_xar_dataset = pandas_to_xarray(results_dict[df_name], unit_mapping)
+        data_xarray = dataset_to_array(data_xar_dataset, results_dict[df_name].columns.names)
+        preprocessing_results_xarray[df_name] = data_xarray
 
     # TODO: vemamodelling.py works with dict of dfs and not only dict of xarrays, therefore now both are returned (for now)
     return results_dict, preprocessing_results_xarray

@@ -12,6 +12,8 @@ from constants import (
 )
 import pandas as pd
 import numpy as np
+import xarray as xr
+
 from typing import Optional
 from constants import FIRST_YEAR, END_YEAR, REGIONS
 from read_scripts.dynamic_stock_model_BM import DynamicStockModel as DSM
@@ -396,10 +398,4 @@ def nr_by_cohorts_to_materials_typical_np(
     return pd_inflow_mat, pd_outflow_mat, pd_stock_mat
 
 
-def pandas_to_xarray(df, unit_mapping):
-    ds = df.to_xarray()
-    # Apply units to each dimension
-    for dim in ds.dims:
-        if dim in unit_mapping:
-            ds[dim].attrs['units'] = unit_mapping[dim]
-    return ds.pint.quantify()
+
