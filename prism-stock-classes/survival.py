@@ -117,6 +117,11 @@ class ScipySurvival(ABC):
         first_array = list(first_dict.values())[0]
         return first_array.coords["time"]
 
+    @classmethod
+    def from_lifetime_vehicles(cls, lifetime_vehicles):
+        scipy_params = convert_life_time_vehicles(lifetime_vehicles)
+        return cls(scipy_params)
+
 
 def _is_iterable(val):
     try:
@@ -131,7 +136,6 @@ NAME_TO_DIST = {dist.name: dist for dist in ALL_DISTRIBUTIONS}
 
 
 def convert_life_time_vehicles(life_time_vehicles):
-    life_time_vehicles = life_time_vehicles.rename({"year": "time"})
     mode_param = defaultdict(list)
     for mode, par in life_time_vehicles.data_vars:
         mode_param[mode].append(par)
@@ -153,10 +157,10 @@ def convert_life_time_vehicles(life_time_vehicles):
             array = xr.DataArray(
                 0.0, dims=("time", "mode"),
                 coords={
-                    "time": life_time_vehicles.coords["time"].to_numpy(),
+                    "time": life_time_vehicles.coords["year"].to_numpy(),
                     "mode": mode_list})
             for mode in mode_list:
-                array.loc[:, str(mode)] = life_time_vehicles.data_vars[str(mode), param]
+                array.loc[:, str(mode)] = life_time_vehicles.data_vars[str(mode), param].to_numpy()
             param_arrays[param] = array
         scipy_params[dist_name] = (dist.get_param(param_arrays), dist.method)
     return scipy_params

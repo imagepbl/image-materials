@@ -33,13 +33,23 @@ def dataset_to_array(xar_dataset, extra_dims):
     for coor_name in xar_dataset.coords.keys():
         coords[coor_name] = xar_dataset.coords[coor_name]
 
+    extra_dims = [("mode" if x is None else x) for x in extra_dims]
+
     for i_dim, dim_name in enumerate(extra_dims):
-        dim_values = np.unique([str(x[i_dim]) for x in xar_dataset.data_vars])
+        if len(extra_dims) == 1:
+            if extra_dims[0] is None:
+                extra_dims = ["mode"]
+            dim_values = np.unique([str(x) for x in xar_dataset.data_vars])
+        else:
+            dim_values = np.unique([str(x[i_dim]) for x in xar_dataset.data_vars])
         coords[dim_name] = dim_values
 
     result_array = xr.DataArray(0.0, dims = tuple(coords),
                                 coords=coords)
     for dv in xar_dataset.data_vars:
-        result_array.loc[{key: str(value) for key, value in zip(extra_dims, dv)}] = xar_dataset[dv].to_numpy()
+        if len(extra_dims) == 1:
+            loc = {extra_dims[0]: dv}
+        else:
+            loc = {key: str(value) for key, value in zip(extra_dims, dv)}
+        result_array.loc[loc] = xar_dataset[dv].to_numpy()
     return result_array
-
