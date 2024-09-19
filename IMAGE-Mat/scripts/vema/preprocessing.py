@@ -602,14 +602,18 @@ def preprocessing(base_dir: str = os.getcwd()):
     # Convert the DataFrames to xarray Datasets and apply units
     preprocessing_results_xarray = {}
     
-    for df_name in results_dict:
-        print(df_name)
+    for df_name, df in results_dict.items():
+        if df_name == 'lifetimes_vehicles':
+            data_xarray = pandas_to_xarray(df, unit_mapping)
+        else:
+            data_xar_dataset = pandas_to_xarray(df, unit_mapping)
+            data_xarray = dataset_to_array(data_xar_dataset, df.columns.names)
+
+        # print(df_name)
         # TOD): set column names for these ones and check if label is fine
-        if df_name in ['vehicle_weights_simple', 'battery_weights_typical', 
-                       'battery_materials', 'battery_shares', 'weight_boats']:
-            continue
-        data_xar_dataset = pandas_to_xarray(results_dict[df_name], unit_mapping)
-        data_xarray = dataset_to_array(data_xar_dataset, results_dict[df_name].columns.names)
+        # if df_name in ['vehicle_weights_simple', 'battery_weights_typical', 
+                    #    'battery_materials', 'battery_shares', 'weight_boats']:
+            # continue
         preprocessing_results_xarray[df_name] = data_xarray
 
     # TODO: vemamodelling.py works with dict of dfs and not only dict of xarrays, therefore now both are returned (for now)
