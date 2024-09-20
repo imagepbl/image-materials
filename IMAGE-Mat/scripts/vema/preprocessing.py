@@ -601,19 +601,26 @@ def preprocessing(base_dir: str = os.getcwd()):
     
     # Convert the DataFrames to xarray Datasets and apply units
     preprocessing_results_xarray = {}
-    
-    for df_name, df in results_dict.items():
-        if df_name == 'lifetimes_vehicles':
-            data_xarray = pandas_to_xarray(df, unit_mapping)
-        else:
-            data_xar_dataset = pandas_to_xarray(df, unit_mapping)
-            data_xarray = dataset_to_array(data_xar_dataset, df.columns.names)
 
-        # print(df_name)
-        # TOD): set column names for these ones and check if label is fine
-        # if df_name in ['vehicle_weights_simple', 'battery_weights_typical', 
-                    #    'battery_materials', 'battery_shares', 'weight_boats']:
-            # continue
+    # Conversion table for all coordinates, to be removed/adapted after input tables are fixed.
+    conversion_table = {
+        "total_nr_vehicles_simple": (["mode", "region"],),
+        "material_fractions_simple": (["mode", "material"],),
+        "material_fractions_typical": (["mode", "type", "material"], {"mode": ["mode", "type"]}),
+        "vehicle_weights_simple": (["mode"],),
+        "vehicle_weights_typical": (["mode", "type"], {"mode": ["mode", "type"]}),
+        "battery_weights_typical": (["mode", "type"], {"mode": ["mode", "type"]}),
+        "battery_materials": (["material", "battery"],),
+        "battery_shares": (["battery"],),
+        "weight_boats": (["size"],),
+        "vehicle_shares_typical": (["mode", "type", "region"], {"mode": ["mode", "type"]})
+    }
+    for df_name, df in results_dict.items():
+        if df_name in conversion_table:
+            data_xar_dataset = pandas_to_xarray(df, unit_mapping)
+            data_xarray = dataset_to_array(data_xar_dataset, *conversion_table[df_name])
+        else:
+            data_xarray = pandas_to_xarray(df, unit_mapping)
         preprocessing_results_xarray[df_name] = data_xarray
 
     # TODO: vemamodelling.py works with dict of dfs and not only dict of xarrays, therefore now both are returned (for now)
