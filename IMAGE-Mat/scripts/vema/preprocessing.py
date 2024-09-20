@@ -620,6 +620,7 @@ def preprocessing(base_dir: str = os.getcwd()):
             data_xar_dataset = pandas_to_xarray(df, unit_mapping)
             data_xarray = dataset_to_array(data_xar_dataset, *conversion_table[df_name])
         else:
+            # lifetimes_vehicles does not need to be converted in the same way.
             data_xarray = pandas_to_xarray(df, unit_mapping)
         preprocessing_results_xarray[df_name] = data_xarray
 

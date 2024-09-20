@@ -44,11 +44,14 @@ def dataset_to_array(xar_dataset: xr.Dataset, extra_dims: list[str],
         coords[coor_name] = xar_dataset.coords[coor_name]
 
     extra_dims = [("mode" if x is None else x) for x in extra_dims]
+
+    # Reverse lookup for the merge dictionary.
     merge_dims = {}
     if merge is not None:
         for key, vals in merge.items():
             merge_dims.update({val: key for val in vals})
 
+    # Compute all the dimensions for the coordinates.
     for i_dim, dim_name in enumerate(extra_dims):
         new_dim_name = dim_name
         if len(extra_dims) == 1 and merge is None:
@@ -68,6 +71,7 @@ def dataset_to_array(xar_dataset: xr.Dataset, extra_dims: list[str],
 
         coords[new_dim_name] = dim_values
 
+    # Create the data array.
     result_array = xr.DataArray(0.0, dims = tuple(coords),
                                 coords=coords)
     for dv in xar_dataset.data_vars:
