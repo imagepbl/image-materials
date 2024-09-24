@@ -1,12 +1,41 @@
 import xarray as xr
+import prism
+from survival import SurvivalMatrix
 
 
-def compute_historic(input_stock, survival, start_simulation, stock_by_cohort, inflow,
-                     outflow_by_cohort, stock_function):
-    first_year = input_stock.coords["time"][0]
-    for t in input_stock.coords["time"].loc[first_year+1:start_simulation]:
+def compute_historic(stock: prism.TimeVariable,
+                     survival: SurvivalMatrix,
+                     start_simulation: int,
+                     stock_by_cohort: prism.TimeVariable,
+                     inflow: prism.TimeVariable,
+                     outflow_by_cohort: prism.TimeVariable,
+                     stock_function: callable):
+    """Compute the historic time series using the stock_function
+
+    Parameters
+    ----------
+    stock
+        Stock, either used as an input (with the stock driven model), or
+        as an output (with the dynamic inflow driven model). 
+    survival
+        Survival matrix (can be dynamic) to compute the survival of stocks.
+    start_simulation
+        Year for which the simulation is started and thus the historic tail ends.
+    stock_by_cohort
+        Available stocks for each cohort at each year, mostly an output.
+    inflow
+        Inflow of stocks at each year, can be input or output.
+    outflow_by_cohort
+        Outflow of the stocks for each of the cohorts at time t.
+    stock_function
+        Function to compute the stocks/inflow/outflow for one timestep.
+        Currently there are two functions: compute_dynamic_stock_driven and
+        compute_dynamic_inflow_driven.
+    """
+    first_year = stock.coords["time"][0]
+    for t in stock.coords["time"].loc[first_year+1:start_simulation]:
         # We assume zeros for all variables in the first year 
-        stock_function(input_stock, stock_by_cohort, inflow, outflow_by_cohort, survival, t)
+        stock_function(stock, stock_by_cohort, inflow, outflow_by_cohort, survival, t)
 
 def compute_dynamic_stock_driven(stock, stock_by_cohort, inflow, outflow_by_cohort, survival, t):
     input_stock = stock
