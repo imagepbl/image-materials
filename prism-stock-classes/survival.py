@@ -118,7 +118,7 @@ class ScipySurvival():
         return all_modes
 
     @property
-    def time_series(self) -> xr.Array:
+    def time_series(self) -> xr.DataArray:
         """Get all the time values in the simulation."""
         first_dict = list(self.lifetime_parameters.values())[0][0]
         first_array = list(first_dict.values())[0]
