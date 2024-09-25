@@ -6,11 +6,14 @@ Returns:
 # %%
 import argparse
 import os
+from collections import defaultdict
 from pathlib import Path
 
 import pandas as pd
 import pint
+import xarray as xr
 
+from imagematerials.distribution import ALL_DISTRIBUTIONS, NAME_TO_DIST
 from imagematerials.read_mym import read_mym_df
 from imagematerials.vehicles.constants import (
     END_YEAR,
@@ -635,6 +638,93 @@ def preprocessing(base_dir: str = os.getcwd()):
 
     # TODO: vemamodelling.py works with dict of dfs and not only dict of xarrays, therefore now both are returned (for now)
     return results_dict, preprocessing_results_xarray
+
+
+
+def convert_life_time_vehicles(life_time_vehicles: xr.Dataset) -> dict[str, xr.DataArray]:
+    """Convert lifetime vehicles dataset to a more appropriate data format.
+
+    This conversion should probably move to the preprocessing stage after we figure out
+    the exact details of what the output should look like.
+
+    Parameters
+    ----------
+    life_time_vehicles
+        The input life_time_vehicles xarray dataset. It is supposed to be in a very particular format:
+        it contains the parameters for each of the modes. However, the distribution types are not
+        the same for each of the modes. Thus, the distribution types need to be inferred from the
+        names of the parameters that are given. If multiple parameter sets for multiple distributions
+        are given, the Weibull distribution is given preference over the FoldedNormal distribution.
+
+    Returns
+    -------
+        A dictionary that contains a data array for each of the distributions. Given the setup there is
+        an implicit assumption that only one distribution is used for each of the modes. If distribution
+        types change over time, this data structure needs to be adjusted.
+
+    """
+    # Create a dictionary to find which parameters are available for which mode.
+    mode_param = defaultdict(list)
+    for mode, par in life_time_vehicles.data_vars:
+        mode_param[mode].append(par)
+
+    # Create a dictionary that says which modes are tied to which distribution.
+    dist_mode = defaultdict(list)
+    modes_done = set()  # temporary
+    for dist in ALL_DISTRIBUTIONS:
+        for mode, param in mode_param.items():
+            if mode not in modes_done and dist.has_param(param):
+                dist_mode[dist.name].append(mode)
+                modes_done.add(mode)
+
+    # Iterate over all distributions to create a data array for each of them.
+    ret_scipy_params = {}
+    for dist_name, mode_list in dist_mode.items():
+        if len(mode_list) == 0:
+            continue
+        dist = NAME_TO_DIST[dist_name]
+
+        # param_arrays = {}
+        array = xr.DataArray(
+            0.0, dims=("time", "mode", "scipy_param"),
+            coords={
+                "time": life_time_vehicles.coords["year"].to_numpy(),
+                "mode": mode_list,
+                "scipy_param": dist.variable_scipy_param})
+        for mode in mode_list:
+            orig_param_dict = {}
+            for param in dist.params:
+                orig_param_dict[param] = life_time_vehicles.data_vars[str(mode), param].to_numpy()
+            scipy_params = dist.get_param(orig_param_dict)
+            for cur_scipy_key, cur_scipy_par in scipy_params.items():
+                if cur_scipy_key in dist.variable_scipy_param:
+                    array.loc[:, str(mode), cur_scipy_key] = cur_scipy_par
+                else:
+                    array.attrs[cur_scipy_key] = cur_scipy_par
+        ret_scipy_params[dist_name] = array
+    return ret_scipy_params
+
+
+def export_to_netcdf(prep_data, out_fp):
+    simple_datasets = {key: val for key, val in prep_data.items() if key.endswith("_simple")}
+    typical_datasets = {key: val for key, val in prep_data.items() if key.endswith("_typical")}
+    lf_vehicles = convert_life_time_vehicles(prep_data["lifetimes_vehicles"])
+    other_datasets = {key: val for key, val in prep_data.items()
+                      if key not in ["lifetimes_vehicles"] + list(simple_datasets) + list(typical_datasets)}
+    xr.Dataset(simple_datasets).to_netcdf(out_fp, group="simple", engine="netcdf4")
+    xr.Dataset(typical_datasets).to_netcdf(out_fp, group="typical", mode="a", engine="netcdf4")
+    xr.Dataset(lf_vehicles).to_netcdf(out_fp, group="lifetimes", mode="a", engine="netcdf4")
+    xr.Dataset(other_datasets).to_netcdf(out_fp, group="other", mode="a", engine="netcdf4")
+
+
+def import_from_netcdf(in_fp):
+    lt = xr.open_dataset(in_fp, group="lifetimes", engine="netcdf4").load()
+    return {
+        "simple": xr.open_dataset(in_fp, group="simple", engine="netcdf4").load(),
+        "typical": xr.open_dataset(in_fp, group="typical", engine="netcdf4").load(),
+        "lifetimes": {dist_name: arr.dropna("mode") for dist_name, arr in lt.items()},
+        "other": xr.open_dataset(in_fp, group="other", engine="netcdf4").load(),
+    }
 
 
 # %%
