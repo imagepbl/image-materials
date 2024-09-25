@@ -12,7 +12,9 @@ import pint
 import pint_xarray
 
 from read_scripts.read_mym import read_mym_df
-from modelling_functions import interpolate, tkms_to_nr_of_vehicles_fixed, pandas_to_xarray
+from modelling_functions import interpolate, tkms_to_nr_of_vehicles_fixed
+from util import pandas_to_xarray, dataset_to_array
+
 # Path fragments and constants
 from constants import (
     PROJECT,
@@ -599,9 +601,28 @@ def preprocessing(base_dir: str = os.getcwd()):
     
     # Convert the DataFrames to xarray Datasets and apply units
     preprocessing_results_xarray = {}
-    
-    for df_name in results_dict:
-        preprocessing_results_xarray[df_name] = pandas_to_xarray(results_dict[df_name], unit_mapping)
+
+    # Conversion table for all coordinates, to be removed/adapted after input tables are fixed.
+    conversion_table = {
+        "total_nr_vehicles_simple": (["time"], ["mode", "region"],),
+        "material_fractions_simple": (["cohort"], ["mode", "material"],),
+        "material_fractions_typical": (["cohort"], ["mode", "type", "material"], {"mode": ["mode", "type"]}),
+        "vehicle_weights_simple": (["cohort"], ["mode"],),
+        "vehicle_weights_typical": (["cohort"], ["mode", "type"], {"mode": ["mode", "type"]}),
+        "battery_weights_typical": (["cohort"], ["mode", "type"], {"mode": ["mode", "type"]}),
+        "battery_materials": (["cohort"], ["material", "battery"],),
+        "battery_shares": (["cohort"], ["battery"],),
+        "weight_boats": (["cohort"], ["size"],),
+        "vehicle_shares_typical": (["cohort"], ["mode", "type", "region"], {"mode": ["mode", "type"]})
+    }
+    for df_name, df in results_dict.items():
+        if df_name in conversion_table:
+            data_xar_dataset = pandas_to_xarray(df, unit_mapping)
+            data_xarray = dataset_to_array(data_xar_dataset, *conversion_table[df_name])
+        else:
+            # lifetimes_vehicles does not need to be converted in the same way.
+            data_xarray = pandas_to_xarray(df, unit_mapping)
+        preprocessing_results_xarray[df_name] = data_xarray
 
     # TODO: vemamodelling.py works with dict of dfs and not only dict of xarrays, therefore now both are returned (for now)
     return results_dict, preprocessing_results_xarray
