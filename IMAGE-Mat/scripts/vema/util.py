@@ -13,7 +13,7 @@ def pandas_to_xarray(df, unit_mapping):
     return ds.pint.quantify()
 
 
-def dataset_to_array(xar_dataset: xr.Dataset, extra_dims: list[str],
+def dataset_to_array(xar_dataset: xr.Dataset, main_coor: list[str], extra_dims: list[str],
                      merge: Optional[dict[str, list[str]]]=None) -> xr.DataArray:
     """Convert an xarray dataset to an xarray dataarray.
 
@@ -40,8 +40,10 @@ def dataset_to_array(xar_dataset: xr.Dataset, extra_dims: list[str],
     >>> dataset_to_array(xr_data, ["mode", "type", "battery"], merge={"merged_mode": ["mode", "type"]})
     """
     coords = {}
-    for coor_name in xar_dataset.coords.keys():
+    rename_coords = {}
+    for i_coor, coor_name in enumerate(xar_dataset.coords.keys()):
         coords[coor_name] = xar_dataset.coords[coor_name]
+        rename_coords[coor_name] = main_coor[i_coor]
 
     extra_dims = [("mode" if x is None else x) for x in extra_dims]
 
@@ -86,4 +88,4 @@ def dataset_to_array(xar_dataset: xr.Dataset, extra_dims: list[str],
         else:
             loc = {key: str(value) for key, value in zip(extra_dims, dv)}
         result_array.loc[loc] = xar_dataset[dv].to_numpy()
-    return result_array
+    return result_array.rename(rename_coords)
