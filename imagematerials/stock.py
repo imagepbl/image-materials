@@ -36,7 +36,7 @@ def compute_historic(stock: prism.TimeVariable,
     """
     first_year = stock.coords["time"][0]
     for t in stock.coords["time"].loc[first_year+1:start_simulation]:
-        # We assume zeros for all variables in the first year 
+        # We assume zeros for all variables in the first year
         stock_function(stock, stock_by_cohort, inflow, outflow_by_cohort, survival, t)
 
 def compute_dynamic_stock_driven(stock, stock_by_cohort, inflow, outflow_by_cohort, survival, t):
