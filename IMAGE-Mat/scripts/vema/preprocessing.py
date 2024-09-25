@@ -604,16 +604,16 @@ def preprocessing(base_dir: str = os.getcwd()):
 
     # Conversion table for all coordinates, to be removed/adapted after input tables are fixed.
     conversion_table = {
-        "total_nr_vehicles_simple": (["mode", "region"],),
-        "material_fractions_simple": (["mode", "material"],),
-        "material_fractions_typical": (["mode", "type", "material"], {"mode": ["mode", "type"]}),
-        "vehicle_weights_simple": (["mode"],),
-        "vehicle_weights_typical": (["mode", "type"], {"mode": ["mode", "type"]}),
-        "battery_weights_typical": (["mode", "type"], {"mode": ["mode", "type"]}),
-        "battery_materials": (["material", "battery"],),
-        "battery_shares": (["battery"],),
-        "weight_boats": (["size"],),
-        "vehicle_shares_typical": (["mode", "type", "region"], {"mode": ["mode", "type"]})
+        "total_nr_vehicles_simple": (["time"], ["mode", "region"],),
+        "material_fractions_simple": (["cohort"], ["mode", "material"],),
+        "material_fractions_typical": (["cohort"], ["mode", "type", "material"], {"mode": ["mode", "type"]}),
+        "vehicle_weights_simple": (["cohort"], ["mode"],),
+        "vehicle_weights_typical": (["cohort"], ["mode", "type"], {"mode": ["mode", "type"]}),
+        "battery_weights_typical": (["cohort"], ["mode", "type"], {"mode": ["mode", "type"]}),
+        "battery_materials": (["cohort"], ["material", "battery"],),
+        "battery_shares": (["cohort"], ["battery"],),
+        "weight_boats": (["cohort"], ["size"],),
+        "vehicle_shares_typical": (["cohort"], ["mode", "type", "region"], {"mode": ["mode", "type"]})
     }
     for df_name, df in results_dict.items():
         if df_name in conversion_table:

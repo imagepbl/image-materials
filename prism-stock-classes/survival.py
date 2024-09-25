@@ -38,6 +38,57 @@ class SurvivalMatrix:
         return self.survival_matrix.loc[t, cohort]
 
 
+class WeibullDistribution():
+    """Weibull Distribution with parameters shape and scale"""
+    name = "weibull"
+    method = scipy.stats.weibull_min.sf
+    params = ["shape", "scale"]
+    variable_scipy_param = ["c", "scale"]
+
+    @staticmethod
+    def get_param(param_dict):
+        """Get the parameters into the right format for Scipy."""
+        return {
+            "c": param_dict["shape"],
+            "scale": param_dict["scale"],
+            "loc": 0
+        }
+
+    @staticmethod
+    def has_param(param):
+        """Used to check whether the parameters are compatible with the Weibull dist."""
+        if "shape" in param and "scale" in param:
+            return True
+        return False
+
+
+class FoldedNormalDistribution():
+    """Folded Normal distirbution with parameters mean and stdev"""
+    name = "folded_norm"
+    method = scipy.stats.foldnorm.sf
+    params = ["mean", "stdev"]
+    variable_scipy_param = ["c", "scale"]
+
+    @staticmethod
+    def get_param(param_dict):
+        """Get the parameters into the right format for Scipy."""
+        mean, stdev = param_dict["mean"], param_dict["stdev"]
+        return {"c": mean/stdev, "scale": stdev, "loc": 0}
+
+    @staticmethod
+    def has_param(param):
+        """Used to check whether the parameters are compatible with the fold_norm dist."""
+        if "mean" in param and "stdev" in param:
+            return True
+        return False
+
+
+
+ALL_DISTRIBUTIONS = [WeibullDistribution, FoldedNormalDistribution]
+NAME_TO_DIST = {dist.name: dist for dist in ALL_DISTRIBUTIONS}
+
+
+
 class ScipySurvival():
     """Method based on scipy distributions to compute the survival matrix.
     
@@ -85,20 +136,26 @@ class ScipySurvival():
         """
         n_coords_left = len(self.time_series.loc[cohort:])
         res_arrays = []
-        for param_dict_array, method in self.lifetime_parameters.values():
-            first_array = list(param_dict_array.values())[0]
-            n_modes = first_array.shape[1]
+        for dist_name, param_array in self.lifetime_parameters.items():
+            n_modes = param_array.shape[1]
             # The index array signifies the relative time delta from the cohort to the
             # future.
             # TODO: Fix this so that this works for dt != 1
             index_array = np.empty((n_coords_left, n_modes))
             index_array[:, :] = np.arange(n_coords_left).reshape(-1, 1)
-            params = {param_name: (full_array.loc[cohort, :] if isinstance(full_array, xr.DataArray) else full_array)
-                      for param_name, full_array in param_dict_array.items()}
-            res_numpy_array = method(index_array, **params)
+            param_dict = {}
+            for param_name in ["c", "scale", "loc"]:
+                if param_name in param_array.attrs:
+                    param_dict[param_name] = param_array.attrs[param_name]
+                else:
+                    param_dict[param_name] = param_array.loc[cohort, :, param_name]
+            method = NAME_TO_DIST[dist_name].method
+            # params = {param_name: (full_array.loc[cohort, :] if isinstance(full_array, xr.DataArray) else full_array)
+                    #   for param_name, full_array in param_dict_array.items()}
+            res_numpy_array = method(index_array, **param_dict)
             res_arrays.append(xr.DataArray(res_numpy_array, dims=("time", "mode"),
                                            coords={"time": self.time_series.loc[cohort:],
-                                                   "mode": first_array.coords["mode"]}))
+                                                   "mode": param_array.coords["mode"]}))
         return xr.concat(res_arrays, dim="mode")
 
     @cached_property
@@ -112,71 +169,15 @@ class ScipySurvival():
             All the modes for which there is a survival distribution in list form.
         """
         all_modes = []
-        for param_dict_array, _ in self.lifetime_parameters.values():
-            first_array = list(param_dict_array.values())[0]
-            all_modes.extend(str(x) for x in first_array.coords["mode"].to_numpy())
+        for param_dict_array in self.lifetime_parameters.values():
+            all_modes.extend(str(x) for x in param_dict_array.coords["mode"].to_numpy())
         return all_modes
 
     @property
     def time_series(self) -> xr.DataArray:
         """Get all the time values in the simulation."""
-        first_dict = list(self.lifetime_parameters.values())[0][0]
-        first_array = list(first_dict.values())[0]
+        first_array = list(self.lifetime_parameters.values())[0]
         return first_array.coords["time"]
-
-    @classmethod
-    def from_lifetime_vehicles(cls, lifetime_vehicles):
-        """Convenience class method to quicly create the survival instance."""
-        lifetime_parameters = convert_life_time_vehicles(lifetime_vehicles)
-        return cls(lifetime_parameters)
-
-
-class WeibullDistribution():
-    """Weibull Distribution with parameters shape and scale"""
-    name = "weibull"
-    method = scipy.stats.weibull_min.sf
-    params = ["shape", "scale"]
-
-    @staticmethod
-    def get_param(param_dict):
-        """Get the parameters into the right format for Scipy."""
-        return {
-            "c": param_dict["shape"],
-            "scale": param_dict["scale"],
-            "loc": 0
-        }
-
-    @staticmethod
-    def has_param(param):
-        """Used to check whether the parameters are compatible with the Weibull dist."""
-        if "shape" in param and "scale" in param:
-            return True
-        return False
-
-
-class FoldedNormalDistribution():
-    """Folded Normal distirbution with parameters mean and stdev"""
-    name = "folded_norm"
-    method = scipy.stats.foldnorm.sf
-    params = ["mean", "stdev"]
-
-    @staticmethod
-    def get_param(param_dict):
-        """Get the parameters into the right format for Scipy."""
-        mean, stdev = param_dict["mean"], param_dict["stdev"]
-        return {"c": mean/stdev, "scale": stdev, "loc": 0}
-
-    @staticmethod
-    def has_param(param):
-        """Used to check whether the parameters are compatible with the fold_norm dist."""
-        if "mean" in param and "stdev" in param:
-            return True
-        return False
-
-
-
-ALL_DISTRIBUTIONS = [WeibullDistribution, FoldedNormalDistribution]
-NAME_TO_DIST = {dist.name: dist for dist in ALL_DISTRIBUTIONS}
 
 
 def convert_life_time_vehicles(life_time_vehicles: xr.Dataset) -> dict[str, xr.DataArray]:
@@ -216,19 +217,28 @@ def convert_life_time_vehicles(life_time_vehicles: xr.Dataset) -> dict[str, xr.D
                 modes_done.add(mode)
 
     # Iterate over all distributions to create a data array for each of them.
-    scipy_params = {}
+    ret_scipy_params = {}
     for dist_name, mode_list in dist_mode.items():
+        if len(mode_list) == 0:
+            continue
         dist = NAME_TO_DIST[dist_name]
 
-        param_arrays = {}
-        for param in dist.params:
-            array = xr.DataArray(
-                0.0, dims=("time", "mode"),
-                coords={
-                    "time": life_time_vehicles.coords["year"].to_numpy(),
-                    "mode": mode_list})
-            for mode in mode_list:
-                array.loc[:, str(mode)] = life_time_vehicles.data_vars[str(mode), param].to_numpy()
-            param_arrays[param] = array
-        scipy_params[dist_name] = (dist.get_param(param_arrays), dist.method)
-    return scipy_params
+        # param_arrays = {}
+        array = xr.DataArray(
+            0.0, dims=("time", "mode", "scipy_param"),
+            coords={
+                "time": life_time_vehicles.coords["year"].to_numpy(),
+                "mode": mode_list,
+                "scipy_param": dist.variable_scipy_param})
+        for mode in mode_list:
+            orig_param_dict = {}
+            for param in dist.params:
+                orig_param_dict[param] = life_time_vehicles.data_vars[str(mode), param].to_numpy()
+            scipy_params = dist.get_param(orig_param_dict)
+            for cur_scipy_key, cur_scipy_par in scipy_params.items():
+                if cur_scipy_key in dist.variable_scipy_param:
+                    array.loc[:, str(mode), cur_scipy_key] = cur_scipy_par
+                else:
+                    array.attrs[cur_scipy_key] = cur_scipy_par
+        ret_scipy_params[dist_name] = array
+    return ret_scipy_params
