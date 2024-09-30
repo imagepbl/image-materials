@@ -577,7 +577,7 @@ trucks_LCV_nr   = stock_tail(trucks_LCV_nr[list(range(1, REGIONS+1))], first_yea
 # Calculate the NUMBER of vehicles, total for inflow & by cohort for stock & outflow, first only for simple vehicles
 
 air_pas_in,      air_pas_out_coh,      air_pas_stock_coh      = inflow_outflow_dynamic_np(air_pas_nr.to_numpy(),    lifetime_tail(lifetimes_vehicles_mean,'air_pas'),  lifetime_tail(lifetimes_vehicles_stdev,'air_pas'),  'FoldedNormal')
-rail_reg_in,     rail_reg_out_coh,     rail_reg_stock_coh     = inflow_outflow_dynamic_np(rail_reg_nr.to_numpy(),   lifetime_tail(lifetimes_vehicles_mean,'rail_reg'), lifetime_tail(lifetimes_vehicles_stdev,'rail_reg'), 'FoldedNormal')
+rail_reg_in,     rail_reg_out_coh,     bikes_stock_coh     = inflow_outflow_dynamic_np(rail_reg_nr.to_numpy(),   lifetime_tail(lifetimes_vehicles_mean,'rail_reg'), lifetime_tail(lifetimes_vehicles_stdev,'rail_reg'), 'FoldedNormal')
 rail_hst_in,     rail_hst_out_coh,     rail_hst_stock_coh     = inflow_outflow_dynamic_np(rail_hst_nr.to_numpy(),   lifetime_tail(lifetimes_vehicles_mean,'rail_hst'), lifetime_tail(lifetimes_vehicles_stdev,'rail_hst'), 'FoldedNormal')
 bikes_in,        bikes_out_coh,        bikes_stock_coh        = inflow_outflow_dynamic_np(bikes_nr.to_numpy(),      lifetime_tail(lifetimes_vehicles_mean,'bicycle'),  lifetime_tail(lifetimes_vehicles_stdev,'bicycle'),  'FoldedNormal')
 
@@ -1972,3 +1972,15 @@ ax2.legend(reversed(handles), reversed(labels), bbox_to_anchor=(-0.05, -0.20), l
 
 plt.savefig('output\\' + FOLDER + '\\graphs\\battery_market_panel_regional_stock_results.jpg', dpi=600)
 plt.show()
+
+
+#%% STOCK BY COHORT ouput for comparison
+
+regions = np.arange(1, 27)
+timesteps = np.arange(1900, 2061)
+timesteps_cohort = np.arange(1900, 2061)
+
+bikes_cohort_mi = pd.MultiIndex.from_product([regions, timesteps_cohort, timesteps], names=['regions', 'time', 'time_cohort'])
+
+bikes_cohort = pd.Series(index=bikes_cohort_mi, data=bikes_stock_coh.flatten(), name = 'Bikes')
+bikes_cohort.to_csv('output/bikes_by_cohort_vema.csv')
