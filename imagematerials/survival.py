@@ -1,5 +1,6 @@
 from functools import cached_property
 from itertools import islice
+from typing import Optional
 
 import numpy as np
 import xarray as xr
@@ -41,21 +42,24 @@ class SurvivalMatrix:
 
 class ScipySurvival():
     """Method based on scipy distributions to compute the survival matrix.
-    
+
     This version has no region dependency for the survival matrix. This would need
     to be implemented still. This version for computing the survival matrix is
     static, where all values are already known beforehand.
     """
 
-    def __init__(self, lifetime_parameters: dict[str, xr.DataArray]):
-        """Initialize scipysurvival class
+    def __init__(self, lifetime_parameters: dict[str, xr.DataArray],
+                 output_modes: Optional[xr.DataArray] = None):
+        """Initialize scipysurvival class.
 
         Parameters
         ----------
         lifetime_parameters
             Output from convert_life_time_vehicles function.
+
         """
         self.lifetime_parameters = lifetime_parameters
+        self._output_modes = output_modes.values
 
     def new_matrix(self):
         """Create a new data array with zeros everywhere.
@@ -63,6 +67,7 @@ class ScipySurvival():
         Returns
         -------
             A DataArray with the correct dimensions and zeros everywhere.
+
         """
         return xr.DataArray(
             0.0, dims=("time", "cohort", "mode"),
@@ -83,6 +88,7 @@ class ScipySurvival():
         -------
             An array with the survival fractions for the current cohort at all
             future times.
+
         """
         n_coords_left = len(self.time_series.loc[cohort:])
         res_arrays = []
@@ -106,7 +112,23 @@ class ScipySurvival():
             res_arrays.append(xr.DataArray(res_numpy_array, dims=("time", "mode"),
                                            coords={"time": self.time_series.loc[cohort:],
                                                    "mode": param_array.coords["mode"]}))
-        return xr.concat(res_arrays, dim="mode")
+        base_array = xr.concat(res_arrays, dim="mode", coords="minimal")
+        if self._output_modes is None:
+            return base_array
+        new_array = xr.DataArray(0.0, dims=("time", "mode"),
+                                 coords={"time": base_array.coords["time"],
+                                         "mode": self.modes})
+        base_modes = base_array.coords["mode"].values
+        for mode in self.modes:
+            base_mode = mode.split(" - ")[0]
+            if mode in base_modes:
+                new_array.loc[:, mode] = base_array.loc[:, mode]
+            elif mode.split(" - ")[0] in base_modes:
+                new_array.loc[:, mode] = base_array.loc[:, base_mode].to_numpy()
+            else:
+                raise ValueError(f"Unknown mode '{mode}' needed for survival matrix, "
+                                 "but lifetime unknown.")
+        return new_array
 
     @cached_property
     def modes(self) -> list[str]:
@@ -119,9 +141,12 @@ class ScipySurvival():
             All the modes for which there is a survival distribution in list form.
 
         """
-        all_modes = []
-        for param_dict_array in self.lifetime_parameters.values():
-            all_modes.extend(str(x) for x in param_dict_array.coords["mode"].to_numpy())
+        if self._output_modes is None:
+            all_modes = []
+            for param_dict_array in self.lifetime_parameters.values():
+                all_modes.extend(str(x) for x in param_dict_array.coords["mode"].to_numpy())
+        else:
+            all_modes = self._output_modes
         return all_modes
 
     @property
