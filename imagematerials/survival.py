@@ -1,3 +1,4 @@
+"""Module containing classes and methods to create a survival matrix."""
 from functools import cached_property
 from itertools import islice
 from typing import Optional
@@ -9,7 +10,24 @@ from imagematerials.distribution import NAME_TO_DIST
 
 
 class SurvivalMatrix:
+    """Container class to create a survival matrix.
+
+    The survival matrix itself is oblivious to the dimensions of the matrix to keep
+    it flexible. In some cases we might have a regional dependence, in other we might
+    not. This will depend on the input data for the model.
+    """
+
     def __init__(self, survival):
+        """Initialize the survival matrix.
+
+        Parameters
+        ----------
+        survival
+            The survival object is a class that knows how to compute the survival matrix.
+            It contains the information on which dimensions the life times of the stocks
+            depend, which could be the "mode", "region", both or neither.
+
+        """
         # TODO: Add docstrings
         self.survival_matrix = survival.new_matrix()
         self._cached_timesteps = set()
@@ -17,6 +35,7 @@ class SurvivalMatrix:
         self.survival = survival
 
     def __getitem__(self, idx):
+        """Use the survival matrix as a numpy array."""
         # TODO: make the computation dependent on t_idx
         # We know that if t_idx < cohort_idx, the result is 0,
         # So if we compute s[t, :], we know that we only need to compute
@@ -25,17 +44,19 @@ class SurvivalMatrix:
 
         # TODO: Check if this actually creates the cohort indices properly.
         if isinstance(cohort, slice):
-            comp_list = islice(self.survival_matrix.indexes["cohort"], *cohort.indices(self.num_timesteps))
+            comp_list = islice(self.survival_matrix.indexes["cohort"],
+                               *cohort.indices(self.num_timesteps))
         else:
             comp_list = [int(cohort)]
 
         # Is the column already computed?
         for cur_cohort in comp_list:
             if cur_cohort not in self._cached_timesteps:
-                # Compute the survival matrix for the current cohort_idx
+                # Compute the survival matrix for the current cohort
                 # The survival coeficients are only relevant for future times t
-                # So the values are created in column cohort_idx, for t_idx=cohort_idx, cohort_idx+1, ...
-                self.survival_matrix.loc[cur_cohort:, cur_cohort] = self.survival.compute_survival(cur_cohort)
+                # So the values are created in column cohort, for t=cohort, cohort+1, ...
+                self.survival_matrix.loc[cur_cohort:, cur_cohort] = self.survival.compute_survival(
+                    cur_cohort)
                 self._cached_timesteps.add(cur_cohort)
         return self.survival_matrix.loc[t, cohort]
 
@@ -56,6 +77,10 @@ class ScipySurvival():
         ----------
         lifetime_parameters
             Output from convert_life_time_vehicles function.
+        output_modes:
+            To allow for sub types that have the same lifetime as the super type.
+            By default, this value is None, in which case it is assumed that all sub types
+            (if any) have their lifetimes specified.
 
         """
         self.lifetime_parameters = lifetime_parameters
@@ -106,8 +131,6 @@ class ScipySurvival():
                 else:
                     param_dict[param_name] = param_array.loc[cohort, :, param_name]
             method = NAME_TO_DIST[dist_name].method
-            # params = {param_name: (full_array.loc[cohort, :] if isinstance(full_array, xr.DataArray) else full_array)
-                    #   for param_name, full_array in param_dict_array.items()}
             res_numpy_array = method(index_array, **param_dict)
             res_arrays.append(xr.DataArray(res_numpy_array, dims=("time", "mode"),
                                            coords={"time": self.time_series.loc[cohort:],
