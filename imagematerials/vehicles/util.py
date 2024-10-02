@@ -1,7 +1,9 @@
+from typing import Optional
+
 import numpy as np
 import xarray as xr
 
-from typing import Optional
+from imagematerials.constants import SUBTYPE_SEPARATOR
 
 
 def pandas_to_xarray(df, unit_mapping):
@@ -21,6 +23,8 @@ def dataset_to_array(xar_dataset: xr.Dataset, main_coor: list[str], extra_dims: 
     ----------
     xar_dataset
         Input xArray dataset.
+    main_coor:
+        Names of the main coordinate(s) of the dataset, usually time or cohort.
     extra_dims
         Coordinates for the data variables for the input dataset in the correct order.
     merge, optional
@@ -29,7 +33,7 @@ def dataset_to_array(xar_dataset: xr.Dataset, main_coor: list[str], extra_dims: 
         while the value is a list of columns that are the source of this resulting coordinate.
         The values in this list should be also present in the extra_dims argument.
         Merged columns will have their dimensions concatenated with a hyphen
-        in between. 
+        in between.
 
     Returns
     -------
@@ -38,6 +42,7 @@ def dataset_to_array(xar_dataset: xr.Dataset, main_coor: list[str], extra_dims: 
     Examples
     --------
     >>> dataset_to_array(xr_data, ["mode", "type", "battery"], merge={"merged_mode": ["mode", "type"]})
+
     """
     coords = {}
     rename_coords = {}
@@ -66,7 +71,8 @@ def dataset_to_array(xar_dataset: xr.Dataset, main_coor: list[str], extra_dims: 
             dim_values = []
             dim_idx = [extra_dims.index(name) for name in cur_merge_dims]
             for cur_data_var in xar_dataset.data_vars:
-                dim_values.append(" - ".join(str(cur_data_var[i_dim]) for i_dim in dim_idx))
+                dim_values.append(SUBTYPE_SEPARATOR.join(str(cur_data_var[i_dim])
+                                                         for i_dim in dim_idx))
             dim_values = np.unique(dim_values)
         else:
             dim_values = np.unique([str(x[i_dim]) for x in xar_dataset.data_vars])
@@ -83,7 +89,7 @@ def dataset_to_array(xar_dataset: xr.Dataset, main_coor: list[str], extra_dims: 
             loc = {key: str(value) for key, value in zip(extra_dims, dv) if key not in merge_dims}
             for dst, sources in merge.items():
                 dst_idx = [extra_dims.index(name) for name in sources]
-                dst_key = " - ".join(str(dv[idx]) for idx in dst_idx)
+                dst_key = SUBTYPE_SEPARATOR.join(str(dv[idx]) for idx in dst_idx)
                 loc[dst] = dst_key
         else:
             loc = {key: str(value) for key, value in zip(extra_dims, dv)}

@@ -1,3 +1,8 @@
+# Intermediate files
+
+examples/prep_vema.nc
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

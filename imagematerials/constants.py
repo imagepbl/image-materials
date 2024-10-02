@@ -20,6 +20,8 @@ T_STOP_LEARNING = Q_(2000, 'year')
 # Year in which subsidy adjustment rate is fixed
 T_SUBRATE = Q_(2015, 'year')
 TRADE_YEAR = Q_(1971, 'year')
+SUBTYPE_SEPARATOR = " - "
+
 
 # Regions
 _IMAGE_REGIONS = [
