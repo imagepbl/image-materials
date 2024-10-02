@@ -6,6 +6,7 @@ from typing import Optional
 import numpy as np
 import xarray as xr
 
+from imagematerials.constants import SUBTYPE_SEPARATOR
 from imagematerials.distribution import NAME_TO_DIST
 
 
@@ -143,10 +144,10 @@ class ScipySurvival():
                                          "mode": self.modes})
         base_modes = base_array.coords["mode"].values
         for mode in self.modes:
-            base_mode = mode.split(" - ")[0]
+            base_mode = mode.split(SUBTYPE_SEPARATOR)[0]
             if mode in base_modes:
                 new_array.loc[:, mode] = base_array.loc[:, mode]
-            elif mode.split(" - ")[0] in base_modes:
+            elif base_mode in base_modes:
                 new_array.loc[:, mode] = base_array.loc[:, base_mode].to_numpy()
             else:
                 raise ValueError(f"Unknown mode '{mode}' needed for survival matrix, "
