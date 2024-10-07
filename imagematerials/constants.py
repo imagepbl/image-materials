@@ -52,13 +52,13 @@ _IMAGE_REGIONS = [
     "RSAS",
     "RSAF"
 ]
-Region = prism.NewDim('region', _IMAGE_REGIONS + ["World"])  # World regions
-ExtendedRegion = prism.NewDim('region', Region.coords + ["World2"])
-ImportRegion = prism.NewDim("import_region", Region.coords)
-ExportRegion = prism.NewDim("export_region", Region.coords)
-ReducedRegion = prism.NewDim("region", _IMAGE_REGIONS)
-ReducedImportRegion = prism.NewDim("import_region", _IMAGE_REGIONS)
-ReducedExportRegion = prism.NewDim("export_region", _IMAGE_REGIONS)
+Region = prism.Dimension('region', _IMAGE_REGIONS + ["World"])  # World regions
+ExtendedRegion = prism.Dimension('region', Region.coords + ["World2"])
+ImportRegion = prism.Dimension("import_region", Region.coords)
+ExportRegion = prism.Dimension("export_region", Region.coords)
+ReducedRegion = prism.Dimension("region", _IMAGE_REGIONS)
+ReducedImportRegion = prism.Dimension("import_region", _IMAGE_REGIONS)
+ReducedExportRegion = prism.Dimension("export_region", _IMAGE_REGIONS)
 
 
 def region_diag(
@@ -73,7 +73,7 @@ def region_diag(
 
 
 # Energy carriers
-EnergyCarrier = prism.NewDim("carrier", [
+EnergyCarrier = prism.Dimension("carrier", [
     "solid fuel",
     "liquid fuel",
     "gaseous fuel",
@@ -84,7 +84,7 @@ EnergyCarrier = prism.NewDim("carrier", [
     "electricity",
     "total"
 ])
-PrimaryEnergyCarrier = prism.NewDim("carrier", [
+PrimaryEnergyCarrier = prism.Dimension("carrier", [
     "coal",
     "conventional oil",
     "unconventional oil",
@@ -97,21 +97,21 @@ PrimaryEnergyCarrier = prism.NewDim("carrier", [
 ])
 
 # Resources
-ConventionalCategory = prism.NewDim("category", [1, 2, 3, 4, 5, 6, 7])
-UnconventionalCategory = prism.NewDim("category", [8, 9, 10, 11, 12])
-Category = prism.NewDim(
+ConventionalCategory = prism.Dimension("category", [1, 2, 3, 4, 5, 6, 7])
+UnconventionalCategory = prism.Dimension("category", [8, 9, 10, 11, 12])
+Category = prism.Dimension(
     "category",
     [*ConventionalCategory.coords, *UnconventionalCategory.coords]
 )  # Resource categories
-CategoryType = prism.NewDim("category_type", ['conventional', 'unconventional'])
+CategoryType = prism.Dimension("category_type", ['conventional', 'unconventional'])
 
 # Constants
 #   Carbon content per fuel (coal, oil, gas and biomass) unit: kg-C/GJ
-Fuel = prism.NewDim("fuel", ["coal", "oil", "gas", "modern biofuel"])
+Fuel = prism.Dimension("fuel", ["coal", "oil", "gas", "modern biofuel"])
 CARBON_CONTENT_FUEL_2 = prism.Array[Fuel, 'kg*C/GJ'](values=[25.5, 19.3, 15.3, 26])
 
 # Calculations
-EROICalculation = prism.NewDim("eroi_calculation", ['exogenous', 'endogenous'])
+EROICalculation = prism.Dimension("eroi_calculation", ['exogenous', 'endogenous'])
 
 # Price deflator
 DEFLATOR_WORLD = 1.12
@@ -151,7 +151,7 @@ _ENERGY_CARRIERS = [
     "Electricity"
 ]
 # Energy carriers in secondary fuel use
-EnergyCarriers = prism.NewDim('energycarrier', _ENERGY_CARRIERS)
+EnergyCarriers = prism.Dimension('energycarrier', _ENERGY_CARRIERS)
 
 # Travel modes
 _MODE_TRVL = [
@@ -163,7 +163,7 @@ _MODE_TRVL = [
     "High-Speed Train",
     "Air"
 ]
-TravelModes = prism.NewDim('mode', _MODE_TRVL)  # Travel modes
+TravelModes = prism.Dimension('mode', _MODE_TRVL)  # Travel modes
 _MODE_FRGT = [
     "National Shipping",
     "Train",
@@ -173,4 +173,4 @@ _MODE_FRGT = [
     "International Shipping",
     "Pipeline"
 ]
-FreightModes = prism.NewDim('mode', _MODE_FRGT)  # Freight
+FreightModes = prism.Dimension('mode', _MODE_FRGT)  # Freight
