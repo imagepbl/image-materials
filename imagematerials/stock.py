@@ -45,7 +45,15 @@ def compute_dynamic_stock_driven(stock, stock_by_cohort, inflow, outflow_by_coho
     # Drop dimension cohort
     stock_diff = xr.where(stock_diff>0, stock_diff/survival[t, t].drop("cohort"), 0)
     inflow[t] = stock_diff
-    stock_by_cohort[t] = inflow[t]*survival[t, :]
+
+    try:
+        t_str = str(t.values)
+    except AttributeError:
+        t_str = str(t)
+    print(t_str)
+    for t_future in stock_by_cohort[t].coords["cohort"].loc[t_str:]:  # Should be + dt
+        t_future = int(t_future)
+        stock_by_cohort[t_future].loc[{"cohort": t_str}] = inflow[t]*survival[t_future, t]
     outflow_by_cohort[t] = stock_by_cohort[t]-stock_by_cohort[t-1]
 
 def compute_dynamic_inflow_driven(stock, stock_by_cohort, inflow, outflow_by_cohort, survival, t):
