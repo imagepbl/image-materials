@@ -349,3 +349,77 @@ commercial_m2_cap_office_tail   = commercial_m2_cap_office_1721_1820.append(comm
 commercial_m2_cap_retail_tail   = commercial_m2_cap_retail_1721_1820.append(commercial_m2_cap_retail_1820_1970.append(commercial_m2_cap_retail, ignore_index=False), ignore_index=False)
 commercial_m2_cap_hotels_tail   = commercial_m2_cap_hotels_1721_1820.append(commercial_m2_cap_hotels_1820_1970.append(commercial_m2_cap_hotels, ignore_index=False), ignore_index=False)
 commercial_m2_cap_govern_tail   = commercial_m2_cap_govern_1721_1820.append(commercial_m2_cap_govern_1820_1970.append(commercial_m2_cap_govern, ignore_index=False), ignore_index=False)
+
+#%% SQUARE METER Calculations (requires dynamic stock model to disaggregate building types) -----------------------------------------------------------
+
+# share in new construction (from Fishman 2021)
+housing_type_rur_new = housing_type_new2.loc[idx[:,:,'Rural'],:].droplevel(2)
+housing_type_urb_new = housing_type_new2.loc[idx[:,:,'Urban'],:].droplevel(2)
+
+if flag_Normal == 0:
+    lifetimes_DB   = pd.read_csv('files_lifetimes\\' + scenario_select + '\\lifetimes.csv', index_col = [0,1,2,3])   # Weibull parameter database for residential buildings (shape & scale parameters given by region, area & building-type)
+    lifetimes_comm = pd.read_csv('files_lifetimes\\' + scenario_select + '\\lifetimes_comm.csv', index_col = [0,1])  # Weibull parameter database for commercial buildings (shape & scale parameters given by region, area & building-type)
+else:
+    lifetimes_DB = pd.read_csv('files_lifetimes\lifetimes_normal.csv')  # Normal distribution database (Mean & StDev parameters given by region, area & building-type, though only defined by region for now)
+
+# interpolate lifetime data
+lifetimes_comm_shape = lifetimes_comm['Shape'].unstack().reindex(list(range(hist_year, end_year + 1))).interpolate(limit=300, limit_direction='both')
+lifetimes_comm_scale = lifetimes_comm['Scale'].unstack().reindex(list(range(hist_year, end_year + 1))).interpolate(limit=300, limit_direction='both')
+
+lifetimes_shape = pd.DataFrame(index=pd.MultiIndex.from_product([list(range(hist_year, end_year + 1)), list(lifetimes_DB.index.levels[2]), list(lifetimes_DB.index.levels[3])]), columns=lifetimes_DB.index.levels[1])
+lifetimes_scale = pd.DataFrame(index=pd.MultiIndex.from_product([list(range(hist_year, end_year + 1)), list(lifetimes_DB.index.levels[2]), list(lifetimes_DB.index.levels[3])]), columns=lifetimes_DB.index.levels[1])
+for building in list(lifetimes_DB.index.levels[2]):
+    for area in list(lifetimes_DB.index.levels[3]):
+        lifetimes_shape.loc[idx[:,building,area],:] = lifetimes_DB['Shape'].unstack(level=1).loc[:,building,area].reindex(list(range(hist_year, end_year + 1))).interpolate(method='linear', limit=300, limit_direction='both').values
+        lifetimes_scale.loc[idx[:,building,area],:] = lifetimes_DB['Scale'].unstack(level=1).loc[:,building,area].reindex(list(range(hist_year, end_year + 1))).interpolate(method='linear', limit=300, limit_direction='both').values
+
+
+# calculte the total rural/urban population in millions (pop2 = millions of people, rurpop2 = % of people living in rural areas)
+people_rur = pd.DataFrame(rurpop_tail.values * pop_tail.values, columns=pop_tail.columns.astype('int'), index=pop_tail.index)
+people_urb = pd.DataFrame(urbpop_tail.values * pop_tail.values, columns=pop_tail.columns.astype('int'), index=pop_tail.index)
+
+# re-calculate the total floorspace (IMAGE), including historic tails (in MILLIONS of m2)
+m2_rur = floorspace_rur_tail.mul(people_rur.values)
+m2_urb = floorspace_urb_tail.mul(people_urb.values)
+
+# define the relative importance of housing type wthin the stock of floorspace 
+# (not just accounting for the changing share of people living accross housing types, 
+# but also acknowledging that some housing types typically involve a higher floorspace per capita)
+# the avg_m2 (per capita) only affects the relative allocation of total IMAGE floorsapce over building types
+relative_rur_det = avg_m2_cap_rur2.loc['1',:] * housing_type_rur_new['Detached'].unstack()
+relative_rur_sem = avg_m2_cap_rur2.loc['2',:] * housing_type_rur_new['Semi-detached'].unstack()
+relative_rur_app = avg_m2_cap_rur2.loc['3',:] * housing_type_rur_new['Appartment'].unstack()
+relative_rur_hig = avg_m2_cap_rur2.loc['4',:] * housing_type_rur_new['High-rise'].unstack()
+total_rur        = relative_rur_det + relative_rur_sem + relative_rur_app + relative_rur_hig
+
+relative_urb_det = avg_m2_cap_urb2.loc['1',:] * housing_type_urb_new['Detached'].unstack()
+relative_urb_sem = avg_m2_cap_urb2.loc['2',:] * housing_type_urb_new['Semi-detached'].unstack()
+relative_urb_app = avg_m2_cap_urb2.loc['3',:] * housing_type_urb_new['Appartment'].unstack()
+relative_urb_hig = avg_m2_cap_urb2.loc['4',:] * housing_type_urb_new['High-rise'].unstack()
+total_urb        = relative_urb_det + relative_urb_sem + relative_urb_app + relative_urb_hig
+
+stock_share_rur_det = relative_rur_det / total_rur
+stock_share_rur_sem = relative_rur_sem / total_rur
+stock_share_rur_app = relative_rur_app / total_rur
+stock_share_rur_hig = relative_rur_hig / total_rur
+
+stock_share_urb_det = relative_urb_det / total_urb
+stock_share_urb_sem = relative_urb_sem / total_urb
+stock_share_urb_app = relative_urb_app / total_urb
+stock_share_urb_hig = relative_urb_hig / total_urb
+
+# checksum (should be all 1's)
+checksum_rur = stock_share_rur_det + stock_share_rur_sem + stock_share_rur_app + stock_share_rur_hig
+checksum_urb = stock_share_urb_det + stock_share_urb_sem + stock_share_urb_app + stock_share_urb_hig
+
+# All m2 by region (in millions), Building_type & year (using the correction factor, to comply with IMAGE avg m2/cap)
+m2_det_rur = pd.DataFrame(stock_share_rur_det.values * m2_rur.values, columns=people_rur.columns, index=people_rur.index)
+m2_sem_rur = pd.DataFrame(stock_share_rur_sem.values * m2_rur.values, columns=people_rur.columns, index=people_rur.index)
+m2_app_rur = pd.DataFrame(stock_share_rur_app.values * m2_rur.values, columns=people_rur.columns, index=people_rur.index)
+m2_hig_rur = pd.DataFrame(stock_share_rur_hig.values * m2_rur.values, columns=people_rur.columns, index=people_rur.index)
+
+m2_det_urb = pd.DataFrame(stock_share_urb_det.values * m2_urb.values, columns=people_urb.columns, index=people_urb.index)
+m2_sem_urb = pd.DataFrame(stock_share_urb_sem.values * m2_urb.values, columns=people_urb.columns, index=people_urb.index)
+m2_app_urb = pd.DataFrame(stock_share_urb_app.values * m2_urb.values, columns=people_urb.columns, index=people_urb.index)
+m2_hig_urb = pd.DataFrame(stock_share_urb_hig.values * m2_urb.values, columns=people_urb.columns, index=people_urb.index)
+# %%
