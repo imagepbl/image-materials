@@ -29,7 +29,6 @@ class SurvivalMatrix:
             depend, which could be the "mode", "region", both or neither.
 
         """
-        # TODO: Add docstrings
         self.survival_matrix = survival.new_matrix()
         self._cached_timesteps = set()
         self.num_timesteps = len(survival.time_series)
@@ -85,7 +84,10 @@ class ScipySurvival():
 
         """
         self.lifetime_parameters = lifetime_parameters
-        self._output_modes = output_modes.values
+        if output_modes is not None:
+            self._output_modes = output_modes.values
+        else:
+            self._output_modes = output_modes
 
     def new_matrix(self):
         """Create a new data array with zeros everywhere.
@@ -137,8 +139,12 @@ class ScipySurvival():
                                            coords={"time": self.time_series.loc[cohort:],
                                                    "mode": param_array.coords["mode"]}))
         base_array = xr.concat(res_arrays, dim="mode", coords="minimal")
+
         if self._output_modes is None:
+            # Not needed to deal with subtypes
             return base_array
+
+        # Deal with subtypes/submodes of the form "{mode} - {submode}"
         new_array = xr.DataArray(0.0, dims=("time", "mode"),
                                  coords={"time": base_array.coords["time"],
                                          "mode": self.modes})
