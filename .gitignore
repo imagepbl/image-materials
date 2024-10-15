@@ -170,7 +170,7 @@ cython_debug/
 *.mym
 
 # mym data files
-*.out
+# *.out
 *.dat
 *.scn
 *.his
