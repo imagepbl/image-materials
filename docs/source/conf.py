@@ -19,13 +19,13 @@ sys.path.insert(0, os.path.abspath(".."))
 
 # -- Project information -----------------------------------------------------
 
-project = "metasyn"
-copyright = "2024, SODA Team"
-author = "SODA Team"
+project = "imagematerials"
+copyright = "2024, IMAGE"
+author = "Frederike Arp, Luja von Köckritz, Sebastiaan Deetman, Roel Brouwer, Christine Staiger, Raoul Schram"
 
 
 # The full version, including alpha/beta/rc tags
-release = '1.0.3'
+release = '0.0.1'
 
 # -- General configuration ---------------------------------------------------
 
@@ -57,7 +57,7 @@ exclude_patterns = []
 # a list of builtin themes.
 #
 html_theme = "sphinx_rtd_theme"
-html_logo = "images/logos/white_med.png"
+html_logo = "images/logos/image.png"
 html_theme_options = {
     "logo_only": True,
     "navigation_depth": -1,
