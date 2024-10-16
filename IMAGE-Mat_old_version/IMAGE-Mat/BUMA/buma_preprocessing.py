@@ -76,12 +76,13 @@ else:
 #%% # Reading all csv files for buildings that are external to IMAGE
 base_dir = Path(os.getcwd())
 files_db_data_path = base_dir.joinpath('files_DB\\' + scenario_select)
+files_IMAGE = base_dir.joinpath('files_IMAGE\\' + scenario_select)
 
 # 1) scenario independent data
 # Avg_m2_cap; unit: m2/capita; meaning: average square meters per person (by region & rural/urban) 
 avg_m2_cap: pd.DataFrame = pd.read_csv(base_dir.joinpath('files_DB\\'). joinpath('Average_m2_per_cap.csv')) 
 
-# 1) scenario dependent data #TODO think about whether to change the file to only include the relevent data 
+# 1) scenario dependent data 
 # Housing_type; unit: %; meaning: the share of the PEOPLE living in a particular building type (by region & by area) 
 housing_type_new: pd.DataFrame = pd.read_csv(files_db_data_path. joinpath('Housing_type_dynamic.csv'), index_col = [0,1,2]) 
 # Building_materials; unit: kg/m2; meaning: the average material use per square meter (by building type, by region & by area)
@@ -99,15 +100,24 @@ materials_commercial: pd.DataFrame = pd.read_csv(files_db_data_path. joinpath('m
 # load IMAGE data-files (MyM file format)
 floorspace = read_mym_df('files_IMAGE/' + scenario_select + '/res_Floorspace.out')
 floorspace = floorspace[['time','DIM_1',2,3]].rename(columns={"DIM_1": "Region", 'time':'t', 2:'Urban', 3:'Rural'})
-#TODO what are the other columns after column 3?
+#the other columns are average per capita floorspace per quintile (we also exclude the average per capita floorspace of the total population in column 1, because we use the urban & rural specific totals)
 floorspace = floorspace[floorspace.Region != regions + 1] #removing region 27
 floorspace = floorspace[floorspace['t'].isin(list(range(start_year,end_year+1)))]
-#TODO why remove all data beyond 2060?
+#remove all data beyond 2060 to save runtime, we have not yet generated scenario results beyond 2060
 
-pop         = pd.read_csv('files_IMAGE/' + scenario_select + '/pop.csv', index_col = [0])     # Pop; unit: million of people; meaning: global population (over time, by region)             
-rurpop      = pd.read_csv('files_IMAGE/' + scenario_select + '/rurpop.csv', index_col = [0])  # rurpop; unit: %; meaning: the share of people living in rural areas (over time, by region)
-sva_pc_2005 = pd.read_csv('files_IMAGE/' + scenario_select + '/sva_pc.csv', index_col = [0]) 
-sva_pc = sva_pc_2005 * inflation                                                              # we use the inflation corrected SVA to adjust for the fact that IMAGE provides gdp/cap in 2005 US$
+# Pop; unit: million of people; meaning: global population (over time, by region)             
+pop: pd.DataFrame = pd.read_csv(files_IMAGE. joinpath('pop.csv'), index_col = [0]) 
+# rurpop; unit: %; meaning: the share of people living in rural areas (over time, by region)
+rurpop: pd.DataFrame = pd.read_csv(files_IMAGE. joinpath('rurpop.csv'), index_col = [0])
+# we use the inflation corrected SVA to adjust for the fact that IMAGE provides gdp/cap in 2005 US$
+sva_pc_2005: pd.DataFrame = pd.read_csv(files_IMAGE. joinpath('sva_pc.csv'), index_col = [0])
+sva_pc = sva_pc_2005 * inflation
+
+
+#pop         = pd.read_csv('files_IMAGE/' + scenario_select + '/pop.csv', index_col = [0])     # Pop; unit: million of people; meaning: global population (over time, by region)             
+#rurpop      = pd.read_csv('files_IMAGE/' + scenario_select + '/rurpop.csv', index_col = [0])  # rurpop; unit: %; meaning: the share of people living in rural areas (over time, by region)
+#sva_pc_2005 = pd.read_csv('files_IMAGE/' + scenario_select + '/sva_pc.csv', index_col = [0]) 
+#sva_pc = sva_pc_2005 * inflation                                                              # we use the inflation corrected SVA to adjust for the fact that IMAGE provides gdp/cap in 2005 US$
 
 # added cubic interpolation to the sva_pc (presumed linear interpolation between 5-year original data caused sawtooth demand/inflow throughout the scenario projection after 2025)
 year_list   = list(range(1970,2025)) + [2030, 2035, 2040, 2045, 2050, 2055, 2060, 2065, 2070, 2075, 2080, 2085, 2090, 2095, 2100]
