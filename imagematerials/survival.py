@@ -85,7 +85,10 @@ class ScipySurvival():
         """
         self.lifetime_parameters = lifetime_parameters
         if output_modes is not None:
-            self._output_modes = output_modes.values
+            try:
+                self._output_modes = output_modes.values
+            except AttributeError:
+                self._output_modes = output_modes
         else:
             self._output_modes = output_modes
 

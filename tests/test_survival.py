@@ -1,11 +1,9 @@
-# Example on how to create a survival class instance:
-#
+"""Test survival classes."""
 import numpy as np
-import scipy
-import scipy.stats
 import xarray as xr
 
-from imagematerials.survival import SurvivalMatrix
+from imagematerials.constants import SUBTYPE_SEPARATOR
+from imagematerials.survival import ScipySurvival, SurvivalMatrix
 
 
 class ExampleSurvival():
@@ -57,40 +55,50 @@ def test_example_survival_matrix():
                 assert survival_matrix[i_time, i_cohort] == 0
 
 
+def create_life_times(prefix, more_life=0):
+    time = np.arange(30)+1900
+    mode = [f"{prefix}_{i}" for i in range(4)]
+    array = xr.DataArray(0.0, dims=["time", "mode", "scipy_param"],
+                         coords={"time": time, "mode": mode, "scipy_param": ["c", "scale"]})
+    for i_mode, mode_name in enumerate(mode):
+        array.loc[:, mode[i_mode], "c"] = 4
+        array.loc[:, mode[i_mode], "scale"] = i_mode + 1
+    array.attrs["loc"] = 0
+    return array
+
+
+def _check_part(sm_part, i_cohort, n_cohort, n_modes):
+    assert sm_part.shape == (n_cohort-i_cohort, n_modes)
+    assert np.all(sm_part[i_cohort+1:, :] >= 0 )
+    assert np.all(np.isclose(sm_part[0, :], 1))
+    assert not np.all(np.isclose(sm_part[1:, :], 1))
+
+
 def test_scipy_survival():
-    pass
+    lifetime_vehicles = {
+        "weibull": create_life_times("weibull"),
+        "folded_norm": create_life_times("folded_norm", more_life=10)
+    }
+    survival = ScipySurvival(lifetime_vehicles)
+    assert len(survival.modes) == 8
+    assert len(survival.time_series) == 30
+    assert survival.new_matrix().shape == (30, 30, 8)
+    sm_part = survival.compute_survival(1924).to_numpy()
+    _check_part(sm_part, 24, 30, 8)
 
-# def test_survival_random():
-#     num_timesteps=100
-#     compute_survival = lambda num_timesteps, cohort_idx: weibull_survival(num_timesteps, cohort_idx, shape=1, scale=2)
-#     surv = Survival(
-#         compute_next=compute_survival,
-#         num_timesteps=num_timesteps
-#     )
-#     for _ in range(100):
-#         t_idx = np.random.randint(num_timesteps)
-#         cohort_idx = np.random.randint(num_timesteps)
-#         if t_idx > cohort_idx:
-#             assert surv[t_idx, cohort_idx] > 0 and surv[t_idx, cohort_idx] <= 1
-#         elif t_idx == cohort_idx:
-#             assert surv[t_idx, cohort_idx] == 1
-#         else:
-#             assert surv[t_idx, cohort_idx] == 0
-
-
-# def test_survival_slice():
-#     num_timesteps=100
-#     compute_survival = lambda num_timesteps, cohort_idx: weibull_survival(num_timesteps, cohort_idx, shape=1, scale=2)
-#     surv = Survival(
-#         compute_next=compute_survival,
-#         num_timesteps=num_timesteps
-#     )
-#     sub_surv = surv[4:10, 10:20]
-#     assert np.all(sub_surv == 0)
-#     assert sub_surv.shape == (6, 10)
-
-#     sub_surv = surv[20:30, 5:10]
-#     assert np.all(sub_surv > 0) and np.all(sub_surv <= 1)
-
-#     sub_surv = surv[:, :]
-#     assert np.all(np.diag(sub_surv) == 1)
+def test_scipy_survival_subtypes():
+    lifetime_vehicles = {
+        "weibull": create_life_times("weibull"),
+        "folded_norm": create_life_times("folded_norm", more_life=10)
+    }
+    output_modes = []
+    for prefix in lifetime_vehicles:
+        for i in range(4):
+            for sub_i in range(2):
+                output_modes.append(f"{prefix}_{i}{SUBTYPE_SEPARATOR}{sub_i}")
+    survival = ScipySurvival(lifetime_vehicles, output_modes=output_modes)
+    assert len(survival.modes) == 16
+    sm_part = survival.compute_survival(1924).to_numpy()
+    _check_part(sm_part, 24, 30, 16)
+    assert len(survival.time_series) == 30
+    assert survival.new_matrix().shape == (30, 30, 16)
