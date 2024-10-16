@@ -81,21 +81,28 @@ files_db_data_path = base_dir.joinpath('files_DB\\' + scenario_select)
 # Avg_m2_cap; unit: m2/capita; meaning: average square meters per person (by region & rural/urban) 
 avg_m2_cap: pd.DataFrame = pd.read_csv(base_dir.joinpath('files_DB\\'). joinpath('Average_m2_per_cap.csv')) 
 
-# 1) scenario dependent data
+# 1) scenario dependent data #TODO think about whether to change the file to only include the relevent data 
+# Housing_type; unit: %; meaning: the share of the PEOPLE living in a particular building type (by region & by area) 
+housing_type_new: pd.DataFrame = pd.read_csv(files_db_data_path. joinpath('Housing_type_dynamic.csv'), index_col = [0,1,2]) 
 # Building_materials; unit: kg/m2; meaning: the average material use per square meter (by building type, by region & by area)
-building_materials: pd.DataFrame = pd.read_csv(files_db_data_path. joinpath('Building_materials' + file_addition + '.csv')) 
+building_materials: pd.DataFrame = pd.read_csv(files_db_data_path. joinpath('Building_materials' + file_addition + '.csv'), index_col = [0,1,2]) 
+# 7 building materials in 4 commercial building types; unit: kg/m2; meaning: the average material use per square meter (by commercial building type)
+materials_commercial: pd.DataFrame = pd.read_csv(files_db_data_path. joinpath('materials_commercial' + file_addition + '.csv'), index_col = [0,1])  
+
 
 # load material Databe csv-files
-avg_m2_cap = pd.read_csv('files_DB\Average_m2_per_cap.csv')                                                                               
-building_materials = pd.read_csv('files_DB\\' + scenario_select + '\\Building_materials' + file_addition + '.csv', index_col = [0,1,2])   
-housing_type_new = pd.read_csv('files_DB\\' + scenario_select + '\Housing_type_dynamic.csv', index_col = [0,1,2])                         # Housing_type; unit: %; meaning: the share of the PEOPLE living in a particular building type (by region & by area) 
-materials_commercial = pd.read_csv('files_DB\\' + scenario_select + '\\materials_commercial' + file_addition + '.csv', index_col = [0,1]) # 7 building materials in 4 commercial building types; unit: kg/m2; meaning: the average material use per square meter (by commercial building type) 
+#avg_m2_cap = pd.read_csv('files_DB\Average_m2_per_cap.csv')                                                                               
+#building_materials = pd.read_csv('files_DB\\' + scenario_select + '\\Building_materials' + file_addition + '.csv', index_col = [0,1,2])   
+#housing_type_new = pd.read_csv('files_DB\\' + scenario_select + '\Housing_type_dynamic.csv', index_col = [0,1,2])                         # Housing_type; unit: %; meaning: the share of the PEOPLE living in a particular building type (by region & by area) 
+#materials_commercial = pd.read_csv('files_DB\\' + scenario_select + '\\materials_commercial' + file_addition + '.csv', index_col = [0,1]) # 7 building materials in 4 commercial building types; unit: kg/m2; meaning: the average material use per square meter (by commercial building type) 
 
 # load IMAGE data-files (MyM file format)
 floorspace = read_mym_df('files_IMAGE/' + scenario_select + '/res_Floorspace.out')
 floorspace = floorspace[['time','DIM_1',2,3]].rename(columns={"DIM_1": "Region", 'time':'t', 2:'Urban', 3:'Rural'})
-floorspace = floorspace[floorspace.Region != regions + 1]
+#TODO what are the other columns after column 3?
+floorspace = floorspace[floorspace.Region != regions + 1] #removing region 27
 floorspace = floorspace[floorspace['t'].isin(list(range(start_year,end_year+1)))]
+#TODO why remove all data beyond 2060?
 
 pop         = pd.read_csv('files_IMAGE/' + scenario_select + '/pop.csv', index_col = [0])     # Pop; unit: million of people; meaning: global population (over time, by region)             
 rurpop      = pd.read_csv('files_IMAGE/' + scenario_select + '/rurpop.csv', index_col = [0])  # rurpop; unit: %; meaning: the share of people living in rural areas (over time, by region)
