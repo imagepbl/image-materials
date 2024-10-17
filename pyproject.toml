@@ -56,8 +56,8 @@ test = [
 # [project.scripts]
 # ibridges = "ibridges.__main__:main"
 
-[tool.setuptools]
-packages = ["imagematerials"]
+[tool.setuptools.packages.find]
+include = ["imagematerials*"]
 
 [tool.setuptools_scm]
 write_to = "imagematerials/_version.py"
