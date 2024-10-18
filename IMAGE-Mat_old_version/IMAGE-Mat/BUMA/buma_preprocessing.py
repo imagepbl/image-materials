@@ -41,7 +41,7 @@ hist_year = 1721    # historick stock-tail is pre-caluculated from this year onw
 switch_year = 2019  # year that the data on building type split (of the stock) ends
 year_list_sva   = [*range(1970, 2025), *range(2030, 2101, 5)]
 years = range(start_year, end_year + 1)
-regions = range(1, regions+1)
+regions_range = range(1, regions+1)
 
 # Set Flags for sensitivity analysis
 flag_alpha  = 0     # switch for the sensitivity analysis on alpha, if 1 the maximum alpha is 10% above the maximum found in the data
@@ -202,12 +202,12 @@ alpha, beta, gamma = (
 alpha_low = alpha * lowComm                                    # alpha multiplied with a factor, lowering the maximum per capita commecrial floorspace between (2020 and 2050) 
 
 # find the total commercial m2 stock (in Millions of m2)
-commercial_m2_cap = pd.DataFrame(index=years, columns=regions)
+commercial_m2_cap = pd.DataFrame(index=years, columns=regions_range)
 commercial_m2_cap_low = commercial_m2_cap.copy()
 
 # Compute commercial floorspace using Gompertz curves
 for year in years:
-    for region in regions:
+    for region in regions_range:
         exp_factor = math.exp((-gamma/1000) * sva_pc[str(region)][year])
         if flag_ExpDec == 0:
             commercial_m2_cap[region][year] = alpha * math.exp(-beta * exp_factor)
@@ -225,7 +225,7 @@ commercial_m2_cap    = commercial_m2_cap.mul(scale_comm, axis=0) + commercial_m2
 # Subdivide the total across Offices, Retail+, Govt+ & Hotels+
 
 types = ["Office", "Retail+", "Hotels+", "Govt+"]
-index = pd.MultiIndex.from_product([types, regions, years], names=["Type", "Region", "Year"])
+index = pd.MultiIndex.from_product([types, regions_range, years], names=["Type", "Region", "Year"])
 commercial_m2_cap = pd.DataFrame(index=index, columns=["m2_per_cap"]).fillna(0)
 
 # Initialize minimum values
@@ -244,7 +244,7 @@ def gompertz_value(category, region, year, sva_data):
     return params['a'] * math.exp(-params['b'] * math.exp((-params['c'] / 1000) * sva_data[str(region)][year]))
 
 for year in years:
-    for region in regions:
+    for region in regions_range:
         # Calculate floorspace for all types and update the minimum values
         floorspace_commercial_list = {}
         for type_ in types:
@@ -258,7 +258,7 @@ for year in years:
         # Calculate and assign the floorspace for each type
         for type_ in types:
             commercial_m2_cap.loc[(type_, region, year), "m2_per_cap"] = (
-                commercial_m2_cap.loc[(type_, region, year), "m2_per_cap"] * (floorspace[type_] / commercial_sum)
+                commercial_m2_cap.loc[(type_, region, year), "m2_per_cap"] * (floorspace_commercial_list[type_] / commercial_sum)
             )
 
 #%% Old code
