@@ -42,3 +42,13 @@ elif flag_Mean ==3:
     file_addition = '_low'
 else:
     file_addition = '_median'
+
+gompertz_ExpDec = (25.601, 28.431, 0.0415)
+
+# Initialize minimum values
+minimum_com = {
+    "Office": 25,
+    "Retail+": 25,
+    "Hotels+": 25,
+    "Govt+": 25
+}

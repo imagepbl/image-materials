@@ -14,7 +14,9 @@ from constants_BUMA import(
     regions, regions_range,
     start_year,end_year, hist_year, year_list_sva,
     inflation, flag_alpha, flag_ExpDec,
-    lowComm
+    lowComm,
+    gompertz_ExpDec,
+    minimum_com
 )
 
 #%% # Reading all csv files for buildings that are external to IMAGE
@@ -103,12 +105,12 @@ avg_m2_cap_rur = avg_m2_cap.loc[avg_m2_cap['Area'] == 'Rural'].drop('Area', 1).T
 avg_m2_cap_rur.columns = list(map(int,avg_m2_cap_rur.iloc[0]))                      # name columns according to the row containing the region-labels
 avg_m2_cap_rur2 = avg_m2_cap_rur.drop(['Region'])                                 # Remove idle row 
 
-#%% COMMERCIAL building space demand (stock) calculated from Gomperz curve (fitted, using separate regression model)
+#%% COMMERCIAL building space demand (stock) calculated from Gompertz curve (fitted, using separate regression model)
 
 # Select gompertz curve paramaters for the total commercial m2 demand (stock)
 alpha, beta, gamma = (
     (gompertz['All']['a'], gompertz['All']['b'], gompertz['All']['c'])
-    if flag_ExpDec == 0 else (25.601, 28.431, 0.0415)           #TODO remove magic numbers
+    if flag_ExpDec == 0 else gompertz_ExpDec          
 )
 alpha_low = alpha * lowComm                                    # alpha multiplied with a factor, lowering the maximum per capita commecrial floorspace between (2020 and 2050) 
 
@@ -128,22 +130,12 @@ for year in years:
 
 # commercial floorspace is scaled here (in case lowComm is not 1)
 scale_comm = pd.Series([1.0, 0.0], index=[2020, 2060], name='time').reindex(years).interpolate(method='linear', limit=300, limit_direction='both')
-
 commercial_m2_cap    = commercial_m2_cap.mul(scale_comm, axis=0) + commercial_m2_cap_low.mul((1-scale_comm), axis=0)
 
 # Subdivide the total across Offices, Retail+, Govt+ & Hotels+
-
 types = ["Office", "Retail+", "Hotels+", "Govt+"]
 index = pd.MultiIndex.from_product([types, regions_range, years], names=["Type", "Region", "Year"])
 commercial_m2_cap = pd.DataFrame(index=index, columns=["m2_per_cap"]).fillna(0)
-
-# Initialize minimum values
-minimum_com = {
-    "Office": 25,
-    "Retail+": 25,
-    "Hotels+": 25,
-    "Govt+": 25
-}
 
 #TODO move to a util file
 # Define a function to calculate Gompertz growth
@@ -170,10 +162,8 @@ for year in years:
                 commercial_m2_cap.loc[(type_, region, year), "m2_per_cap"] * (floorspace_commercial_list[type_] / commercial_sum)
             )
 
-
         
 #%% Add historic tail (1720-1970) + 100 yr initial --------------------------------------------
-
 
 # Determine the historical average global trend in floorspace/cap  & the regional rural population share based on the last 10 years of IMAGE data
 floorspace_urb_trend_by_region = [0 for j in range(0,26)]
