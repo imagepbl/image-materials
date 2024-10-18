@@ -16,16 +16,10 @@ contributions from: Sylvia Marinova
 import pandas as pd
 import numpy as np
 import os
-#import ctypes     
-#import matplotlib.pyplot as plt
 import math
 from pathlib import Path
 
-# set current directory
-#os.chdir("C:\\Users\\Admin\\surfdrive\\Projects\\IRP\\GRO23\\Modelling\\2060\\BUMA")   # SET YOUR PATH HERE
 idx = pd.IndexSlice
-
-# from past.builtins import execfile
 
 from read_mym import read_mym_df
 
@@ -73,8 +67,6 @@ elif flag_Mean ==3:
     file_addition = '_low'
 else:
     file_addition = '_median'
-
-
 
 #%% # Reading all csv files for buildings that are external to IMAGE
 base_dir = Path(os.getcwd())
@@ -148,36 +140,6 @@ rurpop2 = rurpop2.iloc[1:]
 
 #pre-calculate urban population
 urbpop = 1 - rurpop2                                                           # urban population is 1 - the fraction of people living in rural areas (rurpop)
-
-"""
-# debugging population figure (used to determine a solution of interpolation issue based on 5yr data input format)
-fig, ax1 = plt.subplots()
-ax1.set_ylabel('Population (million)', rotation='vertical', y=0.8, fontsize=10)
-ax1.margins(x=0)
-ax1.plot(np.array(pop2.index), list(pop2.sum(axis=1)), label=["pop"], color='black')
-ax1.plot(np.array(pop2.index), list(pop2_new.sum(axis=1)), label=["pop_new"], color='blue')
-ax1.plot(np.array(rurpop2.index), list((rurpop2 * pop2).sum(axis=1)), '--', label=["rur_pop"], color='black')
-ax1.plot(np.array(rurpop2.index), list((rurpop2_new * pop2_new).sum(axis=1)), '--', label=["rur_pop_new"], color='blue')
-ax1.plot(np.array(urbpop.index), list((urbpop * pop2).sum(axis=1)), '*', label=["urb_pop"], color='black')
-ax1.plot(np.array(urbpop.index), list((urbpop_new * pop2_new).sum(axis=1)), '*', label=["urb_pop_new"], color='blue')
-plt.show()
-
-sva_pc_diff = [0, 0, 0]
-sva_pc_diff_new = [0, 0, 0]
-region_diff = '2'
-for year in range(1972,2060):
-    #rural_diff.append( (rurpop2[region_diff][year] * pop2[region_diff][year]) - (rurpop2[region_diff][year-1] * pop2[region_diff][year-1]) )
-    sva_pc_diff.append( sva_pc[region_diff][year] - sva_pc[region_diff][year-1] )
-    sva_pc_diff_new.append( sva_pc_new[region_diff][year] - sva_pc_new[region_diff][year-1] )
-
-fig, ax1 = plt.subplots()
-ax1.set_ylabel('Population (million)', rotation='vertical', y=0.8, fontsize=10)
-ax1.margins(x=0)
-ax1.plot(np.array(sva_pc_new.index), sva_pc_diff, label=["diff"], color='red')
-ax1.plot(np.array(sva_pc_new.index), sva_pc_diff_new,  '--', label=["diff_new"], color='red')
-plt.show()
-"""
-
       
 # Restructure the tables to regions as columns; for floorspace
 floorspace_rur = floorspace.pivot(index="t", columns="Region", values="Rural")    # floorspace (m2) per capita
@@ -216,10 +178,8 @@ for year in years:
             commercial_m2_cap[region][year] = max(0.542, alpha - beta * exp_factor)
 
 # commercial floorspace is scaled here (in case lowComm is not 1)
-scale_comm           = pd.Series(index=years, name='time')
-scale_comm.loc[2020] = 1.0
-scale_comm.loc[2060] = 0.0
-scale_comm           = scale_comm.interpolate(method='linear', limit=300, limit_direction='both')
+scale_comm = pd.Series([1.0, 0.0], index=[2020, 2060], name='time').reindex(years).interpolate(method='linear', limit=300, limit_direction='both')
+
 commercial_m2_cap    = commercial_m2_cap.mul(scale_comm, axis=0) + commercial_m2_cap_low.mul((1-scale_comm), axis=0)
 
 # Subdivide the total across Offices, Retail+, Govt+ & Hotels+
@@ -261,38 +221,6 @@ for year in years:
                 commercial_m2_cap.loc[(type_, region, year), "m2_per_cap"] * (floorspace_commercial_list[type_] / commercial_sum)
             )
 
-#%% Old code
-commercial_m2_cap_office = pd.DataFrame(index=range(1971, end_year + 1), columns=range(1,27))    # Offices
-commercial_m2_cap_retail = pd.DataFrame(index=range(1971, end_year + 1), columns=range(1,27))    # Retail & Warehouses
-commercial_m2_cap_hotels = pd.DataFrame(index=range(1971, end_year + 1), columns=range(1,27))    # Hotels & Restaurants
-commercial_m2_cap_govern = pd.DataFrame(index=range(1971, end_year + 1), columns=range(1,27))    # Hospitals, Education, Government & Transportation
-
-minimum_com_office = 25
-minimum_com_retail = 25
-minimum_com_hotels = 25
-minimum_com_govern = 25
-for year in years:
-    for region in regions:
-        
-        # get the square meter per capita floorspace for 4 commercial applications
-        office = gompertz['Office']['a'] * math.exp(-gompertz['Office']['b'] * math.exp((-gompertz['Office']['c']/1000) * sva_pc[str(region)][year]))
-        retail = gompertz['Retail+']['a'] * math.exp(-gompertz['Retail+']['b'] * math.exp((-gompertz['Retail+']['c']/1000) * sva_pc[str(region)][year]))
-        hotels = gompertz['Hotels+']['a'] * math.exp(-gompertz['Hotels+']['b'] * math.exp((-gompertz['Hotels+']['c']/1000) * sva_pc[str(region)][year]))
-        govern = gompertz['Govt+']['a'] * math.exp(-gompertz['Govt+']['b'] * math.exp((-gompertz['Govt+']['c']/1000) * sva_pc[str(region)][year]))
-
-        #calculate minimum values for later use in historic tail(Region 20: China @ 134 $/cap SVA)
-        minimum_com_office = office if office < minimum_com_office else minimum_com_office      
-        minimum_com_retail = retail if retail < minimum_com_retail else minimum_com_retail
-        minimum_com_hotels = hotels if hotels < minimum_com_hotels else minimum_com_hotels
-        minimum_com_govern = govern if govern < minimum_com_govern else minimum_com_govern
-        
-        # Then use the ratio's to subdivide the total commercial floorspace into 4 categories      
-        commercial_sum = office + retail + hotels + govern
-        
-        commercial_m2_cap_office[region][year] = commercial_m2_cap[region][year] * (office/commercial_sum)
-        commercial_m2_cap_retail[region][year] = commercial_m2_cap[region][year] * (retail/commercial_sum)
-        commercial_m2_cap_hotels[region][year] = commercial_m2_cap[region][year] * (hotels/commercial_sum)
-        commercial_m2_cap_govern[region][year] = commercial_m2_cap[region][year] * (govern/commercial_sum)
 
         
 #%% Add historic tail (1720-1970) + 100 yr initial --------------------------------------------
@@ -492,3 +420,64 @@ m2_sem_urb = pd.DataFrame(stock_share_urb_sem.values * m2_urb.values, columns=pe
 m2_app_urb = pd.DataFrame(stock_share_urb_app.values * m2_urb.values, columns=people_urb.columns, index=people_urb.index)
 m2_hig_urb = pd.DataFrame(stock_share_urb_hig.values * m2_urb.values, columns=people_urb.columns, index=people_urb.index)
 # %%
+#%% Old code
+commercial_m2_cap_office = pd.DataFrame(index=range(1971, end_year + 1), columns=range(1,27))    # Offices
+commercial_m2_cap_retail = pd.DataFrame(index=range(1971, end_year + 1), columns=range(1,27))    # Retail & Warehouses
+commercial_m2_cap_hotels = pd.DataFrame(index=range(1971, end_year + 1), columns=range(1,27))    # Hotels & Restaurants
+commercial_m2_cap_govern = pd.DataFrame(index=range(1971, end_year + 1), columns=range(1,27))    # Hospitals, Education, Government & Transportation
+
+minimum_com_office = 25
+minimum_com_retail = 25
+minimum_com_hotels = 25
+minimum_com_govern = 25
+for year in years:
+    for region in regions:
+        
+        # get the square meter per capita floorspace for 4 commercial applications
+        office = gompertz['Office']['a'] * math.exp(-gompertz['Office']['b'] * math.exp((-gompertz['Office']['c']/1000) * sva_pc[str(region)][year]))
+        retail = gompertz['Retail+']['a'] * math.exp(-gompertz['Retail+']['b'] * math.exp((-gompertz['Retail+']['c']/1000) * sva_pc[str(region)][year]))
+        hotels = gompertz['Hotels+']['a'] * math.exp(-gompertz['Hotels+']['b'] * math.exp((-gompertz['Hotels+']['c']/1000) * sva_pc[str(region)][year]))
+        govern = gompertz['Govt+']['a'] * math.exp(-gompertz['Govt+']['b'] * math.exp((-gompertz['Govt+']['c']/1000) * sva_pc[str(region)][year]))
+
+        #calculate minimum values for later use in historic tail(Region 20: China @ 134 $/cap SVA)
+        minimum_com_office = office if office < minimum_com_office else minimum_com_office      
+        minimum_com_retail = retail if retail < minimum_com_retail else minimum_com_retail
+        minimum_com_hotels = hotels if hotels < minimum_com_hotels else minimum_com_hotels
+        minimum_com_govern = govern if govern < minimum_com_govern else minimum_com_govern
+        
+        # Then use the ratio's to subdivide the total commercial floorspace into 4 categories      
+        commercial_sum = office + retail + hotels + govern
+        
+        commercial_m2_cap_office[region][year] = commercial_m2_cap[region][year] * (office/commercial_sum)
+        commercial_m2_cap_retail[region][year] = commercial_m2_cap[region][year] * (retail/commercial_sum)
+        commercial_m2_cap_hotels[region][year] = commercial_m2_cap[region][year] * (hotels/commercial_sum)
+        commercial_m2_cap_govern[region][year] = commercial_m2_cap[region][year] * (govern/commercial_sum)
+
+"""
+# debugging population figure (used to determine a solution of interpolation issue based on 5yr data input format)
+fig, ax1 = plt.subplots()
+ax1.set_ylabel('Population (million)', rotation='vertical', y=0.8, fontsize=10)
+ax1.margins(x=0)
+ax1.plot(np.array(pop2.index), list(pop2.sum(axis=1)), label=["pop"], color='black')
+ax1.plot(np.array(pop2.index), list(pop2_new.sum(axis=1)), label=["pop_new"], color='blue')
+ax1.plot(np.array(rurpop2.index), list((rurpop2 * pop2).sum(axis=1)), '--', label=["rur_pop"], color='black')
+ax1.plot(np.array(rurpop2.index), list((rurpop2_new * pop2_new).sum(axis=1)), '--', label=["rur_pop_new"], color='blue')
+ax1.plot(np.array(urbpop.index), list((urbpop * pop2).sum(axis=1)), '*', label=["urb_pop"], color='black')
+ax1.plot(np.array(urbpop.index), list((urbpop_new * pop2_new).sum(axis=1)), '*', label=["urb_pop_new"], color='blue')
+plt.show()
+
+sva_pc_diff = [0, 0, 0]
+sva_pc_diff_new = [0, 0, 0]
+region_diff = '2'
+for year in range(1972,2060):
+    #rural_diff.append( (rurpop2[region_diff][year] * pop2[region_diff][year]) - (rurpop2[region_diff][year-1] * pop2[region_diff][year-1]) )
+    sva_pc_diff.append( sva_pc[region_diff][year] - sva_pc[region_diff][year-1] )
+    sva_pc_diff_new.append( sva_pc_new[region_diff][year] - sva_pc_new[region_diff][year-1] )
+
+fig, ax1 = plt.subplots()
+ax1.set_ylabel('Population (million)', rotation='vertical', y=0.8, fontsize=10)
+ax1.margins(x=0)
+ax1.plot(np.array(sva_pc_new.index), sva_pc_diff, label=["diff"], color='red')
+ax1.plot(np.array(sva_pc_new.index), sva_pc_diff_new,  '--', label=["diff_new"], color='red')
+plt.show()
+"""
