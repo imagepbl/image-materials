@@ -77,6 +77,7 @@ rural_population = rural_population.iloc[1:]
 
 #pre-calculate urban population
 urban_population = 1 - rural_population    
+# urban population is 1 - the fraction of people living in rural areas (rurpop)
 
 # also interpolate housing type data
 index_ht = pd.MultiIndex.from_product([list(range(HIST_YEAR, END_YEAR + 1)), 
@@ -90,9 +91,7 @@ for year in list(housing_type.index.levels[0]):
 for region in list(range(1,REGIONS + 1)):
     for area in ['Urban', 'Rural']:
         housing_types_interpolated = housing_type.loc[idx[:,region,area],:].interpolate(method='linear', limit_direction='both')
-        housing_type.loc[idx[:,region,area],:] = housing_types_interpolated.values
-        
-                                                       # urban population is 1 - the fraction of people living in rural areas (rurpop)
+        housing_type.loc[idx[:,region,area],:] = housing_types_interpolated.values                                                     
       
 # Restructure the tables to regions as columns; for floorspace
 floorspace_rur = floorspace.pivot(index="t", columns="Region", values="Rural")    # floorspace (m2) per capita
@@ -164,6 +163,79 @@ for year in YEARS:
                 commercial_m2_cap.loc[(type_, region, year), "m2_per_cap"] * (floorspace_commercial_list[type_] / commercial_sum)
             )
 
+#%% Looped version
+# Add historic tail (1720-1970) + 100 yr initial setup
+floorspace_urb = floorspace.pivot(index="t", columns="Region", values="Urban")
+
+# Calculate regional floorspace trend (average annual trend from 1970-1980)
+floorspace_urb_trend_by_region = [
+    sum(floorspace_urb[region][year+1] / floorspace_urb[region][year+2] 
+        for year in range(1970, 1980)) / 10 
+    for region in range(1, 27)
+]
+
+# Calculate global trend as a percentage decrease per annum
+floorspace_urb_trend_global = (1 - sum(floorspace_urb_trend_by_region) / 26) * 100
+
+# Create DataFrame for 1820-1970 historic floorspace (m2/cap)
+floorspace_urb_1820_1970 = pd.DataFrame(index=range(1820, 1971), columns=floorspace_urb.columns)
+
+# Get the minimum value from the original IMAGE data (for residential)
+minimum_urb_fs = floorspace_urb.values.min()
+
+# Fill 1820-1970 DataFrame with max of the minimum value or the trend-calculated value
+for region in range(1, 27):
+    for year in range(1820, 1971):
+        decay_factor = ((100 - floorspace_urb_trend_global) / 100) ** (1971 - year)
+        floorspace_urb_1820_1970.at[year, region] = max(minimum_urb_fs, floorspace_urb[region][1971] * decay_factor)
+
+# Create DataFrame for the tail (1720-1820) with linear interpolation from 0 to 1820 value
+floorspace_urb_1720_1820 = pd.DataFrame(index=range(1720, 1820), columns=floorspace_urb.columns)
+
+for region in range(1, 27):
+    final_value = floorspace_urb_1820_1970.at[1820, region]
+    for year in range(1720, 1820):
+        # Linear interpolation: smoothly increase from 0 to the 1820 value over 100 years
+        interpolated_value = max(0.0, final_value * (year - 1720) / 100)
+        floorspace_urb_1720_1820.at[year, region] = interpolated_value
+
+# Combine all data (1720-1970 tail + original IMAGE data)
+floorspace_urb_tail = pd.concat([floorspace_urb_1720_1820, floorspace_urb_1820_1970, floorspace_urb], axis=0)
+
+#%% Single out urban floorspace
+# Add historic tail (1720-1970) + 100 yr initial --------------------------------------------
+
+floorspace_urb = floorspace.pivot(index="t", columns="Region", values="Urban")
+floorspace_urb_trend_by_region = [0 for j in range(0,26)]
+
+for region in range(1,27):
+    floorspace_urb_trend_by_year = [0 for i in range(0,10)]
+    for year in range(1970,1980):
+        floorspace_urb_trend_by_year[year-1970] = floorspace_urb[region][year+1]/floorspace_urb[region][year+2]
+    floorspace_urb_trend_by_region[region-1] = sum(floorspace_urb_trend_by_year)/10
+
+floorspace_urb_trend_global = (1-(sum(floorspace_urb_trend_by_region)/26))*100              # in % decrease per annum
+# define historic floorspace (1820-1970) in m2/cap
+floorspace_urb_1820_1970 = pd.DataFrame(index=range(1820,1971), columns=floorspace_urb.columns)
+
+# Find minumum or maximum values in the original IMAGE data (Just for residential, commercial minimum values have been calculated above)
+minimum_urb_fs = floorspace_urb.values.min()    # Region 20: China
+
+# Calculate the actual values used between 1820 & 1970, given the trends & the min/max values
+for region in range(1,REGIONS+1):
+    for year in range(1820,1971):
+        # MAX of 1) the MINimum value & 2) the calculated value
+        floorspace_urb_1820_1970[region][year] = max(minimum_urb_fs, floorspace_urb[region][1971] * ((100-floorspace_urb_trend_global)/100)**(1971-year))  # single global value for average annual Decrease
+# To avoid full model setup in 1820 (all required stock gets built in yr 1) we assume another tail that linearly increases to the 1820 value over a 100 year time period, so 1720 = 0
+floorspace_urb_1721_1820 = pd.DataFrame(index=range(HIST_YEAR, 1820), columns=floorspace_urb.columns)
+
+for region in range(1,27):
+    for time in range(HIST_YEAR, 1820):
+        #                                                        MAX(0,...) Because of floating point deviations, leading to negative stock in some cases
+        floorspace_urb_1721_1820[int(region)][time]            = max(0.0, floorspace_urb_1820_1970[int(region)][1820] - (floorspace_urb_1820_1970[int(region)][1820]/100)*(1820-time))
+
+floorspace_urb_tail             = floorspace_urb_1820_1970.append(floorspace_urb, ignore_index=False)
+floorspace_urb_tail             = floorspace_urb_1721_1820.append(floorspace_urb_1820_1970.append(floorspace_urb, ignore_index=False), ignore_index=False)
         
 #%% Add historic tail (1720-1970) + 100 yr initial --------------------------------------------
 
