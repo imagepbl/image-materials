@@ -21,24 +21,24 @@ from constants_BUMA import(
 )
 
 #%% # Reading all csv files for buildings that are external to IMAGE
-base_dir = Path(os.getcwd())
-files_db_data_path = base_dir.joinpath('files_DB\\' + SCENARIO_SELECT)
-files_IMAGE = base_dir.joinpath('files_IMAGE\\' + SCENARIO_SELECT)
+base_directory = Path(os.getcwd())
+database_directory = base_directory.joinpath('files_DB\\' + SCENARIO_SELECT)
+image_directory = base_directory.joinpath('files_IMAGE\\' + SCENARIO_SELECT)
 
 # 1) scenario independent data
 # Avg_m2_cap; unit: m2/capita; meaning: average square meters per person (by region & rural/urban) 
-avg_m2_cap: pd.DataFrame = pd.read_csv(base_dir.joinpath('files_DB\\'). joinpath('Average_m2_per_cap.csv')) 
+avg_m2_cap: pd.DataFrame = pd.read_csv(base_directory.joinpath('files_DB','Average_m2_per_cap.csv')) 
 
 # 1) scenario dependent data 
 # Housing_type; unit: %; meaning: the share of the PEOPLE living in a particular building type (by region & by area) 
-housing_type_new: pd.DataFrame = pd.read_csv(files_db_data_path. joinpath('Housing_type_dynamic.csv'), index_col = [0,1,2]) 
+housing_type_new: pd.DataFrame = pd.read_csv(database_directory. joinpath('Housing_type_dynamic.csv'), index_col = [0,1,2]) 
 # Building_materials; unit: kg/m2; meaning: the average material use per square meter (by building type, by region & by area)
-building_materials: pd.DataFrame = pd.read_csv(files_db_data_path. joinpath('Building_materials' + FILE_ADDITION + '.csv'), index_col = [0,1,2]) 
+building_materials: pd.DataFrame = pd.read_csv(database_directory. joinpath('Building_materials' + FILE_ADDITION + '.csv'), index_col = [0,1,2]) 
 # 7 building materials in 4 commercial building types; unit: kg/m2; meaning: the average material use per square meter (by commercial building type)
-materials_commercial: pd.DataFrame = pd.read_csv(files_db_data_path. joinpath('materials_commercial' + FILE_ADDITION + '.csv'), index_col = [0,1])  
+materials_commercial: pd.DataFrame = pd.read_csv(database_directory. joinpath('materials_commercial' + FILE_ADDITION + '.csv'), index_col = [0,1])  
 
 # load IMAGE data-files (MyM file format)
-floorspace: pd.DataFrame = read_mym_df(files_IMAGE.joinpath("res_Floorspace.out"))
+floorspace: pd.DataFrame = read_mym_df(image_directory.joinpath("res_Floorspace.out"))
 floorspace = floorspace[['time','DIM_1',2,3]].rename(columns={"DIM_1": "Region", 'time':'t', 2:'Urban', 3:'Rural'})
 #the other columns are average per capita floorspace per quintile (we also exclude the average per capita floorspace of the total population in column 1, because we use the urban & rural specific totals)
 floorspace = floorspace[floorspace.Region != REGIONS + 1] #removing region 27
@@ -46,15 +46,15 @@ floorspace = floorspace[floorspace['t'].isin(list(range(START_YEAR, END_YEAR+1))
 #remove all data beyond 2060 to save runtime, we have not yet generated scenario results beyond 2060
 
 # Pop; unit: million of people; meaning: global population (over time, by region)             
-pop: pd.DataFrame = pd.read_csv(files_IMAGE. joinpath('pop.csv'), index_col = [0]) 
+population: pd.DataFrame = pd.read_csv(image_directory. joinpath('pop.csv'), index_col = [0]) 
 # rurpop; unit: %; meaning: the share of people living in rural areas (over time, by region)
-rurpop: pd.DataFrame = pd.read_csv(files_IMAGE. joinpath('rurpop.csv'), index_col = [0])
+rural_population: pd.DataFrame = pd.read_csv(image_directory. joinpath('rurpop.csv'), index_col = [0])
 # we use the inflation corrected SVA to adjust for the fact that IMAGE provides gdp/cap in 2005 US$
-sva_pc_2005: pd.DataFrame = pd.read_csv(files_IMAGE. joinpath('sva_pc.csv'), index_col = [0])
+sva_pc_2005: pd.DataFrame = pd.read_csv(image_directory. joinpath('sva_pc.csv'), index_col = [0])
 sva_pc = sva_pc_2005 * INFLATION
 
 # load historic population development
-hist_pop = pd.read_csv('files_initial_stock\hist_pop.csv', index_col = [0])  # initial population as a percentage of the 1970 population; unit: %; according to the Maddison Project Database (MPD) 2018 (Groningen University)
+historic_population = pd.read_csv('files_initial_stock\hist_pop.csv', index_col = [0])  # initial population as a percentage of the 1970 population; unit: %; according to the Maddison Project Database (MPD) 2018 (Groningen University)
 
 # Load fitted regression parameters
 if FLAG_ALPHA == 0:
@@ -68,8 +68,14 @@ else:
 sva_pc      = sva_pc.loc[YEAR_LIST_SVA,:].reindex(list(range(1970, END_YEAR + 1,1))).interpolate(method='cubic')      
 
 # Interpolate population and rural population data (fills in missing years with cubic interpolation)
-rurpop2 = rurpop.reindex(YEARS).interpolate(method='cubic')
-pop2 = pop.reindex(YEARS).interpolate(method='cubic')
+rural_population = rural_population.reindex(YEARS).interpolate(method='cubic')
+population = population.reindex(YEARS).interpolate(method='cubic')
+# Remove 1st year, to ensure same Table size as floorspace data (from 1971)
+population = population.iloc[1:]
+rural_population = rural_population.iloc[1:]
+
+#pre-calculate urban population
+urban_population = 1 - rural_population    
 
 # also interpolate housing type data
 index_ht = pd.MultiIndex.from_product([list(range(HIST_YEAR, END_YEAR + 1)), 
@@ -85,12 +91,7 @@ for region in list(range(1,REGIONS + 1)):
         housing_types_interpolated = housing_type_new2.loc[idx[:,region,area],:].interpolate(method='linear', limit_direction='both')
         housing_type_new2.loc[idx[:,region,area],:] = housing_types_interpolated.values
         
-# Remove 1st year, to ensure same Table size as floorspace data (from 1971)
-pop2 = pop2.iloc[1:]
-rurpop2 = rurpop2.iloc[1:]
-
-#pre-calculate urban population
-urbpop = 1 - rurpop2                                                           # urban population is 1 - the fraction of people living in rural areas (rurpop)
+                                                       # urban population is 1 - the fraction of people living in rural areas (rurpop)
       
 # Restructure the tables to regions as columns; for floorspace
 floorspace_rur = floorspace.pivot(index="t", columns="Region", values="Rural")    # floorspace (m2) per capita
@@ -192,7 +193,7 @@ for region in range(1,27):
         commercial_m2_cap_hotels_trend_by_year[year-1970] = commercial_m2_cap_hotels[region][year+1]/commercial_m2_cap_hotels[region][year+2]
         commercial_m2_cap_govern_trend_by_year[year-1970] = commercial_m2_cap_govern[region][year+1]/commercial_m2_cap_govern[region][year+2]
         
-    rurpop_trend_by_region[region-1] = ((1-(rurpop[str(region)][1980]/rurpop[str(region)][1970]))/10)*100
+    rurpop_trend_by_region[region-1] = ((1-(rural_population[str(region)][1980]/rural_population[str(region)][1970]))/10)*100
     floorspace_urb_trend_by_region[region-1] = sum(floorspace_urb_trend_by_year)/10
     floorspace_rur_trend_by_region[region-1] = sum(floorspace_rur_trend_by_year)/10
     commercial_m2_cap_office_trend[region-1] = sum(commercial_m2_cap_office_trend_by_year)/10
@@ -213,7 +214,7 @@ commercial_m2_cap_govern_trend_global = (1-(sum(commercial_m2_cap_govern_trend)/
 floorspace_urb_1820_1970 = pd.DataFrame(index=range(1820,1971), columns=floorspace_urb.columns)
 floorspace_rur_1820_1970 = pd.DataFrame(index=range(1820,1971), columns=floorspace_rur.columns)
 rurpop_1820_1970 = pd.DataFrame(index=range(1820,1971), columns=rurpop.columns)
-pop_1820_1970 = pd.DataFrame(index=range(1820,1971), columns=pop2.columns)
+pop_1820_1970 = pd.DataFrame(index=range(1820,1971), columns=population.columns)
 commercial_m2_cap_office_1820_1970 = pd.DataFrame(index=range(1820,1971), columns=commercial_m2_cap_office.columns)
 commercial_m2_cap_retail_1820_1970 = pd.DataFrame(index=range(1820,1971), columns=commercial_m2_cap_retail.columns)
 commercial_m2_cap_hotels_1820_1970 = pd.DataFrame(index=range(1820,1971), columns=commercial_m2_cap_hotels.columns)
@@ -236,17 +237,17 @@ for region in range(1,REGIONS+1):
         commercial_m2_cap_govern_1820_1970[region][year] = max(minimum_com_govern, commercial_m2_cap_govern[region][1971] * ((100-commercial_m2_cap_govern_trend_global)/100)**(1971-year))  # single global value for average annual Decrease
         # MIN of 1) the MAXimum value & 2) the calculated value        
         rurpop_1820_1970[str(region)][year] = min(maximum_rurpop, rurpop[str(region)][1970] * ((100+rurpop_trend_by_region[region-1])/100)**(1970-year))  # average annual INcrease by region
-        # just add the tail to the population (no min/max & trend is pre-calculated in hist_pop)        
-        pop_1820_1970[str(region)][year] = hist_pop[str(region)][year] * pop[str(region)][1970]
+        # just add the tail to the population (no min/max & trend is pre-calculated in historic_population)        
+        pop_1820_1970[str(region)][year] = historic_population[str(region)][year] * pop[str(region)][1970]
 
 urbpop_1820_1970 = 1 - rurpop_1820_1970
 
 # To avoid full model setup in 1820 (all required stock gets built in yr 1) we assume another tail that linearly increases to the 1820 value over a 100 year time period, so 1720 = 0
 floorspace_urb_1721_1820 = pd.DataFrame(index=range(HIST_YEAR, 1820), columns=floorspace_urb.columns)
 floorspace_rur_1721_1820 = pd.DataFrame(index=range(HIST_YEAR,1820), columns=floorspace_rur.columns)
-rurpop_1721_1820 = pd.DataFrame(index=range(HIST_YEAR, 1820), columns=rurpop.columns)
-urbpop_1721_1820 = pd.DataFrame(index=range(HIST_YEAR, 1820), columns=urbpop.columns)
-pop_1721_1820 = pd.DataFrame(index=range(HIST_YEAR, 1820), columns=pop2.columns)
+rurpop_1721_1820 = pd.DataFrame(index=range(HIST_YEAR, 1820), columns=rural_population.columns)
+urbpop_1721_1820 = pd.DataFrame(index=range(HIST_YEAR, 1820), columns=urban_population.columns)
+pop_1721_1820 = pd.DataFrame(index=range(HIST_YEAR, 1820), columns=population.columns)
 commercial_m2_cap_office_1721_1820 = pd.DataFrame(index=range(HIST_YEAR, 1820), columns=commercial_m2_cap_office.columns)
 commercial_m2_cap_retail_1721_1820 = pd.DataFrame(index=range(HIST_YEAR, 1820), columns=commercial_m2_cap_retail.columns)
 commercial_m2_cap_hotels_1721_1820 = pd.DataFrame(index=range(HIST_YEAR, 1820), columns=commercial_m2_cap_hotels.columns)
@@ -266,9 +267,9 @@ for region in range(1,27):
         commercial_m2_cap_govern_1721_1820[int(region)][time]  = max(0.0, commercial_m2_cap_govern_1820_1970[region][1820] - (commercial_m2_cap_govern_1820_1970[region][1820]/100)*(1820-time))
 
 # combine historic with IMAGE data here
-rurpop_tail                     = rurpop_1820_1970.append(rurpop2, ignore_index=False)
-urbpop_tail                     = urbpop_1820_1970.append(urbpop, ignore_index=False)
-pop_tail                        = pop_1820_1970.append(pop2, ignore_index=False)
+rurpop_tail                     = rurpop_1820_1970.append(rural_population, ignore_index=False)
+urbpop_tail                     = urbpop_1820_1970.append(urban_population, ignore_index=False)
+pop_tail                        = pop_1820_1970.append(population, ignore_index=False)
 floorspace_urb_tail             = floorspace_urb_1820_1970.append(floorspace_urb, ignore_index=False)
 floorspace_rur_tail             = floorspace_rur_1820_1970.append(floorspace_rur, ignore_index=False)
 commercial_m2_cap_office_tail   = commercial_m2_cap_office_1820_1970.append(commercial_m2_cap_office, ignore_index=False)
@@ -276,9 +277,9 @@ commercial_m2_cap_retail_tail   = commercial_m2_cap_retail_1820_1970.append(comm
 commercial_m2_cap_hotels_tail   = commercial_m2_cap_hotels_1820_1970.append(commercial_m2_cap_hotels, ignore_index=False)
 commercial_m2_cap_govern_tail   = commercial_m2_cap_govern_1820_1970.append(commercial_m2_cap_govern, ignore_index=False)
 
-rurpop_tail                     = rurpop_1721_1820.append(rurpop_1820_1970.append(rurpop2, ignore_index=False), ignore_index=False)
-urbpop_tail                     = urbpop_1721_1820.append(urbpop_1820_1970.append(urbpop, ignore_index=False), ignore_index=False)
-pop_tail                        = pop_1721_1820.append(pop_1820_1970.append(pop2, ignore_index=False), ignore_index=False)
+rurpop_tail                     = rurpop_1721_1820.append(rurpop_1820_1970.append(rural_population, ignore_index=False), ignore_index=False)
+urbpop_tail                     = urbpop_1721_1820.append(urbpop_1820_1970.append(urban_population, ignore_index=False), ignore_index=False)
+pop_tail                        = pop_1721_1820.append(pop_1820_1970.append(population, ignore_index=False), ignore_index=False)
 floorspace_urb_tail             = floorspace_urb_1721_1820.append(floorspace_urb_1820_1970.append(floorspace_urb, ignore_index=False), ignore_index=False)
 floorspace_rur_tail             = floorspace_rur_1721_1820.append(floorspace_rur_1820_1970.append(floorspace_rur, ignore_index=False), ignore_index=False)
 commercial_m2_cap_office_tail   = commercial_m2_cap_office_1721_1820.append(commercial_m2_cap_office_1820_1970.append(commercial_m2_cap_office, ignore_index=False), ignore_index=False)
