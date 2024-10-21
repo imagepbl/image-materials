@@ -31,41 +31,42 @@ avg_m2_cap: pd.DataFrame = pd.read_csv(base_directory.joinpath('files_DB','Avera
 
 # 1) scenario dependent data 
 # Housing_type; unit: %; meaning: the share of the PEOPLE living in a particular building type (by region & by area) 
-housing_type_new: pd.DataFrame = pd.read_csv(database_directory. joinpath('Housing_type_dynamic.csv'), index_col = [0,1,2]) 
+housing_type: pd.DataFrame = pd.read_csv(database_directory.joinpath('Housing_type_dynamic.csv'), index_col = [0,1,2]) 
 # Building_materials; unit: kg/m2; meaning: the average material use per square meter (by building type, by region & by area)
-building_materials: pd.DataFrame = pd.read_csv(database_directory. joinpath('Building_materials' + FILE_ADDITION + '.csv'), index_col = [0,1,2]) 
+building_materials: pd.DataFrame = pd.read_csv(database_directory.joinpath('Building_materials' + FILE_ADDITION + '.csv'), index_col = [0,1,2]) 
 # 7 building materials in 4 commercial building types; unit: kg/m2; meaning: the average material use per square meter (by commercial building type)
-materials_commercial: pd.DataFrame = pd.read_csv(database_directory. joinpath('materials_commercial' + FILE_ADDITION + '.csv'), index_col = [0,1])  
+materials_commercial: pd.DataFrame = pd.read_csv(database_directory.joinpath('materials_commercial' + FILE_ADDITION + '.csv'), index_col = [0,1])  
 
 # load IMAGE data-files (MyM file format)
 floorspace: pd.DataFrame = read_mym_df(image_directory.joinpath("res_Floorspace.out"))
 floorspace = floorspace[['time','DIM_1',2,3]].rename(columns={"DIM_1": "Region", 'time':'t', 2:'Urban', 3:'Rural'})
-#the other columns are average per capita floorspace per quintile (we also exclude the average per capita floorspace of the total population in column 1, because we use the urban & rural specific totals)
+# the other columns are average per capita floorspace per quintile (we also exclude the average per capita floorspace of the total population in column 1, 
+# because we use the urban & rural specific totals)
 floorspace = floorspace[floorspace.Region != REGIONS + 1] #removing region 27
 floorspace = floorspace[floorspace['t'].isin(list(range(START_YEAR, END_YEAR+1)))]
-#remove all data beyond 2060 to save runtime, we have not yet generated scenario results beyond 2060
+# remove all data beyond 2060 to save runtime, we have not yet generated scenario results beyond 2060
 
 # Pop; unit: million of people; meaning: global population (over time, by region)             
-population: pd.DataFrame = pd.read_csv(image_directory. joinpath('pop.csv'), index_col = [0]) 
+population: pd.DataFrame = pd.read_csv(image_directory.joinpath('pop.csv'), index_col = [0]) 
 # rurpop; unit: %; meaning: the share of people living in rural areas (over time, by region)
 rural_population: pd.DataFrame = pd.read_csv(image_directory. joinpath('rurpop.csv'), index_col = [0])
-# we use the inflation corrected SVA to adjust for the fact that IMAGE provides gdp/cap in 2005 US$
-sva_pc_2005: pd.DataFrame = pd.read_csv(image_directory. joinpath('sva_pc.csv'), index_col = [0])
-sva_pc = sva_pc_2005 * INFLATION
-
 # load historic population development
-historic_population = pd.read_csv('files_initial_stock\hist_pop.csv', index_col = [0])  # initial population as a percentage of the 1970 population; unit: %; according to the Maddison Project Database (MPD) 2018 (Groningen University)
+historic_population = pd.read_csv('files_initial_stock\hist_pop.csv', index_col = [0])  
+# initial population as a percentage of the 1970 population; unit: %; according to the Maddison Project Database (MPD) 2018 (Groningen University)
+
+# we use the inflation corrected SVA to adjust for the fact that IMAGE provides gdp/cap in 2005 US$
+service_value_added_2005: pd.DataFrame = pd.read_csv(image_directory.joinpath('sva_pc.csv'), index_col = [0])
+service_value_added = service_value_added_2005 * INFLATION
+# added cubic interpolation to the sva_pc (presumed linear interpolation between 5-year original data caused sawtooth demand/inflow throughout the scenario projection after 2025)
+service_value_added = service_value_added.loc[YEAR_LIST_SVA,:].reindex(list(range(1970, END_YEAR + 1,1))).interpolate(method='cubic') 
 
 # Load fitted regression parameters
 if FLAG_ALPHA == 0:
-    gompertz = pd.read_csv('files_commercial/Gompertz_parameters.csv', index_col = [0])
+    gompertz = pd.read_csv(Path('files_commercial/Gompertz_parameters.csv'), index_col = [0])
 else:
-    gompertz = pd.read_csv('files_commercial/Gompertz_parameters_alpha.csv', index_col = [0])
+    gompertz = pd.read_csv(Path('files_commercial/Gompertz_parameters_alpha.csv'), index_col = [0])
 
-#%% 
-# added cubic interpolation to the sva_pc (presumed linear interpolation between 5-year original data caused sawtooth demand/inflow throughout the scenario projection after 2025)
-
-sva_pc      = sva_pc.loc[YEAR_LIST_SVA,:].reindex(list(range(1970, END_YEAR + 1,1))).interpolate(method='cubic')      
+#%%     
 
 # Interpolate population and rural population data (fills in missing years with cubic interpolation)
 rural_population = rural_population.reindex(YEARS).interpolate(method='cubic')
@@ -81,15 +82,15 @@ urban_population = 1 - rural_population
 index_ht = pd.MultiIndex.from_product([list(range(HIST_YEAR, END_YEAR + 1)), 
                                        list(range(1,REGIONS + 1)), 
                                        ['Urban', 'Rural'] ]) 
-housing_type_new2 = pd.DataFrame(np.nan, index=index_ht, columns=housing_type_new.columns)
+housing_type = pd.DataFrame(np.nan, index=index_ht, columns=housing_type.columns)
 
-for year in list(housing_type_new.index.levels[0]):
-    housing_type_new2.loc[idx[year,:,:],:] = housing_type_new.loc[idx[year,:,:],:]
+for year in list(housing_type.index.levels[0]):
+    housing_type.loc[idx[year,:,:],:] = housing_type.loc[idx[year,:,:],:]
     
 for region in list(range(1,REGIONS + 1)):
     for area in ['Urban', 'Rural']:
-        housing_types_interpolated = housing_type_new2.loc[idx[:,region,area],:].interpolate(method='linear', limit_direction='both')
-        housing_type_new2.loc[idx[:,region,area],:] = housing_types_interpolated.values
+        housing_types_interpolated = housing_type.loc[idx[:,region,area],:].interpolate(method='linear', limit_direction='both')
+        housing_type.loc[idx[:,region,area],:] = housing_types_interpolated.values
         
                                                        # urban population is 1 - the fraction of people living in rural areas (rurpop)
       
@@ -122,7 +123,7 @@ commercial_m2_cap_low = commercial_m2_cap.copy()
 # Compute commercial floorspace using Gompertz curves
 for year in YEARS:
     for region in REGIONS_RANGE:
-        exp_factor = math.exp((-gamma/1000) * sva_pc[str(region)][year])
+        exp_factor = math.exp((-gamma/1000) * service_value_added[str(region)][year])
         if FLAG_EXPDEC == 0:
             commercial_m2_cap[region][year] = alpha * math.exp(-beta * exp_factor)
             commercial_m2_cap_low[region][year] = alpha_low * math.exp(-beta * exp_factor)
@@ -150,7 +151,7 @@ for year in YEARS:
         # Calculate floorspace for all types and update the minimum values
         floorspace_commercial_list = {}
         for type_ in types:
-            value = gompertz_value(type_, region, year, sva_pc)
+            value = gompertz_value(type_, region, year, service_value_added)
             floorspace_commercial_list[type_] = value
             MINIMUM_COM[type_] = min(MINIMUM_COM[type_], value)
 
@@ -290,8 +291,8 @@ commercial_m2_cap_govern_tail   = commercial_m2_cap_govern_1721_1820.append(comm
 #%% SQUARE METER Calculations (requires dynamic stock model to disaggregate building types) -----------------------------------------------------------
 
 # share in new construction (from Fishman 2021)
-housing_type_rur_new = housing_type_new2.loc[idx[:,:,'Rural'],:].droplevel(2)
-housing_type_urb_new = housing_type_new2.loc[idx[:,:,'Urban'],:].droplevel(2)
+housing_type_rur_new = housing_type.loc[idx[:,:,'Rural'],:].droplevel(2)
+housing_type_urb_new = housing_type.loc[idx[:,:,'Urban'],:].droplevel(2)
 
 if flag_Normal == 0:
     lifetimes_DB   = pd.read_csv('files_lifetimes\\' + SCENARIO_SELECT + '\\lifetimes.csv', index_col = [0,1,2,3])   # Weibull parameter database for residential buildings (shape & scale parameters given by region, area & building-type)
@@ -374,12 +375,12 @@ for year in YEARS:
     for region in REGIONS:
         
         # get the square meter per capita floorspace for 4 commercial applications
-        office = gompertz['Office']['a'] * math.exp(-gompertz['Office']['b'] * math.exp((-gompertz['Office']['c']/1000) * sva_pc[str(region)][year]))
-        retail = gompertz['Retail+']['a'] * math.exp(-gompertz['Retail+']['b'] * math.exp((-gompertz['Retail+']['c']/1000) * sva_pc[str(region)][year]))
-        hotels = gompertz['Hotels+']['a'] * math.exp(-gompertz['Hotels+']['b'] * math.exp((-gompertz['Hotels+']['c']/1000) * sva_pc[str(region)][year]))
-        govern = gompertz['Govt+']['a'] * math.exp(-gompertz['Govt+']['b'] * math.exp((-gompertz['Govt+']['c']/1000) * sva_pc[str(region)][year]))
+        office = gompertz['Office']['a'] * math.exp(-gompertz['Office']['b'] * math.exp((-gompertz['Office']['c']/1000) * service_value_added[str(region)][year]))
+        retail = gompertz['Retail+']['a'] * math.exp(-gompertz['Retail+']['b'] * math.exp((-gompertz['Retail+']['c']/1000) * service_value_added[str(region)][year]))
+        hotels = gompertz['Hotels+']['a'] * math.exp(-gompertz['Hotels+']['b'] * math.exp((-gompertz['Hotels+']['c']/1000) * service_value_added[str(region)][year]))
+        govern = gompertz['Govt+']['a'] * math.exp(-gompertz['Govt+']['b'] * math.exp((-gompertz['Govt+']['c']/1000) * service_value_added[str(region)][year]))
 
-        #calculate minimum values for later use in historic tail(Region 20: China @ 134 $/cap SVA)
+        #calculate minimum values for later use in historic tail(Region 20: China @ 134 $/cap service_value_added)
         minimum_com_office = office if office < minimum_com_office else minimum_com_office      
         minimum_com_retail = retail if retail < minimum_com_retail else minimum_com_retail
         minimum_com_hotels = hotels if hotels < minimum_com_hotels else minimum_com_hotels
