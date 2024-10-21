@@ -10,19 +10,20 @@ idx = pd.IndexSlice
 from read_mym import read_mym_df
 
 from constants_BUMA import(
-    scenario_select, file_addition,
-    regions, regions_range,
-    start_year,end_year, hist_year, year_list_sva,
-    inflation, flag_alpha, flag_ExpDec,
-    lowComm,
-    gompertz_ExpDec,
-    minimum_com
+    SCENARIO_SELECT, FILE_ADDITION,
+    REGIONS, REGIONS_RANGE,
+    START_YEAR, END_YEAR, HIST_YEAR, YEARS, YEAR_LIST_SVA,
+    INFLATION, 
+    FLAG_ALPHA, FLAG_EXPDEC,
+    LOWCOMM,
+    GOMPERTZ_EXPDEC,
+    MINIMUM_COM
 )
 
 #%% # Reading all csv files for buildings that are external to IMAGE
 base_dir = Path(os.getcwd())
-files_db_data_path = base_dir.joinpath('files_DB\\' + scenario_select)
-files_IMAGE = base_dir.joinpath('files_IMAGE\\' + scenario_select)
+files_db_data_path = base_dir.joinpath('files_DB\\' + SCENARIO_SELECT)
+files_IMAGE = base_dir.joinpath('files_IMAGE\\' + SCENARIO_SELECT)
 
 # 1) scenario independent data
 # Avg_m2_cap; unit: m2/capita; meaning: average square meters per person (by region & rural/urban) 
@@ -32,16 +33,16 @@ avg_m2_cap: pd.DataFrame = pd.read_csv(base_dir.joinpath('files_DB\\'). joinpath
 # Housing_type; unit: %; meaning: the share of the PEOPLE living in a particular building type (by region & by area) 
 housing_type_new: pd.DataFrame = pd.read_csv(files_db_data_path. joinpath('Housing_type_dynamic.csv'), index_col = [0,1,2]) 
 # Building_materials; unit: kg/m2; meaning: the average material use per square meter (by building type, by region & by area)
-building_materials: pd.DataFrame = pd.read_csv(files_db_data_path. joinpath('Building_materials' + file_addition + '.csv'), index_col = [0,1,2]) 
+building_materials: pd.DataFrame = pd.read_csv(files_db_data_path. joinpath('Building_materials' + FILE_ADDITION + '.csv'), index_col = [0,1,2]) 
 # 7 building materials in 4 commercial building types; unit: kg/m2; meaning: the average material use per square meter (by commercial building type)
-materials_commercial: pd.DataFrame = pd.read_csv(files_db_data_path. joinpath('materials_commercial' + file_addition + '.csv'), index_col = [0,1])  
+materials_commercial: pd.DataFrame = pd.read_csv(files_db_data_path. joinpath('materials_commercial' + FILE_ADDITION + '.csv'), index_col = [0,1])  
 
 # load IMAGE data-files (MyM file format)
 floorspace: pd.DataFrame = read_mym_df(files_IMAGE.joinpath("res_Floorspace.out"))
 floorspace = floorspace[['time','DIM_1',2,3]].rename(columns={"DIM_1": "Region", 'time':'t', 2:'Urban', 3:'Rural'})
 #the other columns are average per capita floorspace per quintile (we also exclude the average per capita floorspace of the total population in column 1, because we use the urban & rural specific totals)
-floorspace = floorspace[floorspace.Region != regions + 1] #removing region 27
-floorspace = floorspace[floorspace['t'].isin(list(range(start_year,end_year+1)))]
+floorspace = floorspace[floorspace.Region != REGIONS + 1] #removing region 27
+floorspace = floorspace[floorspace['t'].isin(list(range(START_YEAR, END_YEAR+1)))]
 #remove all data beyond 2060 to save runtime, we have not yet generated scenario results beyond 2060
 
 # Pop; unit: million of people; meaning: global population (over time, by region)             
@@ -50,13 +51,13 @@ pop: pd.DataFrame = pd.read_csv(files_IMAGE. joinpath('pop.csv'), index_col = [0
 rurpop: pd.DataFrame = pd.read_csv(files_IMAGE. joinpath('rurpop.csv'), index_col = [0])
 # we use the inflation corrected SVA to adjust for the fact that IMAGE provides gdp/cap in 2005 US$
 sva_pc_2005: pd.DataFrame = pd.read_csv(files_IMAGE. joinpath('sva_pc.csv'), index_col = [0])
-sva_pc = sva_pc_2005 * inflation
+sva_pc = sva_pc_2005 * INFLATION
 
 # load historic population development
 hist_pop = pd.read_csv('files_initial_stock\hist_pop.csv', index_col = [0])  # initial population as a percentage of the 1970 population; unit: %; according to the Maddison Project Database (MPD) 2018 (Groningen University)
 
 # Load fitted regression parameters
-if flag_alpha == 0:
+if FLAG_ALPHA == 0:
     gompertz = pd.read_csv('files_commercial/Gompertz_parameters.csv', index_col = [0])
 else:
     gompertz = pd.read_csv('files_commercial/Gompertz_parameters_alpha.csv', index_col = [0])
@@ -64,23 +65,22 @@ else:
 #%% 
 # added cubic interpolation to the sva_pc (presumed linear interpolation between 5-year original data caused sawtooth demand/inflow throughout the scenario projection after 2025)
 
-sva_pc      = sva_pc.loc[year_list_sva,:].reindex(list(range(1970,end_year + 1,1))).interpolate(method='cubic')      
+sva_pc      = sva_pc.loc[YEAR_LIST_SVA,:].reindex(list(range(1970, END_YEAR + 1,1))).interpolate(method='cubic')      
 
 # Interpolate population and rural population data (fills in missing years with cubic interpolation)
-years = range(1970, end_year + 1)
-rurpop2 = rurpop.reindex(years).interpolate(method='cubic')
-pop2 = pop.reindex(years).interpolate(method='cubic')
+rurpop2 = rurpop.reindex(YEARS).interpolate(method='cubic')
+pop2 = pop.reindex(YEARS).interpolate(method='cubic')
 
 # also interpolate housing type data
-index_ht = pd.MultiIndex.from_product([list(range(hist_year,end_year + 1)), 
-                                       list(range(1,regions + 1)), 
+index_ht = pd.MultiIndex.from_product([list(range(HIST_YEAR, END_YEAR + 1)), 
+                                       list(range(1,REGIONS + 1)), 
                                        ['Urban', 'Rural'] ]) 
 housing_type_new2 = pd.DataFrame(np.nan, index=index_ht, columns=housing_type_new.columns)
 
 for year in list(housing_type_new.index.levels[0]):
     housing_type_new2.loc[idx[year,:,:],:] = housing_type_new.loc[idx[year,:,:],:]
     
-for region in list(range(1,regions + 1)):
+for region in list(range(1,REGIONS + 1)):
     for area in ['Urban', 'Rural']:
         housing_types_interpolated = housing_type_new2.loc[idx[:,region,area],:].interpolate(method='linear', limit_direction='both')
         housing_type_new2.loc[idx[:,region,area],:] = housing_types_interpolated.values
@@ -110,31 +110,31 @@ avg_m2_cap_rur2 = avg_m2_cap_rur.drop(['Region'])                               
 # Select gompertz curve paramaters for the total commercial m2 demand (stock)
 alpha, beta, gamma = (
     (gompertz['All']['a'], gompertz['All']['b'], gompertz['All']['c'])
-    if flag_ExpDec == 0 else gompertz_ExpDec          
+    if FLAG_EXPDEC == 0 else GOMPERTZ_EXPDEC          
 )
-alpha_low = alpha * lowComm                                    # alpha multiplied with a factor, lowering the maximum per capita commecrial floorspace between (2020 and 2050) 
+alpha_low = alpha * LOWCOMM                                    # alpha multiplied with a factor, lowering the maximum per capita commecrial floorspace between (2020 and 2050) 
 
 # find the total commercial m2 stock (in Millions of m2)
-commercial_m2_cap = pd.DataFrame(index=years, columns=regions_range)
+commercial_m2_cap = pd.DataFrame(index=YEARS, columns=REGIONS_RANGE)
 commercial_m2_cap_low = commercial_m2_cap.copy()
 
 # Compute commercial floorspace using Gompertz curves
-for year in years:
-    for region in regions_range:
+for year in YEARS:
+    for region in REGIONS_RANGE:
         exp_factor = math.exp((-gamma/1000) * sva_pc[str(region)][year])
-        if flag_ExpDec == 0:
+        if FLAG_EXPDEC == 0:
             commercial_m2_cap[region][year] = alpha * math.exp(-beta * exp_factor)
             commercial_m2_cap_low[region][year] = alpha_low * math.exp(-beta * exp_factor)
         else:
             commercial_m2_cap[region][year] = max(0.542, alpha - beta * exp_factor)
 
 # commercial floorspace is scaled here (in case lowComm is not 1)
-scale_comm = pd.Series([1.0, 0.0], index=[2020, 2060], name='time').reindex(years).interpolate(method='linear', limit=300, limit_direction='both')
+scale_comm = pd.Series([1.0, 0.0], index=[2020, 2060], name='time').reindex(YEARS).interpolate(method='linear', limit=300, limit_direction='both')
 commercial_m2_cap    = commercial_m2_cap.mul(scale_comm, axis=0) + commercial_m2_cap_low.mul((1-scale_comm), axis=0)
 
 # Subdivide the total across Offices, Retail+, Govt+ & Hotels+
 types = ["Office", "Retail+", "Hotels+", "Govt+"]
-index = pd.MultiIndex.from_product([types, regions_range, years], names=["Type", "Region", "Year"])
+index = pd.MultiIndex.from_product([types, REGIONS_RANGE, YEARS], names=["Type", "Region", "Year"])
 commercial_m2_cap = pd.DataFrame(index=index, columns=["m2_per_cap"]).fillna(0)
 
 #TODO move to a util file
@@ -144,14 +144,14 @@ def gompertz_value(category, region, year, sva_data):
     params = gompertz[category]
     return params['a'] * math.exp(-params['b'] * math.exp((-params['c'] / 1000) * sva_data[str(region)][year]))
 
-for year in years:
-    for region in regions_range:
+for year in YEARS:
+    for region in REGIONS_RANGE:
         # Calculate floorspace for all types and update the minimum values
         floorspace_commercial_list = {}
         for type_ in types:
             value = gompertz_value(type_, region, year, sva_pc)
             floorspace_commercial_list[type_] = value
-            minimum_com[type_] = min(minimum_com[type_], value)
+            MINIMUM_COM[type_] = min(MINIMUM_COM[type_], value)
 
         # Sum all floorspace values for normalization
         commercial_sum = sum(floorspace_commercial_list.values())
@@ -225,7 +225,7 @@ minimum_rur_fs = floorspace_rur.values.min()    # Region 20: China
 maximum_rurpop = rurpop.values.max()            # Region 9 : Eastern Africa
 
 # Calculate the actual values used between 1820 & 1970, given the trends & the min/max values
-for region in range(1,regions+1):
+for region in range(1,REGIONS+1):
     for year in range(1820,1971):
         # MAX of 1) the MINimum value & 2) the calculated value
         floorspace_urb_1820_1970[region][year] = max(minimum_urb_fs, floorspace_urb[region][1971] * ((100-floorspace_urb_trend_global)/100)**(1971-year))  # single global value for average annual Decrease
@@ -242,18 +242,18 @@ for region in range(1,regions+1):
 urbpop_1820_1970 = 1 - rurpop_1820_1970
 
 # To avoid full model setup in 1820 (all required stock gets built in yr 1) we assume another tail that linearly increases to the 1820 value over a 100 year time period, so 1720 = 0
-floorspace_urb_1721_1820 = pd.DataFrame(index=range(hist_year,1820), columns=floorspace_urb.columns)
-floorspace_rur_1721_1820 = pd.DataFrame(index=range(hist_year,1820), columns=floorspace_rur.columns)
-rurpop_1721_1820 = pd.DataFrame(index=range(hist_year,1820), columns=rurpop.columns)
-urbpop_1721_1820 = pd.DataFrame(index=range(hist_year,1820), columns=urbpop.columns)
-pop_1721_1820 = pd.DataFrame(index=range(hist_year,1820), columns=pop2.columns)
-commercial_m2_cap_office_1721_1820 = pd.DataFrame(index=range(hist_year,1820), columns=commercial_m2_cap_office.columns)
-commercial_m2_cap_retail_1721_1820 = pd.DataFrame(index=range(hist_year,1820), columns=commercial_m2_cap_retail.columns)
-commercial_m2_cap_hotels_1721_1820 = pd.DataFrame(index=range(hist_year,1820), columns=commercial_m2_cap_hotels.columns)
-commercial_m2_cap_govern_1721_1820 = pd.DataFrame(index=range(hist_year,1820), columns=commercial_m2_cap_govern.columns)
+floorspace_urb_1721_1820 = pd.DataFrame(index=range(HIST_YEAR, 1820), columns=floorspace_urb.columns)
+floorspace_rur_1721_1820 = pd.DataFrame(index=range(HIST_YEAR,1820), columns=floorspace_rur.columns)
+rurpop_1721_1820 = pd.DataFrame(index=range(HIST_YEAR, 1820), columns=rurpop.columns)
+urbpop_1721_1820 = pd.DataFrame(index=range(HIST_YEAR, 1820), columns=urbpop.columns)
+pop_1721_1820 = pd.DataFrame(index=range(HIST_YEAR, 1820), columns=pop2.columns)
+commercial_m2_cap_office_1721_1820 = pd.DataFrame(index=range(HIST_YEAR, 1820), columns=commercial_m2_cap_office.columns)
+commercial_m2_cap_retail_1721_1820 = pd.DataFrame(index=range(HIST_YEAR, 1820), columns=commercial_m2_cap_retail.columns)
+commercial_m2_cap_hotels_1721_1820 = pd.DataFrame(index=range(HIST_YEAR, 1820), columns=commercial_m2_cap_hotels.columns)
+commercial_m2_cap_govern_1721_1820 = pd.DataFrame(index=range(HIST_YEAR, 1820), columns=commercial_m2_cap_govern.columns)
 
 for region in range(1,27):
-    for time in range(hist_year,1820):
+    for time in range(HIST_YEAR, 1820):
         #                                                        MAX(0,...) Because of floating point deviations, leading to negative stock in some cases
         floorspace_urb_1721_1820[int(region)][time]            = max(0.0, floorspace_urb_1820_1970[int(region)][1820] - (floorspace_urb_1820_1970[int(region)][1820]/100)*(1820-time))
         floorspace_rur_1721_1820[int(region)][time]            = max(0.0, floorspace_rur_1820_1970[int(region)][1820] - (floorspace_rur_1820_1970[int(region)][1820]/100)*(1820-time))
@@ -293,21 +293,21 @@ housing_type_rur_new = housing_type_new2.loc[idx[:,:,'Rural'],:].droplevel(2)
 housing_type_urb_new = housing_type_new2.loc[idx[:,:,'Urban'],:].droplevel(2)
 
 if flag_Normal == 0:
-    lifetimes_DB   = pd.read_csv('files_lifetimes\\' + scenario_select + '\\lifetimes.csv', index_col = [0,1,2,3])   # Weibull parameter database for residential buildings (shape & scale parameters given by region, area & building-type)
-    lifetimes_comm = pd.read_csv('files_lifetimes\\' + scenario_select + '\\lifetimes_comm.csv', index_col = [0,1])  # Weibull parameter database for commercial buildings (shape & scale parameters given by region, area & building-type)
+    lifetimes_DB   = pd.read_csv('files_lifetimes\\' + SCENARIO_SELECT + '\\lifetimes.csv', index_col = [0,1,2,3])   # Weibull parameter database for residential buildings (shape & scale parameters given by region, area & building-type)
+    lifetimes_comm = pd.read_csv('files_lifetimes\\' + SCENARIO_SELECT + '\\lifetimes_comm.csv', index_col = [0,1])  # Weibull parameter database for commercial buildings (shape & scale parameters given by region, area & building-type)
 else:
     lifetimes_DB = pd.read_csv('files_lifetimes\lifetimes_normal.csv')  # Normal distribution database (Mean & StDev parameters given by region, area & building-type, though only defined by region for now)
 
 # interpolate lifetime data
-lifetimes_comm_shape = lifetimes_comm['Shape'].unstack().reindex(list(range(hist_year, end_year + 1))).interpolate(limit=300, limit_direction='both')
-lifetimes_comm_scale = lifetimes_comm['Scale'].unstack().reindex(list(range(hist_year, end_year + 1))).interpolate(limit=300, limit_direction='both')
+lifetimes_comm_shape = lifetimes_comm['Shape'].unstack().reindex(list(range(HIST_YEAR, END_YEAR + 1))).interpolate(limit=300, limit_direction='both')
+lifetimes_comm_scale = lifetimes_comm['Scale'].unstack().reindex(list(range(HIST_YEAR, END_YEAR + 1))).interpolate(limit=300, limit_direction='both')
 
-lifetimes_shape = pd.DataFrame(index=pd.MultiIndex.from_product([list(range(hist_year, end_year + 1)), list(lifetimes_DB.index.levels[2]), list(lifetimes_DB.index.levels[3])]), columns=lifetimes_DB.index.levels[1])
-lifetimes_scale = pd.DataFrame(index=pd.MultiIndex.from_product([list(range(hist_year, end_year + 1)), list(lifetimes_DB.index.levels[2]), list(lifetimes_DB.index.levels[3])]), columns=lifetimes_DB.index.levels[1])
+lifetimes_shape = pd.DataFrame(index=pd.MultiIndex.from_product([list(range(HIST_YEAR, END_YEAR + 1)), list(lifetimes_DB.index.levels[2]), list(lifetimes_DB.index.levels[3])]), columns=lifetimes_DB.index.levels[1])
+lifetimes_scale = pd.DataFrame(index=pd.MultiIndex.from_product([list(range(HIST_YEAR, END_YEAR + 1)), list(lifetimes_DB.index.levels[2]), list(lifetimes_DB.index.levels[3])]), columns=lifetimes_DB.index.levels[1])
 for building in list(lifetimes_DB.index.levels[2]):
     for area in list(lifetimes_DB.index.levels[3]):
-        lifetimes_shape.loc[idx[:,building,area],:] = lifetimes_DB['Shape'].unstack(level=1).loc[:,building,area].reindex(list(range(hist_year, end_year + 1))).interpolate(method='linear', limit=300, limit_direction='both').values
-        lifetimes_scale.loc[idx[:,building,area],:] = lifetimes_DB['Scale'].unstack(level=1).loc[:,building,area].reindex(list(range(hist_year, end_year + 1))).interpolate(method='linear', limit=300, limit_direction='both').values
+        lifetimes_shape.loc[idx[:,building,area],:] = lifetimes_DB['Shape'].unstack(level=1).loc[:,building,area].reindex(list(range(HIST_YEAR, END_YEAR + 1))).interpolate(method='linear', limit=300, limit_direction='both').values
+        lifetimes_scale.loc[idx[:,building,area],:] = lifetimes_DB['Scale'].unstack(level=1).loc[:,building,area].reindex(list(range(HIST_YEAR, END_YEAR + 1))).interpolate(method='linear', limit=300, limit_direction='both').values
 
 
 # calculte the total rural/urban population in millions (pop2 = millions of people, rurpop2 = % of people living in rural areas)
@@ -360,17 +360,17 @@ m2_app_urb = pd.DataFrame(stock_share_urb_app.values * m2_urb.values, columns=pe
 m2_hig_urb = pd.DataFrame(stock_share_urb_hig.values * m2_urb.values, columns=people_urb.columns, index=people_urb.index)
 # %%
 #%% Old code
-commercial_m2_cap_office = pd.DataFrame(index=range(1971, end_year + 1), columns=range(1,27))    # Offices
-commercial_m2_cap_retail = pd.DataFrame(index=range(1971, end_year + 1), columns=range(1,27))    # Retail & Warehouses
-commercial_m2_cap_hotels = pd.DataFrame(index=range(1971, end_year + 1), columns=range(1,27))    # Hotels & Restaurants
-commercial_m2_cap_govern = pd.DataFrame(index=range(1971, end_year + 1), columns=range(1,27))    # Hospitals, Education, Government & Transportation
+commercial_m2_cap_office = pd.DataFrame(index=range(1971, END_YEAR + 1), columns=range(1,27))    # Offices
+commercial_m2_cap_retail = pd.DataFrame(index=range(1971, END_YEAR + 1), columns=range(1,27))    # Retail & Warehouses
+commercial_m2_cap_hotels = pd.DataFrame(index=range(1971, END_YEAR + 1), columns=range(1,27))    # Hotels & Restaurants
+commercial_m2_cap_govern = pd.DataFrame(index=range(1971, END_YEAR + 1), columns=range(1,27))    # Hospitals, Education, Government & Transportation
 
 minimum_com_office = 25
 minimum_com_retail = 25
 minimum_com_hotels = 25
 minimum_com_govern = 25
-for year in years:
-    for region in regions:
+for year in YEARS:
+    for region in REGIONS:
         
         # get the square meter per capita floorspace for 4 commercial applications
         office = gompertz['Office']['a'] * math.exp(-gompertz['Office']['b'] * math.exp((-gompertz['Office']['c']/1000) * sva_pc[str(region)][year]))
