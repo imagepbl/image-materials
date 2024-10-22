@@ -45,7 +45,7 @@ def compute_dynamic_stock_driven(stock, stock_by_cohort, inflow, outflow_by_coho
                                  shares):
     input_stock = stock
     typical_missing = _find_missing(input_stock.loc[t])
-    stock_diff = input_stock.loc[t] - stock_by_cohort[t].sum("cohort")
+    stock_diff = input_stock.loc[t] - stock_by_cohort.loc[t].sum("cohort")
     # Drop dimension cohort
     stock_diff = xr.where(stock_diff>0, stock_diff/survival[t, t].drop("cohort"), 0)
     _add_subtype_stock(stock_diff, shares, typical_missing, t)
@@ -56,10 +56,11 @@ def compute_dynamic_stock_driven(stock, stock_by_cohort, inflow, outflow_by_coho
     except AttributeError:
         t_str = str(t)
     print(t_str)
-    for t_future in stock_by_cohort[t].coords["cohort"].loc[t_str:]:
-        t_future = int(t_future)
-        stock_by_cohort[t_future].loc[{"cohort": t_str}] = inflow[t]*survival[t_future, t]
-    outflow_by_cohort[t] = stock_by_cohort[t]-stock_by_cohort[t-1]
+    stock_by_cohort.loc[t:, t] = inflow[t]*survival[t:, t]
+    # for t_future in stock_by_cohort[t].coords["cohort"].loc[t_str:]:
+        # t_future = int(t_future)
+        # stock_by_cohort[t_future].loc[{"cohort": t_str}] = inflow[t]*survival[t_future, t]
+    outflow_by_cohort[t] = stock_by_cohort.loc[t]-stock_by_cohort.loc[t-1]
 
 # TODO: function below is broken, use the same fix as compute_dynamic_stock_driven.
 def compute_dynamic_inflow_driven(stock, stock_by_cohort, inflow, outflow_by_cohort, survival, t):
