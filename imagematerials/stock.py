@@ -55,7 +55,7 @@ def compute_dynamic_stock_driven(stock, stock_by_cohort, inflow, outflow_by_coho
         t_str = str(t.values)
     except AttributeError:
         t_str = str(t)
-    print(t_str)
+    print(f"{t_str}", end="\r")
     stock_by_cohort.loc[t:, t] = inflow[t]*survival[t:, t]
     # for t_future in stock_by_cohort[t].coords["cohort"].loc[t_str:]:
         # t_future = int(t_future)
