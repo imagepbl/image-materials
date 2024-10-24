@@ -87,12 +87,21 @@ def export_summary_netcdf(model, output_fp):
         "outflow_by_cohort": _convert_timevar(model.outflow_by_cohort, time_coor),
         "stock_by_cohort": model.stock_by_cohort,
     }
+    if Path(output_fp).is_file():
+        Path(output_fp).unlink()
+    all_keys = []
     for data_name, array in data_dict.items():
-        for drop_coor in array.coords.values():
-            sum_over = set(array.coords.values().values) - set(drop_coor)
+        for drop_coor in array.coords.keys():
+            sum_over = set(x for x in list(array.coords.keys())) - set({drop_coor})
             summary = array.sum(sum_over)
-            summary.to_netcdf(output_fp, group=f"{data_name}-{drop_coor}", mode="a",
-                              engine="netcdf4")
+            summary.attrs.pop("units", None)
+            summary.coords[drop_coor].attrs.pop("units", None)
+            key = f"{data_name}-{drop_coor}"
+            summary.drop_encoding().to_netcdf(output_fp, group=key, mode="a", engine="netcdf4")
+            all_keys.append(key)
+    empty = xr.DataArray(0.0)
+    empty.attrs["summary_names"] = all_keys
+    empty.to_netcdf(output_fp, group="summary", mode="a", engine="netcdf4")
 
 def _convert_timevar(time_var, time_coor):
     random_t = time_coor.coords["time"].values[0]
