@@ -133,6 +133,7 @@ for year in YEARS:
 scale_comm = pd.Series([1.0, 0.0], index=[2020, 2060], name='time').reindex(YEARS).interpolate(method='linear', limit=300, limit_direction='both')
 commercial_m2_cap    = commercial_m2_cap.mul(scale_comm, axis=0) + commercial_m2_cap_low.mul((1-scale_comm), axis=0)
 
+#%%
 # Subdivide the total across Offices, Retail+, Govt+ & Hotels+
 types = ["Office", "Retail+", "Hotels+", "Govt+"]
 index = pd.MultiIndex.from_product([types, REGIONS_RANGE, YEARS], names=["Type", "Region", "Year"])
@@ -444,7 +445,7 @@ minimum_com_retail = 25
 minimum_com_hotels = 25
 minimum_com_govern = 25
 for year in YEARS:
-    for region in REGIONS:
+    for region in REGIONS_RANGE:
         
         # get the square meter per capita floorspace for 4 commercial applications
         office = gompertz['Office']['a'] * math.exp(-gompertz['Office']['b'] * math.exp((-gompertz['Office']['c']/1000) * service_value_added[str(region)][year]))
