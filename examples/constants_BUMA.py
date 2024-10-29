@@ -9,7 +9,7 @@ END_YEAR = 2060     # year for which the output is generated (e.g. choose 2050 f
 HIST_YEAR = 1721    # historick stock-tail is pre-caluculated from this year onward
 #switch_year = 2019  # year that the data on building type split (of the stock) ends
 YEAR_LIST_SVA   = [*range(1970, 2025), *range(2030, 2101, 5)]
-YEARS = range(START_YEAR, END_YEAR + 1)
+YEARS = range(START_YEAR-1, END_YEAR + 1)
 REGIONS_RANGE = range(1, REGIONS+1)
 
 # Set Flags for sensitivity analysis
