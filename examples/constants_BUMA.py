@@ -15,7 +15,7 @@ REGIONS_RANGE = range(1, REGIONS+1)
 # Set Flags for sensitivity analysis
 FLAG_ALPHA  = 0     # switch for the sensitivity analysis on alpha, if 1 the maximum alpha is 10% above the maximum found in the data
 FLAG_EXPDEC = 0     # switch to choose between Gompertz and Exponential Decay function for commercial floorspace demand (0 = Gompertz, 1 = Expdec)
-flag_Normal = 0     # switch to choose between Weibull and Normal lifetime distributions (0 = Weibull, 1 = Normal)
+FLAG_NORMAL = 0     # switch to choose between Weibull and Normal lifetime distributions (0 = Weibull, 1 = Normal)
 flag_Mean   = 0     # switch to choose between material intensity settings (0 = regular regional, 1 = mean, 2 = high, 3 = low, 4 = median)
 
 # scenario selection
