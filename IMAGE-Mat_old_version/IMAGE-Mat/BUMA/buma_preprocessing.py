@@ -388,11 +388,12 @@ for building in list(lifetimes_DB.index.levels[2]):
 # calculte the total rural/urban population in millions (pop2 = millions of people, rurpop2 = % of people living in rural areas)
 people_rur = pd.DataFrame(rurpop_tail.values * pop_tail.values, columns=pop_tail.columns.astype('int'), index=pop_tail.index)
 people_urb = pd.DataFrame(urbpop_tail.values * pop_tail.values, columns=pop_tail.columns.astype('int'), index=pop_tail.index)
-
+#%%
 # re-calculate the total floorspace (IMAGE), including historic tails (in MILLIONS of m2)
 m2_rur = floorspace_rur_tail.mul(people_rur.values)
 m2_urb = floorspace_urb_tail.mul(people_urb.values)
 
+#%%
 # define the relative importance of housing type wthin the stock of floorspace 
 # (not just accounting for the changing share of people living accross housing types, 
 # but also acknowledging that some housing types typically involve a higher floorspace per capita)
