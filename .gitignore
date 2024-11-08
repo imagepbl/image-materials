@@ -1,6 +1,8 @@
 # Intermediate files
 
 examples/prep_vema.nc
+examples/data_sums.nc
+examples/all.prof
 
 
 # Byte-compiled / optimized / DLL files
