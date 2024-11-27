@@ -7,9 +7,9 @@ import os
 import math
 from pathlib import Path
 from matplotlib import pyplot as plt
-idx = pd.IndexSlice
 import xarray as xr
 from read_mym import read_mym_df
+from util import dataset_to_array
 
 from constants_BUMA import(
     SCENARIO_SELECT, FILE_ADDITION,
@@ -24,6 +24,8 @@ from constants_BUMA import(
 start_year = 1820
 end_year = 1970
 far_start_year = 1721
+idx = pd.IndexSlice
+
 
 def get_gompertz(base_directory):
     # Load fitted regression parameters
@@ -51,14 +53,15 @@ def get_image_floorspace(image_directory, base_directory):
     floorspace_all = floorspace_urb_rur.merge(commercial_m2_cap, how = "left", left_index=True, right_index=True)
     floorspace_dataset = floorspace_all.to_xarray()
 
-    floorspace_xr = xr.DataArray(0.0, dims=("Year", "Region", "type"), coords={
+    floorspace_xr = xr.DataArray(0.0, dims=("Year", "Region", "Type"), coords={
         "Year": floorspace_dataset.coords["Year"],
         "Region": floorspace_dataset.coords["Region"],
-        "type": ["Urban", "Rural", "Office", "Retail+", "Hotels+", "Govt+"],
+        "Type": ["Urban", "Rural", "Office", "Retail+", "Hotels+", "Govt+"],
     })
 
     for data_name, data_var in floorspace_dataset.data_vars.items():
         floorspace_xr.loc[:, :, data_name] = data_var
+    floorspace_xr.coords["Region"] = [str(x.values) for x in floorspace_xr.coords["Region"]]
     return floorspace_xr
 
 def extrapolate_floorspace(floorspace_image):
@@ -68,7 +71,7 @@ def extrapolate_floorspace(floorspace_image):
     interp_coor = floorspace_image.sel(Year=range(1971, 1981)).coords
     trend_1971_1981 = xr.DataArray(
         floorspace_image.sel(Year=range(1971, 1981)).to_numpy()/floorspace_image.sel(Year=range(1972, 1982)).to_numpy(),
-        dims=("Year", "Region", "type"),
+        dims=("Year", "Region", "Type"),
         coords=interp_coor
     )
 
@@ -89,7 +92,7 @@ def extrapolate_floorspace(floorspace_image):
 
     # combine historic with IMAGE data here
     floorspace = xr.concat((floor_1721_1820, floor_1820_1970, floorspace_image), dim="Year")
-    return floorspace
+    return floorspace.transpose()
 
 
 def get_floorspace_urban_rural(image_directory):
@@ -164,6 +167,42 @@ def compute_commercial_floor_m2_cap(gompertz, commercial_m2_cap_sum, service_val
     commercial_m2_cap_all = commercial_m2_cap_all.unstack("Type")
     commercial_m2_cap_all = commercial_m2_cap_all.droplevel(0, axis = 1)
     return commercial_m2_cap_all
+
+def compute_housing_type(database_directory):
+    housing_type_data: pd.DataFrame = pd.read_csv(database_directory.joinpath('Housing_type_dynamic.csv'), index_col = [0,1,2]) 
+    # also interpolate housing type data
+    index_ht = pd.MultiIndex.from_product([list(range(HIST_YEAR, END_YEAR + 1)), 
+                                        list(range(1,REGIONS + 1)), 
+                                        ['Urban', 'Rural'] ]) 
+    housing_type = pd.DataFrame(np.nan, index=index_ht, columns=housing_type_data.columns)
+    housing_type.index.names = ['Year','Region','Area']
+
+    for year in list(housing_type_data.index.levels[0]):
+        housing_type.loc[idx[year,:,:],:] = housing_type_data.loc[idx[year,:,:],:]
+        
+    for region in list(range(1,REGIONS + 1)):
+        for area in ['Urban', 'Rural']:
+            housing_types_interpolated = housing_type.loc[idx[:,region,area],:].interpolate(method='linear', limit_direction='both')
+            housing_type.loc[idx[:,region,area],:] = housing_types_interpolated.values   
+
+    housing_type_xr = dataset_to_array(housing_type.to_xarray(), ["Year", "Region", "Area"], ["Type"])
+    housing_type_xr.coords["Region"] = [str(x.values) for x in housing_type_xr.coords["Region"]]
+    return housing_type_xr
+
+def compute_average_m2_capita(base_directory):
+    average_m2_capita_df: pd.DataFrame = pd.read_csv(base_directory.joinpath('files_DB','Average_m2_per_cap.csv'), index_col = [0,1]) 
+    column_mapping = {'1': 'Detached', '2': 'Semi-detached', '3': 'Appartment', '4': 'High-rise'}
+    average_m2_capita_df.rename(columns=column_mapping, inplace=True)
+    average_m2_capita = dataset_to_array(average_m2_capita_df.to_xarray(), ["Region", "Area"], ["Type"])
+    average_m2_capita.coords["Region"] = [str(x.values) for x in average_m2_capita.coords["Region"]]
+    return average_m2_capita
+
+def compute_housing_residential(population, average_m2_capita, housing_type, floorspace_rururb):
+    m2_housing_per_capita = average_m2_capita * housing_type
+    m2_housing_share = m2_housing_per_capita / m2_housing_per_capita.sum(["Type"])
+    total_m2_housing_per_cap = m2_housing_share*floorspace_rururb
+    total_m2_housing = total_m2_housing_per_cap * population.sel({"Area": ["Rural", "Urban"]})
+    return total_m2_housing.transpose("Year", "Region", "Area", "Type")
 
 # #TODO move to a util file
 # # Define a function to calculate Gompertz growth

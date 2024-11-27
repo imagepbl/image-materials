@@ -26,9 +26,10 @@ def compute_population(base_directory = Path("..", "IMAGE-Mat_old_version", "IMA
     rurpop_share, urbpop_share = compute_rurpop_share(image_directory)
     
     # Merge into one xarray DataArray.
-    all_population = xr.concat((tot_population, rurpop_share, urbpop_share), dim="Location")
-    all_population = all_population.assign_coords({"Location": ["Total", "Rural", "Urban"]})
-    all_population = all_population.transpose("Year", "Region", "Location")
+    all_population = xr.concat((tot_population, rurpop_share*tot_population, urbpop_share*tot_population),
+                               dim="Area")
+    all_population = all_population.assign_coords({"Area": ["Total", "Rural", "Urban"]})
+    all_population = all_population.transpose("Year", "Region", "Area")
 
     return all_population
 
