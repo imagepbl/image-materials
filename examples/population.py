@@ -91,13 +91,18 @@ def compute_rurpop_share(image_directory):
 
     # Compute the rural population share for the first part.
     # TODO: Rural population share goes to zero (took it from the original), but probably should go to one.
-    rurpop_share_1721_1820 = rurpop_share_1820_1970.loc[1820] - (rurpop_share_1820_1970.loc[1820])*(1820-years_1721_1820)/100
-    rurpop_share_1721_1820 = rurpop_share_1721_1820.transpose()
-    rurpop_share_1721_1820 = rurpop_share_1721_1820.where(rurpop_share_1721_1820 >= 0, 0)
+    rurpop_share_1721_1820 = 0*years_1721_1820 + rurpop_share_1820_1970.loc[1820]
+    # rurpop_share_1721_1820 = rurpop_share_1820_1970.loc[1820] - (rurpop_share_1820_1970.loc[1820])*(1820-years_1721_1820)/100
+    # rurpop_share_1721_1820 = rurpop_share_1721_1820.transpose()
+    # rurpop_share_1721_1820 = rurpop_share_1721_1820.where(rurpop_share_1721_1820 >= 0, 0)
 
     # Concatenate timeline together
     # TODO: I think there is a bug in the old code where urbpop_share + rurpop_share != 1, check this.
     rurpop_share = xr.concat((rurpop_share_1721_1820, rurpop_share_1820_1970, rurpop_share_1970_future), dim="Year")
     urbpop_share = 1-rurpop_share
+
+    # TODO: Remove this BUG
+    rurpop_share.loc[1721:1819] = rurpop_share.loc[1721:1819] * (years_1721_1820-1720)/100
+    urbpop_share.loc[1721:1819] = urbpop_share.loc[1721:1819] * (years_1721_1820-1720)/100
 
     return rurpop_share, urbpop_share

@@ -19,12 +19,15 @@ from constants_BUMA import(
     FLAG_ALPHA, FLAG_EXPDEC, FLAG_NORMAL,
     LOWCOMM,
     GOMPERTZ_EXPDEC,
-    MINIMUM_COM
 )
+far_start_year = 1721
 start_year = 1820
 end_year = 1970
-far_start_year = 1721
 idx = pd.IndexSlice
+
+years_1721_1820 = xr.DataArray(np.arange(far_start_year, start_year), dims=["Year"], coords={"Year": np.arange(far_start_year, start_year)})
+years_1820_1971 = xr.DataArray(np.arange(start_year, end_year+1), dims=["Year"], coords={"Year": np.arange(start_year, end_year+1)})
+years_1820_1970 = xr.DataArray(np.arange(start_year, end_year), dims=["Year"], coords={"Year": np.arange(start_year, end_year)})
 
 
 def get_gompertz(base_directory):
@@ -47,7 +50,7 @@ def get_image_floorspace(image_directory, base_directory):
     gompertz = get_gompertz(base_directory)
     service_value_added = get_service_value_added(image_directory)
     commercial_m2_cap_sum = compute_commercial_floor_m2_cap_sum(gompertz, service_value_added)
-    commercial_m2_cap = compute_commercial_floor_m2_cap(gompertz, commercial_m2_cap_sum, service_value_added)
+    commercial_m2_cap, minimum_comm = compute_commercial_floor_m2_cap(gompertz, commercial_m2_cap_sum, service_value_added)
     floorspace_urb_rur = get_floorspace_urban_rural(image_directory)
 
     floorspace_all = floorspace_urb_rur.merge(commercial_m2_cap, how = "left", left_index=True, right_index=True)
@@ -62,9 +65,9 @@ def get_image_floorspace(image_directory, base_directory):
     for data_name, data_var in floorspace_dataset.data_vars.items():
         floorspace_xr.loc[:, :, data_name] = data_var
     floorspace_xr.coords["Region"] = [str(x.values) for x in floorspace_xr.coords["Region"]]
-    return floorspace_xr
+    return floorspace_xr, minimum_comm
 
-def extrapolate_floorspace(floorspace_image):
+def extrapolate_floorspace(floorspace_image, minimum_comm):
     # For the RESIDENTIAL & COMMERCIAL floorspace: Derive the annual trend (in m2/cap) 
     # over the initial 10 years of IMAGE data
     # Get the growth by year (for the first 10 years)
@@ -80,14 +83,15 @@ def extrapolate_floorspace(floorspace_image):
 
     # Find minumum or maximum values in the original IMAGE data 
     # (Just for residential, commercial minimum values have been calculated above)
-    min_floorspace = floorspace_image.min(["Year", "Region"])
-
+    # min_floorspace = floorspace_image.min(["Year", "Region"])
+    # print(floorspace_image.min(["Year", "Region"]))
+    # print(minimum_comm)
+    min_floorspace = xr.concat((floorspace_image.sel(Type=["Urban", "Rural"]).min(["Year", "Region"]), minimum_comm), dim="Type")
+    # print(min_floorspace)
     # Compute the floorspace between 1820 and 1970 with extrapolation
-    years_1820_1970 = xr.DataArray(np.arange(start_year, end_year), dims=["Year"], coords={"Year": np.arange(start_year, end_year)})
-    floor_1820_1970 = floorspace_image.loc[1971]*avg_trend_1971_1981**(end_year-years_1820_1970)
+    floor_1820_1970 = floorspace_image.loc[1971]*avg_trend_1971_1981**(end_year+1-years_1820_1971)
     floor_1820_1970 = floor_1820_1970.where(floor_1820_1970 > min_floorspace, min_floorspace).transpose()
 
-    years_1721_1820 = xr.DataArray(np.arange(far_start_year, start_year), dims=["Year"], coords={"Year": np.arange(far_start_year, start_year)})
     floor_1721_1820 = floor_1820_1970[0]*(1-(start_year - years_1721_1820)/(start_year-far_start_year+1)).transpose()
 
     # combine historic with IMAGE data here
@@ -116,7 +120,8 @@ def compute_commercial_floor_m2_cap_sum(gompertz, service_value_added):
         (gompertz['All']['a'], gompertz['All']['b'], gompertz['All']['c'])
         if FLAG_EXPDEC == 0 else GOMPERTZ_EXPDEC          
     )
-    alpha_low = alpha * LOWCOMM  
+    # alpha_low = alpha * LOWCOMM 
+    alpha_low = alpha
 
     # find the total commercial m2 stock (in Millions of m2)
     commercial_m2_cap = pd.DataFrame(index=YEARS, columns=REGIONS_RANGE)
@@ -143,8 +148,8 @@ def compute_commercial_floor_m2_cap(gompertz, commercial_m2_cap_sum, service_val
     types = ["Office", "Retail+", "Hotels+", "Govt+"]
     index = pd.MultiIndex.from_product([types, REGIONS_RANGE, YEARS], names=["Type", "Region", "Year"])
     commercial_m2_cap_all = pd.DataFrame(index=index, columns=["m2_per_cap"]).fillna(0)
-
-    for year in YEARS:
+    minimum_comm = xr.DataArray(25.0, dims=["Type"], coords={"Type": types})
+    for year in YEARS[1:]:
         for region in REGIONS_RANGE:
             # Calculate floorspace for all types and update the minimum values
             floorspace_commercial_list = {}
@@ -153,7 +158,7 @@ def compute_commercial_floor_m2_cap(gompertz, commercial_m2_cap_sum, service_val
                 params = gompertz[type_]
                 value = params['a'] * math.exp(-params['b'] * math.exp((-params['c'] / 1000) * service_value_added[str(region)][year]))
                 floorspace_commercial_list[type_] = value
-                MINIMUM_COM[type_] = min(MINIMUM_COM[type_], value)
+                minimum_comm.loc[type_] = min(minimum_comm.loc[type_], value)
 
             # Sum all floorspace values for normalization
             commercial_sum = sum(floorspace_commercial_list.values())
@@ -166,7 +171,7 @@ def compute_commercial_floor_m2_cap(gompertz, commercial_m2_cap_sum, service_val
 
     commercial_m2_cap_all = commercial_m2_cap_all.unstack("Type")
     commercial_m2_cap_all = commercial_m2_cap_all.droplevel(0, axis = 1)
-    return commercial_m2_cap_all
+    return commercial_m2_cap_all, minimum_comm
 
 def compute_housing_type(database_directory):
     housing_type_data: pd.DataFrame = pd.read_csv(database_directory.joinpath('Housing_type_dynamic.csv'), index_col = [0,1,2]) 
