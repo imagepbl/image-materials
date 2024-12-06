@@ -1,10 +1,10 @@
 import pandas as pd
 
-from constants_BUMA import SCENARIO_SELECT, YEARS, FLAG_NORMAL
+from imagematerials.buildings.constants import FLAG_NORMAL, SCENARIO_SELECT, YEARS
 
 
 def compute_lifetimes(base_directory, flag_normal=FLAG_NORMAL):
-    
+
     lifetimes_commercial = pd.read_csv(base_directory / 'files_lifetimes' / SCENARIO_SELECT / 'lifetimes_comm.csv', index_col = [0,1])  # Weibull parameter database for commercial buildings (shape & scale parameters given by region, area & building-type)
     # TODO originally lifetimes_commercial was only read in with flag_normal == 0 
 

@@ -16,6 +16,7 @@ import xarray as xr
 
 from imagematerials.distribution import ALL_DISTRIBUTIONS, NAME_TO_DIST
 from imagematerials.read_mym import read_mym_df
+from imagematerials.util import dataset_to_array, pandas_to_xarray
 from imagematerials.vehicles.constants import (
     END_YEAR,
     FOLDER,
@@ -50,7 +51,6 @@ from imagematerials.vehicles.constants import (
     years_range,
 )
 from imagematerials.vehicles.modelling_functions import interpolate, tkms_to_nr_of_vehicles_fixed
-from imagematerials.vehicles.util import dataset_to_array, pandas_to_xarray
 
 base_dir = Path(os.getcwd())
 
