@@ -53,7 +53,6 @@ from imagematerials.vehicles.modelling_functions import interpolate, tkms_to_nr_
 from imagematerials.vehicles.util import dataset_to_array, pandas_to_xarray
 
 base_dir = Path(os.getcwd())
-print('base dir is: ', base_dir)
 
 
 def preprocessing(base_dir: str = os.getcwd()):
@@ -781,4 +780,3 @@ if __name__ == "__main__":
 
     # Call preprocessing function and make output available in variables
     output_preprocessing = preprocessing(base_dir=args.path)
-    print(output_preprocessing)
