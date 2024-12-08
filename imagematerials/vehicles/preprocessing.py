@@ -53,6 +53,7 @@ from imagematerials.vehicles.modelling_functions import interpolate, tkms_to_nr_
 from imagematerials.vehicles.util import dataset_to_array, pandas_to_xarray
 
 base_dir = Path(os.getcwd())
+print('base dir is: ', base_dir)
 
 
 def preprocessing(base_dir: str = os.getcwd()):
@@ -65,10 +66,12 @@ def preprocessing(base_dir: str = os.getcwd()):
         _type_: _description_
     """
     base_path = Path(base_dir)
+
     # %%
     base_input_data_path = base_path.joinpath("vehicles")
-    standard_input_data_path = base_input_data_path.joinpath("standard_data")
-    image_folder = base_path.joinpath(SCEN)
+    standard_input_data_path = base_path.joinpath("data/raw/vehicles/standard_data")
+    scenario_input_data_path = base_path.joinpath("data/raw/vehicles")
+    image_folder = base_path.joinpath("data/raw/SSP2")
     # standard_output_folder = base_path.joinpath("..", "..", "output", PROJECT,
     #                                           FOLDER)
 
@@ -138,55 +141,55 @@ def preprocessing(base_dir: str = os.getcwd()):
 
     # 2) scenario dependent data
     lifetimes_vehicles: pd.DataFrame = pd.read_csv(
-        base_input_data_path. joinpath(
+        scenario_input_data_path. joinpath(
             FOLDER, "lifetimes_years.csv"), index_col=[
             0, 1])
     # Average End-of-Life of vehicles in years, this file also contains the setting for the choice of distribution and
     # other lifetime related settings (standard devition, or alternative
     # parameterisation)
-    kilometrage: pd.DataFrame = pd.read_csv(base_input_data_path.
+    kilometrage: pd.DataFrame = pd.read_csv(scenario_input_data_path.
                                             joinpath(
                                                 FOLDER, "kilometrage.csv"),
                                             index_col="t")
     # kilometrage of passenger cars in kms/yr
     kilometrage_midi_bus: pd.DataFrame = pd.read_csv(
-        base_input_data_path. joinpath(
+        scenario_input_data_path. joinpath(
             FOLDER,
             "kilometrage_midi.csv"),
         index_col="t")  # kilometrage of midi-buses in kms/yr
     kilometrage_bus: pd.DataFrame = pd.read_csv(
-        base_input_data_path. joinpath(
+        scenario_input_data_path. joinpath(
             FOLDER,
             "kilometrage_bus.csv"),
         index_col="t")  # kilometrage of regular buses in kms/yr
     mileages: pd.DataFrame = pd.read_csv(
-        base_input_data_path. joinpath(
+        scenario_input_data_path. joinpath(
             FOLDER,
             "kilometrage_per_year.csv"),
         index_col="t")  # Km/year of all the vehicles (buses & cars have region-specific files)
 
     # weight and materials related data
     vehicle_weight_kg_simple: pd.DataFrame = pd.read_csv(
-        base_input_data_path. joinpath(
+        scenario_input_data_path. joinpath(
             FOLDER,
             "vehicle_weight_kg_simple.csv"),
         index_col=0)  # Weight of a single vehicle of each type in kg
     vehicle_weight_kg_typical: pd.DataFrame = pd.read_csv(
-        base_input_data_path. joinpath(
+        scenario_input_data_path. joinpath(
             FOLDER, "vehicle_weight_kg_typical.csv"), index_col=[
             0, 1])  # Weight of a single vehicle of each type in kg
     material_fractions: pd.DataFrame = pd.read_csv(
-        base_input_data_path. joinpath(
+        scenario_input_data_path. joinpath(
             FOLDER, "material_fractions_simple.csv"), index_col=[
             0, 1])  # Material fractions in percentages
     material_fractions_type: pd.DataFrame = pd.read_csv(
-        base_input_data_path. joinpath(
+        scenario_input_data_path. joinpath(
             FOLDER, "material_fractions_typical.csv"), index_col=[
             0, 1], header=[
                 0, 1])
     # Material fractions in percentages, by vehicle sub-type
     battery_weights: pd.DataFrame = pd.read_csv(
-        base_input_data_path. joinpath(
+        scenario_input_data_path. joinpath(
             FOLDER,
             "battery_weights_kg.csv"),
         index_col=[
@@ -195,7 +198,7 @@ def preprocessing(base_dir: str = os.getcwd()):
     # Using the 250 Wh/kg on the kWh of the various batteries a weight (in kg) of the battery per vehicle category is
     # determined
     battery_materials: pd.DataFrame = pd.read_csv(
-        base_input_data_path. joinpath(
+        scenario_input_data_path. joinpath(
             FOLDER, "battery_materials.csv"), index_col=[
             0, 1])
     # The material fraction of storage technologies (used to get the vehicle
@@ -778,4 +781,4 @@ if __name__ == "__main__":
 
     # Call preprocessing function and make output available in variables
     output_preprocessing = preprocessing(base_dir=args.path)
-
+    print(output_preprocessing)
