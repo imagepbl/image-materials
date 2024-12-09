@@ -64,7 +64,8 @@ def preprocessing(base_dir: str = os.getcwd()):
     Returns:
         _type_: _description_
     """
-    base_path = Path(base_dir)
+    base_path = Path(base_dir).joinpath("data", "raw")
+
     # %%
     base_input_data_path = base_path.joinpath("vehicles")
     standard_input_data_path = base_input_data_path.joinpath("standard_data")
@@ -455,7 +456,7 @@ def preprocessing(base_dir: str = os.getcwd()):
     for label in ["Passenger Planes", "Trains", "High Speed Trains", "Bikes" ]:
         total_nr_vehicles_simple[label] = tkms_to_nr_of_vehicles_fixed(
             passengerkms_Tpkms[label].unstack(),
-            mileages[label].values[0],
+            mileages[label],
             load[label].values[0],
             loadfactor[label].values[0]
         )
@@ -483,7 +484,7 @@ def preprocessing(base_dir: str = os.getcwd()):
     for out_label, (df, key, unit) in vehicle_data.items():
         total_nr_vehicles_simple[out_label] = tkms_to_nr_of_vehicles_fixed(
             df / MEGA_TO_TERA,
-            mileages[key].values[0],
+            mileages[key],
             load[key].values[0],
             loadfactor[key].values[0]
         )
