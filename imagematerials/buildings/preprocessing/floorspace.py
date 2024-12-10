@@ -19,7 +19,7 @@ from imagematerials.buildings.constants import (
     YEARS,
 )
 from imagematerials.read_mym import read_mym_df
-from imagematerials.util import dataset_to_array
+from imagematerials.util import dataset_to_array, merge_dims
 
 far_start_year = 1721
 start_year = 1820
@@ -208,7 +208,8 @@ def compute_housing_residential(population, average_m2_capita, housing_type, flo
     m2_housing_share = m2_housing_per_capita / m2_housing_per_capita.sum(["Type"])
     total_m2_housing_per_cap = m2_housing_share*floorspace_rururb
     total_m2_housing = total_m2_housing_per_cap * population.sel({"Area": ["Rural", "Urban"]})
-    return total_m2_housing.transpose("Year", "Region", "Area", "Type")
+    floorspace_residential = merge_dims(total_m2_housing, "Type", "Area")
+    return floorspace_residential.transpose("Year", "Region", "Type")
 
 # #TODO move to a util file
 # # Define a function to calculate Gompertz growth

@@ -1,9 +1,11 @@
 import pandas as pd
+import xarray as xr
 
 from imagematerials.buildings.constants import FLAG_NORMAL, SCENARIO_SELECT, YEARS
+from imagematerials.util import dataset_to_array, merge_dims
 
 
-def compute_lifetimes(base_directory, flag_normal=FLAG_NORMAL):
+def compute_lifetimes(base_directory, commercial_types, flag_normal=FLAG_NORMAL):
 
     lifetimes_commercial = pd.read_csv(base_directory / 'files_lifetimes' / SCENARIO_SELECT / 'lifetimes_comm.csv', index_col = [0,1])  # Weibull parameter database for commercial buildings (shape & scale parameters given by region, area & building-type)
     # TODO originally lifetimes_commercial was only read in with flag_normal == 0 
@@ -43,4 +45,18 @@ def compute_lifetimes(base_directory, flag_normal=FLAG_NORMAL):
         axis=1,
         keys=['Shape', 'Scale']
     )
-    return lifetimes_commercial_interpolated, lifetimes_residential_interpolated
+
+    # Convert commercial lifetimes to xarray and add Type dimension.
+    xr_lifetimes_commercial = dataset_to_array(lifetimes_commercial_interpolated.to_xarray(),
+                                               ["Time", "Region"],
+                                               ["Parameter"])
+    xr_lifetimes_commercial = xr_lifetimes_commercial.expand_dims({"Type": commercial_types})
+
+    # Convert residential lifetimes to xarray and merge Type - Area
+    xr_lifetimes_residential = dataset_to_array(lifetimes_residential_interpolated.to_xarray(),
+                                                ["Region", "Type", "Area", "Time"],
+                                                ["Parameter"])
+    xr_lifetimes_residential = merge_dims(xr_lifetimes_residential, "Type", "Area")
+    xr_lifetimes_residential = xr_lifetimes_residential.transpose("Time", "Region", "Type", "Parameter")
+    return xr.concat((xr_lifetimes_commercial, xr_lifetimes_residential), dim="Type")
+
