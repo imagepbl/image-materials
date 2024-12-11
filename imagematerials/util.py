@@ -1,4 +1,5 @@
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Union
 
 import numpy as np
 import xarray as xr
@@ -120,3 +121,41 @@ def merge_dims(xr_array, dim_one, dim_two):
             new_coor_one = SUBTYPE_SEPARATOR.join((cur_coor_one, cur_coor_two))
             new_array.loc[{dim_one: new_coor_one}] = xr_array.loc[{dim_one: cur_coor_one, dim_two: cur_coor_two}]
     return new_array
+
+
+def export_to_netcdf(prep_data: dict, out_fp: Union[Path, str]):
+    """Export the xarray data to a netcdf4 file.
+
+    Parameters
+    ----------
+    prep_data
+        xArray data from the preprocessing steps.
+    out_fp
+        Netcdf4 file to write to, recommended extension is .nc.
+
+    """
+    new_prep_data = {key: val for key, val in prep_data.items()}
+    lifetimes = new_prep_data.pop("lifetimes")
+    xr.Dataset(new_prep_data).to_netcdf(out_fp, group="main", engine="netcdf4")
+    xr.Dataset(lifetimes).to_netcdf(out_fp, group="lifetimes", mode="a", engine="netcdf4")
+
+
+def import_from_netcdf(in_fp: Union[Path, str]) -> dict:
+    """Import the xarray data from a netcdf4 file.
+
+    Parameters
+    ----------
+    in_fp
+        File to read the xarray data file from (usualy with *.nc).
+
+    Returns
+    -------
+        Dictionary containing the data arrays and datasets.
+
+    """
+    lt = xr.open_dataset(in_fp, group="lifetimes", engine="netcdf4").load()
+    prep_data = xr.open_dataset(in_fp, group="main", engine="netcdf4").load()
+    prep_data_dict = {key: value for key, value in prep_data.items()}
+    prep_data_dict["lifetimes"] = {dist_name: arr.dropna("Type")
+                                            for dist_name, arr in lt.items()}
+    return prep_data_dict

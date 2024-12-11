@@ -11,8 +11,8 @@ far_start_year = 1721
 start_year = 1820
 end_year = 1970
 
-years_1721_1820 = xr.DataArray(np.arange(far_start_year, start_year), dims=["Year"], coords={"Year": np.arange(far_start_year, start_year)})
-years_1820_1970 = xr.DataArray(np.arange(start_year, end_year), dims=["Year"], coords={"Year": np.arange(start_year, end_year)})
+years_1721_1820 = xr.DataArray(np.arange(far_start_year, start_year), dims=["Time"], coords={"Time": np.arange(far_start_year, start_year)})
+years_1820_1970 = xr.DataArray(np.arange(start_year, end_year), dims=["Time"], coords={"Time": np.arange(start_year, end_year)})
 
 def compute_population(base_directory = Path("..", "IMAGE-Mat_old_version", "IMAGE-Mat", "BUMA")):
 
@@ -30,7 +30,7 @@ def compute_population(base_directory = Path("..", "IMAGE-Mat_old_version", "IMA
     all_population = xr.concat((tot_population, rurpop_share*tot_population, urbpop_share*tot_population),
                                dim="Area")
     all_population = all_population.assign_coords({"Area": ["Total", "Rural", "Urban"]})
-    all_population = all_population.transpose("Year", "Region", "Area")
+    all_population = all_population.transpose("Time", "Region", "Area")
 
     return all_population
 
@@ -43,26 +43,26 @@ def compute_total_population(image_directory, base_directory):
     historic_population_df = pd.read_csv(base_directory / 'files_initial_stock' /'hist_pop.csv', index_col = [0])  
 
     population_1970_future_df = population_1970_future_df.reindex(YEARS).interpolate(method='cubic')
-    population_1970_future_df = population_1970_future_df.rename_axis(index = "Year", columns = "Region")
+    population_1970_future_df = population_1970_future_df.rename_axis(index = "Time", columns = "Region")
 
     # Deriving historic population tail based on fraction for 1970
     population_1970 = population_1970_future_df.loc[1970]
     historic_population = historic_population_df.multiply(population_1970, axis=1)
 
     population_1820_future_df = pd.concat([historic_population.loc[:1969], population_1970_future_df])
-    population_1820_future_df = population_1820_future_df.rename_axis(index = "Year", columns = "Region")
+    population_1820_future_df = population_1820_future_df.rename_axis(index = "Time", columns = "Region")
 
 
     population_1820_future = xr.DataArray(
         data=population_1820_future_df.values,                # Data values from the DataFrame
-        dims=["Year", "Region"],                  # Names for the two dimensions
-        coords={"Year": population_1820_future_df.index,      # Year coordinates from the DataFrame index
+        dims=["Time", "Region"],                  # Names for the two dimensions
+        coords={"Time": population_1820_future_df.index,      # Time coordinates from the DataFrame index
                 "Region": population_1820_future_df.columns}  # Region coordinates from the DataFrame columns
     )
 
     # Extrapolate population to zero from 1720 (population at 1721 > 0)
     population_1721_1820 = (population_1820_future[0]*(1-(start_year - years_1721_1820)/(start_year-far_start_year+1))).transpose()
-    population = xr.concat((population_1721_1820, population_1820_future), dim="Year")
+    population = xr.concat((population_1721_1820, population_1820_future), dim="Time")
 
     return population
 
@@ -79,7 +79,7 @@ def compute_rurpop_share(image_directory):
     maximum_rural_population = rural_population.values.max()
 
     # Get the rural population share from 1970-future directly from the data
-    rurpop_share_1970_future = dataset_to_array(rural_population.to_xarray(), ["Year"], ["Region"])
+    rurpop_share_1970_future = dataset_to_array(rural_population.to_xarray(), ["Time"], ["Region"])
 
     # Get the growth or rural population by year (average for the first 10 years of IMAGE data)
     # TODO: This trend computation seems wrong, find yearly increase with log instead.
@@ -99,7 +99,7 @@ def compute_rurpop_share(image_directory):
 
     # Concatenate timeline together
     # TODO: I think there is a bug in the old code where urbpop_share + rurpop_share != 1, check this.
-    rurpop_share = xr.concat((rurpop_share_1721_1820, rurpop_share_1820_1970, rurpop_share_1970_future), dim="Year")
+    rurpop_share = xr.concat((rurpop_share_1721_1820, rurpop_share_1820_1970, rurpop_share_1970_future), dim="Time")
     urbpop_share = 1-rurpop_share
 
     # TODO: Remove this BUG
