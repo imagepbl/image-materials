@@ -52,10 +52,10 @@ from imagematerials.vehicles.constants import (
 )
 from imagematerials.vehicles.modelling_functions import interpolate, tkms_to_nr_of_vehicles_fixed
 
-base_dir = Path(os.getcwd())
+base_dir = Path(os.getcwd()).joinpath("data", "raw")
 
 
-def preprocessing(base_dir: str = os.getcwd()):
+def preprocessing(base_dir: str):
     """Wrapper function for the preprocessing part of the VEMA script.
 
     Args:
@@ -64,7 +64,7 @@ def preprocessing(base_dir: str = os.getcwd()):
     Returns:
         _type_: _description_
     """
-    base_path = Path(base_dir).joinpath("data", "raw")
+    base_path = Path(base_dir)
 
     # %%
     base_input_data_path = base_path.joinpath("vehicles")
