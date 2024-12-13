@@ -152,21 +152,20 @@ class ScipySurvival():
         # Deal with subtypes/submodes of the form "{mode} - {submode}"
         base_modes = base_array.coords["Type"].values
         keep_modes = []
-        new_arrays = []
+        coords = {coord.name: coord for coord in base_array.coords.values()}
+        coords["Type"] = self._output_modes
+        new_array = xr.DataArray(0.0, dims=base_array.dims, coords=coords)
         for mode in self.modes:
             base_mode = mode.split(SUBTYPE_SEPARATOR)[0]
             if mode in base_modes:
                 keep_modes.append(mode)
             elif base_mode in base_modes:
-                # TODO: check if this still works
-                new_array = base_array.loc[{"Type": [base_mode]}]
-                new_array.coords["Type"] = [mode]
-                new_arrays.append(new_array)
+                new_array.loc[{"Type": mode}] = base_array.loc[{"Type": base_mode}]
             else:
                 raise ValueError(f"Unknown mode '{mode}' needed for survival matrix, "
                                  "but lifetime unknown.")
-        merged_array = xr.concat((base_array.sel(Type=keep_modes), *new_arrays), dim="Type")
-        return merged_array.sel(Type=self._output_modes)
+        new_array.loc[{"Type": keep_modes}] = base_array.loc[{"Type": keep_modes}]
+        return new_array
 
     @cached_property
     def modes(self) -> list[str]:
