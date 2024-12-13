@@ -194,7 +194,7 @@ def compute_housing_type(database_directory):
 
 def compute_average_m2_capita(base_directory):
     average_m2_capita_df: pd.DataFrame = pd.read_csv(base_directory.joinpath('files_DB','Average_m2_per_cap.csv'), index_col = [0,1]) 
-    column_mapping = {'1': 'Detached', '2': 'Semi-detached', '3': 'Appartments', '4': 'High-rise'}
+    column_mapping = {'1': 'Detached', '2': 'Semi-detached', '3': 'Appartment', '4': 'High-rise'}
     average_m2_capita_df.rename(columns=column_mapping, inplace=True)
     average_m2_capita = dataset_to_array(average_m2_capita_df.to_xarray(), ["Region", "Area"], ["Type"])
     average_m2_capita.coords["Region"] = [str(x.values) for x in average_m2_capita.coords["Region"]]

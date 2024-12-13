@@ -159,13 +159,14 @@ class ScipySurvival():
                 keep_modes.append(mode)
             elif base_mode in base_modes:
                 # TODO: check if this still works
-                new_array = base_array.loc[{"Type": mode}]
+                new_array = base_array.loc[{"Type": [base_mode]}]
                 new_array.coords["Type"] = [mode]
                 new_arrays.append(new_array)
             else:
                 raise ValueError(f"Unknown mode '{mode}' needed for survival matrix, "
                                  "but lifetime unknown.")
-        return xr.concat((base_array.sel(Type=keep_modes), *new_arrays), dim="Type")
+        merged_array = xr.concat((base_array.sel(Type=keep_modes), *new_arrays), dim="Type")
+        return merged_array.sel(Type=self._output_modes)
 
     @cached_property
     def modes(self) -> list[str]:
@@ -215,6 +216,6 @@ class ScipySurvival():
     @cached_property
     def dt(self) -> int:
         first_array = list(self.lifetime_parameters.values())[0]
-        dt = first_array.coords["Time"].values[1]- first_array.coords["Time"].values[0]
+        dt = first_array.coords["Time"].values[1] - first_array.coords["Time"].values[0]
         assert dt == 1
         return dt

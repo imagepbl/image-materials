@@ -58,6 +58,8 @@ def compute_lifetimes(base_directory, commercial_types, distribution_type="weibu
     xr_lifetimes_residential = dataset_to_array(lifetimes_residential_interpolated.to_xarray(),
                                                 ["Region", "Type", "Area", "Time"],
                                                 ["Parameter"])
+    fixed_coords = [x if x != "Appartments" else "Appartment" for x in xr_lifetimes_residential.coords["Type"].values]
+    xr_lifetimes_residential.coords["Type"] = fixed_coords
     xr_lifetimes_residential = merge_dims(xr_lifetimes_residential, "Type", "Area")
     xr_lifetimes_residential = xr_lifetimes_residential.transpose("Time", "Region", "Type", "Parameter")
     lifetimes_array = xr.concat((xr_lifetimes_commercial, xr_lifetimes_residential), dim="Type")
