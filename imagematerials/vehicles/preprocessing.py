@@ -726,44 +726,6 @@ def convert_life_time_vehicles(life_time_vehicles: xr.Dataset) -> dict[str, xr.D
     return ret_scipy_params
 
 
-# def export_to_netcdf(prep_data: dict, out_fp: Union[Path, str]):
-#     """Export the xarray data to a netcdf4 file.
-
-#     Parameters
-#     ----------
-#     prep_data
-#         xArray data from the preprocessing steps.
-#     out_fp
-#         Netcdf4 file to write to, recommended extension is .nc.
-
-#     """
-#     new_prep_data = {key: val for key, val in prep_data.items()}
-#     lf_vehicles = new_prep_data.pop("lifetimes_vehicles")
-#     xr.Dataset(new_prep_data).to_netcdf(out_fp, group="main", engine="netcdf4")
-#     xr.Dataset(lf_vehicles).to_netcdf(out_fp, group="lifetimes", mode="a", engine="netcdf4")
-
-
-# def import_from_netcdf(in_fp: Union[Path, str]) -> dict:
-#     """Import the xarray data from a netcdf4 file.
-
-#     Parameters
-#     ----------
-#     in_fp
-#         File to read the xarray data file from (usualy with *.nc).
-
-#     Returns
-#     -------
-#         Dictionary containing the data arrays and datasets.
-
-#     """
-#     lt = xr.open_dataset(in_fp, group="lifetimes", engine="netcdf4").load()
-#     prep_data = xr.open_dataset(in_fp, group="main", engine="netcdf4").load()
-#     prep_data_dict = {key: value for key, value in prep_data.items()}
-#     prep_data_dict["lifetimes_vehicles"] = {dist_name: arr.dropna("mode")
-#                                             for dist_name, arr in lt.items()}
-#     return prep_data_dict
-
-
 # %%
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
