@@ -52,8 +52,6 @@ from imagematerials.vehicles.constants import (
 )
 from imagematerials.vehicles.modelling_functions import interpolate, tkms_to_nr_of_vehicles_fixed
 
-base_dir = Path(os.getcwd()).joinpath("data", "raw")
-
 
 def preprocessing(base_dir: str):
     """Wrapper function for the preprocessing part of the VEMA script.
