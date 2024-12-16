@@ -26,7 +26,7 @@ class SurvivalMatrix:
         survival
             The survival object is a class that knows how to compute the survival matrix.
             It contains the information on which dimensions the life times of the stocks
-            depend, which could be the "mode", "region", both or neither.
+            depend, which could be the "Type", "region", both or neither.
 
         """
         self.survival_matrix = survival.new_matrix()
@@ -44,7 +44,7 @@ class SurvivalMatrix:
 
         # TODO: Check if this actually creates the cohort indices properly.
         if isinstance(cohort, slice):
-            comp_list = islice(self.survival_matrix.indexes["cohort"],
+            comp_list = islice(self.survival_matrix.indexes["Cohort"],
                                *cohort.indices(self.num_timesteps))
         else:
             comp_list = [int(cohort)]
@@ -100,11 +100,12 @@ class ScipySurvival():
             A DataArray with the correct dimensions and zeros everywhere.
 
         """
+        coords = {"Time": self.time_series.to_numpy(), "Cohort": self.time_series.to_numpy()}
+        coords.update(self.extra_coords)
         return xr.DataArray(
-            0.0, dims=("time", "cohort", "mode"),
-            coords={"time": self.time_series.to_numpy(),
-                    "cohort": self.time_series.to_numpy(),
-                    "mode": self.modes})
+            0.0, dims=("Time", "Cohort", *self.extra_dims),
+            coords=coords
+        )
 
     def compute_survival(self, cohort: int) -> xr.DataArray:
         """Compute the survival fractions for one cohort, but all modes.
@@ -124,43 +125,46 @@ class ScipySurvival():
         n_coords_left = len(self.time_series.loc[cohort:])
         res_arrays = []
         for dist_name, param_array in self.lifetime_parameters.items():
-            n_modes = param_array.shape[1]
+            var_shape = [len(param_array.coords[dim]) for dim in param_array.dims if dim not in ["Time", "ScipyParam"]]
+            # n_modes = len(param_array.coords["Type"])
             # The index array signifies the relative time delta from the cohort to the
             # future.
-            # TODO: Fix this so that this works for dt != 1
-            index_array = np.empty((n_coords_left, n_modes))
-            index_array[:, :] = np.arange(n_coords_left).reshape(-1, 1)
+            index_array = np.broadcast_to(self.dt*np.arange(n_coords_left), reversed((n_coords_left, *var_shape))).T
             param_dict = {}
             for param_name in ["c", "scale", "loc"]:
                 if param_name in param_array.attrs:
                     param_dict[param_name] = param_array.attrs[param_name]
                 else:
-                    param_dict[param_name] = param_array.loc[cohort, :, param_name]
+                    param_dict[param_name] = param_array.loc[{"Time": cohort, "ScipyParam": param_name}]
             method = NAME_TO_DIST[dist_name].method
             res_numpy_array = method(index_array, **param_dict)
-            res_arrays.append(xr.DataArray(res_numpy_array, dims=("time", "mode"),
-                                           coords={"time": self.time_series.loc[cohort:],
-                                                   "mode": param_array.coords["mode"]}))
-        base_array = xr.concat(res_arrays, dim="mode", coords="minimal")
+            array_coords = {"Time": self.time_series.loc[cohort:]}
+            array_coords.update({dim: param_array.coords[dim] for dim in param_array.dims
+                                 if dim not in ["Time", "ScipyParam"]})
+            res_arrays.append(xr.DataArray(res_numpy_array, dims=list(array_coords),
+                                           coords=array_coords))
+        base_array = xr.concat(res_arrays, dim="Type", coords="minimal")
 
         if self._output_modes is None:
             # Not needed to deal with subtypes
             return base_array
 
         # Deal with subtypes/submodes of the form "{mode} - {submode}"
-        new_array = xr.DataArray(0.0, dims=("time", "mode"),
-                                 coords={"time": base_array.coords["time"],
-                                         "mode": self.modes})
-        base_modes = base_array.coords["mode"].values
+        base_modes = base_array.coords["Type"].values
+        keep_modes = []
+        coords = {coord.name: coord for coord in base_array.coords.values()}
+        coords["Type"] = self._output_modes
+        new_array = xr.DataArray(0.0, dims=base_array.dims, coords=coords)
         for mode in self.modes:
             base_mode = mode.split(SUBTYPE_SEPARATOR)[0]
             if mode in base_modes:
-                new_array.loc[:, mode] = base_array.loc[:, mode]
+                keep_modes.append(mode)
             elif base_mode in base_modes:
-                new_array.loc[:, mode] = base_array.loc[:, base_mode].to_numpy()
+                new_array.loc[{"Type": mode}] = base_array.loc[{"Type": base_mode}]
             else:
                 raise ValueError(f"Unknown mode '{mode}' needed for survival matrix, "
                                  "but lifetime unknown.")
+        new_array.loc[{"Type": keep_modes}] = base_array.loc[{"Type": keep_modes}]
         return new_array
 
     @cached_property
@@ -177,7 +181,7 @@ class ScipySurvival():
         if self._output_modes is None:
             all_modes = []
             for param_dict_array in self.lifetime_parameters.values():
-                all_modes.extend(str(x) for x in param_dict_array.coords["mode"].to_numpy())
+                all_modes.extend(str(x) for x in param_dict_array.coords["Type"].to_numpy())
         else:
             all_modes = self._output_modes
         return all_modes
@@ -186,5 +190,31 @@ class ScipySurvival():
     def time_series(self) -> xr.DataArray:
         """Get all the time values in the simulation."""
         first_array = list(self.lifetime_parameters.values())[0]
-        return first_array.coords["time"]
+        return first_array.coords["Time"]
 
+    @cached_property
+    def extra_dims(self) -> list[str]:
+        dims = []
+        first_array = list(self.lifetime_parameters.values())[0]
+        for dim in first_array.dims:
+            if dim not in ["Time", "ScipyParam"]:
+                dims.append(dim)
+        return dims
+
+    @cached_property
+    def extra_coords(self) -> list[list]:
+        first_array = list(self.lifetime_parameters.values())[0]
+        coords = {}
+        for dim in self.extra_dims:
+            if dim == "Type":
+                coords[dim] = self.modes
+            else:
+                coords[dim] = first_array.coords[dim]
+        return coords
+
+    @cached_property
+    def dt(self) -> int:
+        first_array = list(self.lifetime_parameters.values())[0]
+        dt = first_array.coords["Time"].values[1] - first_array.coords["Time"].values[0]
+        assert dt == 1
+        return dt

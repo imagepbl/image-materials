@@ -596,7 +596,7 @@ def preprocessing(base_dir: str):
         'material_fractions_typical': material_fractions_typical,
         'vehicle_weights_simple': vehicle_weights_simple,
         'vehicle_weights_typical': vehicle_weights_typical,
-        'lifetimes_vehicles': lifetimes_vehicles,
+        'lifetimes': lifetimes_vehicles,
         'battery_weights_typical': battery_weights_typical,
         'battery_materials': battery_materials,
         'battery_shares': battery_shares,
@@ -616,16 +616,16 @@ def preprocessing(base_dir: str):
 
     # Conversion table for all coordinates, to be removed/adapted after input tables are fixed.
     conversion_table = {
-        "total_nr_vehicles_simple": (["time"], ["mode", "region"],),
-        "material_fractions_simple": (["cohort"], ["mode", "material"],),
-        "material_fractions_typical": (["cohort"], ["mode", "type", "material"], {"mode": ["mode", "type"]}),
-        "vehicle_weights_simple": (["cohort"], ["mode"],),
-        "vehicle_weights_typical": (["cohort"], ["mode", "type"], {"mode": ["mode", "type"]}),
-        "battery_weights_typical": (["cohort"], ["mode", "type"], {"mode": ["mode", "type"]}),
-        "battery_materials": (["cohort"], ["material", "battery"],),
-        "battery_shares": (["cohort"], ["battery"],),
-        "weight_boats": (["cohort"], ["size"],),
-        "vehicle_shares_typical": (["cohort"], ["mode", "type", "region"], {"mode": ["mode", "type"]})
+        "total_nr_vehicles_simple": (["Time"], ["Type", "Region"],),
+        "material_fractions_simple": (["Cohort"], ["Type", "material"],),
+        "material_fractions_typical": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]}),
+        "vehicle_weights_simple": (["Cohort"], ["Type"],),
+        "vehicle_weights_typical": (["Cohort"], ["Type", "SubType"], {"Type": ["Type", "SubType"]}),
+        "battery_weights_typical": (["Cohort"], ["Type", "SubType"], {"Type": ["Type", "SubType"]}),
+        "battery_materials": (["Cohort"], ["material", "battery"],),
+        "battery_shares": (["Cohort"], ["battery"],),
+        "weight_boats": (["Cohort"], ["size"],),
+        "vehicle_shares_typical": (["Cohort"], ["Type", "SubType", "Region"], {"Type": ["Type", "SubType"]})
     }
     for df_name, df in results_dict.items():
         if df_name in conversion_table:
@@ -643,7 +643,7 @@ def preprocessing(base_dir: str):
             if df_name_typical in df_name_list:
                 xar_simple = preprocessing_results_xarray.pop(df_name)
                 xar_typical = preprocessing_results_xarray.pop(df_name[:-6]+"typical")
-                xar_complete = xr.concat((xar_simple, xar_typical), dim="mode")
+                xar_complete = xr.concat((xar_simple, xar_typical), dim="Type")
                 preprocessing_results_xarray[df_name[:-7]] = xar_complete
             else:
                 preprocessing_results_xarray[df_name[:-7]] = preprocessing_results_xarray.pop(df_name)
@@ -652,8 +652,9 @@ def preprocessing(base_dir: str):
             if df_name_simple not in df_name_list:
                 preprocessing_results_xarray[df_name[:-8]] = preprocessing_results_xarray.pop(df_name)
 
-    preprocessing_results_xarray["lifetimes_vehicles"] = convert_life_time_vehicles(
-        preprocessing_results_xarray["lifetimes_vehicles"])
+    preprocessing_results_xarray["lifetimes"] = convert_life_time_vehicles(preprocessing_results_xarray["lifetimes"])
+    preprocessing_results_xarray["stocks"] = preprocessing_results_xarray.pop("total_nr_vehicles")
+    preprocessing_results_xarray["shares"] = preprocessing_results_xarray.pop("vehicle_shares")
 
     # TODO: vemamodelling.py works with dict of dfs and not only dict of xarrays, therefore now both are returned (for now)
     return results_dict, preprocessing_results_xarray
@@ -705,11 +706,11 @@ def convert_life_time_vehicles(life_time_vehicles: xr.Dataset) -> dict[str, xr.D
 
         # param_arrays = {}
         array = xr.DataArray(
-            0.0, dims=("time", "mode", "scipy_param"),
+            0.0, dims=("Time", "Type", "ScipyParam"),
             coords={
-                "time": life_time_vehicles.coords["year"].to_numpy(),
-                "mode": mode_list,
-                "scipy_param": dist.variable_scipy_param})
+                "Time": life_time_vehicles.coords["year"].to_numpy(),
+                "Type": mode_list,
+                "ScipyParam": dist.variable_scipy_param})
         for mode in mode_list:
             orig_param_dict = {}
             for param in dist.params:
@@ -722,44 +723,6 @@ def convert_life_time_vehicles(life_time_vehicles: xr.Dataset) -> dict[str, xr.D
                     array.attrs[cur_scipy_key] = cur_scipy_par
         ret_scipy_params[dist_name] = array
     return ret_scipy_params
-
-
-def export_to_netcdf(prep_data: dict, out_fp: Union[Path, str]):
-    """Export the xarray data to a netcdf4 file.
-
-    Parameters
-    ----------
-    prep_data
-        xArray data from the preprocessing steps.
-    out_fp
-        Netcdf4 file to write to, recommended extension is .nc.
-
-    """
-    new_prep_data = {key: val for key, val in prep_data.items()}
-    lf_vehicles = new_prep_data.pop("lifetimes_vehicles")
-    xr.Dataset(new_prep_data).to_netcdf(out_fp, group="main", engine="netcdf4")
-    xr.Dataset(lf_vehicles).to_netcdf(out_fp, group="lifetimes", mode="a", engine="netcdf4")
-
-
-def import_from_netcdf(in_fp: Union[Path, str]) -> dict:
-    """Import the xarray data from a netcdf4 file.
-
-    Parameters
-    ----------
-    in_fp
-        File to read the xarray data file from (usualy with *.nc).
-
-    Returns
-    -------
-        Dictionary containing the data arrays and datasets.
-
-    """
-    lt = xr.open_dataset(in_fp, group="lifetimes", engine="netcdf4").load()
-    prep_data = xr.open_dataset(in_fp, group="main", engine="netcdf4").load()
-    prep_data_dict = {key: value for key, value in prep_data.items()}
-    prep_data_dict["lifetimes_vehicles"] = {dist_name: arr.dropna("mode")
-                                            for dist_name, arr in lt.items()}
-    return prep_data_dict
 
 
 # %%

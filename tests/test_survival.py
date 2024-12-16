@@ -8,10 +8,10 @@ from imagematerials.survival import ScipySurvival, SurvivalMatrix
 
 class ExampleSurvival():
     def __init__(self, n_time):
-        self._survival_matrix = xr.DataArray(0.0, dims=("time", "cohort"),
+        self._survival_matrix = xr.DataArray(0.0, dims=("Time", "Cohort"),
                                              coords={
-                                                 "time": np.arange(n_time) + 1900,
-                                                 "cohort": np.arange(n_time) + 1900,
+                                                 "Time": np.arange(n_time) + 1900,
+                                                 "Cohort": np.arange(n_time) + 1900,
                                              })
         self._survival_matrix.loc[self.time_series, self.time_series] = 1.0
         for i_cohort, cur_cohort in enumerate(self.time_series[:-1]):
@@ -20,16 +20,16 @@ class ExampleSurvival():
 
     @property
     def time_series(self):
-        return self._survival_matrix.coords["time"]
+        return self._survival_matrix.coords["Time"]
 
     def compute_survival(self, cohort):
         return self._survival_matrix.loc[cohort:, cohort]
 
     def new_matrix(self):
-        return xr.DataArray(0.0, dims=("time", "cohort"),
+        return xr.DataArray(0.0, dims=("Time", "Cohort"),
                                              coords={
-                                                 "time": self.time_series.to_numpy(),
-                                                 "cohort": self.time_series.to_numpy(),
+                                                 "Time": self.time_series.to_numpy(),
+                                                 "Cohort": self.time_series.to_numpy(),
                                              })
 
 def test_example_survival_matrix():
@@ -58,8 +58,8 @@ def test_example_survival_matrix():
 def create_life_times(prefix, more_life=0):
     time = np.arange(30)+1900
     mode = [f"{prefix}_{i}" for i in range(4)]
-    array = xr.DataArray(0.0, dims=["time", "mode", "scipy_param"],
-                         coords={"time": time, "mode": mode, "scipy_param": ["c", "scale"]})
+    array = xr.DataArray(0.0, dims=["Time", "Type", "ScipyParam"],
+                         coords={"Time": time, "Type": mode, "ScipyParam": ["c", "scale"]})
     for i_mode, mode_name in enumerate(mode):
         array.loc[:, mode[i_mode], "c"] = 4
         array.loc[:, mode[i_mode], "scale"] = i_mode + 1
