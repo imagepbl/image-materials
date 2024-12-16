@@ -15,7 +15,7 @@ from imagematerials.util import (
 def simulate_stocks(prep_data):
     total_stocks = prep_data['stocks']
     lifetimes = prep_data["lifetimes"]
-    vehicle_shares = prep_data.get("shares", None)
+    shares = prep_data.get("shares", None)
     survival_matrix = SurvivalMatrix(ScipySurvival(lifetimes, total_stocks.coords["Type"]))
 
     start_simulation = 1970
@@ -59,7 +59,7 @@ def simulate_stocks(prep_data):
                             end=end_simulation, stepsize=1)
     model = Stocks(timeline, start_simulation=start_simulation, survival_matrix=survival_matrix,
                    stock=total_stocks, stock_function = compute_dynamic_stock_driven,
-                   stock_by_cohort=stock_by_cohort, shares=vehicle_shares)
+                   stock_by_cohort=stock_by_cohort, shares=shares)
     model.simulate(timeline_simulate)
     model.time_coor = total_stocks.coords["Time"]
     return model
