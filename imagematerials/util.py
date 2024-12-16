@@ -1,4 +1,5 @@
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Union
 
 import numpy as np
 import xarray as xr
@@ -95,3 +96,66 @@ def dataset_to_array(xar_dataset: xr.Dataset, main_coor: list[str], extra_dims: 
             loc = {key: str(value) for key, value in zip(extra_dims, dv)}
         result_array.loc[loc] = xar_dataset[dv].to_numpy()
     return result_array.rename(rename_coords)
+
+
+def merge_dims(xr_array, dim_one, dim_two):
+    if dim_one not in xr_array.coords:
+        raise ValueError(f"Dimension {dim_one} not found in data array.")
+    if dim_two not in xr_array.coords:
+        raise ValueError(f"Dimension {dim_two} not found in data array.")
+
+    new_types = []
+    for cur_coor_one in xr_array.coords[dim_one].values:
+        for cur_coor_two in xr_array.coords[dim_two].values:
+            new_types.append(SUBTYPE_SEPARATOR.join((cur_coor_one, cur_coor_two)))
+
+    new_dims = [dim for dim in xr_array.coords.keys() if dim != dim_two]
+    new_coords = {dim: coord.values for dim, coord in xr_array.coords.items() if dim not in [dim_one, dim_two]}
+    new_coords.update({dim_one: new_types})
+    new_array = xr.DataArray(
+        0.0, dims=new_dims,
+        coords = new_coords
+    )
+    for cur_coor_one in xr_array.coords[dim_one].values:
+        for cur_coor_two in xr_array.coords[dim_two].values:
+            new_coor_one = SUBTYPE_SEPARATOR.join((cur_coor_one, cur_coor_two))
+            new_array.loc[{dim_one: new_coor_one}] = xr_array.loc[{dim_one: cur_coor_one, dim_two: cur_coor_two}]
+    return new_array
+
+
+def export_to_netcdf(prep_data: dict, out_fp: Union[Path, str]):
+    """Export the xarray data to a netcdf4 file.
+
+    Parameters
+    ----------
+    prep_data
+        xArray data from the preprocessing steps.
+    out_fp
+        Netcdf4 file to write to, recommended extension is .nc.
+
+    """
+    new_prep_data = {key: val for key, val in prep_data.items()}
+    lifetimes = new_prep_data.pop("lifetimes")
+    xr.Dataset(new_prep_data).to_netcdf(out_fp, group="main", engine="netcdf4")
+    xr.Dataset(lifetimes).to_netcdf(out_fp, group="lifetimes", mode="a", engine="netcdf4")
+
+
+def import_from_netcdf(in_fp: Union[Path, str]) -> dict:
+    """Import the xarray data from a netcdf4 file.
+
+    Parameters
+    ----------
+    in_fp
+        File to read the xarray data file from (usualy with *.nc).
+
+    Returns
+    -------
+        Dictionary containing the data arrays and datasets.
+
+    """
+    lt = xr.open_dataset(in_fp, group="lifetimes", engine="netcdf4").load()
+    prep_data = xr.open_dataset(in_fp, group="main", engine="netcdf4").load()
+    prep_data_dict = {key: value for key, value in prep_data.items()}
+    prep_data_dict["lifetimes"] = {dist_name: arr.dropna("Type")
+                                            for dist_name, arr in lt.items()}
+    return prep_data_dict

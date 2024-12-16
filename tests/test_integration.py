@@ -4,12 +4,9 @@ import numpy as np
 import xarray as xr
 from pytest import fixture, mark
 
-from imagematerials.vehicles.__main__ import export_summary_netcdf, simulate_stocks
-from imagematerials.vehicles.preprocessing import (
-    export_to_netcdf,
-    import_from_netcdf,
-    preprocessing,
-)
+from imagematerials.__main__ import export_summary_netcdf, simulate_stocks
+from imagematerials.util import export_to_netcdf, import_from_netcdf
+from imagematerials.vehicles.preprocessing import preprocessing
 
 DATA_DIR = Path("data", "raw")
 COMPARE_SUMMARY_FP = Path("tests", "data", "data_sums.nc")

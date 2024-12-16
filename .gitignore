@@ -1,7 +1,6 @@
 # Intermediate files
 
-examples/prep_vema.nc
-examples/data_sums.nc
+examples/*.nc
 examples/all.prof
 
 
