@@ -67,7 +67,7 @@ def preprocessing(base_dir: str):
     # %%
     base_input_data_path = base_path.joinpath("vehicles")
     standard_input_data_path = base_input_data_path.joinpath("standard_data")
-    image_folder = base_path.joinpath(SCEN)
+    image_folder = base_path.joinpath("IMAGE_data", PROJECT)
     # standard_output_folder = base_path.joinpath("..", "..", "output", PROJECT,
     #                                           FOLDER)
 

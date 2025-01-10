@@ -154,9 +154,9 @@ vshares_label    = ['ICE', 'HEV', 'PHEV', 'BEV', 'FCV', 'Trolley']
 # --- Paths
 
 # Scenario settings
-SCEN = "SSP2_M"
+SCEN = "SSP2"
 # CP or 2D (Add "_RE" for Resource Efficiency)
-VARIANT = "_CP"
-PROJECT = "mock_project"
+VARIANT = "CP"
+PROJECT = "SSP2_M_CP"
 FOLDER = SCEN + "_" + VARIANT
 OUTPUT_FOLDER = base_dir.joinpath("..", "..", "output", PROJECT, FOLDER)
