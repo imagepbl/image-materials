@@ -29,6 +29,9 @@ class SurvivalMatrix:
             depend, which could be the "Type", "region", both or neither.
 
         """
+        # The XArray.Datarray that contains the values is part of the SurvivalMatrix object.
+        # Method to create this matrix is part of the survival object,
+        # because it know the dimensions.
         self.survival_matrix = survival.new_matrix()
         self._cached_timesteps = set()  # Cohorts that are already computed.
         self.num_timesteps = len(survival.time_series)
@@ -71,7 +74,7 @@ class ScipySurvival():
     """
 
     def __init__(self, lifetime_parameters: dict[str, xr.DataArray],
-                 output_modes: Optional[xr.DataArray] = None):
+                 output_modes: Optional[list, xr.DataArray] = None):
         """Initialize scipysurvival class.
 
         Parameters
@@ -91,11 +94,13 @@ class ScipySurvival():
         self.lifetime_parameters = lifetime_parameters
         if output_modes is not None:
             try:
+                # Xarray coordinates, convert to np.NDArray
                 self._output_modes = output_modes.values
             except AttributeError:
+                # Lists, and other
                 self._output_modes = output_modes
         else:
-            self._output_modes = output_modes
+            self._output_modes = None
 
     def new_matrix(self):
         """Create a new data array with zeros everywhere.
@@ -127,6 +132,7 @@ class ScipySurvival():
             future times.
 
         """
+        # Get the number of time steps in the future including the current year.
         n_coords_left = len(self.time_series.loc[cohort:])
         res_arrays = []
         for dist_name, param_array in self.lifetime_parameters.items():
