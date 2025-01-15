@@ -30,7 +30,7 @@ class SurvivalMatrix:
 
         """
         self.survival_matrix = survival.new_matrix()
-        self._cached_timesteps = set()
+        self._cached_timesteps = set()  # Cohorts that are already computed.
         self.num_timesteps = len(survival.time_series)
         self.survival = survival
 
@@ -44,6 +44,7 @@ class SurvivalMatrix:
 
         # TODO: Check if this actually creates the cohort indices properly.
         if isinstance(cohort, slice):
+            # Convert the slice into a list.
             comp_list = islice(self.survival_matrix.indexes["Cohort"],
                                *cohort.indices(self.num_timesteps))
         else:
@@ -76,7 +77,11 @@ class ScipySurvival():
         Parameters
         ----------
         lifetime_parameters
-            Output from convert_life_time_vehicles function.
+            Output from convert_life_time_vehicles function. This should be a dictionary, with
+            the keys the name of the distribution, and the values a xr.DataArray with the scipy
+            parameters. E.g. weibull or folded_normal.
+            mandatory dimensions for the arrays: Cohort, Type, ScipyParam
+            optional dimension: Region
         output_modes:
             To allow for sub types that have the same lifetime as the super type.
             By default, this value is None, in which case it is assumed that all sub types

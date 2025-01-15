@@ -15,7 +15,8 @@ from imagematerials.util import (
 def simulate_stocks(prep_data):
     total_stocks = prep_data['stocks']
     lifetimes = prep_data["lifetimes"]
-    shares = prep_data.get("shares", None)
+    shares = prep_data.get("shares", None)  # If the shares are not present they will be set to None
+    # Type means: E.g. type of building (Appartment)/ vehicles / etc.
     survival_matrix = SurvivalMatrix(ScipySurvival(lifetimes, total_stocks.coords["Type"]))
 
     start_simulation = 1970
@@ -23,6 +24,8 @@ def simulate_stocks(prep_data):
     region = prism.Dimension("Region", coords=[str(x) for x in total_stocks.coords["Region"].values])
     stock_type = prism.Dimension("Type", coords=[str(x) for x in total_stocks["Type"].to_numpy()])
     cohort = prism.Dimension("Cohort", coords=[x for x in total_stocks["Time"].to_numpy()])
+
+    # Create stock_by_cohort as a data array instead of a prism array, because this is much faster.
     stock_by_cohort = xr.DataArray(0.0, dims=("Time", "Cohort", "Region", "Type"),
                                    coords={"Time": total_stocks.coords["Time"],
                                            "Cohort": total_stocks.coords["Time"].to_numpy(),
@@ -54,9 +57,9 @@ def simulate_stocks(prep_data):
                                 self.survival_matrix, t, self.shares)
 
     timeline = prism.Timeline(start=total_stocks.coords["Time"][0],
-                            end=end_simulation, stepsize=1)
+                              end=end_simulation, stepsize=1)
     timeline_simulate = prism.Timeline(start=start_simulation,
-                            end=end_simulation, stepsize=1)
+                                       end=end_simulation, stepsize=1)
     model = Stocks(timeline, start_simulation=start_simulation, survival_matrix=survival_matrix,
                    stock=total_stocks, stock_function = compute_dynamic_stock_driven,
                    stock_by_cohort=stock_by_cohort, shares=shares)
