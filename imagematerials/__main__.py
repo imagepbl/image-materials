@@ -17,6 +17,9 @@ def simulate_stocks(prep_data):
     lifetimes = prep_data["lifetimes"]
     shares = prep_data.get("shares", None)  # If the shares are not present they will be set to None
     # Type means: E.g. type of building (Appartment)/ vehicles / etc.
+    # Currently only one way of computing the survival matrix exists: ScipySurvival
+    # This computes the survival matrix on the fly, values are only computed when accessed.
+    # Other ways of computing the survival matrix could be implemented.
     survival_matrix = SurvivalMatrix(ScipySurvival(lifetimes, total_stocks.coords["Type"]))
 
     start_simulation = 1970
