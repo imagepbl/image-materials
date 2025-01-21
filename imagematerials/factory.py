@@ -90,9 +90,9 @@ class MaterialModule(BaseModule):
         end_simulation = coordinates["Time"].max()
         start_simulation = coordinates["Time"].min()
 
-        stock_by_cohort_materials = xr.DataArray(0.0, dims=("Time", "Cohort", "Region", "Type", "material"),
+        stock_by_cohort_materials = xr.DataArray(0.0, dims=("Time", "Region", "Type", "material"),
                                     coords={"Time": coordinates["Time"],
-                                            "Cohort": coordinates["Time"].values,
+                                            # "Cohort": coordinates["Time"].values,
                                             "Region": coordinates["Region"],
                                             "Type": coordinates["Type"],
                                             "material": coordinates["material"]})
@@ -104,13 +104,13 @@ class MaterialModule(BaseModule):
             stock_by_cohort_materials: xr.DataArray
 
             inflow_materials: prism.TimeVariable[region, stock_type, material_type, "count"] = prism.export(initial_value = prism.Array[region, stock_type, material_type, 'count'](0.0))
-            outflow_by_cohort_materials: prism.TimeVariable[region, stock_type, material_type, cohort, "count"] = prism.export(initial_value = prism.Array[region, stock_type, material_type, cohort, 'count'](0.0))
+            outflow_by_cohort_materials: prism.TimeVariable[region, stock_type, material_type, "count"] = prism.export(initial_value = prism.Array[region, stock_type, material_type, cohort, 'count'](0.0))
 
             def compute_values(self, time: prism.Time):
                 t, dt = time.t, time.dt
                 self.inflow_materials[t] = external.inflow[t]*self.material_fractions.sel(Cohort=t).drop_vars("Cohort")*self.weights.sel(Cohort=t).drop_vars("Cohort")
-                self.outflow_by_cohort_materials[t] = external.outflow_by_cohort[t]*self.material_fractions*self.weights
-                self.stock_by_cohort_materials.loc[t] = external.stock_by_cohort.loc[t]*self.material_fractions*self.weights
+                self.outflow_by_cohort_materials[t] = (external.outflow_by_cohort[t]*self.material_fractions*self.weights).sum("Cohort")
+                self.stock_by_cohort_materials.loc[t] = (external.stock_by_cohort.loc[t]*self.material_fractions*self.weights).sum("Cohort")
 
         timeline = prism.Timeline(start=start_simulation,
                                   end=end_simulation, stepsize=1)
