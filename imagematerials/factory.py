@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, ClassVar, Optional
 
 import xarray as xr
 
@@ -24,6 +24,7 @@ class BaseModule():
                 raise KeyError(f"Cannot find {data_name} in preprocessing data.")
         for data_name in self.optional_input_data:
             setattr(self, data_name, prep_data.get(data_name))
+
 
 class StockModule(BaseModule):
     name = "stock"
@@ -67,6 +68,7 @@ class StockModule(BaseModule):
                 t, dt = time.t, time.dt
                 self.stock_function(self.stock, self.stock_by_cohort,  self.inflow, self.outflow_by_cohort,
                                     self.survival_matrix, t, self.shares)
+
         timeline = prism.Timeline(start=self.stocks.coords["Time"][0],
                                   end=end_simulation, stepsize=1)
 
