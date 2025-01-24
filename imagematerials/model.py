@@ -24,21 +24,22 @@ class GenericStocks(prism.Model):
     Time: prism.Coords[TIME]
 
     # Inputs
-    survival_matrix: SurvivalMatrix
-    stocks: prism.TimeVariable[REGION, STOCK_TYPE] #TODO check how to have property that can be both input and output within prism
-    stock_function: Callable    # defines the stock function to use e.g. stock or inflow driven
+    lifetimes: xr.DataArray
+    stocks: xr.DataArray #TODO check how to have property that can be both input and output within prism
+    # stock_function: Callable    # defines the stock function to use e.g. stock or inflow driven
     shares: Optional[xr.DataArray]
 
     # For module dependency, ignored by prism
     input_data: tuple[str] = ("stocks", "lifetimes")
-    optional_input_data: tuple[str] = ("shares")
+    optional_input_data: tuple[str] = ("shares",)
     output_data: tuple[str] = ("outflow_by_cohort", "inflow", "stock_by_cohort")
 
-    # stock_by_cohort: prism.TimeVariable[Region, Mode, Cohort, "count"] = prism.export(initial_value = prism.Array[Region, Mode, Cohort, 'count'](0.0)) 
+    # stock_by_cohort: prism.TimeVariable[Region, Mode, Cohort, "count"] = prism.export(initial_value = prism.Array[Region, Mode, Cohort, 'count'](0.0))
     inflow: prism.TimeVariable[REGION, STOCK_TYPE, "count"] = prism.export()
     outflow_by_cohort: prism.TimeVariable[REGION, STOCK_TYPE, COHORT, "count"] = prism.export()
 
     def compute_initial_values(self, time: prism.Timeline):
+        self.survival_matrix = SurvivalMatrix(ScipySurvival(self.lifetimes, self.stocks.coords["Type"]))
         self.stock_by_cohort = xr.DataArray(
             0.0,
             dims=("Time", "Cohort", "Region", "Type"),
@@ -52,15 +53,15 @@ class GenericStocks(prism.Model):
         self.inflow[t].loc[:] = 0.0
         self.outflow_by_cohort[t].loc[:] = 0.0
 
-        self.stock_function(self.stocks, self.stock_by_cohort,  self.inflow, self.outflow_by_cohort,
-                            self.survival_matrix, t, self.shares)
+        compute_dynamic_stock_driven(
+            self.stocks, self.stock_by_cohort,  self.inflow, self.outflow_by_cohort,
+            self.survival_matrix, t, self.shares)
 
 @prism.interface
 class GenericMaterials(prism.Model):
     # Input data
     weights: xr.DataArray
     material_fractions: xr.DataArray
-    # stock_by_cohort_materials: xr.DataArray
 
     # Dimensions
     Region: prism.Coords[REGION]
@@ -68,6 +69,12 @@ class GenericMaterials(prism.Model):
     Cohort: prism.Coords[COHORT]
     Time: prism.Coords[TIME]
     material: prism.Coords[MATERIAL_TYPE]
+
+    # Data dependencies
+    input_data: tuple[str] = ("weights", "material_fractions", "inflow",
+                              "stock_by_cohort", "outflow_by_cohort")
+    output_data: tuple[str] = ("stock_by_cohort_materials", "inflow_materials",
+                               "outflow_by_cohort_materials")
 
     # Output data
     inflow_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
@@ -101,17 +108,15 @@ class GenericMainModel(prism.Model):
     Time: prism.Coords[TIME]
     material: prism.Coords[MATERIAL_TYPE]
 
-    def compute_initial_values(self, timline: prism.Timeline):
+    def compute_initial_values(self, timeline: prism.Timeline):
         self.historic_tail_computed = False
 
     def init_submodels(self, timeline: prism.Timeline):
-        survival_matrix = SurvivalMatrix(ScipySurvival(
-            self.prep_data["lifetimes"], self.prep_data["stocks"].coords["Type"]))
         self.complete_timeline = timeline
         self.stock_model = GenericStocks(
             self.complete_timeline, Region=self.Region, Type=self.Type, Cohort=self.Cohort, Time=self.Time,
-            stocks=self.prep_data["stocks"], stock_function=compute_dynamic_stock_driven,
-            survival_matrix = survival_matrix, shares=self.prep_data.get("shares")
+            stocks=self.prep_data["stocks"],
+            lifetimes=self.prep_data["lifetimes"], shares=self.prep_data.get("shares")
         )
         self.stock_model.compute_initial_values(timeline)
 
@@ -140,7 +145,6 @@ class GenericMainModel(prism.Model):
         self._compute_one_timestep(time)
 
     def _compute_one_timestep(self, time: prism.Time):
-        t, dt = time.t, time.dt
         self.stock_model.compute_values(time)
         if self.compute_materials:
             self.material_model.compute_values(time, inflow=self.stock_model.inflow,
