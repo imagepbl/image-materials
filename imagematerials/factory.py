@@ -1,221 +1,176 @@
-from typing import Callable, ClassVar, Optional
+"""Module to dynamically create models."""
+from typing import Any, Optional
 
 import xarray as xr
 
 import prism
-from imagematerials.stock import (
-    compute_dynamic_stock_driven,
-    compute_historic,
-)
-from imagematerials.survival import ScipySurvival, SurvivalMatrix
-
-
-class BaseModule():
-    name = "base"
-    input_data = []
-    optional_input_data = []
-    output_data = []
-
-    def __init__(self, prep_data):
-        for data_name in self.input_data:
-            try:
-                setattr(self, data_name, prep_data[data_name])
-            except KeyError:
-                raise KeyError(f"Cannot find {data_name} in preprocessing data.")
-        for data_name in self.optional_input_data:
-            setattr(self, data_name, prep_data.get(data_name))
-
-
-class StockModule(BaseModule):
-    name = "stock"
-    input_data = ["stocks", "lifetimes"]
-    optional_input_data = ["shares"]
-    output_data = ["outflow_by_cohort", "inflow", "stock_by_cohort"]
-
-    def create_model(self, coordinates):
-        survival_matrix = SurvivalMatrix(ScipySurvival(self.lifetimes, self.stocks.coords["Type"]))
-        start_simulation = 1970
-        end_simulation = coordinates["Time"].max()
-        region = prism.Dimension("Region", coords=list(coordinates["Region"].values))
-        stock_type = prism.Dimension("Type", coords=list(coordinates["Type"].values))
-        cohort = prism.Dimension("Cohort", coords=list(coordinates["Time"].values))
-        stock_by_cohort = xr.DataArray(0.0, dims=("Time", "Cohort", "Region", "Type"),
-                                    coords={"Time": coordinates["Time"],
-                                            "Cohort": coordinates["Time"].values,
-                                            "Region": coordinates["Region"],
-                                            "Type": coordinates["Type"]})
-
-        @prism.interface
-        class Stocks(prism.Model):
-            start_simulation: int
-            survival_matrix: SurvivalMatrix
-            stock: prism.TimeVariable[region, stock_type] #TODO check how to have property that can be both input and output within prism
-            stock_function: Callable    # defines the stock function to use e.g. stock or inflow driven
-            stock_by_cohort: xr.DataArray
-            shares: prism.TimeVariable[region, stock_type]
-
-            # stock_by_cohort: prism.TimeVariable[Region, Mode, Cohort, "count"] = prism.export(initial_value = prism.Array[Region, Mode, Cohort, 'count'](0.0)) 
-            inflow: prism.TimeVariable[region, stock_type, "count"] = prism.export(initial_value = prism.Array[region, stock_type, 'count'](0.0))
-            outflow_by_cohort: prism.TimeVariable[region, stock_type, cohort, "count"] = prism.export(initial_value = prism.Array[region, stock_type, cohort, 'count'](0.0))
-
-            def compute_initial_values(self, time: prism.Timeline):
-                compute_historic(self.stock, self.survival_matrix, self.start_simulation,
-                                self.stock_by_cohort, self.inflow, self.outflow_by_cohort,
-                                self.shares,
-                                self.stock_function)
-
-            def compute_values(self, time: prism.Time):
-                t, dt = time.t, time.dt
-                self.stock_function(self.stock, self.stock_by_cohort,  self.inflow, self.outflow_by_cohort,
-                                    self.survival_matrix, t, self.shares)
-
-        timeline = prism.Timeline(start=self.stocks.coords["Time"][0],
-                                  end=end_simulation, stepsize=1)
-
-        return Stocks(timeline, start_simulation=start_simulation, survival_matrix=survival_matrix,
-                   stock=self.stocks, stock_function = compute_dynamic_stock_driven,
-                   stock_by_cohort=stock_by_cohort,
-                   shares=self.shares)
-
-class MaterialModule(BaseModule):
-    name = "material"
-    input_data = ["inflow", "material_fractions", "outflow_by_cohort", "weights", "stock_by_cohort"]
-    optional_input_data = ["shares"]
-    output_data = ["outflow_by_cohort_materials", "inflow_materials", "stock_by_cohort_materials"]
-
-    def create_model(self, coordinates):
-        external = self
-        material_type = prism.Dimension("material", coords=list(coordinates["material"].values))
-        region = prism.Dimension("Region", coords=list(coordinates["Region"].values))
-        stock_type = prism.Dimension("Type", coords=list(coordinates["Type"].values))
-        cohort = prism.Dimension("Cohort", coords=list(coordinates["Time"].values))
-        end_simulation = coordinates["Time"].max()
-        start_simulation = coordinates["Time"].min()
-
-        stock_by_cohort_materials = xr.DataArray(0.0, dims=("Time", "Region", "Type", "material"),
-                                    coords={"Time": coordinates["Time"],
-                                            # "Cohort": coordinates["Time"].values,
-                                            "Region": coordinates["Region"],
-                                            "Type": coordinates["Type"],
-                                            "material": coordinates["material"]})
-
-        @prism.interface
-        class Materials(prism.Model):
-            weights: xr.DataArray
-            material_fractions: xr.DataArray
-            stock_by_cohort_materials: xr.DataArray
-
-            inflow_materials: prism.TimeVariable[region, stock_type, material_type, "count"] = prism.export(initial_value = prism.Array[region, stock_type, material_type, 'count'](0.0))
-            outflow_by_cohort_materials: prism.TimeVariable[region, stock_type, material_type, "count"] = prism.export(initial_value = prism.Array[region, stock_type, material_type, cohort, 'count'](0.0))
-
-            def compute_values(self, time: prism.Time):
-                t, dt = time.t, time.dt
-                self.inflow_materials[t] = external.inflow[t]*self.material_fractions.sel(Cohort=t).drop_vars("Cohort")*self.weights.sel(Cohort=t).drop_vars("Cohort")
-                self.outflow_by_cohort_materials[t] = (external.outflow_by_cohort[t]*self.material_fractions*self.weights).sum("Cohort")
-                self.stock_by_cohort_materials.loc[t] = (external.stock_by_cohort.loc[t]*self.material_fractions*self.weights).sum("Cohort")
-
-        timeline = prism.Timeline(start=start_simulation,
-                                  end=end_simulation, stepsize=1)
-        mat_model = Materials(timeline, weights=self.weights, material_fractions=self.material_fractions,
-                             stock_by_cohort_materials=stock_by_cohort_materials)
-        return mat_model
-
-
 
 
 class ModelFactory():
-    all_modules = [StockModule, MaterialModule]
+    """Factory class to create simulation models.
 
-    def __init__(self, prep_data):
+    The model factory is a way to dynamically create prism models.
+    It starts with an empty model and adds one feature one at a time.
+    The submodels will be exectuted in the order that they were added
+    to the factory. After adding all the submodels, the model can be generated
+    using the finish method of the factory.
+
+    Examples
+    --------
+    >>> factory = ModelFactory(prep_data, prism.Timeline(1721, 2060, 1))
+    >>> factory.add(GenericStocks)
+    >>> factory.add(GenericMaterials)
+    >>> model = factory.finish()
+
+    """
+
+    def __init__(self, prep_data: dict[str, Any], complete_timeline: prism.Timeline):
+        """Initialize the factory with prepocessing data.
+
+        Parameters
+        ----------
+        prep_data:
+            Preprocessing data
+        complete_timeline:
+            The complete timeline of the data, including both the historic tail and simulation part.
+
+        """
         self.prep_data = prep_data
+        # Preprocessing data + output data of the submodels
+        self.all_data = {key: value for key, value in prep_data.items()}
         self.models = []
         self.coordinates = self.create_coordinates()
-        self.all_data = {key: value for key, value in prep_data.items()}
+        self.complete_timeline = complete_timeline
 
-    def create_coordinates(self):
+    def create_coordinates(self) -> dict[str, list[Any]]:
+        """Get all the available coordinates from the preprocessing data.
+
+        Also validates that there are no mismatched coordinates between data arrays.
+
+        Returns
+        -------
+        coordinates:
+            All coordinates in the preprocessing data arrays as a list.
+
+        Raises
+        ------
+        ValueError:
+            If coordinates with the same dimension do not match up.
+
+        """
         coordinates = {}
         for data_name, data_obj in self.prep_data.items():
+            # Ignore preprocessing data that are not xArray DataArrays.
             if not isinstance(data_obj, xr.DataArray):
                 continue
             for coor in data_obj.coords.values():
                 if coor.name not in coordinates:
-                    coordinates[coor.name] = coor
-                elif not all(coor == coordinates[coor.name]):
-                    raise ValueError(f"Mismatched dimensions in input data for {data_name} for coordinates {coor.name}")
+                    coordinates[coor.name] = list(coor.values)
+                elif not list(coor.values) == coordinates[coor.name]:
+                    raise ValueError(f"Mismatched dimensions in input data for {data_name} "
+                                     f"for coordinates {coor.name}")
         return coordinates
 
-    def add(self, module_name: str):
-        module_class = None
-        for module in self.all_modules:
-            if module_name == module.name:
-                module_class = module
-        if module_class is None:
-            raise ValueError(f"Cannot find module with name '{module_name}'.")
-        new_sub_model = module_class(self.all_data).create_model(self.coordinates)
-        self.models.append(new_sub_model)
+    def add(self, model_class: str,
+            input_data: Optional[tuple[str]] = None,
+            optional_input_data: Optional[tuple[str]] = None,
+            output_data: Optional[tuple[str]] = None):
+        """Add a submodel to the main model.
 
-        for output_name in module_class.output_data:
+        Parameters
+        ----------
+        model_class
+            The class of the model to be added uninitialized.
+        input_data, optional
+            Override the input data names, by default None
+        optional_input_data, optional
+            Override the optional input data names, by default None
+        output_data, optional
+            Override the output data name, by default None
+
+        Returns
+        -------
+            The factory itself, so that the creation of the model can be stacked.
+
+        """
+        # Find default data names
+        if input_data is None:
+            input_data = getattr(model_class, "input_data", tuple())
+        if optional_input_data is None:
+            optional_input_data = getattr(model_class, "optional_input_data", tuple())
+        if output_data is None:
+            output_data = getattr(model_class, "output_data", tuple())
+
+        arguments_dict = {}
+        # Add coordinates
+        for var_name, var_type in model_class.__annotations__.items():
+            if isinstance(var_type, prism._typing.CoordsType):
+                arguments_dict[var_name] = self.coordinates[var_name]
+
+        # Add input data either from the preprocessing data or other submodels.
+        linked_input_data = []
+        for var_name in input_data + optional_input_data:
+            if var_name in self.prep_data:
+                arguments_dict[var_name] = self.prep_data[var_name]
+            else:
+                assert var_name in self.all_data
+                linked_input_data.append(var_name)
+
+        # Initialize the new submodel.
+        # print(list(arguments_dict))
+        new_sub_model = model_class(self.complete_timeline, **arguments_dict)
+        new_sub_model.compute_initial_values(self.complete_timeline)
+
+        # Add output data of sub model to dictionary.
+        for output_name in new_sub_model.output_data:
             self.all_data[output_name] = getattr(new_sub_model, output_name)
 
+        # Add the new submodel to the list of submodels.
+        new_sub_model.linked_input_data = linked_input_data
+        self.models.append(new_sub_model)
         return self
 
-    def get_model(self, module_name):
-        module_class = None
-        for module in self.all_modules:
-            if module_name == module.name:
-                module_class = module
-        if module_class is None:
-            raise KeyError(f"Cannot find module with name '{module_name}', available: {self.all_modules}.")
-        return module_class
+    def finish(self):
+        """Finish the creation of the main model.
 
+        Returns
+        -------
+            A prism model that can be used to do the simulations.
 
-    def run(self):
+        """
+        # For injection of data of the factory class.
         factory = self
         @prism.interface
         class MainModule(prism.Model):
+            def compute_initial_values(self, time: prism.Time):
+                self.historic_tail_computed = False
+
             def init_submodels(self, timeline: prism.Timeline):
                 self.submodels = factory.models
-            def compute_initial_values(self, time: prism.Time):
-                for model in self.submodels:
-                    try:
-                        model.compute_initial_values(time)
-                    except AttributeError:
-                        pass
+
             def compute_values(self, time: prism.Time):
+                t, dt = time.t, time.dt
+                if not self.historic_tail_computed:
+                    for historic_time in factory.complete_timeline:
+                        prism_time = prism.Time(factory.complete_timeline.start,
+                                                factory.complete_timeline.end,
+                                                dt, historic_time)
+                        if historic_time == factory.complete_timeline.start:
+                            continue
+                        if historic_time >= t:
+                            break
+                        self._compute_one_timestep(prism_time)
+                    self.historic_tail_computed = True
+                self._compute_one_timestep(time)
+
+            def _compute_one_timestep(self, time: prism.Time):
                 for model in self.submodels:
-                    model.compute_values(time)
-        main_model = MainModule(self.timeline)
-        main_model.simulate(self.timeline_simulate)
-        main_model.time_coor = self.time_coordinates
+                    model.compute_values(time, **{var_name: getattr(self, var_name)
+                                                  for var_name in model.linked_input_data})
+        main_model = MainModule(self.complete_timeline)
+
+        # Link all input data in the main model, so that you can do model.stocks
+        # instead of model.submodels[0].stocks.
         for data_name, data in self.all_data.items():
             setattr(main_model, data_name, data)
         return main_model
-
-    @property
-    def time_coordinates(self):
-        for data_obj in self.prep_data.values():
-            if isinstance(data_obj, xr.DataArray) and "Time" in data_obj.coords:
-                return data_obj.coords["Time"].values
-        raise ValueError("Cannot find any time coordinates in the data.")
-
-    @property
-    def historic_start(self):
-        return self.time_coordinates.min()
-
-    @property
-    def simulation_start(self):
-        return 1970
-
-    @property
-    def simulation_end(self):
-        return self.time_coordinates.max()
-
-    @property
-    def timeline(self):
-        return prism.Timeline(start=self.historic_start,
-                              end=self.simulation_end, stepsize=1)
-
-    @property
-    def timeline_simulate(self):
-        return prism.Timeline(start=self.simulation_start, end=self.simulation_end,
-                              stepsize=1)
