@@ -95,12 +95,44 @@ class GenericMaterials(prism.Model):
         self.outflow_by_cohort_materials[t] = (outflow_by_cohort[t]*self.material_fractions*self.weights).sum("Cohort")
         self.stock_by_cohort_materials.loc[t] = (stock_by_cohort.loc[t]*self.material_fractions*self.weights).sum("Cohort")
 
+class Maintenance(prism.Model):
+    # Input data
+    weights: xr.DataArray
+    maintenance_material_fractions: xr.DataArray
+
+    # Dimensions
+    Region: prism.Coords[REGION]
+    Type: prism.Coords[STOCK_TYPE]
+    Cohort: prism.Coords[COHORT]
+    Time: prism.Coords[TIME]
+    material: prism.Coords[MATERIAL_TYPE]
+
+    # Data dependencies
+    input_data: tuple[str] = ("weights", "maintenance_material_fractions", "inflow",
+                              "stock_by_cohort", "outflow_by_cohort")
+    output_data: tuple[str] = ("stock_by_cohort_Maintenance_materials", "inflow_maintenance_materials",
+                               "outflow_by_cohort_maintenance_materials")
+    
+    def compute_initial_values(self, time: prism.Timeline):
+        self.stock_by_cohort_maintenance_materials = xr.DataArray(
+            0.0, dims=("Time", "Region", "Type", "material"),
+            coords={"Time": self.Time,
+                    # "Cohort": coordinates["Time"].values,
+                    "Region": self.Region,
+                    "Type": self.Type,
+                    "material": self.material})
+        
+    def compute_values(self, time: prism.Time, inflow, stock_by_cohort, outflow_by_cohort):
+        t, dt = time.t, time.dt
+        self.stock_by_cohort_maintenance_materials.loc[t] = (stock_by_cohort.loc[t]*self.maintenance_material_fractions*self.weights).sum("Cohort")
 
 
 @prism.interface
 class GenericMainModel(prism.Model):
     prep_data: dict
     compute_materials: bool
+    compute_battery_materials: bool
+    compute_maintenance_materials: bool
 
     Region: prism.Coords[REGION]
     Type: prism.Coords[STOCK_TYPE]
@@ -126,6 +158,24 @@ class GenericMainModel(prism.Model):
                 self.complete_timeline, Region=self.Region, Type=self.Type, Cohort=self.Cohort, Time=self.Time,
                 material=self.material, weights=self.prep_data["weights"],
                 material_fractions=self.prep_data["material_fractions"]
+            )
+            self.material_model.compute_initial_values(timeline)
+
+        # Battery materials
+        if self.compute_battery_materials:
+            self.material_model = GenericMaterials(
+                self.complete_timeline, Region=self.Region, Type=self.Type, Cohort=self.Cohort, Time=self.Time,
+                material=self.material, weights=self.prep_data["weights"],
+                material_fractions=self.prep_data["battery_material_fractions"]
+            )
+            self.material_model.compute_initial_values(timeline)
+
+        # Maintenance materials
+        if self.compute_maintenance_materials:
+            self.material_model = GenericMaterials(
+                self.complete_timeline, Region=self.Region, Type=self.Type, Cohort=self.Cohort, Time=self.Time,
+                material=self.material, weights=self.prep_data["weights"],
+                material_fractions=self.prep_data["maintenance_material_fractions"]
             )
             self.material_model.compute_initial_values(timeline)
 
