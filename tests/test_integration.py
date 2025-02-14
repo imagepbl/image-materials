@@ -38,6 +38,6 @@ def test_integration(summary_fp, key):
         assert new_summary.shape == old_summary.shape, "Dimensions are different or have changed."
         coor = key.split("-")[-1]
         wrong_idx = np.where(new_summary.values == old_summary.values)[0]
-        if len(wrong_idx) == old_summary:
+        if len(wrong_idx) == len(old_summary):
             assert False, "All values in this summary array have changed/are wrong."
         assert False, f"Values are wrong for: {coor.iloc[wrong_idx].values}"
