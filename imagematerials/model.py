@@ -157,7 +157,7 @@ class GenericMainModel(prism.Model):
             self.material_model = GenericMaterials(
                 self.complete_timeline, Region=self.Region, Type=self.Type, Cohort=self.Cohort, Time=self.Time,
                 material=self.material, weights=self.prep_data["weights"],
-                material_fractions=self.prep_data["material_fractions"]
+                material_fractions=self.prep_data["maintenance_material"]
             )
             self.material_model.compute_initial_values(timeline)
 
