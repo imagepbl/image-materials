@@ -29,8 +29,11 @@ class SurvivalMatrix:
             depend, which could be the "Type", "region", both or neither.
 
         """
+        # The XArray.Datarray that contains the values is part of the SurvivalMatrix object.
+        # Method to create this matrix is part of the survival object,
+        # because it know the dimensions.
         self.survival_matrix = survival.new_matrix()
-        self._cached_timesteps = set()
+        self._cached_timesteps = set()  # Cohorts that are already computed.
         self.num_timesteps = len(survival.time_series)
         self.survival = survival
 
@@ -44,6 +47,7 @@ class SurvivalMatrix:
 
         # TODO: Check if this actually creates the cohort indices properly.
         if isinstance(cohort, slice):
+            # Convert the slice into a list.
             comp_list = islice(self.survival_matrix.indexes["Cohort"],
                                *cohort.indices(self.num_timesteps))
         else:
@@ -70,13 +74,17 @@ class ScipySurvival():
     """
 
     def __init__(self, lifetime_parameters: dict[str, xr.DataArray],
-                 output_modes: Optional[xr.DataArray] = None):
+                 output_modes: Optional[list, xr.DataArray] = None):
         """Initialize scipysurvival class.
 
         Parameters
         ----------
         lifetime_parameters
-            Output from convert_life_time_vehicles function.
+            Output from convert_life_time_vehicles function. This should be a dictionary, with
+            the keys the name of the distribution, and the values a xr.DataArray with the scipy
+            parameters. E.g. weibull or folded_normal.
+            mandatory dimensions for the arrays: Cohort, Type, ScipyParam
+            optional dimension: Region
         output_modes:
             To allow for sub types that have the same lifetime as the super type.
             By default, this value is None, in which case it is assumed that all sub types
@@ -86,11 +94,13 @@ class ScipySurvival():
         self.lifetime_parameters = lifetime_parameters
         if output_modes is not None:
             try:
+                # Xarray coordinates, convert to np.NDArray
                 self._output_modes = output_modes.values
             except AttributeError:
+                # Lists, and other
                 self._output_modes = output_modes
         else:
-            self._output_modes = output_modes
+            self._output_modes = None
 
     def new_matrix(self):
         """Create a new data array with zeros everywhere.
@@ -122,6 +132,7 @@ class ScipySurvival():
             future times.
 
         """
+        # Get the number of time steps in the future including the current year.
         n_coords_left = len(self.time_series.loc[cohort:])
         res_arrays = []
         for dist_name, param_array in self.lifetime_parameters.items():

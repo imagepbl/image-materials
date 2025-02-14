@@ -1,6 +1,7 @@
 """Test survival classes."""
 import numpy as np
 import xarray as xr
+from pytest import mark
 
 from imagematerials.constants import SUBTYPE_SEPARATOR
 from imagematerials.survival import ScipySurvival, SurvivalMatrix
@@ -31,9 +32,9 @@ class ExampleSurvival():
                                                  "Time": self.time_series.to_numpy(),
                                                  "Cohort": self.time_series.to_numpy(),
                                              })
-
-def test_example_survival_matrix():
-    time_len = 20
+@mark.parametrize("time_len", [10, 15, 20])
+def test_example_survival_matrix(time_len):
+    # time_len = 20
     survival = ExampleSurvival(time_len)
     survival_matrix = SurvivalMatrix(survival)
     assert survival_matrix.num_timesteps == time_len
