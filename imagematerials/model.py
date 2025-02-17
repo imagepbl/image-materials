@@ -95,6 +95,7 @@ class GenericMaterials(prism.Model):
         self.outflow_by_cohort_materials[t] = (outflow_by_cohort[t]*self.material_fractions*self.weights).sum("Cohort")
         self.stock_by_cohort_materials.loc[t] = (stock_by_cohort.loc[t]*self.material_fractions*self.weights).sum("Cohort")
 
+@prism.interface
 class Maintenance(prism.Model):
     # Input data
     weights: xr.DataArray
@@ -110,9 +111,10 @@ class Maintenance(prism.Model):
     # Data dependencies
     input_data: tuple[str] = ("weights", "maintenance_material_fractions", "inflow",
                               "stock_by_cohort", "outflow_by_cohort")
-    output_data: tuple[str] = ("stock_by_cohort_Maintenance_materials", "inflow_maintenance_materials",
-                               "outflow_by_cohort_maintenance_materials")
-    
+    output_data: tuple[str] = ("stock_by_cohort_maintenance_materials", )
+    #, "inflow_maintenance_materials",
+    #                           "outflow_by_cohort_maintenance_materials")
+
     def compute_initial_values(self, time: prism.Timeline):
         self.stock_by_cohort_maintenance_materials = xr.DataArray(
             0.0, dims=("Time", "Region", "Type", "material"),
@@ -121,7 +123,7 @@ class Maintenance(prism.Model):
                     "Region": self.Region,
                     "Type": self.Type,
                     "material": self.material})
-        
+
     def compute_values(self, time: prism.Time, inflow, stock_by_cohort, outflow_by_cohort):
         t, dt = time.t, time.dt
         self.stock_by_cohort_maintenance_materials.loc[t] = (stock_by_cohort.loc[t]*self.maintenance_material_fractions*self.weights).sum("Cohort")
@@ -157,7 +159,7 @@ class GenericMainModel(prism.Model):
             self.material_model = GenericMaterials(
                 self.complete_timeline, Region=self.Region, Type=self.Type, Cohort=self.Cohort, Time=self.Time,
                 material=self.material, weights=self.prep_data["weights"],
-                material_fractions=self.prep_data["maintenance_material"]
+                material_fractions=self.prep_data["material_fractions"]
             )
             self.material_model.compute_initial_values(timeline)
 
@@ -172,12 +174,12 @@ class GenericMainModel(prism.Model):
 
         # Maintenance materials
         if self.compute_maintenance_materials:
-            self.material_model = GenericMaterials(
+            self.maintenance_model = Maintenance(
                 self.complete_timeline, Region=self.Region, Type=self.Type, Cohort=self.Cohort, Time=self.Time,
                 material=self.material, weights=self.prep_data["weights"],
-                material_fractions=self.prep_data["maintenance_material_fractions"]
+                maintenance_material_fractions=self.prep_data["maintenance_material_fractions"]
             )
-            self.material_model.compute_initial_values(timeline)
+            self.maintenance_model.compute_initial_values(timeline)
 
 
     def compute_values(self, time: prism.Time):
@@ -200,4 +202,6 @@ class GenericMainModel(prism.Model):
             self.material_model.compute_values(time, inflow=self.stock_model.inflow,
                                                stock_by_cohort=self.stock_model.stock_by_cohort,
                                                outflow_by_cohort=self.stock_model.outflow_by_cohort)
+        if self.compute_maintenance_materials:
+            self.maintenance_model.compute_values(time, )
 
