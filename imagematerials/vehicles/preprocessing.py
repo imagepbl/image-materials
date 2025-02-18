@@ -659,7 +659,11 @@ def preprocessing(base_dir: str):
     preprocessing_results_xarray["stocks"] = preprocessing_results_xarray.pop("total_nr_vehicles")
     preprocessing_results_xarray["shares"] = preprocessing_results_xarray.pop("vehicle_shares")
 
-    preprocessing_results_xarray["maintenance_material"]= maintenance_material
+    xr_maintenance_material = xr.DataArray(maintenance_material["total_material_per_km"],
+                                           dims=("material",),
+                                           coords={"material": maintenance_material["Material"]})
+
+    preprocessing_results_xarray["maintenance_material_fractions"] = xr_maintenance_material
 
     # TODO: vemamodelling.py works with dict of dfs and not only dict of xarrays, therefore now both are returned (for now)
     return results_dict, preprocessing_results_xarray
