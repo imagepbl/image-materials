@@ -109,8 +109,8 @@ class Maintenance(prism.Model):
     material: prism.Coords[MATERIAL_TYPE]
 
     # Data dependencies
-    input_data: tuple[str] = ("weights", "maintenance_material_fractions", "inflow",
-                              "stock_by_cohort", "outflow_by_cohort")
+    input_data: tuple[str] = ("weights", "maintenance_material_fractions",
+                              "stock_by_cohort")
     output_data: tuple[str] = ("stock_by_cohort_maintenance_materials", )
     #, "inflow_maintenance_materials",
     #                           "outflow_by_cohort_maintenance_materials")
