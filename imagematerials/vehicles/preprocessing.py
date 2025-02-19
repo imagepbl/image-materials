@@ -665,14 +665,14 @@ def preprocessing(base_dir: str):
     #                                       coords={"material": maintenance_material["Material"]})#,"Type":"'Cars'"})
 
     # Copy dimensiomns from material_fractions for xr_maintenance_material
-    materials = material_fractions.coords["material"]
-    types = material_fractions.coords["Type"]
+    materials = preprocessing_results_xarray['material_fractions'].coords["material"]
+    types = preprocessing_results_xarray['material_fractions'].coords["Type"]
 
     # Initialize xr_maintenance_material with zeros
     xr_maintenance_material = xr.DataArray(
         np.zeros((len(materials), len(types))),  # Shape based on dimensions
         dims=("material", "Type"),
-        coords={"material": material_fractions.coords["material"], "Type": material_fractions.coords["Type"]}
+        coords={"material": materials, "Type": types}
     )
 
     # Assign values from data in xr_maintenance_material where Type contains "Cars"
