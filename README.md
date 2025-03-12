@@ -80,6 +80,7 @@ main_model_normal.simulate(simulation_timeline)
 
 ```mermaid
 classDiagram
+    direction LR
     class GenericStocks {
         +simulate()
         +compute_stock()
