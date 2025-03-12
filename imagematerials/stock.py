@@ -60,14 +60,14 @@ def compute_dynamic_stock_driven(stock, stock_by_cohort, inflow, outflow_by_coho
     # for t_future in stock_by_cohort[t].coords["Cohort"].loc[t_str:]:
         # t_future = int(t_future)
         # stock_by_cohort[t_future].loc[{"Cohort": t_str}] = inflow[t]*survival[t_future, t]
-    outflow_by_cohort[t] = stock_by_cohort.loc[t]-stock_by_cohort.loc[t-1]
+    outflow_by_cohort[t] = stock_by_cohort.loc[t-1] - stock_by_cohort.loc[t]
 
 # TODO: function below is broken, use the same fix as compute_dynamic_stock_driven.
 def compute_dynamic_inflow_driven(stock, stock_by_cohort, inflow, outflow_by_cohort, survival, t):
     input_inflow = inflow
     stock_by_cohort[t] = input_inflow[t] * survival[t, :]
     stock[t] = stock_by_cohort[t].sum("Cohort")
-    outflow_by_cohort[t] = stock_by_cohort[t]-stock_by_cohort[t-1]
+    outflow_by_cohort[t] = stock_by_cohort[t-1]-stock_by_cohort[t]
 
 def _add_subtype_stock(stock_diff, shares, typical_missing, cur_cohort):
     for cur_mode in typical_missing:
@@ -82,3 +82,10 @@ def _find_missing(input_stock):
     all_modes = input_stock.coords["Type"].values
     non_na_modes = input_stock.dropna("Type").coords["Type"].values
     return set(all_modes) - set(non_na_modes)
+
+
+def material_computation(input_array, material_fractions, weights):
+    return input_array*material_fractions*weights
+
+def battery_computation(input_array, battery_shares, battery_materials, battery_weights):
+    return input_array*battery_shares*battery_materials*battery_weights

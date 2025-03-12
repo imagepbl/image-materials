@@ -1,7 +1,7 @@
 """Module containing classes and methods to create a survival matrix."""
 from functools import cached_property
 from itertools import islice
-from typing import Optional
+from typing import Union
 
 import numpy as np
 import xarray as xr
@@ -75,7 +75,7 @@ class ScipySurvival():
     """
 
     def __init__(self, lifetime_parameters: dict[str, xr.DataArray],
-                 output_modes: Optional[list, xr.DataArray] = None):
+                 output_modes: Union[None, list, xr.DataArray] = None):
         """Initialize scipysurvival class.
 
         Parameters
