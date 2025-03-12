@@ -13,7 +13,7 @@ Install Python 3.10.
 Step 2: Install PIP
 ----------------------
 
-Metasyn uses `PyPI <https://pypi.org/project/metasyn/>`_ for distribution, which requires pip, the Python package installer, to install. If you haven't installed pip, refer to the `Pip Installation Guide <https://pip.pypa.io/en/stable/installation/>`_ for instructions.
+If you haven't installed pip, refer to the `Pip Installation Guide <https://pip.pypa.io/en/stable/installation/>`_ for instructions.
 
 Step 3: Install prism
 ---------------------
