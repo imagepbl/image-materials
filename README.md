@@ -80,7 +80,6 @@ main_model_normal.simulate(simulation_timeline)
 
 ```mermaid
 classDiagram
-    direction LR
     class GenericStocks {
         +compute_initial_values(time)
         +compute_values(time)
@@ -256,6 +255,6 @@ classDiagram
     SurvivalMatrix --> ScipySurvival : "Depends on"
     GenericMaterials --> GenericStocks : "Depends on stock data"
     Maintenance --> GenericStocks : "Depends on stock data"
-
+```
 
 
