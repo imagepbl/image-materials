@@ -39,7 +39,19 @@ class SurvivalMatrix:
         self.survival = survival
 
     def __getitem__(self, idx):
-        """Use the survival matrix as a numpy array."""
+        """Use the survival matrix as a numpy array.
+
+        Parameters
+        ----------
+        idx : tuple
+            A tuple of (time, cohort) to retrieve the survival matrix value for the 
+            specified time and cohort.
+
+        Returns
+        -------
+        xr.DataArray
+            The survival matrix for the specified time and cohort.
+        """
         # TODO: make the computation dependent on t_idx
         # We know that if t_idx < cohort_idx, the result is 0,
         # So if we compute s[t, :], we know that we only need to compute
@@ -208,6 +220,13 @@ class ScipySurvival():
 
     @cached_property
     def extra_dims(self) -> list[str]:
+        """Get extra dimensions in the lifetime parameters.
+
+        Returns
+        -------
+        list
+            List of extra dimensions in the lifetime parameters.
+        """
         dims = []
         first_array = list(self.lifetime_parameters.values())[0]
         for dim in first_array.dims:
@@ -217,6 +236,13 @@ class ScipySurvival():
 
     @cached_property
     def extra_coords(self) -> list[list]:
+        """Get extra coordinates for the lifetime parameters.
+
+        Returns
+        -------
+        list
+            List of extra coordinates for the lifetime parameters.
+        """
         first_array = list(self.lifetime_parameters.values())[0]
         coords = {}
         for dim in self.extra_dims:
@@ -228,6 +254,13 @@ class ScipySurvival():
 
     @cached_property
     def dt(self) -> int:
+        """Get the time step used in the simulation.
+
+        Returns
+        -------
+        int
+            The time step value used in the simulation.
+        """
         first_array = list(self.lifetime_parameters.values())[0]
         dt = first_array.coords["Time"].values[1] - first_array.coords["Time"].values[0]
         assert dt == 1
