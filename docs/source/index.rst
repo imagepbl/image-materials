@@ -23,7 +23,7 @@
 |break|
 
 IMAGE Materials Documentation
-=======================
+=============================
 Welcome to the `IMAGE Materials <https://github.com/imagepbl/image-materials>`_ documentation. 
 
 Some description here.
@@ -38,8 +38,7 @@ Documentation Outline
 
    installation
    quickstart
-   faq
-   about
+   api/modules
 
 
 
@@ -55,18 +54,9 @@ The :doc:`installation` section provides an overview of IMAGE materials's purpos
 ^^^^^^^^^^^^^^^^^
 The :doc:`quickstart` contains detailed, step-by-step instructions, as well as best practices for using the package. If you're new to IMAGE materials, we recommend you start here!
 
-:doc:`faq`
-^^^^^^^^^^^^
-The :doc:`faq` provides resources for those interested in contributing to IMAGE material's development. This section includes guidance on how to build upon the existing ``IMAGE materials`` codebase, add new modules, functions, or even integrate other packages.
-
-:doc:`about`
-^^^^^^^^^^^^
-The :doc:`about` provides resources for those interested in contributing to IMAGE material's development. This section includes guidance on how to build upon the existing ``IMAGE materials`` codebase, add new modules, functions, or even integrate other packages.
-
-
-:doc:`api`
-^^^^^^^^^^
-The :doc:`api` is a technical reference for IMAGE materials. Here, each function, class, and module is outlined in detail, giving you a comprehensive understanding of how the package works and how to use its various functionalities.  If, for example, you'd like to discover which parameters can be used for which function, you can find that here.
+:doc:`api/modules`
+^^^^^^^^^^^^^^^^^^
+The :doc:`api/modules` is a technical reference for IMAGE materials. Here, each function, class, and module is outlined in detail, giving you a comprehensive understanding of how the package works and how to use its various functionalities.  If, for example, you'd like to discover which parameters can be used for which function, you can find that here.
 
 
 

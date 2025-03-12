@@ -21,4 +21,4 @@ help:
 
 
 clean:
-	rm -r $(BUILDDIR) $(SOURCEDIR)/api/generated
+	rm -r $(BUILDDIR)

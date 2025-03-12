@@ -1,13 +1,6 @@
 imagematerials package
 ======================
 
-Subpackages
------------
-
-.. toctree::
-   :maxdepth: 4
-
-   imagematerials.vehicles
 
 Submodules
 ----------
@@ -28,13 +21,13 @@ imagematerials.distribution module
    :undoc-members:
    :show-inheritance:
 
-imagematerials.read\_mym module
--------------------------------
+.. imagematerials.read\_mym module
+.. -------------------------------
 
-.. automodule:: imagematerials.read_mym
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. .. automodule:: imagematerials.read_mym
+..    :members:
+..    :undoc-members:
+..    :show-inheritance:
 
 imagematerials.stock module
 ---------------------------
@@ -52,10 +45,10 @@ imagematerials.survival module
    :undoc-members:
    :show-inheritance:
 
-Module contents
----------------
+imagematerials.util module
+------------------------------
 
-.. automodule:: imagematerials
+.. automodule:: imagematerials.util
    :members:
    :undoc-members:
    :show-inheritance:
