@@ -13,6 +13,7 @@ from typing import Union
 import pandas as pd
 import pint
 import xarray as xr
+import numpy as np
 
 from imagematerials.distribution import ALL_DISTRIBUTIONS, NAME_TO_DIST
 from imagematerials.read_mym import read_mym_df
@@ -92,6 +93,9 @@ def preprocessing(base_dir: str):
     # The share of the battery market (8 battery types used in vehicles), this data is based on a Multi-Nomial-Logit
     # market model & costs in https://doi.org/10.1016/j.resconrec.2020.105200 - since this is scenario dependent it's
     # placed under the "IMAGE" scenario folder
+
+    maintenance_material : pd.DataFrame = pd.read_csv(
+        standard_input_data_path. joinpath("maintenance_passenger_cars.csv"), index_col=0)
 
     # Files related to the international shipping
     nr_of_boats: pd.DataFrame = pd.read_csv(
@@ -655,6 +659,27 @@ def preprocessing(base_dir: str):
     preprocessing_results_xarray["lifetimes"] = convert_life_time_vehicles(preprocessing_results_xarray["lifetimes"])
     preprocessing_results_xarray["stocks"] = preprocessing_results_xarray.pop("total_nr_vehicles")
     preprocessing_results_xarray["shares"] = preprocessing_results_xarray.pop("vehicle_shares")
+
+    #xr_maintenance_material = xr.DataArray(maintenance_material["total_material_per_km"],
+    #                                       dims=("material",), #"Type"),
+    #                                       coords={"material": maintenance_material["Material"]})#,"Type":"'Cars'"})
+
+    # Copy dimensiomns from material_fractions for xr_maintenance_material
+    materials = preprocessing_results_xarray['material_fractions'].coords["material"]
+    types = preprocessing_results_xarray['material_fractions'].coords["Type"]
+
+    # Initialize xr_maintenance_material with zeros
+    xr_maintenance_material = xr.DataArray(
+        np.zeros((len(materials), len(types))),  # Shape based on dimensions
+        dims=("material", "Type"),
+        coords={"material": materials, "Type": types}
+    )
+
+    # Assign values from data in xr_maintenance_material where Type contains "Cars"
+    cars_mask = np.char.find(types.astype(str), "Cars") >= 0  # Find entries containing "Cars"
+    xr_maintenance_material.loc[{"Type": types[cars_mask]}] = maintenance_material["total_material_per_km"].values.reshape(-1, 1)
+    
+    preprocessing_results_xarray["maintenance_material_fractions"] = xr_maintenance_material
 
     # TODO: vemamodelling.py works with dict of dfs and not only dict of xarrays, therefore now both are returned (for now)
     return results_dict, preprocessing_results_xarray
