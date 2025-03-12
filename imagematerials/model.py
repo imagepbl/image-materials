@@ -109,8 +109,8 @@ class Maintenance(prism.Model):
     material: prism.Coords[MATERIAL_TYPE]
 
     # Data dependencies
-    input_data: tuple[str] = ("weights", "maintenance_material_fractions", "inflow",
-                              "stock_by_cohort", "outflow_by_cohort")
+    input_data: tuple[str] = ("weights", "maintenance_material_fractions",
+                              "stock_by_cohort")
     output_data: tuple[str] = ("stock_by_cohort_maintenance_materials", )
     #, "inflow_maintenance_materials",
     #                           "outflow_by_cohort_maintenance_materials")
@@ -124,7 +124,7 @@ class Maintenance(prism.Model):
                     "Type": self.Type,
                     "material": self.material})
 
-    def compute_values(self, time: prism.Time, inflow, stock_by_cohort, outflow_by_cohort):
+    def compute_values(self, time: prism.Time, stock_by_cohort):
         t, dt = time.t, time.dt
         self.stock_by_cohort_maintenance_materials.loc[t] = (stock_by_cohort.loc[t]*self.maintenance_material_fractions*self.weights).sum("Cohort")
 
@@ -203,5 +203,5 @@ class GenericMainModel(prism.Model):
                                                stock_by_cohort=self.stock_model.stock_by_cohort,
                                                outflow_by_cohort=self.stock_model.outflow_by_cohort)
         if self.compute_maintenance_materials:
-            self.maintenance_model.compute_values(time, )
+            self.maintenance_model.compute_values(time, stock_by_cohort=self.stock_model.stock_by_cohort)
 
