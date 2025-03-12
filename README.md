@@ -82,8 +82,9 @@ main_model_normal.simulate(simulation_timeline)
 classDiagram
     direction LR
     class GenericStocks {
-        +simulate()
-        +compute_stock()
+        +compute_initial_values(time)
+        +compute_values(time)
+        +simulate (inherited from prism.model)
     }
     
     class GenericMaterials {
@@ -91,17 +92,21 @@ classDiagram
     }
     
     class SurvivalMatrix {
-        +generate_matrix()
+        +compute_survival(cohort)
     }
     
     class ScipySurvival {
-        +compute_survival()
+        +new_matrix()
+        +compute_survival(cohort)
     }
 
-    GenericStocks --> SurvivalMatrix
-    GenericMaterials --> GenericStocks
-    SurvivalMatrix --> ScipySurvival
+    GenericMainModel --> GenericStocks : "Creates instance"
+    GenericMainModel --> GenericMaterials : "Creates instance if compute_materials"
+    GenericStocks --> SurvivalMatrix : "Uses"
+    SurvivalMatrix --> ScipySurvival : "Depends on"
+    GenericMaterials --> GenericStocks : "Depends on stock data"
 ```
+At the end of this readme a complete mermaid diagram including all class input data is added.
 
 ### Interaction with Other Models
 
@@ -228,6 +233,7 @@ classDiagram
         +init_submodels(timeline)
         +compute_values(time)
         +_compute_one_timestep(time)
+        +simulate (inherited from prism.model)
     }
 
     class SurvivalMatrix {
