@@ -163,6 +163,93 @@ Citation details to be added.
 
 ---
 
-Feel free to update sections like **License, Citation, and Contact** when the relevant details are available!
+Complex class diagram:
+
+```mermaid
+classDiagram
+    class GenericStocks {
+        +Coords Region
+        +Coords Type
+        +Coords Cohort
+        +Coords Time
+        +DataArray lifetimes
+        +DataArray stocks
+        +Optional DataArray shares
+        +tuple input_data
+        +tuple optional_input_data
+        +tuple output_data
+        +TimeVariable inflow
+        +TimeVariable outflow_by_cohort
+        +compute_initial_values(time)
+        +compute_values(time)
+    }
+
+    class GenericMaterials {
+        +Coords Region
+        +Coords Type
+        +Coords Cohort
+        +Coords Time
+        +Coords material
+        +DataArray weights
+        +DataArray material_fractions
+        +tuple input_data
+        +tuple output_data
+        +TimeVariable inflow_materials
+        +TimeVariable outflow_by_cohort_materials
+        +compute_initial_values(time)
+        +compute_values(time, inflow, stock_by_cohort, outflow_by_cohort)
+    }
+
+    class Maintenance {
+        +Coords Region
+        +Coords Type
+        +Coords Cohort
+        +Coords Time
+        +Coords material
+        +DataArray weights
+        +DataArray maintenance_material_fractions
+        +tuple input_data
+        +tuple output_data
+        +compute_initial_values(time)
+        +compute_values(time, stock_by_cohort)
+    }
+
+    class GenericMainModel {
+        +dict prep_data
+        +bool compute_materials
+        +bool compute_battery_materials
+        +bool compute_maintenance_materials
+        +Coords Region
+        +Coords Type
+        +Coords Cohort
+        +Coords Time
+        +Coords material
+        +compute_initial_values(timeline)
+        +init_submodels(timeline)
+        +compute_values(time)
+        +_compute_one_timestep(time)
+    }
+
+    class SurvivalMatrix {
+        +DataArray survival_matrix
+        +set _cached_timesteps
+        +int num_timesteps
+        +compute_survival(cohort)
+    }
+
+    class ScipySurvival {
+        +dict lifetime_parameters
+        +new_matrix()
+        +compute_survival(cohort)
+    }
+
+    GenericMainModel --> GenericStocks : "Creates instance"
+    GenericMainModel --> GenericMaterials : "Creates instance if compute_materials"
+    GenericMainModel --> Maintenance : "Creates instance if compute_maintenance_materials"
+    GenericStocks --> SurvivalMatrix : "Uses"
+    SurvivalMatrix --> ScipySurvival : "Depends on"
+    GenericMaterials --> GenericStocks : "Depends on stock data"
+    Maintenance --> GenericStocks : "Depends on stock data"
+
 
 
