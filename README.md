@@ -1,8 +1,167 @@
-# image-materials
-Prism implementation of IMAGE-MAT
+# imagematerials
 
-Needs to following installs:
+## Overview
+
+**imagematerials** is a standalone stock and material model that converts service demand data (e.g., kilometers traveled, goods transported, or square meters of built space) into product stock, such as vehicles, buildings, and roads. The model includes a detailed age structure of the product stock based on lifetime distributions and historical assumptions. It is designed for researchers analyzing material use patterns.
+
+## Installation
+
+### Prerequisites
+
+Ensure you have the necessary dependencies installed:
+
+```bash
 pip install -r requirements.txt
+```
 
-pint-xarray needs to be installed using the following:
+Additionally, install **prism** in the same environment from the IMAGEPBL GitHub repository.
+
+For **pint-xarray**, install it using:
+
+```bash
 pip install git+https://github.com/xarray-contrib/pint-xarray
+```
+
+### Setting Up a Python Environment
+
+It is recommended to use a virtual environment for installing dependencies. See [this guide](https://docs.python.org/3/tutorial/venv.html) for instructions on creating and managing Python environments.
+
+### Installing imagematerials
+
+Install the package locally with:
+
+```bash
+pip install imagematerials -e
+```
+
+Using `-e` ensures automatic updates when modifying the package.
+
+## Usage
+
+### Example Usage
+
+Example notebooks are available in the `examples` folder (e.g., `vehicles.ipynb`, `buildings.ipynb`). Below is a basic usage example:
+
+```python
+from imagematerials import import_from_netcdf, GenericMainModel
+import prism
+
+# Load data
+prep_data = import_from_netcdf("path/to/netcdf_file.nc")
+time_start = 1960
+complete_timeline = prism.Timeline(time_start, 2060, 1)
+simulation_timeline = prism.Timeline(1970, 2060, 1)
+
+# Create model
+main_model_normal = GenericMainModel(
+    complete_timeline, Region=Region, Time=Time, Cohort=Cohort, Type=Type, prep_data=prep_data,
+    compute_materials=True, compute_battery_materials=False, compute_maintenance_materials=True, 
+    material=material)    
+
+# Run model
+main_model_normal.simulate(simulation_timeline)
+```
+
+### Key Features
+
+- **Stock Model**: Defined in `model.py` to track stock dynamics.
+- **Material Calculations**: Estimates material demand based on product lifetimes and historical trends.
+
+## Model Structure & Components
+
+### Key Modules & Classes
+
+- `GenericStocks`: Calculates stock dynamics using a **SurvivalMatrix**.
+- `GenericMaterials`: Computes material demand based on cohort-specific stock levels.
+- `SurvivalMatrix`: Generates a survival matrix using lifetime distributions.
+- `ScipySurvival`: Uses SciPy statistical distributions to compute the survival matrix.
+
+### Class Diagram
+
+```mermaid
+classDiagram
+    class GenericStocks {
+        +simulate()
+        +compute_stock()
+    }
+    
+    class GenericMaterials {
+        +compute_materials()
+    }
+    
+    class SurvivalMatrix {
+        +generate_matrix()
+    }
+    
+    class ScipySurvival {
+        +compute_survival()
+    }
+
+    GenericStocks --> SurvivalMatrix
+    GenericMaterials --> GenericStocks
+    SurvivalMatrix --> ScipySurvival
+```
+
+### Interaction with Other Models
+
+The standalone version does not require **IMAGE**, but it can use **IMAGE outputs** (e.g., person-kilometers, floorspace demand) as inputs. In the long run, `imagematerials` is intended to be integrated as a submodule within **IMAGE**.
+
+## Customization & Extensions
+
+### Modifying Parameters & Extending Functionality
+
+Users can extend the model by adding new modules for additional sectors. (More details to be added.)
+
+### Configuration Files
+
+- Constants are defined in `constant.py`.
+- A **scenario file** will eventually be introduced for defining scenario parameters.
+
+## Testing & Validation
+
+### Running Tests
+
+- Unit tests are defined in `tests.py`.
+- Tests are **automatically executed** when a pull request is initialized.
+
+### Example Runs
+
+- Example test cases are included in the `examples` folder.
+- Additional user feedback tests will be added in the future.
+
+## Development & Collaboration
+
+### Contributing
+
+Contributions are welcome! Follow these steps:
+
+1. Create a branch.
+2. Submit a pull request.
+
+### Coding Standards
+
+- Code should be **PEP8-compliant**.
+- Follow **recursive modeling principles** and align with the **prism package**.
+
+## License & Citation
+
+### License
+
+License details to be added.
+
+### How to Cite
+
+Citation details to be added.
+
+## Contact & Support
+
+### Questions & Issues
+
+- Submit questions via **GitHub Issues**.
+- Contact information to be added.
+
+---
+
+Feel free to update sections like **License, Citation, and Contact** when the relevant details are available!
+
+
