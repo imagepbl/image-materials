@@ -24,7 +24,7 @@ class SurvivalMatrix:
 
         Parameters
         ----------
-        survival
+        survival : object
             The survival object is a class that knows how to compute the survival matrix.
             It contains the information on which dimensions the life times of the stocks
             depend, which could be the "Type", "region", both or neither.
@@ -39,7 +39,19 @@ class SurvivalMatrix:
         self.survival = survival
 
     def __getitem__(self, idx):
-        """Use the survival matrix as a numpy array."""
+        """Use the survival matrix as a numpy array for the specified time and cohort.
+
+        Parameters
+        ----------
+        idx : tuple
+            A tuple of (time, cohort) to retrieve the survival matrix value for the 
+            specified time and cohort.
+
+        Returns
+        -------
+        xr.DataArray
+            The survival matrix for the specified time and cohort.
+        """
         # TODO: make the computation dependent on t_idx
         # We know that if t_idx < cohort_idx, the result is 0,
         # So if we compute s[t, :], we know that we only need to compute
@@ -80,13 +92,13 @@ class ScipySurvival():
 
         Parameters
         ----------
-        lifetime_parameters
+        lifetime_parameters : dict[str, xr.DataArray]
             Output from convert_life_time_vehicles function. This should be a dictionary, with
             the keys the name of the distribution, and the values a xr.DataArray with the scipy
             parameters. E.g. weibull or folded_normal.
             mandatory dimensions for the arrays: Cohort, Type, ScipyParam
             optional dimension: Region
-        output_modes:
+        output_modes : list or xr.DataArray, optional
             To allow for sub types that have the same lifetime as the super type.
             By default, this value is None, in which case it is assumed that all sub types
             (if any) have their lifetimes specified.
@@ -108,6 +120,7 @@ class ScipySurvival():
 
         Returns
         -------
+        xr.DataArray
             A DataArray with the correct dimensions and zeros everywhere.
 
         """
@@ -123,12 +136,13 @@ class ScipySurvival():
 
         Parameters
         ----------
-        cohort
+        cohort : int
             The cohort for which to compute the survival matrix. This should
             not be the cohort index.
 
         Returns
         -------
+        xr.DataArray
             An array with the survival fractions for the current cohort at all
             future times.
 
@@ -189,6 +203,7 @@ class ScipySurvival():
 
         Returns
         -------
+        list of str
             All the modes for which there is a survival distribution in list form.
 
         """
@@ -202,12 +217,25 @@ class ScipySurvival():
 
     @property
     def time_series(self) -> xr.DataArray:
-        """Get all the time values in the simulation."""
+        """Get all the time values in the simulation.
+
+        Returns
+        -------
+        xarray.DataArray
+            Time coordinate values from the simulation.
+        """
         first_array = list(self.lifetime_parameters.values())[0]
         return first_array.coords["Time"]
 
     @cached_property
     def extra_dims(self) -> list[str]:
+        """Get extra dimensions in the lifetime parameters.
+
+        Returns
+        -------
+        list of str
+            List of extra dimensions in the lifetime parameters.
+        """
         dims = []
         first_array = list(self.lifetime_parameters.values())[0]
         for dim in first_array.dims:
@@ -217,6 +245,13 @@ class ScipySurvival():
 
     @cached_property
     def extra_coords(self) -> list[list]:
+        """Get extra coordinates for the lifetime parameters.
+
+        Returns
+        -------
+        list
+            List of extra coordinates for the lifetime parameters.
+        """
         first_array = list(self.lifetime_parameters.values())[0]
         coords = {}
         for dim in self.extra_dims:
@@ -228,6 +263,13 @@ class ScipySurvival():
 
     @cached_property
     def dt(self) -> int:
+        """Get the time step used in the simulation.
+
+        Returns
+        -------
+        int
+            The time step value used in the simulation.
+        """
         first_array = list(self.lifetime_parameters.values())[0]
         dt = first_array.coords["Time"].values[1] - first_array.coords["Time"].values[0]
         assert dt == 1
