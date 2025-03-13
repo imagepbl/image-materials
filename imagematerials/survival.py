@@ -24,7 +24,7 @@ class SurvivalMatrix:
 
         Parameters
         ----------
-        survival
+        survival : object
             The survival object is a class that knows how to compute the survival matrix.
             It contains the information on which dimensions the life times of the stocks
             depend, which could be the "Type", "region", both or neither.
@@ -39,7 +39,7 @@ class SurvivalMatrix:
         self.survival = survival
 
     def __getitem__(self, idx):
-        """Use the survival matrix as a numpy array.
+        """Use the survival matrix as a numpy array for the specified time and cohort.
 
         Parameters
         ----------
@@ -92,13 +92,13 @@ class ScipySurvival():
 
         Parameters
         ----------
-        lifetime_parameters
+        lifetime_parameters : dict[str, xr.DataArray]
             Output from convert_life_time_vehicles function. This should be a dictionary, with
             the keys the name of the distribution, and the values a xr.DataArray with the scipy
             parameters. E.g. weibull or folded_normal.
             mandatory dimensions for the arrays: Cohort, Type, ScipyParam
             optional dimension: Region
-        output_modes:
+        output_modes : list or xr.DataArray, optional
             To allow for sub types that have the same lifetime as the super type.
             By default, this value is None, in which case it is assumed that all sub types
             (if any) have their lifetimes specified.
@@ -120,6 +120,7 @@ class ScipySurvival():
 
         Returns
         -------
+        xr.DataArray
             A DataArray with the correct dimensions and zeros everywhere.
 
         """
@@ -135,12 +136,13 @@ class ScipySurvival():
 
         Parameters
         ----------
-        cohort
+        cohort : int
             The cohort for which to compute the survival matrix. This should
             not be the cohort index.
 
         Returns
         -------
+        xr.DataArray
             An array with the survival fractions for the current cohort at all
             future times.
 
@@ -201,6 +203,7 @@ class ScipySurvival():
 
         Returns
         -------
+        list of str
             All the modes for which there is a survival distribution in list form.
 
         """
@@ -214,7 +217,13 @@ class ScipySurvival():
 
     @property
     def time_series(self) -> xr.DataArray:
-        """Get all the time values in the simulation."""
+        """Get all the time values in the simulation.
+
+        Returns
+        -------
+        xarray.DataArray
+            Time coordinate values from the simulation.
+        """
         first_array = list(self.lifetime_parameters.values())[0]
         return first_array.coords["Time"]
 
@@ -224,7 +233,7 @@ class ScipySurvival():
 
         Returns
         -------
-        list
+        list of str
             List of extra dimensions in the lifetime parameters.
         """
         dims = []
