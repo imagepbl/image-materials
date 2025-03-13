@@ -55,8 +55,7 @@ class GenericStocks(prism.Model):
     outflow_by_cohort: prism.TimeVariable[REGION, STOCK_TYPE, COHORT, "count"] = prism.export()
 
     def compute_initial_values(self, time: prism.Timeline):
-        """
-        Computes the initial values for stocks and the survival matrix.
+        """Compute the initial values for stocks and the survival matrix.
         
         Parameters:
         - time: The simulation timeline.
