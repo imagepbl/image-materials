@@ -125,10 +125,14 @@ class GenericMaterials(prism.Model):
     output_data : tuple of str
         Tuple of output data variable names.
     """
+
+    # Flags
+    compute_maintenance_materials: bool
         
     # Input data
     weights: xr.DataArray
     material_fractions: xr.DataArray
+    maintenance_material_fractions: xr.DataArray
 
     # Dimensions
     Region: prism.Coords[REGION]
@@ -139,13 +143,18 @@ class GenericMaterials(prism.Model):
 
     # Data dependencies
     input_data: tuple[str] = ("weights", "material_fractions", "inflow",
-                              "stock_by_cohort", "outflow_by_cohort")
+                              "stock_by_cohort", "outflow_by_cohort", 
+                              "maintenance_material_fractions")
     output_data: tuple[str] = ("stock_by_cohort_materials", "inflow_materials",
-                               "outflow_by_cohort_materials")
+                               "outflow_by_cohort_materials", "inflow_maintenance",
+                               "outflow_maintenance")
 
     # Output data
     inflow_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
     outflow_by_cohort_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
+    
+    inflow_maintenance: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
+    outflow_maintenance: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
 
     def compute_initial_values(self, time: prism.Timeline):
         """
@@ -185,82 +194,9 @@ class GenericMaterials(prism.Model):
         self.outflow_by_cohort_materials[t] = (outflow_by_cohort[t]*self.material_fractions*self.weights).sum("Cohort")
         self.stock_by_cohort_materials.loc[t] = (stock_by_cohort.loc[t]*self.material_fractions*self.weights).sum("Cohort")
 
-@prism.interface
-class Maintenance(prism.Model):
-    """
-    A model class for managing maintenance-related materials used over time, 
-    including stock-by-cohort maintenance material use and computation of values.
-
-    Attributes
-    ----------
-    weights : xr.DataArray
-        Weight data for materials used in the product for maintaining it.
-    maintenance_material_fractions : xr.DataArray
-        Fractions of materials used for maintenance.
-    Region : prism.Coords
-        The region for the stock.
-    Type : prism.Coords
-        The type of stock (e.g., vehicles).
-    Cohort : prism.Coords
-        Cohort groups within the stock (e.g., age groups).
-    Time : prism.Coords
-        Time steps in the simulation.
-    material : prism.Coords
-        The material type used in the model.
-    input_data : tuple of str
-        Tuple of input data variables.
-    output_data : tuple of str
-        Tuple of output data variables.
-    """
-    # Input data
-    weights: xr.DataArray
-    maintenance_material_fractions: xr.DataArray
-
-    # Dimensions
-    Region: prism.Coords[REGION]
-    Type: prism.Coords[STOCK_TYPE]
-    Cohort: prism.Coords[COHORT]
-    Time: prism.Coords[TIME]
-    material: prism.Coords[MATERIAL_TYPE]
-
-    # Data dependencies
-    input_data: tuple[str] = ("weights", "maintenance_material_fractions",
-                              "stock_by_cohort")
-    output_data: tuple[str] = ("stock_by_cohort_maintenance_materials", )
-    #, "inflow_maintenance_materials",
-    #                           "outflow_by_cohort_maintenance_materials")
-
-    def compute_initial_values(self, time: prism.Timeline):
-        """
-        Computes the initial values for maintenance materials used by stock cohorts.
-        
-        Parameters
-        ----------
-        time : prism.Timeline
-            The simulation timeline.
-        """
-        self.stock_by_cohort_maintenance_materials = xr.DataArray(
-            0.0, dims=("Time", "Region", "Type", "material"),
-            coords={"Time": self.Time,
-                    # "Cohort": coordinates["Time"].values,
-                    "Region": self.Region,
-                    "Type": self.Type,
-                    "material": self.material})
-
-    def compute_values(self, time: prism.Time, stock_by_cohort):
-        """
-        Computes the maintenance material usage by stock cohort at each time step.
-        
-        Parameters
-        ----------
-        time : prism.Time
-            The current simulation time step.
-        stock_by_cohort : xr.DataArray
-            The stock-by-cohort data.
-        """
-        t, dt = time.t, time.dt
-        self.stock_by_cohort_maintenance_materials.loc[t] = (stock_by_cohort.loc[t]*self.maintenance_material_fractions*self.weights).sum("Cohort")
-
+        if self.compute_maintenance_materials:
+            self.inflow_maintenance[t] = (stock_by_cohort.loc[t]*self.maintenance_material_fractions*self.weights).sum("Cohort")
+            self.outflow_maintenance[t] = self.inflow_maintenance[t]
 
 @prism.interface
 class GenericMainModel(prism.Model):
@@ -333,7 +269,9 @@ class GenericMainModel(prism.Model):
             self.material_model = GenericMaterials(
                 self.complete_timeline, Region=self.Region, Type=self.Type, Cohort=self.Cohort, Time=self.Time,
                 material=self.material, weights=self.prep_data["weights"],
-                material_fractions=self.prep_data["material_fractions"]
+                material_fractions=self.prep_data["material_fractions"],
+                compute_maintenance_materials=self.compute_maintenance_materials,
+                maintenance_material_fractions=self.prep_data["maintenance_material_fractions"]
             )
             self.material_model.compute_initial_values(timeline)
 
@@ -345,15 +283,6 @@ class GenericMainModel(prism.Model):
                 material_fractions=self.prep_data["battery_material_fractions"]
             )
             self.material_model.compute_initial_values(timeline)
-
-        # Maintenance materials
-        if self.compute_maintenance_materials:
-            self.maintenance_model = Maintenance(
-                self.complete_timeline, Region=self.Region, Type=self.Type, Cohort=self.Cohort, Time=self.Time,
-                material=self.material, weights=self.prep_data["weights"],
-                maintenance_material_fractions=self.prep_data["maintenance_material_fractions"]
-            )
-            self.maintenance_model.compute_initial_values(timeline)
 
 
     def compute_values(self, time: prism.Time):
@@ -393,6 +322,5 @@ class GenericMainModel(prism.Model):
             self.material_model.compute_values(time, inflow=self.stock_model.inflow,
                                                stock_by_cohort=self.stock_model.stock_by_cohort,
                                                outflow_by_cohort=self.stock_model.outflow_by_cohort)
-        if self.compute_maintenance_materials:
-            self.maintenance_model.compute_values(time, stock_by_cohort=self.stock_model.stock_by_cohort)
+
 
