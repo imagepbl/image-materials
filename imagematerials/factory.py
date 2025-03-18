@@ -112,6 +112,8 @@ class ModelFactory():
         for var_name in input_data + optional_input_data:
             if var_name in self.prep_data:
                 arguments_dict[var_name] = self.prep_data[var_name]
+            elif var_name in optional_input_data and var_name not in self.all_data:
+                arguments_dict[var_name] = None
             elif var_name not in optional_input_data and var_name not in self.all_data:
                 raise ValueError(f"Cannot find dataset with name '{var_name}'")
             else:
