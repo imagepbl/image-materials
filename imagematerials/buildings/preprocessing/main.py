@@ -13,6 +13,10 @@ from imagematerials.buildings.preprocessing.floorspace import (
     get_image_floorspace,
 )
 from imagematerials.buildings.preprocessing.lifetimes import compute_lifetimes
+from imagematerials.buildings.preprocessing.materials import (
+    compute_mat_intensities_commercial,
+    compute_mat_intensities_residential,
+)
 from imagematerials.buildings.preprocessing.population import compute_population
 
 
@@ -42,6 +46,7 @@ def buildings_preprocessing(base_directory):
     housing_type = compute_housing_type(database_directory)
 
     floorspace_residential = compute_housing_residential(population, average_m2_capita, housing_type, floorspace_rururb)
+    print(floorspace_residential.coords["Type"])
 
     floorspace = xr.concat((floorspace_residential, floorspace_commercial), dim="Type")
 
@@ -51,4 +56,8 @@ def buildings_preprocessing(base_directory):
         warnings.simplefilter("ignore")
         lifetimes = compute_lifetimes(base_directory, floorspace_commercial.coords["Type"].values)
 
-    return {"stocks": floorspace, "lifetimes": lifetimes}
+    mat_intensities_comm = compute_mat_intensities_commercial(database_directory)
+    mat_intensities_res = compute_mat_intensities_residential(database_directory)
+    mat_intensities = xr.concat((mat_intensities_res, mat_intensities_comm), dim="Type")
+
+    return {"stocks": floorspace, "lifetimes": lifetimes, "material_intensities": mat_intensities}
