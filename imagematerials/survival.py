@@ -175,7 +175,7 @@ class ScipySurvival():
             # Not needed to deal with subtypes
             return base_array
 
-        knowledge_graph.rebroadcast_xarray(base_array, self._output_modes)
+        return knowledge_graph.rebroadcast_xarray(base_array, self._output_modes)
 
         # # Deal with subtypes/submodes of the form "{mode} - {submode}"
         # base_modes = base_array.coords["Type"].values
