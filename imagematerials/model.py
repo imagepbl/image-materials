@@ -288,7 +288,7 @@ class Maintenance(prism.Model):
                     "material": self.material})
 
     def compute_values(self, time: prism.Time, stock_by_cohort):
-         """
+        """
         Computes the maintenance material usage by stock cohort at each time step.
         
         Parameters
