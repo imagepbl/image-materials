@@ -147,7 +147,7 @@ class GenericMaterials(prism.Model):
     outflow_by_cohort_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
 
     def compute_initial_values(self, time: prism.Timeline):
-                """
+        """
         Computes the initial values for materials used in each stock cohort.
         
         Parameters
