@@ -82,7 +82,7 @@ class GenericStocks(prism.Model):
                     "Type": self.Type})
 
     def compute_values(self, time: prism.Time):
-         """
+        """
         Computes the stock values at each time step, including inflow and outflow by cohort.
         
         Parameters
