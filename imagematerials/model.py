@@ -343,7 +343,7 @@ class GenericMainModel(prism.Model):
     material: prism.Coords[MATERIAL_TYPE]
 
     def compute_initial_values(self, timeline: prism.Timeline):
-         """
+        """
         Initializes the simulation by setting the historic tail as not computed.
         
         Parameters
