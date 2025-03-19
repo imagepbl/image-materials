@@ -165,7 +165,7 @@ class GenericMaterials(prism.Model):
                     "material": self.material})
 
     def compute_values(self, time: prism.Time, inflow, stock_by_cohort, outflow_by_cohort):
-         """
+        """
         Computes the material inflows, outflows, and stock usage by cohort 
         at each time step.
         
