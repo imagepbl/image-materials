@@ -17,7 +17,7 @@ MATERIAL_TYPE = prism.Dimension("material")
 
 @prism.interface
 class GenericStocks(prism.Model):
-     """Stock class that can be used for different products.
+    """Stock class that can be used for different products.
     A model class for managing stocks and their inflows and outflows over time, 
     including the computation of initial and dynamic stock values based on input data.
     Attributes
