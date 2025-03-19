@@ -270,7 +270,7 @@ class Maintenance(prism.Model):
     #                           "outflow_by_cohort_maintenance_materials")
 
     def compute_initial_values(self, time: prism.Timeline):
-         """
+        """
         Computes the initial values for maintenance materials used by stock cohorts.
         
         Parameters
