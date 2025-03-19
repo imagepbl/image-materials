@@ -101,7 +101,7 @@ class GenericStocks(prism.Model):
 
 @prism.interface
 class GenericMaterials(prism.Model):
-     """
+    """
     A model class for managing materials used in stock cohorts, including 
     inflows and outflows of materials and the computation of stock-by-cohort 
     material use over time.
