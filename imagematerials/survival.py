@@ -8,7 +8,7 @@ import xarray as xr
 
 from imagematerials.constants import SUBTYPE_SEPARATOR
 from imagematerials.distribution import NAME_TO_DIST
-from imagematerials.concepts import vehicle_knowledge_graph
+from imagematerials.concepts import knowledge_graph
 
 
 class SurvivalMatrix:
@@ -175,7 +175,7 @@ class ScipySurvival():
             # Not needed to deal with subtypes
             return base_array
 
-        vehicle_knowledge_graph.rebroadcast_xarray(base_array, self._output_modes)
+        knowledge_graph.rebroadcast_xarray(base_array, self._output_modes)
 
         # # Deal with subtypes/submodes of the form "{mode} - {submode}"
         # base_modes = base_array.coords["Type"].values

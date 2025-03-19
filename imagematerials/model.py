@@ -17,11 +17,9 @@ MATERIAL_TYPE = prism.Dimension("material")
 
 @prism.interface
 class GenericStocks(prism.Model):
-    """Stock class that can be used for different products.
-
+     """Stock class that can be used for different products.
     A model class for managing stocks and their inflows and outflows over time, 
     including the computation of initial and dynamic stock values based on input data.
-
     Attributes
     ----------
     Region : prism.Coords[REGION]
@@ -43,7 +41,7 @@ class GenericStocks(prism.Model):
     output_data : tuple of str
         Tuple of output data variable names.
     """
-        
+     
     # Dimensions
     Region: prism.Coords[REGION]
     Type: prism.Coords[STOCK_TYPE]
@@ -73,6 +71,7 @@ class GenericStocks(prism.Model):
         time : prism.Timeline
             The simulation timeline.
         """
+
         self.survival_matrix = SurvivalMatrix(ScipySurvival(self.lifetimes, self.stocks.coords["Type"]))
         self.stock_by_cohort = xr.DataArray(
             0.0,
@@ -91,6 +90,7 @@ class GenericStocks(prism.Model):
         time : prism.Time
             The current simulation time step.
         """
+         
         t, dt = time.t, time.dt
         self.inflow[t].loc[:] = 0.0
         self.outflow_by_cohort[t].loc[:] = 0.0
@@ -105,7 +105,6 @@ class GenericMaterials(prism.Model):
     A model class for managing materials used in stock cohorts, including 
     inflows and outflows of materials and the computation of stock-by-cohort 
     material use over time.
-
     Attributes
     ----------
     weights : xr.DataArray
@@ -125,7 +124,7 @@ class GenericMaterials(prism.Model):
     output_data : tuple of str
         Tuple of output data variable names.
     """
-        
+
     # Input data
     weights: xr.DataArray
     material_fractions: xr.DataArray
@@ -156,6 +155,7 @@ class GenericMaterials(prism.Model):
         time : prism.Timeline
             The simulation timeline.
         """
+                
         self.stock_by_cohort_materials = xr.DataArray(
             0.0, dims=("Time", "Region", "Type", "material"),
             coords={"Time": self.Time,
@@ -180,17 +180,55 @@ class GenericMaterials(prism.Model):
         outflow_by_cohort : xr.DataArray
             Outflow data by cohort.
         """
+         
         t, dt = time.t, time.dt
         self.inflow_materials[t] = inflow[t]*self.material_fractions.sel(Cohort=t).drop_vars("Cohort")*self.weights.sel(Cohort=t).drop_vars("Cohort")
         self.outflow_by_cohort_materials[t] = (outflow_by_cohort[t]*self.material_fractions*self.weights).sum("Cohort")
         self.stock_by_cohort_materials.loc[t] = (stock_by_cohort.loc[t]*self.material_fractions*self.weights).sum("Cohort")
 
 @prism.interface
+class MaterialIntensities(prism.Model):
+    # Input data
+    material_intensities: xr.DataArray
+
+    # Dimensions
+    Region: prism.Coords[REGION]
+    Type: prism.Coords[STOCK_TYPE]
+    Cohort: prism.Coords[COHORT]
+    Time: prism.Coords[TIME]
+    material: prism.Coords[MATERIAL_TYPE]
+
+    # Data dependencies
+    input_data: tuple[str] = ("material_intensities", "inflow",
+                              "stock_by_cohort", "outflow_by_cohort")
+    output_data: tuple[str] = ("stock_by_cohort_materials", "inflow_materials",
+                               "outflow_by_cohort_materials")
+
+    # Output data
+    inflow_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
+    outflow_by_cohort_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
+
+    def compute_initial_values(self, time: prism.Timeline):
+        self.stock_by_cohort_materials = xr.DataArray(
+            0.0, dims=("Time", "Region", "Type", "material"),
+            coords={"Time": self.Time,
+                    # "Cohort": coordinates["Time"].values,
+                    "Region": self.Region,
+                    "Type": self.Type,
+                    "material": self.material})
+
+    def compute_values(self, time: prism.Time, inflow, stock_by_cohort, outflow_by_cohort):
+        t, dt = time.t, time.dt
+        self.inflow_materials[t] = inflow[t]*self.material_intensities.sel(Cohort=t).drop_vars("Cohort")
+        self.outflow_by_cohort_materials[t] = (outflow_by_cohort[t]*self.material_intensities).sum("Cohort")
+        self.stock_by_cohort_materials.loc[t] = (stock_by_cohort.loc[t]*self.material_intensities).sum("Cohort")
+
+
+@prism.interface
 class Maintenance(prism.Model):
     """
     A model class for managing maintenance-related materials used over time, 
     including stock-by-cohort maintenance material use and computation of values.
-
     Attributes
     ----------
     weights : xr.DataArray
@@ -212,6 +250,7 @@ class Maintenance(prism.Model):
     output_data : tuple of str
         Tuple of output data variables.
     """
+
     # Input data
     weights: xr.DataArray
     maintenance_material_fractions: xr.DataArray
@@ -239,6 +278,7 @@ class Maintenance(prism.Model):
         time : prism.Timeline
             The simulation timeline.
         """
+         
         self.stock_by_cohort_maintenance_materials = xr.DataArray(
             0.0, dims=("Time", "Region", "Type", "material"),
             coords={"Time": self.Time,
@@ -258,6 +298,7 @@ class Maintenance(prism.Model):
         stock_by_cohort : xr.DataArray
             The stock-by-cohort data.
         """
+         
         t, dt = time.t, time.dt
         self.stock_by_cohort_maintenance_materials.loc[t] = (stock_by_cohort.loc[t]*self.maintenance_material_fractions*self.weights).sum("Cohort")
 
@@ -289,6 +330,7 @@ class GenericMainModel(prism.Model):
     material : prism.Coords
         Material type used in the model.
     """
+
     prep_data: dict
     compute_materials: bool
     compute_battery_materials: bool
@@ -309,7 +351,8 @@ class GenericMainModel(prism.Model):
         timeline : prism.Timeline
             The simulation timeline.
         """
-        self.historic_tail_computed = False #TODO add explanation
+         
+        self.historic_tail_computed = False
 
     def init_submodels(self, timeline: prism.Timeline):
         """
@@ -320,6 +363,7 @@ class GenericMainModel(prism.Model):
         timeline : prism.Timeline
             The simulation timeline.
         """
+
         self.complete_timeline = timeline
         self.stock_model = GenericStocks(
             self.complete_timeline, Region=self.Region, Type=self.Type, Cohort=self.Cohort, Time=self.Time,
@@ -365,6 +409,7 @@ class GenericMainModel(prism.Model):
         time : prism.Time
             The current simulation time step.
         """
+         
         t, dt = time.t, time.dt
         if not self.historic_tail_computed:
             for historic_time in self.complete_timeline:
@@ -388,6 +433,7 @@ class GenericMainModel(prism.Model):
         time : prism.Time
             The current simulation time step.
         """
+         
         self.stock_model.compute_values(time)
         if self.compute_materials:
             self.material_model.compute_values(time, inflow=self.stock_model.inflow,
