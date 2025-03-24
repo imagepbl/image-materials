@@ -142,11 +142,9 @@ class GenericMaterials(prism.Model):
 
     # Data dependencies
     input_data: tuple[str] = ("weights", "material_fractions", "inflow",
-                              "stock_by_cohort", "outflow_by_cohort", 
-                              "maintenance_material_fractions") #, "compute_maintenance_materials")
+                              "stock_by_cohort", "outflow_by_cohort") #, "compute_maintenance_materials")
     output_data: tuple[str] = ("stock_by_cohort_materials", "inflow_materials",
-                               "outflow_by_cohort_materials", "inflow_maintenance",
-                               "outflow_maintenance")
+                               "outflow_by_cohort_materials")
 
     # Output data
     inflow_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
