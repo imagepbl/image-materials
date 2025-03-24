@@ -7,6 +7,7 @@ from imagematerials.stock import (
     compute_dynamic_stock_driven,
 )
 from imagematerials.survival import ScipySurvival, SurvivalMatrix
+from imagematerials.maintenance import Maintenance
 
 REGION = prism.Dimension("Region")
 STOCK_TYPE = prism.Dimension("Type")
@@ -124,7 +125,7 @@ class GenericMaterials(prism.Model):
     output_data : tuple of str
         Tuple of output data variable names.
     """
-
+        
     # Input data
     weights: xr.DataArray
     material_fractions: xr.DataArray
@@ -138,7 +139,7 @@ class GenericMaterials(prism.Model):
 
     # Data dependencies
     input_data: tuple[str] = ("weights", "material_fractions", "inflow",
-                              "stock_by_cohort", "outflow_by_cohort")
+                              "stock_by_cohort", "outflow_by_cohort") 
     output_data: tuple[str] = ("stock_by_cohort_materials", "inflow_materials",
                                "outflow_by_cohort_materials")
 
@@ -222,85 +223,6 @@ class MaterialIntensities(prism.Model):
         self.inflow_materials[t] = inflow[t]*self.material_intensities.sel(Cohort=t).drop_vars("Cohort")
         self.outflow_by_cohort_materials[t] = (outflow_by_cohort[t]*self.material_intensities).sum("Cohort")
         self.stock_by_cohort_materials.loc[t] = (stock_by_cohort.loc[t]*self.material_intensities).sum("Cohort")
-
-
-@prism.interface
-class Maintenance(prism.Model):
-    """
-    A model class for managing maintenance-related materials used over time, 
-    including stock-by-cohort maintenance material use and computation of values.
-    Attributes
-    ----------
-    weights : xr.DataArray
-        Weight data for materials used in the product for maintaining it.
-    maintenance_material_fractions : xr.DataArray
-        Fractions of materials used for maintenance.
-    Region : prism.Coords
-        The region for the stock.
-    Type : prism.Coords
-        The type of stock (e.g., vehicles).
-    Cohort : prism.Coords
-        Cohort groups within the stock (e.g., age groups).
-    Time : prism.Coords
-        Time steps in the simulation.
-    material : prism.Coords
-        The material type used in the model.
-    input_data : tuple of str
-        Tuple of input data variables.
-    output_data : tuple of str
-        Tuple of output data variables.
-    """
-
-    # Input data
-    weights: xr.DataArray
-    maintenance_material_fractions: xr.DataArray
-
-    # Dimensions
-    Region: prism.Coords[REGION]
-    Type: prism.Coords[STOCK_TYPE]
-    Cohort: prism.Coords[COHORT]
-    Time: prism.Coords[TIME]
-    material: prism.Coords[MATERIAL_TYPE]
-
-    # Data dependencies
-    input_data: tuple[str] = ("weights", "maintenance_material_fractions",
-                              "stock_by_cohort")
-    output_data: tuple[str] = ("stock_by_cohort_maintenance_materials", )
-    #, "inflow_maintenance_materials",
-    #                           "outflow_by_cohort_maintenance_materials")
-
-    def compute_initial_values(self, time: prism.Timeline):
-        """
-        Computes the initial values for maintenance materials used by stock cohorts.
-        
-        Parameters
-        ----------
-        time : prism.Timeline
-            The simulation timeline.
-        """
-         
-        self.stock_by_cohort_maintenance_materials = xr.DataArray(
-            0.0, dims=("Time", "Region", "Type", "material"),
-            coords={"Time": self.Time,
-                    # "Cohort": coordinates["Time"].values,
-                    "Region": self.Region,
-                    "Type": self.Type,
-                    "material": self.material})
-
-    def compute_values(self, time: prism.Time, stock_by_cohort):
-        """
-        Computes the maintenance material usage by stock cohort at each time step.
-        
-        Parameters
-        ----------
-        time : prism.Time
-            The current simulation time step.
-        stock_by_cohort : xr.DataArray
-            The stock-by-cohort data.
-        """
-         
-        t, dt = time.t, time.dt
-        self.stock_by_cohort_maintenance_materials.loc[t] = (stock_by_cohort.loc[t]*self.maintenance_material_fractions*self.weights).sum("Cohort")
 
 
 @prism.interface
@@ -439,6 +361,9 @@ class GenericMainModel(prism.Model):
             self.material_model.compute_values(time, inflow=self.stock_model.inflow,
                                                stock_by_cohort=self.stock_model.stock_by_cohort,
                                                outflow_by_cohort=self.stock_model.outflow_by_cohort)
+            
         if self.compute_maintenance_materials:
-            self.maintenance_model.compute_values(time, stock_by_cohort=self.stock_model.stock_by_cohort)
+            self.maintenance_model.compute_values(time, 
+                                                  stock_by_cohort=self.stock_model.stock_by_cohort,)
+
 
