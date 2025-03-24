@@ -155,7 +155,6 @@ class GenericMaterials(prism.Model):
         time : prism.Timeline
             The simulation timeline.
         """
-                
         self.stock_by_cohort_materials = xr.DataArray(
             0.0, dims=("Time", "Region", "Type", "material"),
             coords={"Time": self.Time,
@@ -185,6 +184,10 @@ class GenericMaterials(prism.Model):
         self.inflow_materials[t] = inflow[t]*self.material_fractions.sel(Cohort=t).drop_vars("Cohort")*self.weights.sel(Cohort=t).drop_vars("Cohort")
         self.outflow_by_cohort_materials[t] = (outflow_by_cohort[t]*self.material_fractions*self.weights).sum("Cohort")
         self.stock_by_cohort_materials.loc[t] = (stock_by_cohort.loc[t]*self.material_fractions*self.weights).sum("Cohort")
+
+# @prism.interface
+# class RestModel(prims.Model):
+    
 
 @prism.interface
 class MaterialIntensities(prism.Model):

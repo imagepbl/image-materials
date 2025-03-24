@@ -46,7 +46,6 @@ def buildings_preprocessing(base_directory):
     housing_type = compute_housing_type(database_directory)
 
     floorspace_residential = compute_housing_residential(population, average_m2_capita, housing_type, floorspace_rururb)
-    print(floorspace_residential.coords["Type"])
 
     floorspace = xr.concat((floorspace_residential, floorspace_commercial), dim="Type")
 
