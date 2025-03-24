@@ -127,7 +127,7 @@ class GenericMaterials(prism.Model):
     """
 
     # Flags
-    compute_maintenance_materials: bool
+    #compute_maintenance_materials: bool
         
     # Input data
     weights: xr.DataArray
@@ -144,7 +144,7 @@ class GenericMaterials(prism.Model):
     # Data dependencies
     input_data: tuple[str] = ("weights", "material_fractions", "inflow",
                               "stock_by_cohort", "outflow_by_cohort", 
-                              "maintenance_material_fractions")
+                              "maintenance_material_fractions") #, "compute_maintenance_materials")
     output_data: tuple[str] = ("stock_by_cohort_materials", "inflow_materials",
                                "outflow_by_cohort_materials", "inflow_maintenance",
                                "outflow_maintenance")
@@ -194,9 +194,9 @@ class GenericMaterials(prism.Model):
         self.outflow_by_cohort_materials[t] = (outflow_by_cohort[t]*self.material_fractions*self.weights).sum("Cohort")
         self.stock_by_cohort_materials.loc[t] = (stock_by_cohort.loc[t]*self.material_fractions*self.weights).sum("Cohort")
 
-        if self.compute_maintenance_materials:
-            self.inflow_maintenance[t] = (stock_by_cohort.loc[t]*self.maintenance_material_fractions*self.weights).sum("Cohort")
-            self.outflow_maintenance[t] = self.inflow_maintenance[t]
+        #if self.compute_maintenance_materials:
+        self.inflow_maintenance[t] = (stock_by_cohort.loc[t]*self.maintenance_material_fractions*self.weights).sum("Cohort")
+        self.outflow_maintenance[t] = self.inflow_maintenance[t]
 
 @prism.interface
 class GenericMainModel(prism.Model):
@@ -228,7 +228,7 @@ class GenericMainModel(prism.Model):
     prep_data: dict
     compute_materials: bool
     compute_battery_materials: bool
-    compute_maintenance_materials: bool
+    #compute_maintenance_materials: bool
 
     Region: prism.Coords[REGION]
     Type: prism.Coords[STOCK_TYPE]
