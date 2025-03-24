@@ -8,7 +8,7 @@ import xarray as xr
 
 from imagematerials.constants import SUBTYPE_SEPARATOR
 from imagematerials.distribution import NAME_TO_DIST
-from imagematerials.concepts import vehicle_knowledge_graph
+from imagematerials.concepts import knowledge_graph
 
 
 class SurvivalMatrix:
@@ -175,25 +175,7 @@ class ScipySurvival():
             # Not needed to deal with subtypes
             return base_array
 
-        vehicle_knowledge_graph.rebroadcast_xarray(base_array, self._output_modes)
-
-        # # Deal with subtypes/submodes of the form "{mode} - {submode}"
-        # base_modes = base_array.coords["Type"].values
-        # keep_modes = []
-        # coords = {coord.name: coord for coord in base_array.coords.values()}
-        # coords["Type"] = self._output_modes
-        # new_array = xr.DataArray(0.0, dims=base_array.dims, coords=coords)
-        # for mode in self.modes:
-        #     base_mode = mode.split(SUBTYPE_SEPARATOR)[0]
-        #     if mode in base_modes:
-        #         keep_modes.append(mode)
-        #     elif base_mode in base_modes:
-        #         new_array.loc[{"Type": mode}] = base_array.loc[{"Type": base_mode}]
-        #     else:
-        #         raise ValueError(f"Unknown mode '{mode}' needed for survival matrix, "
-        #                          "but lifetime unknown.")
-        # new_array.loc[{"Type": keep_modes}] = base_array.loc[{"Type": keep_modes}]
-        # return new_array
+        return knowledge_graph.rebroadcast_xarray(base_array, self._output_modes)
 
     @cached_property
     def modes(self) -> list[str]:

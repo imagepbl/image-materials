@@ -42,7 +42,7 @@ class KnowledgeGraph():
             parent = self._find_closest_parent(cur_coord, input_coords)
             new_array.loc[{dim: cur_coord}] = input_array.loc[{dim: parent}]
         new_array.loc[{dim: keep_coords}] = input_array.loc[{dim: keep_coords}]
-
+        return new_array
 
 @dataclass
 class Node():
@@ -60,3 +60,25 @@ for super_type in vehicle_supertypes:
     for sub_type in vehicle_subtypes:
         vehicle_nodes.append(Node(f"{super_type} - {sub_type}", super_type))
 vehicle_knowledge_graph = KnowledgeGraph(*vehicle_nodes)
+
+building_nodes = []
+for supertype in ["Detached", "Semi-detached", "Appartment", "High-rise"]:
+    building_nodes.append(Node(supertype))
+
+    for subtype in ["Urban", "Rural"]:
+        building_nodes.append(Node(f"{supertype} - {subtype}", supertype))
+
+
+building_knowledge_graph = KnowledgeGraph(*building_nodes)
+knowledge_graph = KnowledgeGraph(*building_nodes, *vehicle_nodes)
+
+
+# building_knowledge_graph = KnowledgeGraph(
+#     Node("Detached"),
+#     Node("Detached - Urban", "Detached"),
+#     Node("Detached - Rural", "Detached"),
+#     Node("Detached"),
+#     Node("Detached - Urban", "Detached"),
+#     Node("Detached - Rural", "Detached"),
+    
+# )
