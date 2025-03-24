@@ -57,6 +57,25 @@ class Maintenance(prism.Model):
     inflow_maintenance: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
     outflow_maintenance: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
 
+    def compute_initial_values(self, time: prism.Timeline):
+        """
+        Computes the initial values for maintenance materials used by stock cohorts.
+        
+        Parameters
+        ----------
+        time : prism.Timeline
+            The simulation timeline.
+        """
+
+        #self.stock_by_cohort_maintenance_materials = xr.DataArray(
+        #    0.0, dims=("Time", "Region", "Type", "material"),
+        #    coords={"Time": self.Time,
+        #            # "Cohort": coordinates["Time"].values,
+        #            "Region": self.Region,
+        #            "Type": self.Type,
+        #            "material": self.material})
+        
+
     def compute_values(self, time: prism.Time, stock_by_cohort):
         """
         Computes the maintenance material usage by stock cohort at each time step.
