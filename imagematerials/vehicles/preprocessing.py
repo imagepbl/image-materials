@@ -660,10 +660,6 @@ def preprocessing(base_dir: str):
     preprocessing_results_xarray["stocks"] = preprocessing_results_xarray.pop("total_nr_vehicles")
     preprocessing_results_xarray["shares"] = preprocessing_results_xarray.pop("vehicle_shares")
 
-    #xr_maintenance_material = xr.DataArray(maintenance_material["total_material_per_km"],
-    #                                       dims=("material",), #"Type"),
-    #                                       coords={"material": maintenance_material["Material"]})#,"Type":"'Cars'"})
-
     # Copy dimensiomns from material_fractions for xr_maintenance_material
     materials = preprocessing_results_xarray['material_fractions'].coords["material"]
     types = preprocessing_results_xarray['material_fractions'].coords["Type"]
