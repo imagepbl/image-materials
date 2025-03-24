@@ -9,7 +9,8 @@ MATERIAL_TYPE = prism.Dimension("material")
 
 @prism.interface
 class Maintenance(prism.Model):
-    """
+    """ Module to calculate material use for product stock maintenance
+
     A model class for managing maintenance-related materials used over time, 
     including stock-by-cohort maintenance material use and computation of values.
     Attributes
@@ -50,8 +51,6 @@ class Maintenance(prism.Model):
                               "stock_by_cohort")
     output_data: tuple[str] = ("inflow_maintenance",
                                "outflow_maintenance")
-    #, "inflow_maintenance_materials",
-    #                           "outflow_by_cohort_maintenance_materials")
 
     # Output data
     inflow_maintenance: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
@@ -66,14 +65,6 @@ class Maintenance(prism.Model):
         time : prism.Timeline
             The simulation timeline.
         """
-
-        #self.stock_by_cohort_maintenance_materials = xr.DataArray(
-        #    0.0, dims=("Time", "Region", "Type", "material"),
-        #    coords={"Time": self.Time,
-        #            # "Cohort": coordinates["Time"].values,
-        #            "Region": self.Region,
-        #            "Type": self.Type,
-        #            "material": self.material})
         
 
     def compute_values(self, time: prism.Time, stock_by_cohort):

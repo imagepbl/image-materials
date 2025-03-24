@@ -125,9 +125,6 @@ class GenericMaterials(prism.Model):
     output_data : tuple of str
         Tuple of output data variable names.
     """
-
-    # Flags
-    #compute_maintenance_materials: bool
         
     # Input data
     weights: xr.DataArray
@@ -142,7 +139,7 @@ class GenericMaterials(prism.Model):
 
     # Data dependencies
     input_data: tuple[str] = ("weights", "material_fractions", "inflow",
-                              "stock_by_cohort", "outflow_by_cohort") #, "compute_maintenance_materials")
+                              "stock_by_cohort", "outflow_by_cohort") 
     output_data: tuple[str] = ("stock_by_cohort_materials", "inflow_materials",
                                "outflow_by_cohort_materials")
 
