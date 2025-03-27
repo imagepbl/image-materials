@@ -185,9 +185,23 @@ class GenericMaterials(prism.Model):
         self.outflow_by_cohort_materials[t] = (outflow_by_cohort[t]*self.material_fractions*self.weights).sum("Cohort")
         self.stock_by_cohort_materials.loc[t] = (stock_by_cohort.loc[t]*self.material_fractions*self.weights).sum("Cohort")
 
-# @prism.interface
-# class RestModel(prims.Model):
-    
+@prism.interface
+class RestModel(prism.Model):
+    # Input data
+    total_inflow_materials_class: int  # Fix
+    gdp_per_capita: xr.DataArray  # Will be a prism time variable probably
+    population: xr.DataArray
+
+    # Output data
+    inflow_materials_rest: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
+
+    input_data: tuple[str] = ("total_inflow_materials_class", "gdp_per_capita", "population")
+    output_data: tuple[str] = ("inflow_materials_rest")
+
+    def compute_values(self, time: prism.Time, total_inflow_materials_class, gdp_per_capita, population):
+        t = time.t
+        self.total_inflow_materials_rest[t] = self.total_inflow_materials_class.predict(self.gdp_per_capita)*self.population
+
 
 @prism.interface
 class MaterialIntensities(prism.Model):
