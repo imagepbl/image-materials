@@ -6,6 +6,10 @@
 
 ## Installation
 
+### Setting Up a Python Environment
+
+It is recommended to use a virtual environment for installing dependencies. See [this guide](https://docs.python.org/3/tutorial/venv.html) for instructions on creating and managing Python environments.
+
 ### Prerequisites
 
 Ensure you have the necessary dependencies installed:
@@ -14,26 +18,31 @@ Ensure you have the necessary dependencies installed:
 pip install -r requirements.txt
 ```
 
-Additionally, install **prism** in the same environment from the IMAGEPBL GitHub repository.
-
 For **pint-xarray**, install it using:
 
 ```bash
 pip install git+https://github.com/xarray-contrib/pint-xarray
 ```
 
-### Setting Up a Python Environment
-
-It is recommended to use a virtual environment for installing dependencies. See [this guide](https://docs.python.org/3/tutorial/venv.html) for instructions on creating and managing Python environments.
+Additionally, install **pym** and **prism** in the same environment from the IMAGEPBL GitHub repository:
+1. Clone the repository
+```bash
+git clone https://github.com/imagepbl/pym.git
+git clone https://github.com/imagepbl/prism.git
+```
+2. Install the packages
+```bash
+pip install ./pym
+pip install ./prism
+```
 
 ### Installing imagematerials
 
-Install the package locally with:
+Install the package locally in the parent directory of image-materials with:
 
 ```bash
-pip install imagematerials -e
+pip install -e image-materials
 ```
-
 Using `-e` ensures automatic updates when modifying the package.
 
 ## Usage
