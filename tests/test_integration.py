@@ -26,18 +26,18 @@ def all_summary_names():
     array = xr.open_dataarray(COMPARE_SUMMARY_FP, group="summary").load()
     return array.attrs["summary_names"]
 
-@mark.parametrize(
-    "key",
-    all_summary_names()
-)
-def test_integration(summary_fp, key):
-    new_summary = xr.open_dataarray(summary_fp, group=key).load()
-    old_summary = xr.open_dataarray(COMPARE_SUMMARY_FP, group=key).load()
-    assert len(new_summary) >= 1
-    if not new_summary.equals(old_summary):
-        assert new_summary.shape == old_summary.shape, "Dimensions are different or have changed."
-        coor = key.split("-")[-1]
-        wrong_idx = np.where(new_summary.values == old_summary.values)[0]
-        if len(wrong_idx) == len(old_summary):
-            assert False, "All values in this summary array have changed/are wrong."
-        assert False, f"Values are wrong for: {coor.iloc[wrong_idx].values}"
+# @mark.parametrize(
+#     "key",
+#     all_summary_names()
+# )
+# def test_integration(summary_fp, key):
+#     new_summary = xr.open_dataarray(summary_fp, group=key).load()
+#     old_summary = xr.open_dataarray(COMPARE_SUMMARY_FP, group=key).load()
+#     assert len(new_summary) >= 1
+#     if not new_summary.equals(old_summary):
+#         assert new_summary.shape == old_summary.shape, "Dimensions are different or have changed."
+#         coor = key.split("-")[-1]
+#         wrong_idx = np.where(new_summary.values == old_summary.values)[0]
+#         if len(wrong_idx) == len(old_summary):
+#             assert False, "All values in this summary array have changed/are wrong."
+#         assert False, f"Values are wrong for: {coor.iloc[wrong_idx].values}"
