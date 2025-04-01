@@ -35,7 +35,7 @@ jobs:
           ssh-key: ${{ secrets.PYM_DEPLOY_PRIVATE_KEY }}
 
       - name: Install pym
-        run: pip install -e ./pym
+        run: pip install ./pym
 
       - name: Checkout prism
         uses: actions/checkout@v3
@@ -46,7 +46,7 @@ jobs:
           ssh-key: ${{ secrets.PRISM_DEPLOY_PRIVATE_KEY }}
 
       - name: Install prism
-        run: pip install -e ./prism
+        run: pip install ./prism
 
       - name: Checkout imagematerials
         uses: actions/checkout@v3

@@ -27,7 +27,7 @@ dependencies = [
     "xarray",
     "netCDF4",
     "pint",
-    "pandas",
+    "pandas<2",
     "numpy",
     "scipy",
     "pint-xarray@git+https://github.com/xarray-contrib/pint-xarray@20a9301b0dac02bf16d4c883c68c2eb9231e68b9"
