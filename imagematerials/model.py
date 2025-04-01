@@ -8,12 +8,14 @@ from imagematerials.stock import (
 )
 from imagematerials.survival import ScipySurvival, SurvivalMatrix
 from imagematerials.maintenance import Maintenance
+from imagematerials.battery import Battery
 
 REGION = prism.Dimension("Region")
 STOCK_TYPE = prism.Dimension("Type")
 COHORT = prism.Dimension("Cohort")
 TIME = prism.Dimension("Time")
 MATERIAL_TYPE = prism.Dimension("material")
+BATTERY_TYPE = prism.Dimension("battery")
 
 
 @prism.interface
@@ -263,6 +265,7 @@ class GenericMainModel(prism.Model):
     Cohort: prism.Coords[COHORT]
     Time: prism.Coords[TIME]
     material: prism.Coords[MATERIAL_TYPE]
+    battery: prism.Coords[BATTERY_TYPE]
 
     def compute_initial_values(self, timeline: prism.Timeline):
         """
@@ -305,12 +308,12 @@ class GenericMainModel(prism.Model):
 
         # Battery materials
         if self.compute_battery_materials:
-            self.material_model = GenericMaterials(
-                self.complete_timeline, Region=self.Region, Type=self.Type, Cohort=self.Cohort, Time=self.Time,
-                material=self.material, weights=self.prep_data["weights"],
-                material_fractions=self.prep_data["battery_material_fractions"]
+            self.battery_model = Battery(
+                self.complete_timeline, Region=self.Region, Type=self.Type, Cohort=self.Cohort, Time=self.Time, 
+                material=self.material, battery  = self.battery, battery_weights=self.prep_data["battery_weights"],
+                battery_material_fractions=self.prep_data["battery_materials"], battery_shares = self.prep_data["battery_shares"]
             )
-            self.material_model.compute_initial_values(timeline)
+            self.battery_model.compute_initial_values(timeline)
 
         # Maintenance materials
         if self.compute_maintenance_materials:
