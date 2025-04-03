@@ -2,6 +2,7 @@ from imagematerials.concepts import KnowledgeGraph, Node
 from imagematerials.constants import _IMAGE_REGIONS as image_regions
 import pandas as pd
 from constants import target_regions, region_mapping
+import xarray as xr
 
 def convert_to_xarray(df, value_name, variable):
     df = df.rename(columns={"Unnamed: 0":"year","Unnamed: 1":"region"})
@@ -33,17 +34,18 @@ def create_region_graph():
     
     # Assign image regions stepwise to their respective target regions
 
-    for region in ["MEX", "RCAM", "BRA", "RSAM"]:
+    for region in ["RCAM", "BRA", "RSAM"]:
         region_knowledge_graph.add(Node(region, inherits_from="Latin America"))
     for region in ["NAF", "ME"]:
         region_knowledge_graph.add(Node(region, inherits_from="Middle East and Northern Africa"))
     for region in ["WAF", "EAF", "SAF", "RSAF"]:
         region_knowledge_graph.add(Node(region, inherits_from="Subsaharan Africa"))
-    for region in ["TUR", "UKR", "STAN", "RUS"]:
+    for region in [ "UKR", "STAN", "RUS"]:
         region_knowledge_graph.add(Node(region, inherits_from="Reforming Economies"))
     for region in ["KOR", "SEAS", "INDO", "RSAS"]:
         region_knowledge_graph.add(Node(region, inherits_from="Other Asia"))
-    region_knowledge_graph["Canada"].synonyms = ["CAN"]
+    for region in ["TUR", "OCE", "MEX"]:
+        region_knowledge_graph.add(Node(region, inherits_from="Other OECD"))
     region_knowledge_graph["Canada"].synonyms = ["CAN"]
     region_knowledge_graph["USA"].synonyms = ["USA"]
     region_knowledge_graph["Western Europe"].synonyms = ["WEU"]
@@ -51,7 +53,6 @@ def create_region_graph():
     region_knowledge_graph["India"].synonyms = ["INDIA"]
     region_knowledge_graph["China"].synonyms = ["CHN"]
     region_knowledge_graph["Japan"].synonyms = ["JAP"]
-    region_knowledge_graph["Other OECD"].synonyms = ["OCE"]
     
     return region_knowledge_graph
 
@@ -103,11 +104,17 @@ def extract_population():
 
     pop = xr_image_output_aggregated.sel(variable="Population")  # Extract Population data
     # Update the year coordinate from 2020 to 2019
-    new_years = pop.coords["year"].values.copy()  # Copy the years array
-    new_years[new_years == 2020] = 2019  # Replace 2020 with 2019
+    #new_years = pop.coords["year"].values.copy()  # Copy the years array
+    #new_years[new_years == 2020] = 2019  # Replace 2020 with 2019
 
     # Assign the modified years back to the coordinate
-    pop.coords["year"] = ("year", new_years)
+    #pop.coords["year"] = ("year", new_years)
+
+    # Create a new DataArray for 2019 by copying 2020 data
+    pop_2019 = pop.sel(year=2020).assign_coords(year=2019)
+
+    # Concatenate the new 2019 data along the year dimension
+    pop = xr.concat([pop_2019, pop], dim="year").sortby("year")
     return pop
 
 

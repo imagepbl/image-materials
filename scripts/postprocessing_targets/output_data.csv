@@ -1,521 +1,469 @@
 region,year,mode,variable,value
-Canada,2019,bus,load,1.091914
-Canada,2019,bus,pkm_per_capita,2882.7004124011087
-Canada,2019,car,load,0.9804317
-Canada,2019,car,pkm_per_capita,28447.02285802445
-Canada,2019,cycling,load,1.0
-Canada,2019,cycling,pkm_per_capita,113.12694461588852
-Canada,2019,heavy truck,tkm_per_capita,6860.669045285169
-Canada,2019,highspeed train,load,1.0
+Canada,2019,airplane,load,124.0
+Canada,2019,bus,load,20.59569
+Canada,2019,bus,pkm_per_capita,2910.828626389763
+Canada,2019,car,load,1.568691
+Canada,2019,car,pkm_per_capita,28724.597295814943
+Canada,2019,cycling,pkm_per_capita,114.23079116627908
+Canada,2019,heavy truck,tkm_per_capita,6927.612653500905
 Canada,2019,highspeed train,pkm_per_capita,0.0
-Canada,2019,international shipping,tkm_per_capita,61481.34889708236
-Canada,2019,medium truck,tkm_per_capita,2602.182812451423
-Canada,2019,national shipping,tkm_per_capita,7451.116700752749
-Canada,2019,plane,load,1.0
-Canada,2019,plane,pkm_per_capita,3456.3251145492554
-Canada,2019,plane,tkm_per_capita,282.7976986902971
-Canada,2019,train,load,1.091914
-Canada,2019,train,pkm_per_capita,1095.4904502710754
-Canada,2019,train,tkm_per_capita,6423.45173196794
-Canada,2019,walking,load,1.0
-Canada,2019,walking,pkm_per_capita,263.9628003888426
-Canada,2060,bus,load,0.9681365
-Canada,2060,bus,pkm_per_capita,2908.426168938223
-Canada,2060,car,load,0.9287609
-Canada,2060,car,pkm_per_capita,28152.66681321613
-Canada,2060,cycling,load,1.0
-Canada,2060,cycling,pkm_per_capita,7.756673615928118
-Canada,2060,heavy truck,tkm_per_capita,9068.658026752615
-Canada,2060,highspeed train,load,1.0
-Canada,2060,highspeed train,pkm_per_capita,1677.251447588255
-Canada,2060,international shipping,tkm_per_capita,72902.3827266944
-Canada,2060,medium truck,tkm_per_capita,3373.535037896672
-Canada,2060,national shipping,tkm_per_capita,8599.496041876799
-Canada,2060,plane,load,1.0
-Canada,2060,plane,pkm_per_capita,10321.08005684599
-Canada,2060,plane,tkm_per_capita,532.5004418397232
-Canada,2060,train,load,0.9681365
-Canada,2060,train,pkm_per_capita,1922.6664649314193
-Canada,2060,train,tkm_per_capita,10094.363491031838
-Canada,2060,walking,load,1.0
-Canada,2060,walking,pkm_per_capita,0.4559755407037469
-Central Europe,2019,bus,load,1.255597
-Central Europe,2019,bus,pkm_per_capita,2703.9004128891656
-Central Europe,2019,car,load,1.044035
-Central Europe,2019,car,pkm_per_capita,9574.071397773592
-Central Europe,2019,cycling,load,1.0
-Central Europe,2019,cycling,pkm_per_capita,180.7112196733381
-Central Europe,2019,heavy truck,tkm_per_capita,4277.461065471921
-Central Europe,2019,highspeed train,load,1.0
+Canada,2019,highspeedtrain,load,310.333
+Canada,2019,international shipping,tkm_per_capita,62081.258804698395
+Canada,2019,medium truck,tkm_per_capita,2627.5738501990004
+Canada,2019,national shipping,tkm_per_capita,7523.821656186755
+Canada,2019,plane,pkm_per_capita,3490.0505242443355
+Canada,2019,plane,tkm_per_capita,285.55712320421463
+Canada,2019,train,load,27.644
+Canada,2019,train,pkm_per_capita,1106.1797989370666
+Canada,2019,train,tkm_per_capita,6486.129152099882
+Canada,2019,walking,pkm_per_capita,266.5384416529993
+Canada,2060,airplane,load,124.0
+Canada,2060,bus,load,18.26099
+Canada,2060,bus,pkm_per_capita,2908.426290169029
+Canada,2060,car,load,1.486018
+Canada,2060,car,pkm_per_capita,28152.667986692883
+Canada,2060,cycling,pkm_per_capita,7.756673939246554
+Canada,2060,heavy truck,tkm_per_capita,9068.658404757989
+Canada,2060,highspeed train,pkm_per_capita,1677.25151750048
+Canada,2060,highspeedtrain,load,310.333
+Canada,2060,international shipping,tkm_per_capita,72902.3857654563
+Canada,2060,medium truck,tkm_per_capita,3373.5351785144317
+Canada,2060,national shipping,tkm_per_capita,8599.496400326276
+Canada,2060,plane,pkm_per_capita,10321.080487055591
+Canada,2060,plane,tkm_per_capita,532.5004640357338
+Canada,2060,train,load,24.51031
+Canada,2060,train,pkm_per_capita,1922.6665450731841
+Canada,2060,train,tkm_per_capita,10094.363911791297
+Canada,2060,walking,pkm_per_capita,0.45597555970999953
+Central Europe,2019,airplane,load,124.0
+Central Europe,2019,bus,load,23.68307
+Central Europe,2019,bus,pkm_per_capita,2694.782049275816
+Central Europe,2019,car,load,1.670456
+Central Europe,2019,car,pkm_per_capita,9541.784755910257
+Central Europe,2019,cycling,pkm_per_capita,180.10180721046092
+Central Europe,2019,heavy truck,tkm_per_capita,4263.036183123815
 Central Europe,2019,highspeed train,pkm_per_capita,0.0
-Central Europe,2019,international shipping,tkm_per_capita,39038.114933929464
-Central Europe,2019,medium truck,tkm_per_capita,1141.4347172727944
-Central Europe,2019,national shipping,tkm_per_capita,301.24581861457415
-Central Europe,2019,plane,load,1.0
-Central Europe,2019,plane,pkm_per_capita,582.9808791721495
-Central Europe,2019,plane,tkm_per_capita,23.435224198096655
-Central Europe,2019,train,load,1.255597
-Central Europe,2019,train,pkm_per_capita,982.0154303278088
-Central Europe,2019,train,tkm_per_capita,231.06961349266464
-Central Europe,2019,walking,load,1.0
-Central Europe,2019,walking,pkm_per_capita,421.6596233406913
-Central Europe,2060,bus,load,1.071097
-Central Europe,2060,bus,pkm_per_capita,5363.581152055147
-Central Europe,2060,car,load,0.9719759
-Central Europe,2060,car,pkm_per_capita,11454.737066709833
-Central Europe,2060,cycling,load,1.0
-Central Europe,2060,cycling,pkm_per_capita,87.4575457461532
-Central Europe,2060,heavy truck,tkm_per_capita,8686.175921969241
-Central Europe,2060,highspeed train,load,1.0
-Central Europe,2060,highspeed train,pkm_per_capita,671.0090269318799
-Central Europe,2060,international shipping,tkm_per_capita,60265.74805719705
-Central Europe,2060,medium truck,tkm_per_capita,2306.9254816739235
-Central Europe,2060,national shipping,tkm_per_capita,418.29403059159955
-Central Europe,2060,plane,load,1.0
-Central Europe,2060,plane,pkm_per_capita,3858.184118764661
-Central Europe,2060,plane,tkm_per_capita,82.97981959907546
-Central Europe,2060,train,load,1.071097
-Central Europe,2060,train,pkm_per_capita,2058.8910521555626
-Central Europe,2060,train,tkm_per_capita,466.383212097623
-Central Europe,2060,walking,load,1.0
-Central Europe,2060,walking,pkm_per_capita,32.1858294113614
-China,2019,bus,load,1.345928
-China,2019,bus,pkm_per_capita,2845.761871572519
-China,2019,car,load,1.07719
-China,2019,car,pkm_per_capita,2726.9300237070224
-China,2019,cycling,load,1.0
-China,2019,cycling,pkm_per_capita,87.76981191849748
-China,2019,heavy truck,tkm_per_capita,1420.7822837626786
-China,2019,highspeed train,load,1.0
-China,2019,highspeed train,pkm_per_capita,154.42113745827518
-China,2019,international shipping,tkm_per_capita,10409.368823113926
-China,2019,medium truck,tkm_per_capita,312.96815151843293
-China,2019,national shipping,tkm_per_capita,3729.8439470844064
-China,2019,plane,load,1.0
-China,2019,plane,pkm_per_capita,569.3330316497365
-China,2019,plane,tkm_per_capita,48.0106113544072
-China,2019,train,load,1.345928
-China,2019,train,pkm_per_capita,426.9578623312515
-China,2019,train,tkm_per_capita,353.6255710396545
-China,2019,walking,load,1.0
-China,2019,walking,pkm_per_capita,204.79618215470103
-China,2060,bus,load,1.080504
-China,2060,bus,pkm_per_capita,6336.260634225285
-China,2060,car,load,0.9758081
-China,2060,car,pkm_per_capita,3769.985770540576
-China,2060,cycling,load,1.0
-China,2060,cycling,pkm_per_capita,81.9464483823051
-China,2060,heavy truck,tkm_per_capita,3294.3721889470053
-China,2060,highspeed train,load,1.0
-China,2060,highspeed train,pkm_per_capita,1481.2254956029203
-China,2060,international shipping,tkm_per_capita,17243.66894687284
-China,2060,medium truck,tkm_per_capita,722.8835845697309
-China,2060,national shipping,tkm_per_capita,5401.850500851918
-China,2060,plane,load,1.0
-China,2060,plane,pkm_per_capita,6313.53218325423
-China,2060,plane,tkm_per_capita,245.33514998165185
-China,2060,train,load,1.080504
-China,2060,train,pkm_per_capita,1196.7009101699064
-China,2060,train,tkm_per_capita,731.6780986012128
-China,2060,walking,load,1.0
-China,2060,walking,pkm_per_capita,65.93181586790621
-India,2019,bus,load,1.615049
-India,2019,bus,pkm_per_capita,802.342065406407
-India,2019,car,load,1.169273
-India,2019,car,pkm_per_capita,936.3414545141381
-India,2019,cycling,load,1.0
-India,2019,cycling,pkm_per_capita,64.42827266642134
-India,2019,heavy truck,tkm_per_capita,442.18158458988705
-India,2019,highspeed train,load,1.0
+Central Europe,2019,highspeedtrain,load,310.333
+Central Europe,2019,international shipping,tkm_per_capita,38906.46669531443
+Central Europe,2019,medium truck,tkm_per_capita,1137.5854568697926
+Central Europe,2019,national shipping,tkm_per_capita,300.22992731249997
+Central Europe,2019,plane,pkm_per_capita,581.0148926992075
+Central Europe,2019,plane,tkm_per_capita,23.356193589358266
+Central Europe,2019,train,load,31.78794
+Central Europe,2019,train,pkm_per_capita,978.7037796009681
+Central Europe,2019,train,tkm_per_capita,230.2903774136365
+Central Europe,2019,walking,pkm_per_capita,420.237660553763
+Central Europe,2060,airplane,load,124.0
+Central Europe,2060,bus,load,20.20304
+Central Europe,2060,bus,pkm_per_capita,5363.581210257058
+Central Europe,2060,car,load,1.555161
+Central Europe,2060,car,pkm_per_capita,11454.737191008797
+Central Europe,2060,cycling,pkm_per_capita,87.45754669518261
+Central Europe,2060,heavy truck,tkm_per_capita,8686.176016225676
+Central Europe,2060,highspeed train,pkm_per_capita,671.0090342132105
+Central Europe,2060,highspeedtrain,load,310.333
+Central Europe,2060,international shipping,tkm_per_capita,60265.74871115969
+Central Europe,2060,medium truck,tkm_per_capita,2306.9255067070994
+Central Europe,2060,national shipping,tkm_per_capita,418.29403513064
+Central Europe,2060,plane,pkm_per_capita,3858.1841606310336
+Central Europe,2060,plane,tkm_per_capita,82.97982049951564
+Central Europe,2060,train,load,27.11697
+Central Europe,2060,train,pkm_per_capita,2058.891074497239
+Central Europe,2060,train,tkm_per_capita,466.3832171584943
+Central Europe,2060,walking,pkm_per_capita,32.18582976061999
+China,2019,airplane,load,124.0
+China,2019,bus,load,25.38689
+China,2019,bus,pkm_per_capita,2851.9904134014714
+China,2019,car,load,1.723504
+China,2019,car,pkm_per_capita,2732.8984773176194
+China,2019,cycling,pkm_per_capita,87.96191440968434
+China,2019,heavy truck,tkm_per_capita,1423.8919613406413
+China,2019,highspeed train,pkm_per_capita,154.75912024015912
+China,2019,highspeedtrain,load,310.333
+China,2019,international shipping,tkm_per_capita,10432.15189213155
+China,2019,medium truck,tkm_per_capita,313.6531474214054
+China,2019,national shipping,tkm_per_capita,3738.0074864416342
+China,2019,plane,pkm_per_capita,570.5791354216855
+China,2019,plane,tkm_per_capita,48.11569256448374
+China,2019,train,load,34.07485
+China,2019,train,pkm_per_capita,427.8923484283826
+China,2019,train,tkm_per_capita,354.3995541627718
+China,2019,walking,pkm_per_capita,205.24442120087795
+China,2060,airplane,load,124.0
+China,2060,bus,load,20.38047
+China,2060,bus,pkm_per_capita,6336.260439300668
+China,2060,car,load,1.561293
+China,2060,car,pkm_per_capita,3769.9856545631765
+China,2060,cycling,pkm_per_capita,81.94644586135767
+China,2060,heavy truck,tkm_per_capita,3294.372087601074
+China,2060,highspeed train,pkm_per_capita,1481.2254500354588
+China,2060,highspeedtrain,load,310.333
+China,2060,international shipping,tkm_per_capita,17243.66841639978
+China,2060,medium truck,tkm_per_capita,722.8835623314087
+China,2060,national shipping,tkm_per_capita,5401.8503346728885
+China,2060,plane,pkm_per_capita,6313.531989028817
+China,2060,plane,tkm_per_capita,245.33514243432023
+China,2060,train,load,27.35513
+China,2060,train,pkm_per_capita,1196.700873355375
+China,2060,train,tkm_per_capita,731.6780760923418
+China,2060,walking,pkm_per_capita,65.93181383962255
+India,2019,airplane,load,124.0
+India,2019,bus,load,30.46306
+India,2019,bus,pkm_per_capita,810.0428598696274
+India,2019,car,load,1.870837
+India,2019,car,pkm_per_capita,945.3283609714904
+India,2019,cycling,pkm_per_capita,65.04664842760384
+India,2019,heavy truck,tkm_per_capita,446.42559677018204
 India,2019,highspeed train,pkm_per_capita,0.0
-India,2019,international shipping,tkm_per_capita,1679.7972640482178
-India,2019,medium truck,tkm_per_capita,86.07556729244543
-India,2019,national shipping,tkm_per_capita,244.6964266022011
-India,2019,plane,load,1.0
-India,2019,plane,pkm_per_capita,125.60579885620143
-India,2019,plane,tkm_per_capita,5.00693517288302
-India,2019,train,load,1.615049
-India,2019,train,pkm_per_capita,278.36954246900973
-India,2019,train,tkm_per_capita,50.57955414325936
-India,2019,walking,load,1.0
-India,2019,walking,pkm_per_capita,150.33261235052078
-India,2060,bus,load,1.20791
-India,2060,bus,pkm_per_capita,3399.0068765375186
-India,2060,car,load,1.026001
-India,2060,car,pkm_per_capita,1657.9256998732342
-India,2060,cycling,load,1.0
-India,2060,cycling,pkm_per_capita,125.90844294103032
-India,2060,heavy truck,tkm_per_capita,1282.8859048069432
-India,2060,highspeed train,load,1.0
-India,2060,highspeed train,pkm_per_capita,86.31381319458966
-India,2060,international shipping,tkm_per_capita,3893.298823799218
-India,2060,medium truck,tkm_per_capita,246.05509823649172
-India,2060,national shipping,tkm_per_capita,401.3674856166972
-India,2060,plane,load,1.0
-India,2060,plane,pkm_per_capita,2050.8120004491816
-India,2060,plane,tkm_per_capita,26.720588506944804
-India,2060,train,load,1.20791
-India,2060,train,pkm_per_capita,1361.2342172800372
-India,2060,train,tkm_per_capita,152.52501731957932
-India,2060,walking,load,1.0
-India,2060,walking,pkm_per_capita,457.98362411746166
-Japan,2019,bus,load,1.132617
-Japan,2019,bus,pkm_per_capita,4544.166420812142
-Japan,2019,car,load,0.9967124
-Japan,2019,car,pkm_per_capita,8130.213997041672
-Japan,2019,cycling,load,1.0
-Japan,2019,cycling,pkm_per_capita,199.991701371821
-Japan,2019,heavy truck,tkm_per_capita,4261.008949155802
-Japan,2019,highspeed train,load,1.0
-Japan,2019,highspeed train,pkm_per_capita,250.93473583726555
-Japan,2019,international shipping,tkm_per_capita,33285.02346214833
-Japan,2019,medium truck,tkm_per_capita,919.343581066036
-Japan,2019,national shipping,tkm_per_capita,5540.979886838701
-Japan,2019,plane,load,1.0
-Japan,2019,plane,pkm_per_capita,1394.0451376899036
-Japan,2019,plane,tkm_per_capita,134.43696209501934
-Japan,2019,train,load,1.132617
-Japan,2019,train,pkm_per_capita,1000.5445591493028
-Japan,2019,train,tkm_per_capita,448.13805789974344
-Japan,2019,walking,load,1.0
-Japan,2019,walking,pkm_per_capita,466.6472499718248
-Japan,2060,bus,load,1.02445
-Japan,2060,bus,pkm_per_capita,7001.502454339949
-Japan,2060,car,load,0.9526938
-Japan,2060,car,pkm_per_capita,11214.119670347425
-Japan,2060,cycling,load,1.0
-Japan,2060,cycling,pkm_per_capita,133.66689524597842
-Japan,2060,heavy truck,tkm_per_capita,6414.346397118809
-Japan,2060,highspeed train,load,1.0
-Japan,2060,highspeed train,pkm_per_capita,714.7132135893883
-Japan,2060,international shipping,tkm_per_capita,42901.97532502284
-Japan,2060,medium truck,tkm_per_capita,1378.9577126208872
-Japan,2060,national shipping,tkm_per_capita,6717.3307501506115
-Japan,2060,plane,load,1.0
-Japan,2060,plane,pkm_per_capita,3373.3909613834244
-Japan,2060,plane,tkm_per_capita,237.99367662649917
-Japan,2060,train,load,1.02445
-Japan,2060,train,pkm_per_capita,1396.7632947820741
-Japan,2060,train,tkm_per_capita,680.9627104916141
-Japan,2060,walking,load,1.0
-Japan,2060,walking,pkm_per_capita,96.70575904240894
-Latin America,2019,bus,load,1.4037085
-Latin America,2019,bus,pkm_per_capita,1170.4074478378616
-Latin America,2019,car,load,1.0976632499999999
-Latin America,2019,car,pkm_per_capita,2556.7969724622867
-Latin America,2019,cycling,load,1.0
-Latin America,2019,cycling,pkm_per_capita,60.44997218071642
-Latin America,2019,heavy truck,tkm_per_capita,1017.127274956989
-Latin America,2019,highspeed train,load,1.0
+India,2019,highspeedtrain,load,310.333
+India,2019,international shipping,tkm_per_capita,1695.9197808998838
+India,2019,medium truck,tkm_per_capita,86.9017115027561
+India,2019,national shipping,tkm_per_capita,247.04499707905072
+India,2019,plane,pkm_per_capita,126.81135005697297
+India,2019,plane,tkm_per_capita,5.054991208231871
+India,2019,train,load,40.8882
+India,2019,train,pkm_per_capita,281.0413039580309
+India,2019,train,tkm_per_capita,51.06501136567393
+India,2019,walking,pkm_per_capita,151.7754888975007
+India,2060,airplane,load,124.0
+India,2060,bus,load,22.78359
+India,2060,bus,pkm_per_capita,3399.0069119858263
+India,2060,car,load,1.641602
+India,2060,car,pkm_per_capita,1657.925717163773
+India,2060,cycling,pkm_per_capita,125.90844425413188
+India,2060,heavy truck,tkm_per_capita,1282.8859181861849
+India,2060,highspeed train,pkm_per_capita,86.31381409475807
+India,2060,highspeedtrain,load,310.333
+India,2060,international shipping,tkm_per_capita,3893.2988644025063
+India,2060,medium truck,tkm_per_capita,246.05510080260504
+India,2060,national shipping,tkm_per_capita,401.3674898025664
+India,2060,plane,pkm_per_capita,2050.812021837139
+India,2060,plane,tkm_per_capita,26.720588785614332
+India,2060,train,load,30.58065
+India,2060,train,pkm_per_capita,1361.2342314763748
+India,2060,train,tkm_per_capita,152.52501891026566
+India,2060,walking,pkm_per_capita,457.98362889378166
+Japan,2019,airplane,load,124.0
+Japan,2019,bus,load,21.36343
+Japan,2019,bus,pkm_per_capita,4524.409798102736
+Japan,2019,car,load,1.59474
+Japan,2019,car,pkm_per_capita,8094.866354457408
+Japan,2019,cycling,pkm_per_capita,199.12219963638302
+Japan,2019,heavy truck,tkm_per_capita,4242.483407092836
+Japan,2019,highspeed train,pkm_per_capita,249.84374962736015
+Japan,2019,highspeedtrain,load,310.333
+Japan,2019,international shipping,tkm_per_capita,33140.310529232054
+Japan,2019,medium truck,tkm_per_capita,915.3465610211166
+Japan,2019,national shipping,tkm_per_capita,5516.889429111778
+Japan,2019,plane,pkm_per_capita,1387.9842628726697
+Japan,2019,plane,tkm_per_capita,133.85247198344564
+Japan,2019,train,load,28.67447
+Japan,2019,train,pkm_per_capita,996.1945024989726
+Japan,2019,train,tkm_per_capita,446.18969296066433
+Japan,2019,walking,pkm_per_capita,464.6184128205597
+Japan,2060,airplane,load,124.0
+Japan,2060,bus,load,19.32318
+Japan,2060,bus,pkm_per_capita,7001.502258010276
+Japan,2060,car,load,1.52431
+Japan,2060,car,pkm_per_capita,11214.119355891426
+Japan,2060,cycling,pkm_per_capita,133.66689149781465
+Japan,2060,heavy truck,tkm_per_capita,6414.346217253625
+Japan,2060,highspeed train,pkm_per_capita,714.7131935480596
+Japan,2060,highspeedtrain,load,310.333
+Japan,2060,international shipping,tkm_per_capita,42901.974122005224
+Japan,2060,medium truck,tkm_per_capita,1378.957673953427
+Japan,2060,national shipping,tkm_per_capita,6717.330561789418
+Japan,2060,plane,pkm_per_capita,3373.390866789907
+Japan,2060,plane,tkm_per_capita,237.99366995290004
+Japan,2060,train,load,25.93601
+Japan,2060,train,pkm_per_capita,1396.7632556153262
+Japan,2060,train,tkm_per_capita,680.9626913966858
+Japan,2060,walking,pkm_per_capita,96.70575633067526
+Latin America,2019,airplane,load,124.0
+Latin America,2019,bus,load,26.47675
+Latin America,2019,bus,pkm_per_capita,2358.8659502804912
+Latin America,2019,car,load,1.75626075
+Latin America,2019,car,pkm_per_capita,5153.027119968428
+Latin America,2019,cycling,pkm_per_capita,121.8322570792873
+Latin America,2019,heavy truck,tkm_per_capita,2049.9415826769405
 Latin America,2019,highspeed train,pkm_per_capita,0.0
-Latin America,2019,international shipping,tkm_per_capita,4125.58528840208
-Latin America,2019,medium truck,tkm_per_capita,363.03594685636085
-Latin America,2019,national shipping,tkm_per_capita,534.98293183865
-Latin America,2019,plane,load,1.0
-Latin America,2019,plane,pkm_per_capita,271.86270874867955
-Latin America,2019,plane,tkm_per_capita,23.453717435151027
-Latin America,2019,train,load,1.4037085
-Latin America,2019,train,pkm_per_capita,68.4983110666337
-Latin America,2019,train,tkm_per_capita,155.06471339724243
-Latin America,2019,walking,load,1.0
-Latin America,2019,walking,pkm_per_capita,141.04993713509498
-Latin America,2060,bus,load,1.17231075
-Latin America,2060,bus,pkm_per_capita,2550.7932885552605
-Latin America,2060,car,load,1.01224185
-Latin America,2060,car,pkm_per_capita,3613.1511304263595
-Latin America,2060,cycling,load,1.0
-Latin America,2060,cycling,pkm_per_capita,64.49901705091888
-Latin America,2060,heavy truck,tkm_per_capita,2087.6012750721725
-Latin America,2060,highspeed train,load,1.0
-Latin America,2060,highspeed train,pkm_per_capita,39.69382577363424
-Latin America,2060,international shipping,tkm_per_capita,6859.020877428084
-Latin America,2060,medium truck,tkm_per_capita,738.9047213242392
-Latin America,2060,national shipping,tkm_per_capita,720.188293752417
-Latin America,2060,plane,load,1.0
-Latin America,2060,plane,pkm_per_capita,1153.290051576084
-Latin America,2060,plane,tkm_per_capita,54.0872146791047
-Latin America,2060,train,load,1.17231075
-Latin America,2060,train,pkm_per_capita,250.93099666961857
-Latin America,2060,train,tkm_per_capita,365.53243951774624
-Latin America,2060,walking,load,1.0
-Latin America,2060,walking,pkm_per_capita,95.60839217802814
-Middle East and Northern Africa,2019,bus,load,1.352048
-Middle East and Northern Africa,2019,bus,pkm_per_capita,3075.9354407045153
-Middle East and Northern Africa,2019,car,load,1.0786565000000001
-Middle East and Northern Africa,2019,car,pkm_per_capita,5058.566351382392
-Middle East and Northern Africa,2019,cycling,load,1.0
-Middle East and Northern Africa,2019,cycling,pkm_per_capita,148.0424804913861
-Middle East and Northern Africa,2019,heavy truck,tkm_per_capita,1189.5458729341706
-Middle East and Northern Africa,2019,highspeed train,load,1.0
-Middle East and Northern Africa,2019,highspeed train,pkm_per_capita,0.6407071593034254
-Middle East and Northern Africa,2019,international shipping,tkm_per_capita,11972.934969954984
-Middle East and Northern Africa,2019,medium truck,tkm_per_capita,901.3673073627399
-Middle East and Northern Africa,2019,national shipping,tkm_per_capita,130.28960822637083
-Middle East and Northern Africa,2019,plane,load,1.0
-Middle East and Northern Africa,2019,plane,pkm_per_capita,827.6629308606433
-Middle East and Northern Africa,2019,plane,tkm_per_capita,32.72382814257159
-Middle East and Northern Africa,2019,train,load,1.352048
-Middle East and Northern Africa,2019,train,pkm_per_capita,88.6895027226416
-Middle East and Northern Africa,2019,train,tkm_per_capita,32.84018038387441
-Middle East and Northern Africa,2019,walking,load,1.0
-Middle East and Northern Africa,2019,walking,pkm_per_capita,345.4324544799009
-Middle East and Northern Africa,2060,bus,load,1.1247875
-Middle East and Northern Africa,2060,bus,pkm_per_capita,6115.4721596197005
-Middle East and Northern Africa,2060,car,load,0.99354575
-Middle East and Northern Africa,2060,car,pkm_per_capita,8064.221694253596
-Middle East and Northern Africa,2060,cycling,load,1.0
-Middle East and Northern Africa,2060,cycling,pkm_per_capita,147.41245603997342
-Middle East and Northern Africa,2060,heavy truck,tkm_per_capita,1661.7529769294986
-Middle East and Northern Africa,2060,highspeed train,load,1.0
-Middle East and Northern Africa,2060,highspeed train,pkm_per_capita,8.778823793375981
-Middle East and Northern Africa,2060,international shipping,tkm_per_capita,13040.427523423074
-Middle East and Northern Africa,2060,medium truck,tkm_per_capita,1222.7594250798431
-Middle East and Northern Africa,2060,national shipping,tkm_per_capita,168.5333041997011
-Middle East and Northern Africa,2060,plane,load,1.0
-Middle East and Northern Africa,2060,plane,pkm_per_capita,2966.1640701302404
-Middle East and Northern Africa,2060,plane,tkm_per_capita,57.3406575648172
-Middle East and Northern Africa,2060,train,load,1.1247875
-Middle East and Northern Africa,2060,train,pkm_per_capita,250.90476480353806
-Middle East and Northern Africa,2060,train,tkm_per_capita,66.1670323296463
-Middle East and Northern Africa,2060,walking,load,1.0
-Middle East and Northern Africa,2060,walking,pkm_per_capita,171.00516025458924
-Other Asia,2019,bus,load,1.44951125
-Other Asia,2019,bus,pkm_per_capita,1676.429098528011
-Other Asia,2019,car,load,1.1116355
-Other Asia,2019,car,pkm_per_capita,2809.7009799228053
-Other Asia,2019,cycling,load,1.0
-Other Asia,2019,cycling,pkm_per_capita,108.03581458572246
-Other Asia,2019,heavy truck,tkm_per_capita,1420.2089591836957
-Other Asia,2019,highspeed train,load,1.0
-Other Asia,2019,highspeed train,pkm_per_capita,5.273030752221583
-Other Asia,2019,international shipping,tkm_per_capita,12495.56090968612
-Other Asia,2019,medium truck,tkm_per_capita,385.51560099549357
-Other Asia,2019,national shipping,tkm_per_capita,1477.3337285374876
-Other Asia,2019,plane,load,1.0
-Other Asia,2019,plane,pkm_per_capita,664.1363394052862
-Other Asia,2019,plane,tkm_per_capita,74.95161264480643
-Other Asia,2019,train,load,1.44951125
-Other Asia,2019,train,pkm_per_capita,143.3780573083773
-Other Asia,2019,train,tkm_per_capita,143.55383078955282
-Other Asia,2019,walking,load,1.0
-Other Asia,2019,walking,pkm_per_capita,252.08353963286626
-Other Asia,2060,bus,load,1.1785519999999998
-Other Asia,2060,bus,pkm_per_capita,5631.4122664895485
-Other Asia,2060,car,load,1.01404255
-Other Asia,2060,car,pkm_per_capita,4523.798645342372
-Other Asia,2060,cycling,load,1.0
-Other Asia,2060,cycling,pkm_per_capita,184.24914229711672
-Other Asia,2060,heavy truck,tkm_per_capita,3125.173399110705
-Other Asia,2060,highspeed train,load,1.0
-Other Asia,2060,highspeed train,pkm_per_capita,70.18670024129415
-Other Asia,2060,international shipping,tkm_per_capita,20992.755441596484
-Other Asia,2060,medium truck,tkm_per_capita,823.4529046143165
-Other Asia,2060,national shipping,tkm_per_capita,2067.942456958835
-Other Asia,2060,plane,load,1.0
-Other Asia,2060,plane,pkm_per_capita,4194.529910571423
-Other Asia,2060,plane,tkm_per_capita,233.82093990780388
-Other Asia,2060,train,load,1.1785519999999998
-Other Asia,2060,train,pkm_per_capita,786.2733259316332
-Other Asia,2060,train,tkm_per_capita,330.9386127123764
-Other Asia,2060,walking,load,1.0
-Other Asia,2060,walking,pkm_per_capita,586.1529998932936
-Other OECD,2019,bus,load,1.142701
-Other OECD,2019,bus,pkm_per_capita,64.586592851429
-Other OECD,2019,car,load,1.000696
-Other OECD,2019,car,pkm_per_capita,534.4015959657312
-Other OECD,2019,cycling,load,1.0
-Other OECD,2019,cycling,pkm_per_capita,2.4039474380113814
-Other OECD,2019,heavy truck,tkm_per_capita,116.90684318202959
-Other OECD,2019,highspeed train,load,1.0
+Latin America,2019,highspeedtrain,load,310.333
+Latin America,2019,international shipping,tkm_per_capita,8314.798987111311
+Latin America,2019,medium truck,tkm_per_capita,731.6709538625043
+Latin America,2019,national shipping,tkm_per_capita,1078.2168416876314
+Latin America,2019,plane,pkm_per_capita,547.9183236598141
+Latin America,2019,plane,tkm_per_capita,47.26915875960984
+Latin America,2019,train,load,35.53769
+Latin America,2019,train,pkm_per_capita,138.0530634227366
+Latin America,2019,train,tkm_per_capita,312.52097139203266
+Latin America,2019,walking,pkm_per_capita,284.27527064341723
+Latin America,2060,airplane,load,124.0
+Latin America,2060,bus,load,22.112125
+Latin America,2060,bus,pkm_per_capita,5101.586573706259
+Latin America,2060,car,load,1.6195875
+Latin America,2060,car,pkm_per_capita,7226.3022560306445
+Latin America,2060,cycling,pkm_per_capita,128.99803401575804
+Latin America,2060,heavy truck,tkm_per_capita,4175.2025473582535
+Latin America,2060,highspeed train,pkm_per_capita,79.3876514942935
+Latin America,2060,highspeedtrain,load,310.333
+Latin America,2060,international shipping,tkm_per_capita,13718.041745702187
+Latin America,2060,medium truck,tkm_per_capita,1477.8094416623437
+Latin America,2060,national shipping,tkm_per_capita,1440.376586543678
+Latin America,2060,plane,pkm_per_capita,2306.5801016129985
+Latin America,2060,plane,tkm_per_capita,108.17442928602514
+Latin America,2060,train,load,29.679395
+Latin America,2060,train,pkm_per_capita,501.86199300434714
+Latin America,2060,train,tkm_per_capita,731.0648785476567
+Latin America,2060,walking,pkm_per_capita,191.2167842284583
+Middle East and Northern Africa,2019,airplane,load,124.0
+Middle East and Northern Africa,2019,bus,load,25.50233
+Middle East and Northern Africa,2019,bus,pkm_per_capita,3119.7905697038013
+Middle East and Northern Africa,2019,car,load,1.7258505
+Middle East and Northern Africa,2019,car,pkm_per_capita,5130.688827347139
+Middle East and Northern Africa,2019,cycling,pkm_per_capita,150.1531951681015
+Middle East and Northern Africa,2019,heavy truck,tkm_per_capita,1206.5058152716301
+Middle East and Northern Africa,2019,highspeed train,pkm_per_capita,0.649842037347414
+Middle East and Northern Africa,2019,highspeedtrain,load,310.333
+Middle East and Northern Africa,2019,international shipping,tkm_per_capita,12143.6390103126
+Middle East and Northern Africa,2019,medium truck,tkm_per_capita,914.2185457265329
+Middle East and Northern Africa,2019,national shipping,tkm_per_capita,132.14721144535298
+Middle East and Northern Africa,2019,plane,pkm_per_capita,839.4633295687863
+Middle East and Northern Africa,2019,plane,tkm_per_capita,33.190387903726474
+Middle East and Northern Africa,2019,train,load,34.2298
+Middle East and Northern Africa,2019,train,pkm_per_capita,89.9539927152837
+Middle East and Northern Africa,2019,train,tkm_per_capita,33.30839903633247
+Middle East and Northern Africa,2019,walking,pkm_per_capita,350.35745539223683
+Middle East and Northern Africa,2060,airplane,load,124.0
+Middle East and Northern Africa,2060,bus,load,21.215739999999997
+Middle East and Northern Africa,2060,bus,pkm_per_capita,6115.472079777184
+Middle East and Northern Africa,2060,car,load,1.5896735
+Middle East and Northern Africa,2060,car,pkm_per_capita,8064.221588968552
+Middle East and Northern Africa,2060,cycling,pkm_per_capita,147.41245411538264
+Middle East and Northern Africa,2060,heavy truck,tkm_per_capita,1661.7529552339474
+Middle East and Northern Africa,2060,highspeed train,pkm_per_capita,8.778823678761219
+Middle East and Northern Africa,2060,highspeedtrain,load,310.333
+Middle East and Northern Africa,2060,international shipping,tkm_per_capita,13040.42735316957
+Middle East and Northern Africa,2060,medium truck,tkm_per_capita,1222.7594091157137
+Middle East and Northern Africa,2060,national shipping,tkm_per_capita,168.53330199936028
+Middle East and Northern Africa,2060,plane,pkm_per_capita,2966.16403140453
+Middle East and Northern Africa,2060,plane,tkm_per_capita,57.340656816187774
+Middle East and Northern Africa,2060,train,load,28.476245
+Middle East and Northern Africa,2060,train,pkm_per_capita,250.9047615277701
+Middle East and Northern Africa,2060,train,tkm_per_capita,66.1670314657813
+Middle East and Northern Africa,2060,walking,pkm_per_capita,171.00515802197629
+Other Asia,2019,airplane,load,124.0
+Other Asia,2019,bus,load,27.340687499999998
+Other Asia,2019,bus,pkm_per_capita,1311.2184823437074
+Other Asia,2019,car,load,1.7786167499999999
+Other Asia,2019,car,pkm_per_capita,2197.60672131548
+Other Asia,2019,cycling,pkm_per_capita,84.50017776727957
+Other Asia,2019,heavy truck,tkm_per_capita,1110.8159824396334
+Other Asia,2019,highspeed train,pkm_per_capita,4.124299313553197
+Other Asia,2019,highspeedtrain,load,310.333
+Other Asia,2019,international shipping,tkm_per_capita,9773.398962364901
+Other Asia,2019,medium truck,tkm_per_capita,301.53090381274313
+Other Asia,2019,national shipping,tkm_per_capita,1155.496102488899
+Other Asia,2019,plane,pkm_per_capita,519.4540250995018
+Other Asia,2019,plane,tkm_per_capita,58.62337981822762
+Other Asia,2019,train,load,36.69728
+Other Asia,2019,train,pkm_per_capita,112.14310159037025
+Other Asia,2019,train,tkm_per_capita,112.28058276235996
+Other Asia,2019,walking,pkm_per_capita,197.16705976498764
+Other Asia,2060,airplane,load,124.0
+Other Asia,2060,bus,load,22.22985
+Other Asia,2060,bus,pkm_per_capita,3892.853327934364
+Other Asia,2060,car,load,1.622468
+Other Asia,2060,car,pkm_per_capita,3127.1879553588187
+Other Asia,2060,cycling,pkm_per_capita,127.36678701868475
+Other Asia,2060,heavy truck,tkm_per_capita,2160.353582971448
+Other Asia,2060,highspeed train,pkm_per_capita,48.518296420406585
+Other Asia,2060,highspeedtrain,load,310.333
+Other Asia,2060,international shipping,tkm_per_capita,14511.762594549653
+Other Asia,2060,medium truck,tkm_per_capita,569.2322331292081
+Other Asia,2060,national shipping,tkm_per_capita,1429.5164862023528
+Other Asia,2060,plane,pkm_per_capita,2899.5727801095627
+Other Asia,2060,plane,tkm_per_capita,161.63452096684188
+Other Asia,2060,train,load,29.8374025
+Other Asia,2060,train,pkm_per_capita,543.530927709368
+Other Asia,2060,train,tkm_per_capita,228.76951977135934
+Other Asia,2060,walking,pkm_per_capita,405.19279149415365
+Other OECD,2019,airplane,load,124.0
+Other OECD,2019,bus,load,21.55363
+Other OECD,2019,bus,pkm_per_capita,2534.9355882084446
+Other OECD,2019,car,load,1.601114
+Other OECD,2019,car,pkm_per_capita,20974.533013765405
+Other OECD,2019,cycling,pkm_per_capita,94.35165479026713
+Other OECD,2019,heavy truck,tkm_per_capita,4588.433979927363
 Other OECD,2019,highspeed train,pkm_per_capita,0.0
-Other OECD,2019,international shipping,tkm_per_capita,849.9576069596018
-Other OECD,2019,medium truck,tkm_per_capita,39.17204520108918
-Other OECD,2019,national shipping,tkm_per_capita,142.55154770007258
-Other OECD,2019,plane,load,1.0
-Other OECD,2019,plane,pkm_per_capita,123.83967274055183
-Other OECD,2019,plane,tkm_per_capita,9.31253603608187
-Other OECD,2019,train,load,1.142701
-Other OECD,2019,train,pkm_per_capita,39.65496417178445
-Other OECD,2019,train,tkm_per_capita,51.61026047926581
-Other OECD,2019,walking,load,1.0
-Other OECD,2019,walking,pkm_per_capita,5.609210181962999
-Other OECD,2060,bus,load,1.001196
-Other OECD,2060,bus,pkm_per_capita,106.31525588096504
-Other OECD,2060,car,load,0.9429011
-Other OECD,2060,car,pkm_per_capita,718.6628326496062
-Other OECD,2060,cycling,load,1.0
-Other OECD,2060,cycling,pkm_per_capita,0.7125214204569983
-Other OECD,2060,heavy truck,tkm_per_capita,224.76364206995942
-Other OECD,2060,highspeed train,load,1.0
-Other OECD,2060,highspeed train,pkm_per_capita,29.63174855882739
-Other OECD,2060,international shipping,tkm_per_capita,1418.978962194069
-Other OECD,2060,medium truck,tkm_per_capita,75.67169923481761
-Other OECD,2060,national shipping,tkm_per_capita,290.23651816262566
-Other OECD,2060,plane,load,1.0
-Other OECD,2060,plane,pkm_per_capita,329.4344271737765
-Other OECD,2060,plane,tkm_per_capita,31.589733656256332
-Other OECD,2060,train,load,1.001196
-Other OECD,2060,train,pkm_per_capita,54.168801730865326
-Other OECD,2060,train,tkm_per_capita,118.32167604788637
-Other OECD,2060,walking,load,1.0
-Other OECD,2060,walking,pkm_per_capita,0.06671311316287538
-Reforming Economies,2019,bus,load,1.385803
-Reforming Economies,2019,bus,pkm_per_capita,3069.846417169454
-Reforming Economies,2019,car,load,1.090993
-Reforming Economies,2019,car,pkm_per_capita,3518.1424485742605
-Reforming Economies,2019,cycling,load,1.0
-Reforming Economies,2019,cycling,pkm_per_capita,132.59581271378875
-Reforming Economies,2019,heavy truck,tkm_per_capita,848.6369208525833
-Reforming Economies,2019,highspeed train,load,1.0
-Reforming Economies,2019,highspeed train,pkm_per_capita,1.9249660744444603
-Reforming Economies,2019,international shipping,tkm_per_capita,6220.689383300157
-Reforming Economies,2019,medium truck,tkm_per_capita,433.6248058760216
-Reforming Economies,2019,national shipping,tkm_per_capita,506.852981968383
-Reforming Economies,2019,plane,load,1.0
-Reforming Economies,2019,plane,pkm_per_capita,748.8627262337205
-Reforming Economies,2019,plane,tkm_per_capita,43.539367027772464
-Reforming Economies,2019,train,load,1.385803
-Reforming Economies,2019,train,pkm_per_capita,1711.6383773272587
-Reforming Economies,2019,train,tkm_per_capita,1136.9689811215924
-Reforming Economies,2019,walking,load,1.0
-Reforming Economies,2019,walking,pkm_per_capita,309.3902439624959
-Reforming Economies,2060,bus,load,1.16456125
-Reforming Economies,2060,bus,pkm_per_capita,5385.363737743239
-Reforming Economies,2060,car,load,1.00889295
-Reforming Economies,2060,car,pkm_per_capita,4463.981294350077
-Reforming Economies,2060,cycling,load,1.0
-Reforming Economies,2060,cycling,pkm_per_capita,111.85369625407496
-Reforming Economies,2060,heavy truck,tkm_per_capita,1923.0995348401002
-Reforming Economies,2060,highspeed train,load,1.0
-Reforming Economies,2060,highspeed train,pkm_per_capita,312.53507075887467
-Reforming Economies,2060,international shipping,tkm_per_capita,11033.647207587808
-Reforming Economies,2060,medium truck,tkm_per_capita,1035.2414898230807
-Reforming Economies,2060,national shipping,tkm_per_capita,695.050766059959
-Reforming Economies,2060,plane,load,1.0
-Reforming Economies,2060,plane,pkm_per_capita,3759.634336877079
-Reforming Economies,2060,plane,tkm_per_capita,138.52125747045213
-Reforming Economies,2060,train,load,1.16456125
-Reforming Economies,2060,train,pkm_per_capita,2066.448039533383
-Reforming Economies,2060,train,tkm_per_capita,2147.8576576430078
-Reforming Economies,2060,walking,load,1.0
-Reforming Economies,2060,walking,pkm_per_capita,182.82950562272572
-Subsaharan Africa,2019,bus,load,1.78320625
-Subsaharan Africa,2019,bus,pkm_per_capita,1289.3687510012392
-Subsaharan Africa,2019,car,load,1.2200975
-Subsaharan Africa,2019,car,pkm_per_capita,538.679363761493
-Subsaharan Africa,2019,cycling,load,1.0
-Subsaharan Africa,2019,cycling,pkm_per_capita,115.35196159751945
-Subsaharan Africa,2019,heavy truck,tkm_per_capita,384.94750253255086
-Subsaharan Africa,2019,highspeed train,load,1.0
+Other OECD,2019,highspeedtrain,load,310.333
+Other OECD,2019,international shipping,tkm_per_capita,33359.675611108025
+Other OECD,2019,medium truck,tkm_per_capita,1537.4492918611013
+Other OECD,2019,national shipping,tkm_per_capita,5594.95361909484
+Other OECD,2019,plane,pkm_per_capita,4860.53807458534
+Other OECD,2019,plane,tkm_per_capita,365.5043248471223
+Other OECD,2019,train,load,28.92977
+Other OECD,2019,train,pkm_per_capita,1556.403202123134
+Other OECD,2019,train,tkm_per_capita,2025.6322594156488
+Other OECD,2019,walking,pkm_per_capita,220.15384128882056
+Other OECD,2060,airplane,load,124.0
+Other OECD,2060,bus,load,18.88456
+Other OECD,2060,bus,pkm_per_capita,3296.7222408626535
+Other OECD,2060,car,load,1.508642
+Other OECD,2060,car,pkm_per_capita,22284.964885284215
+Other OECD,2060,cycling,pkm_per_capita,22.09452626950978
+Other OECD,2060,heavy truck,tkm_per_capita,6969.679860235332
+Other OECD,2060,highspeed train,pkm_per_capita,918.8487926785529
+Other OECD,2060,highspeedtrain,load,310.333
+Other OECD,2060,international shipping,tkm_per_capita,44001.01815320892
+Other OECD,2060,medium truck,tkm_per_capita,2346.49836285592
+Other OECD,2060,national shipping,tkm_per_capita,8999.923638509332
+Other OECD,2060,plane,pkm_per_capita,10215.40882322315
+Other OECD,2060,plane,tkm_per_capita,979.5638139093612
+Other OECD,2060,train,load,25.34728
+Other OECD,2060,train,pkm_per_capita,1679.716536890699
+Other OECD,2060,train,tkm_per_capita,3669.028473580081
+Other OECD,2060,walking,pkm_per_capita,2.0687022017563144
+Reforming Economies,2019,airplane,load,124.0
+Reforming Economies,2019,bus,load,26.139015
+Reforming Economies,2019,bus,pkm_per_capita,4181.2028853111215
+Reforming Economies,2019,car,load,1.74558875
+Reforming Economies,2019,car,pkm_per_capita,4791.792603904146
+Reforming Economies,2019,cycling,pkm_per_capita,180.598609623689
+Reforming Economies,2019,heavy truck,tkm_per_capita,1155.863408086093
+Reforming Economies,2019,highspeed train,pkm_per_capita,2.621848982273994
+Reforming Economies,2019,highspeedtrain,load,310.333
+Reforming Economies,2019,international shipping,tkm_per_capita,8472.724971714159
+Reforming Economies,2019,medium truck,tkm_per_capita,590.6071650134983
+Reforming Economies,2019,national shipping,tkm_per_capita,690.3456598942183
+Reforming Economies,2019,plane,pkm_per_capita,1019.9686128003278
+Reforming Economies,2019,plane,tkm_per_capita,59.30163998529872
+Reforming Economies,2019,train,load,35.08437
+Reforming Economies,2019,train,pkm_per_capita,2331.291650899203
+Reforming Economies,2019,train,tkm_per_capita,1548.5784428128395
+Reforming Economies,2019,walking,pkm_per_capita,421.39677526144203
+Reforming Economies,2060,airplane,load,124.0
+Reforming Economies,2060,bus,load,21.965955
+Reforming Economies,2060,bus,pkm_per_capita,6726.615449749615
+Reforming Economies,2060,car,load,1.61422875
+Reforming Economies,2060,car,pkm_per_capita,5575.758111104241
+Reforming Economies,2060,cycling,pkm_per_capita,139.7114174593445
+Reforming Economies,2060,heavy truck,tkm_per_capita,2402.057070314546
+Reforming Economies,2060,highspeed train,pkm_per_capita,390.37348969045036
+Reforming Economies,2060,highspeedtrain,load,310.333
+Reforming Economies,2060,international shipping,tkm_per_capita,13781.632102857497
+Reforming Economies,2060,medium truck,tkm_per_capita,1293.073548748613
+Reforming Economies,2060,national shipping,tkm_per_capita,868.1566276706963
+Reforming Economies,2060,plane,pkm_per_capita,4695.990029160823
+Reforming Economies,2060,plane,tkm_per_capita,173.02066786856517
+Reforming Economies,2060,train,load,29.483195
+Reforming Economies,2060,train,pkm_per_capita,2581.107235414892
+Reforming Economies,2060,train,tkm_per_capita,2682.7923251510765
+Reforming Economies,2060,walking,pkm_per_capita,228.36410632260737
+Subsaharan Africa,2019,airplane,load,124.0
+Subsaharan Africa,2019,bus,load,33.634837499999996
+Subsaharan Africa,2019,bus,pkm_per_capita,1256.0648074287305
+Subsaharan Africa,2019,car,load,1.9521562499999998
+Subsaharan Africa,2019,car,pkm_per_capita,524.7654643277923
+Subsaharan Africa,2019,cycling,pkm_per_capita,112.37246080146032
+Subsaharan Africa,2019,heavy truck,tkm_per_capita,375.0044432698173
 Subsaharan Africa,2019,highspeed train,pkm_per_capita,0.0
-Subsaharan Africa,2019,international shipping,tkm_per_capita,1990.3495641750671
-Subsaharan Africa,2019,medium truck,tkm_per_capita,166.30701490533272
-Subsaharan Africa,2019,national shipping,tkm_per_capita,190.6555678217434
-Subsaharan Africa,2019,plane,load,1.0
-Subsaharan Africa,2019,plane,pkm_per_capita,146.059999750907
-Subsaharan Africa,2019,plane,tkm_per_capita,7.816992104442008
-Subsaharan Africa,2019,train,load,1.78320625
-Subsaharan Africa,2019,train,pkm_per_capita,6.12417913971631
-Subsaharan Africa,2019,train,tkm_per_capita,97.10148756615865
-Subsaharan Africa,2019,walking,load,1.0
-Subsaharan Africa,2019,walking,pkm_per_capita,269.15458010616726
-Subsaharan Africa,2060,bus,load,1.4454772500000002
-Subsaharan Africa,2060,bus,pkm_per_capita,3229.955739845685
-Subsaharan Africa,2060,car,load,1.1107372500000001
-Subsaharan Africa,2060,car,pkm_per_capita,1504.729901124477
-Subsaharan Africa,2060,cycling,load,1.0
-Subsaharan Africa,2060,cycling,pkm_per_capita,174.3467807683776
-Subsaharan Africa,2060,heavy truck,tkm_per_capita,702.70815157355
-Subsaharan Africa,2060,highspeed train,load,1.0
-Subsaharan Africa,2060,highspeed train,pkm_per_capita,0.9516357292114946
-Subsaharan Africa,2060,international shipping,tkm_per_capita,3219.8559505873422
-Subsaharan Africa,2060,medium truck,tkm_per_capita,304.2766211675423
-Subsaharan Africa,2060,national shipping,tkm_per_capita,229.70095745697895
-Subsaharan Africa,2060,plane,load,1.0
-Subsaharan Africa,2060,plane,pkm_per_capita,438.88204376752935
-Subsaharan Africa,2060,plane,tkm_per_capita,14.782782174018777
-Subsaharan Africa,2060,train,load,1.4454772500000002
-Subsaharan Africa,2060,train,pkm_per_capita,50.685776787364595
-Subsaharan Africa,2060,train,tkm_per_capita,161.8637915367841
-Subsaharan Africa,2060,walking,load,1.0
-Subsaharan Africa,2060,walking,pkm_per_capita,710.76086588242
-USA,2019,bus,load,1.05826
-USA,2019,bus,pkm_per_capita,3105.0867208050954
-USA,2019,car,load,0.9667165
-USA,2019,car,pkm_per_capita,28230.862447711173
-USA,2019,cycling,load,1.0
-USA,2019,cycling,pkm_per_capita,114.8974870575131
-USA,2019,heavy truck,tkm_per_capita,7444.969975427552
-USA,2019,highspeed train,load,1.0
-USA,2019,highspeed train,pkm_per_capita,14.18205582252465
-USA,2019,international shipping,tkm_per_capita,31255.39656979482
-USA,2019,medium truck,tkm_per_capita,2771.6127740068746
-USA,2019,national shipping,tkm_per_capita,5756.35103682564
-USA,2019,plane,load,1.0
-USA,2019,plane,pkm_per_capita,4163.6117480821185
-USA,2019,plane,tkm_per_capita,341.1663463997125
-USA,2019,train,load,1.05826
-USA,2019,train,pkm_per_capita,929.3851704117194
-USA,2019,train,tkm_per_capita,4701.81479349181
-USA,2019,walking,load,1.0
-USA,2019,walking,pkm_per_capita,268.0941463898787
-USA,2060,bus,load,0.9748507
-USA,2060,bus,pkm_per_capita,3582.323216514817
-USA,2060,car,load,0.9316539
-USA,2060,car,pkm_per_capita,27003.870309722028
-USA,2060,cycling,load,1.0
-USA,2060,cycling,pkm_per_capita,22.281213687988163
-USA,2060,heavy truck,tkm_per_capita,9368.481720979751
-USA,2060,highspeed train,load,1.0
-USA,2060,highspeed train,pkm_per_capita,1010.1234337765272
-USA,2060,international shipping,tkm_per_capita,35310.02543056898
-USA,2060,medium truck,tkm_per_capita,3428.7813081224604
-USA,2060,national shipping,tkm_per_capita,5897.204668382896
-USA,2060,plane,load,1.0
-USA,2060,plane,pkm_per_capita,9609.901777334202
-USA,2060,plane,tkm_per_capita,554.6078682652375
-USA,2060,train,load,0.9748507
-USA,2060,train,pkm_per_capita,1392.8663255624738
-USA,2060,train,tkm_per_capita,7453.232435762143
-USA,2060,walking,load,1.0
-USA,2060,walking,pkm_per_capita,1.4406645018119284
-Western Europe,2019,bus,load,1.131967
-Western Europe,2019,bus,pkm_per_capita,2656.699945872504
-Western Europe,2019,car,load,0.9964547
-Western Europe,2019,car,pkm_per_capita,12659.349737002558
-Western Europe,2019,cycling,load,1.0
-Western Europe,2019,cycling,pkm_per_capita,251.67751312499328
-Western Europe,2019,heavy truck,tkm_per_capita,5615.838036271127
-Western Europe,2019,highspeed train,load,1.0
-Western Europe,2019,highspeed train,pkm_per_capita,110.3152152659125
-Western Europe,2019,international shipping,tkm_per_capita,82101.33866658581
-Western Europe,2019,medium truck,tkm_per_capita,1516.805196428908
-Western Europe,2019,national shipping,tkm_per_capita,3333.629032227726
-Western Europe,2019,plane,load,1.0
-Western Europe,2019,plane,pkm_per_capita,2695.2355223238783
-Western Europe,2019,plane,tkm_per_capita,125.44024565553373
-Western Europe,2019,train,load,1.131967
-Western Europe,2019,train,pkm_per_capita,1157.5893624508562
-Western Europe,2019,train,tkm_per_capita,207.5881241875827
-Western Europe,2019,walking,load,1.0
-Western Europe,2019,walking,pkm_per_capita,587.2479249637868
-Western Europe,2060,bus,load,1.022967
-Western Europe,2060,bus,pkm_per_capita,4942.511297869589
-Western Europe,2060,car,load,0.9520729
-Western Europe,2060,car,pkm_per_capita,15117.185344694024
-Western Europe,2060,cycling,load,1.0
-Western Europe,2060,cycling,pkm_per_capita,153.13172831847913
-Western Europe,2060,heavy truck,tkm_per_capita,8691.780853638573
-Western Europe,2060,highspeed train,load,1.0
-Western Europe,2060,highspeed train,pkm_per_capita,385.48559347095403
-Western Europe,2060,international shipping,tkm_per_capita,99564.23720303348
-Western Europe,2060,medium truck,tkm_per_capita,2319.2902708167508
-Western Europe,2060,national shipping,tkm_per_capita,3888.976805745471
-Western Europe,2060,plane,load,1.0
-Western Europe,2060,plane,pkm_per_capita,5761.984754580976
-Western Europe,2060,plane,tkm_per_capita,210.00031425738416
-Western Europe,2060,train,load,1.022967
-Western Europe,2060,train,pkm_per_capita,1809.532643421799
-Western Europe,2060,train,tkm_per_capita,351.6169671653041
-Western Europe,2060,walking,load,1.0
-Western Europe,2060,walking,pkm_per_capita,116.82623856472227
+Subsaharan Africa,2019,highspeedtrain,load,310.333
+Subsaharan Africa,2019,international shipping,tkm_per_capita,1938.9395315343818
+Subsaharan Africa,2019,medium truck,tkm_per_capita,162.0113629160794
+Subsaharan Africa,2019,national shipping,tkm_per_capita,185.7310012324033
+Subsaharan Africa,2019,plane,pkm_per_capita,142.28732107684462
+Subsaharan Africa,2019,plane,tkm_per_capita,7.615081934251424
+Subsaharan Africa,2019,train,load,45.1454325
+Subsaharan Africa,2019,train,pkm_per_capita,5.965993735937396
+Subsaharan Africa,2019,train,tkm_per_capita,94.59339012685065
+Subsaharan Africa,2019,walking,pkm_per_capita,262.20241150337057
+Subsaharan Africa,2060,airplane,load,124.0
+Subsaharan Africa,2060,bus,load,27.2645925
+Subsaharan Africa,2060,bus,pkm_per_capita,3140.924745956684
+Subsaharan Africa,2060,car,load,1.7771797500000002
+Subsaharan Africa,2060,car,pkm_per_capita,1463.2532960493836
+Subsaharan Africa,2060,cycling,pkm_per_capita,169.54105944480986
+Subsaharan Africa,2060,heavy truck,tkm_per_capita,683.3385966360929
+Subsaharan Africa,2060,highspeed train,pkm_per_capita,0.9254046964617916
+Subsaharan Africa,2060,highspeedtrain,load,310.333
+Subsaharan Africa,2060,international shipping,tkm_per_capita,3131.103348833765
+Subsaharan Africa,2060,medium truck,tkm_per_capita,295.88949385630934
+Subsaharan Africa,2060,national shipping,tkm_per_capita,223.36944514324458
+Subsaharan Africa,2060,plane,pkm_per_capita,426.7846320059286
+Subsaharan Africa,2060,plane,tkm_per_capita,14.375307305815047
+Subsaharan Africa,2060,train,load,36.5951475
+Subsaharan Africa,2060,train,pkm_per_capita,49.28866628589663
+Subsaharan Africa,2060,train,tkm_per_capita,157.40215323710558
+Subsaharan Africa,2060,walking,pkm_per_capita,691.1693446964541
+USA,2019,airplane,load,124.0
+USA,2019,bus,load,19.96091
+USA,2019,bus,pkm_per_capita,3120.1541518492627
+USA,2019,car,load,1.546746
+USA,2019,car,pkm_per_capita,28367.852687113562
+USA,2019,cycling,pkm_per_capita,115.45502702951696
+USA,2019,heavy truck,tkm_per_capita,7481.096686794108
+USA,2019,highspeed train,pkm_per_capita,14.25087423804221
+USA,2019,highspeedtrain,load,310.333
+USA,2019,international shipping,tkm_per_capita,31407.063358814932
+USA,2019,medium truck,tkm_per_capita,2785.0620229678357
+USA,2019,national shipping,tkm_per_capita,5784.283726026316
+USA,2019,plane,pkm_per_capita,4183.815671047802
+USA,2019,plane,tkm_per_capita,342.821855846365
+USA,2019,train,load,26.79198
+USA,2019,train,pkm_per_capita,933.8950112721446
+USA,2019,train,tkm_per_capita,4724.630346342139
+USA,2019,walking,pkm_per_capita,269.3950730393692
+USA,2060,airplane,load,124.0
+USA,2060,bus,load,18.38763
+USA,2060,bus,pkm_per_capita,3582.3231315713374
+USA,2060,car,load,1.490646
+USA,2060,car,pkm_per_capita,27003.86966941054
+USA,2060,cycling,pkm_per_capita,22.28121315965956
+USA,2060,heavy truck,tkm_per_capita,9368.4814988358
+USA,2060,highspeed train,pkm_per_capita,1010.1234098246406
+USA,2060,highspeedtrain,load,310.333
+USA,2060,international shipping,tkm_per_capita,35310.024593303264
+USA,2060,medium truck,tkm_per_capita,3428.781226819742
+USA,2060,national shipping,tkm_per_capita,5897.204528549315
+USA,2060,plane,pkm_per_capita,9609.901549465736
+USA,2060,plane,tkm_per_capita,554.6078551144637
+USA,2060,train,load,24.6803
+USA,2060,train,pkm_per_capita,1392.8662925350484
+USA,2060,train,tkm_per_capita,7453.232259032278
+USA,2060,walking,pkm_per_capita,1.4406644676511204
+Western Europe,2019,airplane,load,124.0
+Western Europe,2019,bus,load,21.35115
+Western Europe,2019,bus,pkm_per_capita,2662.7178242380955
+Western Europe,2019,car,load,1.594328
+Western Europe,2019,car,pkm_per_capita,12688.025322675348
+Western Europe,2019,cycling,pkm_per_capita,252.2476056052125
+Western Europe,2019,heavy truck,tkm_per_capita,5628.558866967739
+Western Europe,2019,highspeed train,pkm_per_capita,110.56509803809973
+Western Europe,2019,highspeedtrain,load,310.333
+Western Europe,2019,international shipping,tkm_per_capita,82287.3121975882
+Western Europe,2019,medium truck,tkm_per_capita,1520.241018826009
+Western Europe,2019,national shipping,tkm_per_capita,3341.1802703956337
+Western Europe,2019,plane,pkm_per_capita,2701.34069034075
+Western Europe,2019,plane,tkm_per_capita,125.72438920048984
+Western Europe,2019,train,load,28.658
+Western Europe,2019,train,pkm_per_capita,1160.2114997348783
+Western Europe,2019,train,tkm_per_capita,208.0583466842719
+Western Europe,2019,walking,pkm_per_capita,588.5781416442096
+Western Europe,2060,airplane,load,124.0
+Western Europe,2060,bus,load,19.29521
+Western Europe,2060,bus,pkm_per_capita,4942.511424019263
+Western Europe,2060,car,load,1.523317
+Western Europe,2060,car,pkm_per_capita,15117.185730535939
+Western Europe,2060,cycling,pkm_per_capita,153.13173222692092
+Western Europe,2060,heavy truck,tkm_per_capita,8691.78107548234
+Western Europe,2060,highspeed train,pkm_per_capita,385.48560330985566
+Western Europe,2060,highspeedtrain,load,310.333
+Western Europe,2060,international shipping,tkm_per_capita,99564.23974425097
+Western Europe,2060,medium truck,tkm_per_capita,2319.2903300129155
+Western Europe,2060,national shipping,tkm_per_capita,3888.976905005368
+Western Europe,2060,plane,pkm_per_capita,5761.984901646397
+Western Europe,2060,plane,tkm_per_capita,210.00031961730542
+Western Europe,2060,train,load,25.89846
+Western Europe,2060,train,pkm_per_capita,1809.532689607218
+Western Europe,2060,train,tkm_per_capita,351.6169761397634
+Western Europe,2060,walking,pkm_per_capita,116.82624154652467
