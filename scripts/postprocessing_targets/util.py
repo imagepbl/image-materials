@@ -80,6 +80,7 @@ def aggregate_regions(data_array, region_mapping, aggregation='sum'):
         return data_array.groupby("region").mean()
 
 def extract_population():
+    # not used atm
     image_output = pd.read_csv("IMAGE scenario explorer variables.csv", delimiter=";", index_col=0, usecols=range(8))
     image_output = image_output.drop(columns=["model", "scenario","unit"])
 
