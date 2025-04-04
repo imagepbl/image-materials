@@ -673,9 +673,9 @@ def preprocessing(base_dir: str):
 
     # Assign values from data in xr_maintenance_material where Type contains "Cars"
     cars_mask = np.char.find(types.astype(str), "Cars") >= 0  # Find entries containing "Cars"
-    xr_maintenance_material.loc[{"Type": types[cars_mask]}] = maintenance_material["total_material_per_km"].values.reshape(-1, 1)
+    #xr_maintenance_material.loc[{"Type": types[cars_mask]}] = maintenance_material["total_material_per_km"].values.reshape(-1, 1)
     
-    preprocessing_results_xarray["maintenance_material_fractions"] = xr_maintenance_material
+    #preprocessing_results_xarray["maintenance_material_fractions"] = xr_maintenance_material
 
     # TODO: vemamodelling.py works with dict of dfs and not only dict of xarrays, therefore now both are returned (for now)
     return results_dict, preprocessing_results_xarray
