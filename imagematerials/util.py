@@ -3,7 +3,7 @@ from typing import Optional, Union
 
 import numpy as np
 import xarray as xr
-
+import netCDF4
 from imagematerials.constants import SUBTYPE_SEPARATOR
 
 
@@ -123,7 +123,7 @@ def merge_dims(xr_array, dim_one, dim_two):
     return new_array
 
 
-def export_to_netcdf(prep_data: dict, out_fp: Union[Path, str]):
+def export_to_netcdf(prep_data: dict, out_fp):
     """Export the xarray data to a netcdf4 file.
 
     Parameters
@@ -136,11 +136,12 @@ def export_to_netcdf(prep_data: dict, out_fp: Union[Path, str]):
     """
     new_prep_data = {key: val for key, val in prep_data.items()}
     lifetimes = new_prep_data.pop("lifetimes")
-    xr.Dataset(new_prep_data).to_netcdf(out_fp, group="main", engine="netcdf4")
+    # xr.Dataset(new_prep_data).to_netcdf(out_fp, group="main", engine="netcdf4")
     xr.Dataset(lifetimes).to_netcdf(out_fp, group="lifetimes", mode="a", engine="netcdf4")
+    for key, data in new_prep_data.items():
+        data.to_netcdf(out_fp, group=key, mode="a", engine="netcdf4")
 
-
-def import_from_netcdf(in_fp: Union[Path, str]) -> dict:
+def import_from_netcdf(in_fp) -> dict:
     """Import the xarray data from a netcdf4 file.
 
     Parameters
@@ -153,11 +154,17 @@ def import_from_netcdf(in_fp: Union[Path, str]) -> dict:
         Dictionary containing the data arrays and datasets.
 
     """
+    prep_data_dict = {}
     lt = xr.open_dataset(in_fp, group="lifetimes", engine="netcdf4").load()
-    prep_data = xr.open_dataset(in_fp, group="main", engine="netcdf4").load()
-    prep_data_dict = {key: value for key, value in prep_data.items()}
     prep_data_dict["lifetimes"] = {dist_name: arr.dropna("Type")
                                             for dist_name, arr in lt.items()}
+    # prep_data = xr.open_dataset(in_fp, group="main", engine="netcdf4").load()
+    # prep_data_dict = {key: value for key, value in prep_data.items()}
+    with netCDF4.Dataset(in_fp, "r") as data:
+        all_groups = list(data.groups.keys())
+    all_groups.remove("lifetimes")
+    for key in all_groups:
+        prep_data_dict[key] = xr.open_dataarray(in_fp, group=key, engine="netcdf4").load()
     return prep_data_dict
 
 def summarize_prep_data(data):
