@@ -54,7 +54,7 @@ from imagematerials.vehicles.constants import (
 from imagematerials.vehicles.modelling_functions import interpolate, tkms_to_nr_of_vehicles_fixed
 
 
-def preprocessing(base_dir: str):
+def preprocess(base_dir: str):
     """Wrapper function for the preprocessing part of the VEMA script.
 
     Args:
@@ -678,7 +678,7 @@ def preprocessing(base_dir: str):
     preprocessing_results_xarray["maintenance_material_fractions"] = xr_maintenance_material
 
     # TODO: vemamodelling.py works with dict of dfs and not only dict of xarrays, therefore now both are returned (for now)
-    return results_dict, preprocessing_results_xarray
+    return preprocessing_results_xarray
 
 
 

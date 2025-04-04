@@ -159,3 +159,29 @@ def import_from_netcdf(in_fp: Union[Path, str]) -> dict:
     prep_data_dict["lifetimes"] = {dist_name: arr.dropna("Type")
                                             for dist_name, arr in lt.items()}
     return prep_data_dict
+
+def summarize_prep_data(data):
+    all_summary = {}
+    for data_name, array in data.items():
+        if isinstance(array, (dict, xr.Dataset)):
+            all_summary[data_name] = summarize_prep_data(array)
+        elif isinstance(array, xr.DataArray):
+            all_summary[data_name] = _summarize_array(array)
+        else:
+            raise ValueError(f"Cannot compare data with name '{data_name}' with type {type(array)}")
+    return all_summary
+
+def _summarize_array(array):
+    all_summary = {}
+    for drop_coor in array.coords.keys():
+        sum_over = set(x for x in list(array.coords.keys())) - set({drop_coor})
+        summary = array.sum(sum_over)
+        all_summary[drop_coor] = _listify(summary.to_dict())
+    return all_summary
+
+def _listify(data):
+    if isinstance(data, dict):
+        return {key: _listify(value) for key, value in data.items()}
+    elif isinstance(data, tuple):
+        return list(data)
+    return data

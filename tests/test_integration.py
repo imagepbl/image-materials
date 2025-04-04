@@ -1,30 +1,31 @@
-from pathlib import Path
+# from pathlib import Path
 
-import numpy as np
-import xarray as xr
-from pytest import fixture, mark
+# import numpy as np
+# import xarray as xr
+# from pytest import fixture, mark
 
-from imagematerials.__main__ import export_summary_netcdf, simulate_stocks
-from imagematerials.util import export_to_netcdf, import_from_netcdf
-from imagematerials.vehicles.preprocessing import preprocessing
+# from imagematerials.__main__ import export_summary_netcdf, simulate_stocks
+# from imagematerials.util import export_to_netcdf, import_from_netcdf
+# import imagematerials.vehicles as vhc
+# import imagematerials.buildings as bld
 
-DATA_DIR = Path("data", "raw")
-COMPARE_SUMMARY_FP = Path("tests", "data", "data_sums.nc")
+# DATA_DIR = Path("data", "raw")
+# COMPARE_SUMMARY_FP = Path("tests", "data", "data_sums.nc")
 
-@fixture(scope="module")
-def summary_fp(tmpdir_factory):
-    new_summary_fp = tmpdir_factory.mktemp("data").join("data_sums.nc")
-    prep_fp = tmpdir_factory.mktemp("data").join("prep_data.nc")
-    _, orig_prep_data = preprocessing(DATA_DIR)
-    export_to_netcdf(orig_prep_data, prep_fp)
-    prep_data = import_from_netcdf(prep_fp)
-    model = simulate_stocks(prep_data)
-    export_summary_netcdf(model, new_summary_fp)
-    return new_summary_fp
+# @fixture(scope="module")
+# def summary_fp(tmpdir_factory):
+#     new_summary_fp = tmpdir_factory.mktemp("data").join("data_sums.nc")
+#     prep_fp = tmpdir_factory.mktemp("data").join("prep_data.nc")
+#     _, orig_prep_data = preprocessing(DATA_DIR)
+#     export_to_netcdf(orig_prep_data, prep_fp)
+#     prep_data = import_from_netcdf(prep_fp)
+#     model = simulate_stocks(prep_data)
+#     export_summary_netcdf(model, new_summary_fp)
+#     return new_summary_fp
 
-def all_summary_names():
-    array = xr.open_dataarray(COMPARE_SUMMARY_FP, group="summary").load()
-    return array.attrs["summary_names"]
+# def all_summary_names():
+#     array = xr.open_dataarray(COMPARE_SUMMARY_FP, group="summary").load()
+#     return array.attrs["summary_names"]
 
 # @mark.parametrize(
 #     "key",
