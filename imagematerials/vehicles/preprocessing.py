@@ -95,7 +95,7 @@ def preprocessing(base_dir: str):
     # placed under the "IMAGE" scenario folder
 
     maintenance_material : pd.DataFrame = pd.read_csv(
-        standard_input_data_path. joinpath("maintenance_passenger_cars.csv"), index_col=0)
+        standard_input_data_path. joinpath("all_vehicle_maintenance_image.csv"), index_col=0)
 
     # Files related to the international shipping
     nr_of_boats: pd.DataFrame = pd.read_csv(
