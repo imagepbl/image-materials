@@ -1,3 +1,5 @@
+
+
 from dataclasses import dataclass
 from typing import Optional
 
@@ -41,6 +43,25 @@ class KnowledgeGraph():
                 continue
             parent = self._find_closest_parent(cur_coord, input_coords)
             new_array.loc[{dim: cur_coord}] = input_array.loc[{dim: parent}]
+        new_array.loc[{dim: keep_coords}] = input_array.loc[{dim: keep_coords}]
+        return new_array
+
+    def rebroadcast_xarray_impute(self, input_array, output_coords, dim="Type", imputation_value=0.0):
+        new_coords = {coord.name: coord for coord in input_array.coords.values()}
+        new_coords[dim] = output_coords
+        input_coords = input_array.coords[dim].values
+
+        keep_coords = []
+        new_array = xr.DataArray(0.0, dims=input_array.dims, coords=new_coords)
+        for cur_coord in output_coords:
+            if cur_coord in input_coords:
+                keep_coords.append(cur_coord)
+                continue
+            try:
+                parent = self._find_closest_parent(cur_coord, input_coords)
+                new_array.loc[{dim: cur_coord}] = input_array.loc[{dim: parent}]
+            except KeyError:
+                new_array.loc[{dim: cur_coord}] = imputation_value
         new_array.loc[{dim: keep_coords}] = input_array.loc[{dim: keep_coords}]
         return new_array
 
