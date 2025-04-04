@@ -2,7 +2,6 @@ import warnings
 from pathlib import Path
 
 import xarray as xr
-from matplotlib import pyplot as plt
 
 from imagematerials.buildings.constants import SCENARIO_SELECT
 from imagematerials.buildings.preprocessing.floorspace import (
