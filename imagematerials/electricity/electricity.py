@@ -29,9 +29,6 @@ import scipy
 #YOUR_DIR = "C:\\Users\\Admin\\surfdrive\\Projects\\IRP\\GRO23\\Modelling\\2060\\ELMA"   # Change the running directory here
 YOUR_DIR = "C:\\Users\\Admin\\surfdrive\\Projects\\IRP\\GRO23\\Modelling\\2060\\ELMA"   # Change the running directory here
 
-YOUR_DIR = Path("..", "IMAGE-Mat_old_version", "IMAGE-Mat", "BUMA")
-YOUR_DIR = Path("..", "IMAGE-Mat_old_version", "IMAGE-Mat", "BUMA")
-
 os.chdir(YOUR_DIR)
 
 from past.builtins import execfile
