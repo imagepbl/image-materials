@@ -173,25 +173,27 @@ storage_lifetime.index = storage_lifetime.index.astype('int64')
 storage_start = storage_costs.first_valid_index()
 storage_end =   storage_costs.last_valid_index()
 for i in range(storage_start+1,storage_end):
-    storage_costs = pd.concat([storage_costs, pd.Series(name=i)], ignore_index=True)
-    storage_malus = pd.concat([storage_malus, pd.Series(name=i)], ignore_index=True)         # mind: the malus needs to be defined for the same years as the cost indications
-    storage_density = pd.concat([storage_density, pd.Series(name=i)], ignore_index=True)     # mind: the density needs to be defined for the same years as the cost indications
-    storage_lifetime = pd.concat([storage_lifetime, pd.Series(name=i)], ignore_index=True)   # mind: the lifetime needs to be defined for the same years as the cost indications
+    storage_costs = pd.concat([storage_costs, pd.Series(name=i)]) #, ignore_index=True
+    storage_malus = pd.concat([storage_malus, pd.Series(name=i)])         # mind: the malus needs to be defined for the same years as the cost indications
+    storage_density = pd.concat([storage_density, pd.Series(name=i)])     # mind: the density needs to be defined for the same years as the cost indications
+    storage_lifetime = pd.concat([storage_lifetime, pd.Series(name=i)])   # mind: the lifetime needs to be defined for the same years as the cost indications
     
 # then, do the actual interpolation on the sorted dataframes                                                    
-storage_costs_interpol = storage_costs.sort_index(axis=0).interpolate(axis=0)
+storage_costs_interpol = storage_costs.sort_index(axis=0).interpolate(axis=0)#.index.astype('int64')
 storage_malus_interpol = storage_malus.sort_index(axis=0).interpolate(axis=0)
 storage_density_interpol = storage_density.sort_index(axis=0).interpolate(axis=0)  # density calculation continue with the material calculations
 storage_lifetime_interpol = storage_lifetime.sort_index(axis=0).interpolate(axis=0)  # lifetime calculation continue with the material calculations
 
 # fix the energy density (kg/kwh) of storage technologies after 2030
 for year in range(2030+1,outyear+1):
-    storage_density_interpol = storage_density_interpol.append(pd.Series(storage_density_interpol.loc[storage_density_interpol.last_valid_index()], name=year))
+    # storage_density_interpol = storage_density_interpol.append(pd.Series(storage_density_interpol.loc[storage_density_interpol.last_valid_index()], name=year))
+    storage_density_interpol = pd.concat([storage_density_interpol, pd.Series(storage_density_interpol.loc[storage_density_interpol.last_valid_index()], name=year)])
+    
 
 # assumed fixed energy densities before 2018
 for year in reversed(range(switchtime,storage_start)):
     # storage_density_interpol = storage_density_interpol.append(pd.Series(storage_density_interpol.loc[storage_density_interpol.first_valid_index()], name=year)).sort_index(axis=0)
-    storage_density_interpol = pd.concat([storage_density_interpol, pd.Series(storage_density_interpol.loc[storage_density_interpol.first_valid_index()], name=year)]).sort_index(axis=0)
+    storage_density_interpol = pd.concat([storage_density_interpol, pd.Series(storage_density_interpol.loc[storage_density_interpol.first_valid_index()],name=year)]).sort_index(axis=0)
 
 # Interpolate material intensities (dynamic content for gcap & storage technologies between 1926 to 2100, based on data files)
 index = pd.MultiIndex.from_product([list(range(first_year_grid, outyear+1)), list(storage_materials.index)])
@@ -439,7 +441,7 @@ intensity_gcap = total_global_wght.div(total_global_gcap, axis=1)
 intensity_gcap.to_csv(path_elma / 'output' / scen_folder / sa_settings / 'material_intensity_gcap_ton_per_MW.csv') # ton/MW
 
 ###########################################################################################################
-#%% 2) Then, determine the market share of the storage capacity using a multi-nomial logit function
+#%% 2) Determine MARKET SHARE of the storage capacity using a multi-nomial logit function
 ###########################################################################################################
 
 
@@ -447,11 +449,14 @@ intensity_gcap.to_csv(path_elma / 'output' / scen_folder / sa_settings / 'materi
 decline = ((storage_costs_interpol.loc[storage_start,:]-storage_costs_interpol.loc[storage_end,:])/(storage_end-storage_start))/storage_costs_interpol.loc[storage_start,:]
 decline_used = decline*storage_ltdecline
 
+storage_costs_interpol.index = storage_malus_interpol.index # ADDED, to avoid index mismatch in the next step
 storage_costs_new = storage_costs_interpol * storage_malus_interpol
 
 # calculate the development from 2030 to 2050 (using annual price decline)
 for year in range(storage_end+1,2050+1):
-    storage_costs_new = storage_costs_new.append(pd.Series(storage_costs_new.loc[storage_costs_new.last_valid_index()]*(1-decline_used), name=year))
+    print(year)
+    # storage_costs_new = storage_costs_new.append(pd.Series(storage_costs_new.loc[storage_costs_new.last_valid_index()]*(1-decline_used), name=year))
+    storage_costs_new = pd.concat([storage_costs_new, pd.Series(storage_costs_new.loc[storage_costs_new.last_valid_index()] * (1 - decline_used), name=year)])
 
 # for historic price development, assume 2x AVERAGE annual price decline on all technologies, except lead-acid (so that lead-acid gets a relative price advantage from 1970-2018)
 for year in reversed(range(startyear,storage_start)):
