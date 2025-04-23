@@ -37,12 +37,22 @@ class ModelFactory():
         """
         self.prep_data = prep_data
         # Preprocessing data + output data of the submodels
-        self.all_data = {key: value for key, value in prep_data.items()}
+        # self.all_data = {key: value for key, value in prep_data.items()}
         self.models = []
-        self.coordinates = self.create_coordinates()
+        self.coordinates = self.create_coordinates(prep_data)
+        self.all_data = self.create_databank(prep_data)
         self.complete_timeline = complete_timeline
 
-    def create_coordinates(self) -> dict[str, list[Any]]:
+    def create_databank(self, prep_data) -> dict[str, Any]:
+        all_data = {}
+        for data_name, data_obj in prep_data.items():
+            if isinstance(data_obj, dict) and data_name != "lifetimes":
+                all_data[data_name] = self.create_databank(data_obj)
+            else:
+                all_data[data_name] = data_obj
+        return all_data
+
+    def create_coordinates(self, prep_data) -> dict[str, list[Any]]:
         """Get all the available coordinates from the preprocessing data.
 
         Also validates that there are no mismatched coordinates between data arrays.
@@ -59,7 +69,11 @@ class ModelFactory():
 
         """
         coordinates = {}
-        for data_name, data_obj in self.prep_data.items():
+        for data_name, data_obj in prep_data.items():
+            # TODO: make this more general so that dictionaries can be part of prep_data
+            if isinstance(data_obj, dict) and data_name != "lifetimes":
+                coordinates[data_name] = self.create_coordinates(data_obj)
+                continue
             # Ignore preprocessing data that are not xArray DataArrays.
             if not isinstance(data_obj, xr.DataArray):
                 continue
@@ -67,14 +81,11 @@ class ModelFactory():
                 if coor.name not in coordinates:
                     coordinates[coor.name] = list(coor.values)
                 elif not list(coor.values) == coordinates[coor.name]:
-                    raise ValueError(f"Mismatched dimensions in input data for {data_name} "
+                    raise ValueError(f"Mismatched dimensions in input data for '{data_name}' "
                                      f"for coordinates {coor.name}")
         return coordinates
 
-    def add(self, model_class: str,
-            input_data: Optional[tuple[str]] = None,
-            optional_input_data: Optional[tuple[str]] = None,
-            output_data: Optional[tuple[str]] = None):
+    def add(self, model_class, namespace):
         """Add a submodel to the main model.
 
         Parameters
@@ -94,27 +105,26 @@ class ModelFactory():
 
         """
         # Find default data names
-        if input_data is None:
-            input_data = getattr(model_class, "input_data", tuple())
-        if optional_input_data is None:
-            optional_input_data = getattr(model_class, "optional_input_data", tuple())
-        if output_data is None:
-            output_data = getattr(model_class, "output_data", tuple())
+        input_data = getattr(model_class, "input_data", tuple())
+        optional_input_data = getattr(model_class, "optional_input_data", tuple())
+        output_data = getattr(model_class, "output_data", tuple())
 
         arguments_dict = {}
         # Add coordinates
         for var_name, var_type in model_class.__annotations__.items():
             if isinstance(var_type, prism._typing.CoordsType):
-                arguments_dict[var_name] = self.coordinates[var_name]
+                arguments_dict[var_name] = self.coordinates[namespace][var_name]
 
         # Add input data either from the preprocessing data or other submodels.
         linked_input_data = []
         for var_name in input_data + optional_input_data:
-            if var_name in self.prep_data:
-                arguments_dict[var_name] = self.prep_data[var_name]
-            elif var_name in optional_input_data and var_name not in self.all_data:
+            prep_data = self.prep_data[namespace]
+            all_data = self.all_data[namespace]
+            if var_name in prep_data:
+                arguments_dict[var_name] = prep_data[var_name]
+            elif var_name in optional_input_data and var_name not in all_data:
                 arguments_dict[var_name] = None
-            elif var_name not in optional_input_data and var_name not in self.all_data:
+            elif var_name not in optional_input_data and var_name not in all_data:
                 raise ValueError(f"Cannot find dataset with name '{var_name}'")
             else:
                 linked_input_data.append(var_name)
@@ -126,7 +136,7 @@ class ModelFactory():
 
         # Add output data of sub model to dictionary.
         for output_name in new_sub_model.output_data:
-            self.all_data[output_name] = getattr(new_sub_model, output_name)
+            self.all_data[namespace][output_name] = getattr(new_sub_model, output_name)
 
         # Add the new submodel to the list of submodels.
         new_sub_model.linked_input_data = linked_input_data
@@ -177,3 +187,7 @@ class ModelFactory():
         for data_name, data in self.all_data.items():
             setattr(main_model, data_name, data)
         return main_model
+
+# class Namespace():
+#     def __init__(self, name):
+#         self.name = name
