@@ -8,7 +8,6 @@ import xarray as xr
 
 from imagematerials.constants import SUBTYPE_SEPARATOR
 from imagematerials.distribution import NAME_TO_DIST
-from imagematerials.concepts import knowledge_graph
 
 
 class SurvivalMatrix:
@@ -87,7 +86,8 @@ class ScipySurvival():
     """
 
     def __init__(self, lifetime_parameters: dict[str, xr.DataArray],
-                 output_modes: Union[None, list, xr.DataArray] = None):
+                 output_modes: Union[None, list, xr.DataArray] = None,
+                 knowledge_graph = None):
         """Initialize scipysurvival class.
 
         Parameters
@@ -114,6 +114,7 @@ class ScipySurvival():
                 self._output_modes = output_modes
         else:
             self._output_modes = None
+        self.knowledge_graph = knowledge_graph
 
     def new_matrix(self):
         """Create a new data array with zeros everywhere.
@@ -175,7 +176,7 @@ class ScipySurvival():
             # Not needed to deal with subtypes
             return base_array
 
-        return knowledge_graph.rebroadcast_xarray(base_array, self._output_modes)
+        return self.knowledge_graph.rebroadcast_xarray(base_array, self._output_modes)
 
     @cached_property
     def modes(self) -> list[str]:
