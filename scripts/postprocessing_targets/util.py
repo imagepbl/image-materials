@@ -47,13 +47,32 @@ def create_region_graph():
     for region in ["TUR", "OCE", "MEX"]:
         region_knowledge_graph.add(Node(region, inherits_from="Other OECD"))
     region_knowledge_graph["Canada"].synonyms = ["CAN"]
-    region_knowledge_graph["USA"].synonyms = ["USA"]
-    region_knowledge_graph["Western Europe"].synonyms = ["WEU"]
-    region_knowledge_graph["Central Europe"].synonyms = ["CEU"]
+    region_knowledge_graph["USA"].synonyms = ["USA","US"]
+    region_knowledge_graph["Western Europe"].synonyms = ["WEU","W.Europe"]
+    region_knowledge_graph["Central Europe"].synonyms = ["CEU","C.Europe"]
     region_knowledge_graph["India"].synonyms = ["INDIA"]
     region_knowledge_graph["China"].synonyms = ["CHN"]
     region_knowledge_graph["Japan"].synonyms = ["JAP"]
-    
+    region_knowledge_graph["BRA"].synonyms = ["Brazil"]
+    region_knowledge_graph["EAF"].synonyms = ["E.Africa"]
+    region_knowledge_graph["INDO"].synonyms = ["Indonesia"]
+    region_knowledge_graph["KOR"].synonyms = ["Korea"]
+    region_knowledge_graph["ME"].synonyms = ["M.East"]
+    region_knowledge_graph["MEX"].synonyms = ["Mexico"]
+    region_knowledge_graph["NAF"].synonyms = ["N.Africa"]
+    region_knowledge_graph["OCE"].synonyms = ["Oceania"]
+    region_knowledge_graph["RCAM"].synonyms = ["Rest C.Am."]
+    region_knowledge_graph["RSAM"].synonyms = ["Rest S.Am."]
+    region_knowledge_graph["RSAF"].synonyms = ["Rest S.Africa"]
+    region_knowledge_graph["RSAS"].synonyms = ["Rest S.Asia"]
+    region_knowledge_graph["RUS"].synonyms = ["Russia"]
+    region_knowledge_graph["SEAS"].synonyms = ["SE.Asia"]
+    region_knowledge_graph["SAF"].synonyms = ["South Africa"]
+    region_knowledge_graph["STAN"].synonyms = ["Stan"]
+    region_knowledge_graph["TUR"].synonyms = ["Turkey"]
+    region_knowledge_graph["UKR"].synonyms = ["Ukraine"]
+    region_knowledge_graph["WAF"].synonyms = ["W.Africa"]
+
     return region_knowledge_graph
 
 def verify_image_regions(region_knowledge_graph):
