@@ -38,7 +38,7 @@ class ModelFactory():
             The complete timeline of the data, including both the historic tail and simulation part.
 
         """
-        if all([isinstance(p, dict) for p in prep_data]):
+        if all([isinstance(p, dict) for p in prep_data.values()]):
             self.prep_data = prep_data
         else:
             self.prep_data = {_DEFAULT_NAMESPACE: prep_data}
