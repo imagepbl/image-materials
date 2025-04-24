@@ -176,6 +176,9 @@ class ScipySurvival():
             # Not needed to deal with subtypes
             return base_array
 
+        if (self.knowledge_graph is None and
+                list(base_array.coords.values()) != list(self._output_modes)):
+            raise ValueError(f"Need knowledge graph for broadcasting to {self._output_modes}.")
         return self.knowledge_graph.rebroadcast_xarray(base_array, self._output_modes)
 
     @cached_property

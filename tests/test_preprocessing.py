@@ -1,8 +1,13 @@
 import json
 from pathlib import Path
-from pytest import mark
+
 import pytest
-from imagematerials.util import summarize_prep_data, import_from_netcdf, export_to_netcdf
+import xarray as xr
+from pytest import mark
+
+from imagematerials.concepts import KnowledgeGraph
+from imagematerials.util import export_to_netcdf, import_from_netcdf, summarize_prep_data
+
 
 def _get_new_compare(data, key_list):
     all_compares = []
@@ -58,16 +63,22 @@ def test_buildings_prep(bld_summary, key_list, expected):
         assert data["data"] == expected["data"]
 
 def _check_data_same(orig_data, new_data, name=""):
+    assert type(orig_data) is type(new_data)
     if isinstance(orig_data, dict):
         for cur_name in orig_data:
             _check_data_same(orig_data[cur_name], new_data[cur_name], f"{name}{cur_name}")
         return
-    assert orig_data.shape == new_data.shape, f"Wrong array shape: {name}"
+    if isinstance(orig_data, KnowledgeGraph):
+        assert len(orig_data._items) == len(new_data._items)
+        return
+
+    if isinstance(orig_data, xr.DataArray):
+        assert orig_data.shape == new_data.shape, f"Wrong array shape: {name}"
     assert orig_data.dims == new_data.dims
     for coord in orig_data.coords:
         assert all(orig_data[coord] == new_data[coord])
 
-@mark.parametrize("prep_data_name", ["vhc_prep_data"])#, "bld_prep_data"])
+@mark.parametrize("prep_data_name", ["vhc_prep_data", "bld_prep_data"])
 def test_save_load_netcdf(prep_data_name, request, tmpdir):
     prep_data = request.getfixturevalue(prep_data_name)
     netcdf_fp = tmpdir / "test.netcdf"

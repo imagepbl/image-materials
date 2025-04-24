@@ -1,9 +1,11 @@
 from pathlib import Path
 from typing import Optional, Union
 
+import netCDF4
 import numpy as np
 import xarray as xr
-import netCDF4
+
+from imagematerials.concepts import KnowledgeGraph
 from imagematerials.constants import SUBTYPE_SEPARATOR
 
 
@@ -165,6 +167,8 @@ def import_from_netcdf(in_fp) -> dict:
     all_groups.remove("lifetimes")
     for key in all_groups:
         prep_data_dict[key] = xr.open_dataarray(in_fp, group=key, engine="netcdf4").load()
+        if key == "knowledge_graph":
+            prep_data_dict[key] = KnowledgeGraph.from_dataarray(prep_data_dict[key])
     return prep_data_dict
 
 def summarize_prep_data(data):
@@ -174,6 +178,8 @@ def summarize_prep_data(data):
             all_summary[data_name] = summarize_prep_data(array)
         elif isinstance(array, xr.DataArray):
             all_summary[data_name] = _summarize_array(array)
+        elif isinstance(array, KnowledgeGraph):
+            continue
         else:
             raise ValueError(f"Cannot compare data with name '{data_name}' with type {type(array)}")
     return all_summary
@@ -192,3 +198,12 @@ def _listify(data):
     elif isinstance(data, tuple):
         return list(data)
     return data
+
+def rebroadcast_prep_data(prep_data, knowledge_graph, dim, output_coords):
+    new_prep_data = {}
+    for data_name, data in prep_data.items():
+        if not isinstance(data, xr.DataArray) or dim not in data.coords:
+            new_prep_data[data_name] = data
+        else:
+            new_prep_data[data_name] = knowledge_graph.rebroadcast_xarray(data, output_coords, dim=dim)
+    return new_prep_data

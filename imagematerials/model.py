@@ -1,13 +1,14 @@
 from typing import Callable, ClassVar, Optional
 
+import prism
 import xarray as xr
 
-import prism
+from imagematerials.concepts import KnowledgeGraph
+from imagematerials.maintenance import Maintenance
 from imagematerials.stock import (
     compute_dynamic_stock_driven,
 )
 from imagematerials.survival import ScipySurvival, SurvivalMatrix
-from imagematerials.maintenance import Maintenance
 
 REGION = prism.Dimension("Region")
 STOCK_TYPE = prism.Dimension("Type")
@@ -54,10 +55,11 @@ class GenericStocks(prism.Model):
     stocks: xr.DataArray #TODO check how to have property that can be both input and output within prism
     # stock_function: Callable    # defines the stock function to use e.g. stock or inflow driven
     shares: Optional[xr.DataArray]
+    knowledge_graph: KnowledgeGraph
 
     # For module dependency, ignored by prism
     input_data: tuple[str] = ("stocks", "lifetimes")
-    optional_input_data: tuple[str] = ("shares",)
+    optional_input_data: tuple[str] = ("shares", "knowledge_graph")
     output_data: tuple[str] = ("outflow_by_cohort", "inflow", "stock_by_cohort")
 
     # stock_by_cohort: prism.TimeVariable[Region, Mode, Cohort, "count"] = prism.export(initial_value = prism.Array[Region, Mode, Cohort, 'count'](0.0))
@@ -73,7 +75,9 @@ class GenericStocks(prism.Model):
             The simulation timeline.
         """
 
-        self.survival_matrix = SurvivalMatrix(ScipySurvival(self.lifetimes, self.stocks.coords["Type"]))
+        survival = ScipySurvival(self.lifetimes, self.stocks.coords["Type"],
+                                 knowledge_graph=self.knowledge_graph)
+        self.survival_matrix = SurvivalMatrix(survival)
         self.stock_by_cohort = xr.DataArray(
             0.0,
             dims=("Time", "Cohort", "Region", "Type"),
