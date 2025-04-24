@@ -1,9 +1,8 @@
 """Module to dynamically create models."""
-from typing import Any, Optional
-
-import xarray as xr
+from typing import Any
 
 import prism
+import xarray as xr
 
 _DEFAULT_NAMESPACE = "default"
 
@@ -36,63 +35,20 @@ class ModelFactory():
             Preprocessing data
         complete_timeline:
             The complete timeline of the data, including both the historic tail and simulation part.
+        check_coordinates:
+            Whether to check the compatibility of the input coordinates.
 
         """
         if all([isinstance(p, dict) for p in prep_data.values()]):
             self.prep_data = prep_data
         else:
             self.prep_data = {_DEFAULT_NAMESPACE: prep_data}
+        # Preprocessing data + output data of the submodels
         self.all_data = {namespace: {} for namespace in self.prep_data}
         self.coordinates = {namespace: {} for namespace in self.prep_data}
-        # Preprocessing data + output data of the submodels
-        # self.all_data = {key: value for key, value in prep_data.items()}
         self.models = []
-        # self.coordinates = self.create_coordinates(prep_data)
-        # self.all_data = self.create_databank(prep_data)
         self.complete_timeline = complete_timeline
         self.check_coordinates = check_coordinates
-
-    # def create_databank(self, prep_data) -> dict[str, Any]:
-    #     all_data = {}
-    #     for data_name, data_obj in prep_data.items():
-    #         if isinstance(data_obj, dict) and data_name != "lifetimes":
-    #             all_data[data_name] = self.create_databank(data_obj)
-    #         else:
-    #             all_data[data_name] = data_obj
-    #     return all_data
-
-    # def create_coordinates(self, prep_data) -> dict[str, list[Any]]:
-    #     """Get all the available coordinates from the preprocessing data.
-
-    #     Also validates that there are no mismatched coordinates between data arrays.
-
-    #     Returns
-    #     -------
-    #     coordinates:
-    #         All coordinates in the preprocessing data arrays as a list.
-
-    #     Raises
-    #     ------
-    #     ValueError:
-    #         If coordinates with the same dimension do not match up.
-
-    #     """
-    #     coordinates = {}
-    #     for data_name, data_obj in prep_data.items():
-    #         # TODO: make this more general so that dictionaries can be part of prep_data
-    #         if isinstance(data_obj, dict) and data_name != "lifetimes":
-    #             coordinates[data_name] = self.create_coordinates(data_obj)
-    #             continue
-    #         # Ignore preprocessing data that are not xArray DataArrays.
-    #         if not isinstance(data_obj, xr.DataArray):
-    #             continue
-    #         for coor in data_obj.coords.values():
-    #             if coor.name not in coordinates:
-    #                 coordinates[coor.name] = list(coor.values)
-    #             elif not list(coor.values) == coordinates[coor.name]:
-    #                 raise ValueError(f"Mismatched dimensions in input data for '{data_name}' "
-    #                                  f"for coordinates {coor.name}")
-    #     return coordinates
 
     def _add_input_data(self, namespace, input_data, model_class, optional=False):
         for input_name in input_data:
@@ -131,12 +87,8 @@ class ModelFactory():
         ----------
         model_class
             The class of the model to be added uninitialized.
-        input_data, optional
-            Override the input data names, by default None
-        optional_input_data, optional
-            Override the optional input data names, by default None
-        output_data, optional
-            Override the output data name, by default None
+        namespace:
+            Name space for the model class to be run on.
 
         Returns
         -------
@@ -155,7 +107,6 @@ class ModelFactory():
         # Add coordinates
         for dim_name, dim_type in model_class.__annotations__.items():
             if isinstance(dim_type, prism._typing.CoordsType):
-                # print(list(self.coordinates[namespace]))
                 arguments_dict[dim_name] = self.coordinates[namespace][dim_name][0]
 
         # Add input data either from the preprocessing data or other submodels.
@@ -167,14 +118,6 @@ class ModelFactory():
                 arguments_dict[var_name] = all_data[var_name]
             else:
                 linked_input_data.append((namespace, var_name))
-            # if var_name in prep_data:
-                # arguments_dict[var_name] = prep_data[var_name]
-            # elif var_name in optional_input_data and var_name not in all_data:
-                # arguments_dict[var_name] = None
-            # elif var_name not in optional_input_data and var_name not in all_data:
-                # raise ValueError(f"Cannot find dataset with name '{var_name}'")
-            # else:
-                # linked_input_data.append(var_name)
 
         # Initialize the new submodel.
         new_sub_model = model_class(self.complete_timeline, **arguments_dict)
@@ -242,7 +185,3 @@ class ModelFactory():
         for data_name, data in self.all_data.items():
             setattr(main_model, data_name, data)
         return main_model
-
-# class Namespace():
-#     def __init__(self, name):
-#         self.name = name
