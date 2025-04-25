@@ -54,7 +54,7 @@ from imagematerials.vehicles.constants import (
 from imagematerials.vehicles.modelling_functions import interpolate, tkms_to_nr_of_vehicles_fixed
 
 
-def preprocessing(base_dir: str):
+def preprocess(base_dir: str):
     """Wrapper function for the preprocessing part of the VEMA script.
 
     Args:
@@ -674,11 +674,16 @@ def preprocessing(base_dir: str):
     # Assign values from data in xr_maintenance_material where Type contains "Cars"
     cars_mask = np.char.find(types.astype(str), "Cars") >= 0  # Find entries containing "Cars"
     xr_maintenance_material.loc[{"Type": types[cars_mask]}] = maintenance_material["total_material_per_km"].values.reshape(-1, 1)
-    
+
     preprocessing_results_xarray["maintenance_material_fractions"] = xr_maintenance_material
 
+    # TODO: Check if this is correct
+    bad_coords = preprocessing_results_xarray["battery_materials"].coords["battery"]
+    new_coords = [x if x != "LMO" else "LMO/LCO" for x in bad_coords.values]
+    preprocessing_results_xarray["battery_materials"] = preprocessing_results_xarray["battery_materials"].assign_coords({"battery": new_coords})
+
     # TODO: vemamodelling.py works with dict of dfs and not only dict of xarrays, therefore now both are returned (for now)
-    return results_dict, preprocessing_results_xarray
+    return preprocessing_results_xarray
 
 
 

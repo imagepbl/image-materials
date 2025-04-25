@@ -1,0 +1,53 @@
+region,year,mode,kilometrage
+Canada,2018,bus,57954.0
+Canada,2018,car,15200.0
+Canada,2040,bus,57954.0
+Canada,2040,car,15200.0
+Central Europe,2018,bus,38556.0
+Central Europe,2018,car,13550.897
+Central Europe,2040,bus,38556.0
+Central Europe,2040,car,13550.897
+China,2018,bus,61111.0
+China,2018,car,17794.42857
+China,2040,bus,61111.0
+China,2040,car,17794.42857
+India,2018,bus,85588.0
+India,2018,car,10708.5
+India,2040,bus,85588.0
+India,2040,car,10708.5
+Japan,2018,bus,57954.0
+Japan,2018,car,8275.651747
+Japan,2040,bus,57954.0
+Japan,2040,car,8275.651747
+Latin America,2018,bus,57954.0
+Latin America,2018,car,13550.897000000003
+Latin America,2040,bus,57954.0
+Latin America,2040,car,13550.897000000003
+Middle East and Northern Africa,2018,bus,57954.0
+Middle East and Northern Africa,2018,car,14725.732145
+Middle East and Northern Africa,2040,bus,57954.0
+Middle East and Northern Africa,2040,car,14725.732145
+Other Asia,2018,bus,58598.0
+Other Asia,2018,car,13903.80083425
+Other Asia,2040,bus,58598.0
+Other Asia,2040,car,13903.80083425
+Other OECD,2018,bus,57954.0
+Other OECD,2018,car,14216.965666666665
+Other OECD,2040,bus,57954.0
+Other OECD,2040,car,14216.965666666665
+Reforming Economies,2018,bus,57954.0
+Reforming Economies,2018,car,15200.0
+Reforming Economies,2040,bus,57954.0
+Reforming Economies,2040,car,15200.0
+Subsaharan Africa,2018,bus,57954.0
+Subsaharan Africa,2018,car,14076.322467500002
+Subsaharan Africa,2040,bus,57954.0
+Subsaharan Africa,2040,car,14076.322467500002
+USA,2018,bus,45273.0
+USA,2018,car,18680.89341
+USA,2040,bus,45273.0
+USA,2040,car,18680.89341
+Western Europe,2018,bus,38556.0
+Western Europe,2018,car,13550.897
+Western Europe,2040,bus,38556.0
+Western Europe,2040,car,13550.897
