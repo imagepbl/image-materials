@@ -27,15 +27,19 @@ import math
 import scipy
 import warnings
 from pathlib import Path
+import sys 
 
 from imagematerials.read_mym import read_mym_df
-
 # Define paths ----------------------------------------------------------------------
 #YOUR_DIR = "C:\\Users\\Admin\\surfdrive\\Projects\\IRP\\GRO23\\Modelling\\2060\\ELMA"   # Change the running directory here
 # os.chdir(YOUR_DIR)
-path_current = Path.cwd() #Path(".","image-materials") # absolute path of current working directory
-path_base = path_current.parent.parent
+# path_current = Path.cwd() # 
+path_current = Path(__file__).resolve().parent # absolute path of file
+path_base = path_current.parent.parent # base path of the project -> image-materials
 path_elma = Path(path_base, "IMAGE-Mat_old_version", "IMAGE-Mat", "ELMA")
+
+sys.path.append(str(path_current))
+from dynamic_stock_model import DynamicStockModel as DSM
 
 scenario = "SSP2"
 variant  = "2D_RE"
@@ -551,9 +555,6 @@ for year in list(range(startyear,outyear+1)):
 # Here we use the vehcile stock (number of cars) as a proxy for the development of the battery stock (given that we're calculating the actual battery stock still, and just need to account for the dynamics of purchases to derive te stock share here) 
 EV_inflow_by_tech, EV_stock_cohorts, EV_outflow_cohorts = stock_share_calc(vehicles_EV, market_share_EVs, 'NiMH', ['NiMH', 'LMO', 'NMC', 'NCA', 'LFP', 'Lithium Sulfur', 'Lithium Ceramic ', 'Lithium-air'])
 
-print(EV_stock_cohorts.index)
-print(EV_stock)
-
 # EV_stock =  EV_stock_cohorts.loc[idx[:,:],idx[:,:]].sum(axis=1, level=0) #original
 # EV_storage_stock_abs  = EV_stock.sum(axis=0, level=1)                           # sum over all regions to get the global share of the stock
 # EV_storage_inflow_abs = EV_inflow_by_tech.sum(axis=0, level=1)                  # sum over all regions to get the global share of the inflow
@@ -706,10 +707,6 @@ graphs_elec.graph_market_share_pie(storage_market_share, scen_folder, sa_setting
 #%% 3.2) apply the dedicated electricity storage market shares to the demand for dedicated (other) storage to find storage by type and by region
 ###########################################################################################################
 
-
-import sys 
-sys.path.append(YOUR_DIR)
-from dynamic_stock_model import DynamicStockModel as DSM
 
 
 ###########################################################################################################
