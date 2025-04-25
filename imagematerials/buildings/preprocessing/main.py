@@ -2,7 +2,6 @@ import warnings
 from pathlib import Path
 
 import xarray as xr
-from matplotlib import pyplot as plt
 
 from imagematerials.buildings.constants import SCENARIO_SELECT
 from imagematerials.buildings.preprocessing.floorspace import (
@@ -18,9 +17,11 @@ from imagematerials.buildings.preprocessing.materials import (
     compute_mat_intensities_residential,
 )
 from imagematerials.buildings.preprocessing.population import compute_population
-from imagematerials.concepts import building_knowledge_graph
+from imagematerials.concepts import knowledge_graph
+
 
 def buildings_preprocessing(base_directory):
+    base_directory = Path(base_directory)
     database_directory = base_directory / "files_DB" / SCENARIO_SELECT
     image_directory = base_directory / "files_IMAGE" / SCENARIO_SELECT
     assert database_directory.is_dir(), database_directory
@@ -46,7 +47,6 @@ def buildings_preprocessing(base_directory):
     housing_type = compute_housing_type(database_directory)
 
     floorspace_residential = compute_housing_residential(population, average_m2_capita, housing_type, floorspace_rururb)
-    print(floorspace_residential.coords["Type"])
 
     floorspace = xr.concat((floorspace_residential, floorspace_commercial), dim="Type")
 
@@ -59,7 +59,7 @@ def buildings_preprocessing(base_directory):
     mat_intensities_comm = compute_mat_intensities_commercial(database_directory)
     mat_intensities_res = compute_mat_intensities_residential(database_directory)
     mat_intensities = xr.concat((mat_intensities_res, mat_intensities_comm), dim="Type")
-    mat_intensities = building_knowledge_graph.rebroadcast_xarray(
+    mat_intensities = knowledge_graph.rebroadcast_xarray(
                             mat_intensities, floorspace.coords["Type"].values)
 
     return {"stocks": floorspace, "lifetimes": lifetimes, "material_intensities": mat_intensities}
