@@ -1,3 +1,4 @@
+#%%
 import pandas as pd
 import numpy as np
 import os
@@ -34,8 +35,9 @@ VARIANT = '2D_RE'
 #YOUR_DIR = "C:\\Users\\Admin\\surfdrive\\Projects\\IRP\\GRO23\\Modelling\\2060\\ELMA"   # Change the running directory here
 # os.chdir(YOUR_DIR)
 scen_folder = SCEN + "_" + VARIANT
-path_base = Path().resolve() # TODO absolute path of file "preprocessing.py" ? current solution can differ depending on IDE used (?) 
-# path_base = path_current.parent.parent # base path of the project -> image-materials
+# path_base = Path().resolve() # TODO absolute path of file "preprocessing.py" ? current solution can differ depending on IDE used (?) 
+path_current = Path().resolve()
+path_base = path_current.parent.parent # base path of the project -> image-materials
 path_image_output = Path(path_base, "data", "raw", SCEN)
 path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
 path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scen_folder)
@@ -139,8 +141,6 @@ gcap_data = read_mym_df(path_image_output / 'Gcap.out')
 
 
 
-
-
 ###########################################################################################################
 #%% Prepare model specific variables
 ###########################################################################################################
@@ -206,7 +206,7 @@ for cat in list(storage_materials.columns.levels[1]):
 
 # Car Batteries ----------
 
-# kilometrage is defined untill 2008, fill 2008 values untill 2100 
+# kilometrage is defined until 2008, fill 2008 values until 2100 
 kilometrage = kilometrage.reindex(list(range(startyear,endyear))).interpolate(limit_direction='both')
 region_list = list(kilometrage.columns.values)                          # get a list with region names
 
@@ -265,16 +265,54 @@ gcap_lifetime = gcap_lifetime.unstack().droplevel(axis=1, level=0)
 gcap_lifetime = gcap_lifetime.reindex(list(range(first_year_grid,outyear+1)), axis=0).interpolate(limit_direction='both')
 
 
-   
+###########################################################################################################
+#%% Prep_data File
+###########################################################################################################
+
+#%%% Generation
 
 
+from imagematerials.util import dataset_to_array, pandas_to_xarray
+import pint
 
+ureg = pint.UnitRegistry(force_ndarray_like=True)
 
+# Define the units for each dimension
+unit_mapping = {
+    'time': ureg.year,
+    'year': ureg.year,
+    'kg': ureg.kilogram,
+    'yr': ureg.year,
+    '%': ureg.percent,
+    't': ureg.tonne,
+}
 
+# Conversion table for all coordinates, to be removed/adapted after input tables are fixed.
+conversion_table = {
+    "total_nr_vehicles_simple": (["Time"], ["Type", "Region"],),
+    "material_fractions_simple": (["Cohort"], ["Type", "material"],),
+    "material_fractions_typical": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]}),
+    "vehicle_weights_simple": (["Cohort"], ["Type"],),
+    "vehicle_weights_typical": (["Cohort"], ["Type", "SubType"], {"Type": ["Type", "SubType"]}),
+    "battery_weights_typical": (["Cohort"], ["Type", "SubType"], {"Type": ["Type", "SubType"]}),
+    "battery_materials": (["Cohort"], ["material", "battery"],),
+    "battery_shares": (["Cohort"], ["battery"],),
+    "weight_boats": (["Cohort"], ["size"],),
+    "vehicle_shares_typical": (["Cohort"], ["Type", "SubType", "Region"], {"Type": ["Type", "SubType"]}),
+    "gcap_materials_interpol": (["Cohort"], ["material", "Type"],)
+    # "gcap_materials_interpol": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]})
+}
 
+results_dict = {
+        'gcap_materials_interpol': gcap_materials_interpol
+}
 
-
-
+# df = gcap_materials_interpol.copy()
+from imagematerials.util import dataset_to_array, pandas_to_xarray
+for df_name, df in results_dict.items():
+        if df_name in conversion_table:
+            data_xar_dataset = pandas_to_xarray(df, unit_mapping)
+            data_xarray = dataset_to_array(data_xar_dataset, *conversion_table[df_name])
 
 
 
