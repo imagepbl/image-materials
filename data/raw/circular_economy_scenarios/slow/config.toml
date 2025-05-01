@@ -1,0 +1,8 @@
+[vehicles]
+base_year = 2019
+target_year = 2060
+
+[vehicles.data_files]
+lifetimes = '....csv'
+material_composation = '.csv'
+weights = '.csv'

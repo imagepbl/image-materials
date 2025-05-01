@@ -54,7 +54,7 @@ from imagematerials.vehicles.constants import (
 from imagematerials.vehicles.modelling_functions import interpolate, tkms_to_nr_of_vehicles_fixed
 
 
-def preprocess(base_dir: str):
+def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_config: dict):
     """Wrapper function for the preprocessing part of the VEMA script.
 
     Args:
@@ -208,7 +208,7 @@ def preprocess(base_dir: str):
 
     # IMAGE scenario files (total demand in Tkms & Pkms + vehicle shares)
     tonkms_Mtkms: pd.DataFrame = read_mym_df(
-        image_folder.joinpath("trp_frgt_Tkm.out")). rename(
+        climate_policy_config['config_file_path'] / climate_policy_config['data_files']['transport']['freight']['Tkm']). rename(
         columns={
             "DIM_1": "region"})
     # The tonne kilometres of freight vehicles of the IMAGE/TIMER SSP2 (in
