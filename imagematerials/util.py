@@ -244,7 +244,7 @@ def read_circular_economy_config(scenario_folders: dict) -> dict:
         under the specified labels.
     """
     config_dict = {}
-    for key, scenario_folder in scenario_folders:
+    for key, scenario_folder in scenario_folders.items():
         config_dict[key] = _read_config(scenario_folder)
     return config_dict
 
