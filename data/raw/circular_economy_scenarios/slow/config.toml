@@ -1,8 +1,28 @@
 [vehicles]
 base_year = 2019
 target_year = 2060
+circular_economy_scenario = 'slow'
 
 [vehicles.data_files]
 lifetimes = '....csv'
 material_composation = '.csv'
 weights = '.csv'
+
+[vehicles.lifetime_increase_percent_slow]
+air_pas = 10
+air_freight = 10
+rail_reg = 38
+rail_hst = 38
+rail_freight = 38
+sea_shipping_small = 33
+sea_shipping_med = 33
+sea_shipping_large = 33
+sea_shipping_vl = 33
+LCV = 10
+MFT = 10
+HFT = 10
+midi_bus = 20
+reg_bus = 20
+inland_shipping = 33
+bicycle = 20
+car = 22.5
