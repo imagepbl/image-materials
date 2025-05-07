@@ -71,9 +71,12 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
 
     idx = pd.IndexSlice          # needed for slicing multi-index
 
-    target_year = circular_economy_config['config_file_path'] / circular_economy_config['vehicles']['target_year']
-    base_year = circular_economy_config['config_file_path'] /circular_economy_config['vehicles']['base_year']
-    circular_economy_scenario = circular_economy_config['config_file_path'] /circular_economy_config['vehicles']['circular_economy_scenario']
+    # Scenario settings
+    if 'slow' in circular_economy_config.keys():
+        target_year = circular_economy_config['slow']['vehicles']['target_year']
+        base_year = circular_economy_config['slow']['vehicles']['base_year']
+        lifetime_increase = circular_economy_config['slow']['vehicles']['lifetime_increase_percent_slow']
+
 
     # Reading all csv files for vehicles and ships that are external to IMAGE
 
@@ -147,8 +150,6 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
     # other lifetime related settings (standard devition, or alternative
     # parameterisation)
 
-    lifetime_increase = circular_economy_config['config_file_path']/ circular_economy_config['vehicles']['lifetime_increase_percent_slow']
-
     kilometrage: pd.DataFrame = pd.read_csv(base_input_data_path.
                                             joinpath(
                                                 FOLDER, "kilometrage.csv"),
@@ -216,33 +217,33 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
     # The tonne kilometres of freight vehicles of the IMAGE/TIMER SSP2 (in
     # Mega Tkm)
     passengerkms_Tpkms: pd.DataFrame = read_mym_df(
-        climate_policy_config['config_file_path'] / climate_policy_config['data_files']['passenger']['kilometers']). rename(
+        climate_policy_config['config_file_path'] / climate_policy_config['data_files']['transport']['passenger']['kilometers']). rename(
         columns={
             "DIM_1": "region"})
     # The passenger kilometres from the IMAGE/TIMER SSP2 (in Tera Pkm)
     buses_vshares: pd.DataFrame = read_mym_df(
-        climate_policy_config['config_file_path'] / climate_policy_config['data_files']['passenger']['Vshare_bus']). rename(
+        climate_policy_config['config_file_path'] / climate_policy_config['data_files']['transport']['passenger']['Vshare_bus']). rename(
         columns={
             "DIM_1": "region"})
     # The vehicle shares of buses of the SSP2                            MIND!
     # FOR the BL this is still the OLD SSP2 file REPLACE LATER
     car_vshares: pd.DataFrame = read_mym_df(
-        climate_policy_config['config_file_path'] / climate_policy_config['data_files']['passenger']['Vshare_car']). rename(
+        climate_policy_config['config_file_path'] / climate_policy_config['data_files']['transport']['passenger']['Vshare_car']). rename(
         columns={
             "DIM_1": "region"})
     # The vehicle shares of passenger cars of the SSP2
     medtruck_vshares: pd.DataFrame = read_mym_df(
-        climate_policy_config['config_file_path'] / climate_policy_config['data_files']['freight']['Vshare_MedTruck']). rename(
+        climate_policy_config['config_file_path'] / climate_policy_config['data_files']['transport']['freight']['Vshare_MedTruck']). rename(
         columns={
             "DIM_1": "region"})
     # The vehicle shares of trucks (medium) of the SSP2
     hvytruck_vshares: pd.DataFrame = read_mym_df(
-        climate_policy_config['config_file_path'] / climate_policy_config['data_files']['freight']['Vshare_HvyTruck']). rename(
+        climate_policy_config['config_file_path'] / climate_policy_config['data_files']['transport']['freight']['Vshare_HvyTruck']). rename(
         columns={
             "DIM_1": "region"})
     # The vehicle shares of trucks (heavy) of the SSP2
     loadfactor_car_data: pd.DataFrame = read_mym_df(
-        climate_policy_config['config_file_path'] / climate_policy_config['data_files']['passenger']['load']). rename(
+        climate_policy_config['config_file_path'] / climate_policy_config['data_files']['transport']['passenger']['load']). rename(
         columns={
             "DIM_1": "region"})
     # The loadfactor of passenger vehicles (occupation in nr of
@@ -409,7 +410,7 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
     lifetimes_vehicles = lifetimes_vehicles.unstack(['mode', 'data'])
     lifetimes_vehicles = interpolate(pd.DataFrame(lifetimes_vehicles))
 
-    if circular_economy_scenario == "slow":
+    if 'slow' in circular_economy_config.keys():
         lifetimes_vehicles = lifetimes_vehicles[lifetimes_vehicles.index <= base_year].copy()
         lifetimes_vehicles.loc[target_year] = lifetimes_vehicles.loc[base_year]
 
