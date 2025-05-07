@@ -35,9 +35,6 @@ class ResourceModel():
         if image_mat_available == True:
             self.image_mat_data = pd.read_csv(f'{path_input_data}/{resource_group}/image_mat_{self.resource}.csv', 
                                               index_col=0)
-            # # read in cleaned data - other analysis dealt with negative values
-            # self.historic_other_fraction_consumption = pd.read_csv(f'{path_input_data}/{resource_group}/other_fraction_{self.resource}.csv', 
-            #                                                        index_col=0)
         
         # start year & end year of data
         self.start_year = start_year
@@ -47,9 +44,9 @@ class ResourceModel():
         self.regions = self.historic_consumption_data.columns.to_list()
         
         # IMAGE data regarding gdp, population, ...
-        (self.gdp, self.gdp_global, 
-         self.gdp_pc, self.pop, 
-         self.gdp_pc_100, self.pop_100) = calculate_gdp()
+        (self.gdp_original, self.gdp_global_original, 
+         self.gdp_pc_original, self.pop_original, 
+         self.gdp_pc_100_original, self.pop_100_original) = calculate_gdp()
         
         
     def data_grouped_regions(self, regions_grouping):
@@ -63,10 +60,10 @@ class ResourceModel():
         # gdp etc per region is overwritten if IMAGE regions are summarized
         (self.gdp, self.pop, 
          self.pop_100, self.gdp_pc_100) = summarize_IMAGE_regions(regions_dict, 
-                                                                  self.gdp, 
-                                                                  self.pop, 
-                                                                  self.pop_100, 
-                                                                  self.gdp_pc_100)
+                                                                  self.gdp_original, 
+                                                                  self.pop_original, 
+                                                                  self.pop_100_original, 
+                                                                  self.gdp_pc_100_original)
         
         
     def match_MAT_data_to_regions_year(self, match_external_regions: bool):  
@@ -170,9 +167,39 @@ class ResourceModel():
             # list of projections of all regions to DataFrame
         self.projection_per_region = pd.DataFrame(self.projection_per_region).transpose()
         self.projection_per_region.columns = self.pop.columns
-        
-        # self.start_year = int(self.start_year)
+    
         self.projection_per_region.index = np.arange(2017, 2101)
+
+    
+    def project_on_total_IMAGE_regions(self, REGION_TO_CLASS_DICT, GROUPS_TO_IMAGE_DICT):
+        self.projection_per_region_IMAGE = []
+
+        # loop over every region
+        for region in REGION_TO_CLASS_DICT.values():
+            if region == "class_ 27":
+                continue
+            # get gdp_pc as predictor
+            gdp_pc_region = self.gdp_pc_100_original.loc[self.end_year:, region]
+            
+            # reshape gdp_pc
+            gdp_pc_region = gdp_pc_region.to_numpy().reshape(len(gdp_pc_region), 1)   
+
+            for key, value in GROUPS_TO_IMAGE_DICT.items():
+                if region in value:
+                    # use predict function and model for projection
+                    if self.region_model_match.get(key) is None:
+                        # print(region, 'could not be projected')
+                        continue
+                    region_projected_data = self.region_model_match.get(key).predict(gdp_pc_region)
+                    # numpy array from nd array to 1d array
+                    region_projected_data = region_projected_data.ravel()
+                    self.projection_per_region_IMAGE.append(region_projected_data)
+    
+            # list of projections of all regions to DataFrame
+        self.projection_per_region_IMAGE = pd.DataFrame(self.projection_per_region_IMAGE).transpose()
+        self.projection_per_region_IMAGE.columns = self.pop_original.columns
+        
+        self.projection_per_region_IMAGE.index = np.arange(2017, 2101)
      
         
 
