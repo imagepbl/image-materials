@@ -4,6 +4,9 @@ from typing import Optional, Union
 import numpy as np
 import xarray as xr
 
+from scipy.stats import norm
+from scipy.special import gamma
+
 from imagematerials.constants import SUBTYPE_SEPARATOR
 
 
@@ -159,3 +162,19 @@ def import_from_netcdf(in_fp: Union[Path, str]) -> dict:
     prep_data_dict["lifetimes"] = {dist_name: arr.dropna("Type")
                                             for dist_name, arr in lt.items()}
     return prep_data_dict
+
+def expected_weibull(shape, scale):
+    return scale * gamma(1 + 1 / shape)
+
+def expected_folded_normal(mu, sigma):
+    return sigma * np.sqrt(2 / np.pi) * np.exp(-mu**2 / (2 * sigma**2)) + mu * (1 - 2 * norm.cdf(-mu / sigma))
+
+
+def compute_expected_weibull(params):
+    shape = params[0]
+    scale = params[1]
+    return expected_weibull(shape, scale)
+
+def compute_expected_folded(params):
+    mu, sigma = params[0], params[1]
+    return expected_folded_normal(mu, sigma)
