@@ -1,6 +1,7 @@
 [buildings]
 base_year = 2020
 target_year = 2060
+scenario = base
 
 [buildings.residential.2020.useful_floor_pc]
 Canada = 60.6
