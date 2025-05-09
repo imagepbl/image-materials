@@ -171,3 +171,27 @@ maintenance_lifetime_per_mode = {
     'Regular Buses': 13,
     'Trains': 35
 }
+
+all_types = ['Bikes', 'Cars', 'Cars - BEV', 'Cars - FCV', 'Cars - HEV',
+       'Cars - ICE', 'Cars - PHEV', 'Cars - Trolley', 'Freight Planes',
+       'Freight Trains', 'Heavy Freight Trucks',
+       'Heavy Freight Trucks - BEV', 'Heavy Freight Trucks - FCV',
+       'Heavy Freight Trucks - HEV', 'Heavy Freight Trucks - ICE',
+       'Heavy Freight Trucks - PHEV', 'Heavy Freight Trucks - Trolley',
+       'High Speed Trains', 'Inland Ships', 'Large Ships',
+       'Light Commercial Vehicles', 'Light Commercial Vehicles - BEV',
+       'Light Commercial Vehicles - FCV',
+       'Light Commercial Vehicles - HEV',
+       'Light Commercial Vehicles - ICE',
+       'Light Commercial Vehicles - PHEV',
+       'Light Commercial Vehicles - Trolley', 'Medium Freight Trucks',
+       'Medium Freight Trucks - BEV', 'Medium Freight Trucks - FCV',
+       'Medium Freight Trucks - HEV', 'Medium Freight Trucks - ICE',
+       'Medium Freight Trucks - PHEV', 'Medium Freight Trucks - Trolley',
+       'Medium Ships', 'Midi Buses', 'Midi Buses - BEV',
+       'Midi Buses - FCV', 'Midi Buses - HEV', 'Midi Buses - ICE',
+       'Midi Buses - PHEV', 'Midi Buses - Trolley', 'Passenger Planes',
+       'Regular Buses', 'Regular Buses - BEV', 'Regular Buses - FCV',
+       'Regular Buses - HEV', 'Regular Buses - ICE',
+       'Regular Buses - PHEV', 'Regular Buses - Trolley', 'Small Ships',
+       'Trains', 'Very Large Ships']

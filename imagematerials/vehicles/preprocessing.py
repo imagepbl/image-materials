@@ -50,7 +50,8 @@ from imagematerials.vehicles.constants import (
     typical_modes,
     unit_mapping,
     years_range,
-    maintenance_lifetime_per_mode
+    maintenance_lifetime_per_mode,
+    all_types
 )
 from imagematerials.vehicles.modelling_functions import interpolate, tkms_to_nr_of_vehicles_fixed
 from imagematerials.concepts import vehicle_knowledge_graph
@@ -439,7 +440,7 @@ def preprocessing(base_dir: str):
 
     maintenance_material_per_year = (maintenance_material / expected_lifetimes)
     maintenance_material_per_year_broadcasted = vehicle_knowledge_graph.rebroadcast_xarray_impute(
-        maintenance_material_per_year, all_modes)
+        maintenance_material_per_year, all_types)
 
     # Calculate maintenace material need in kg material per year per kg vehicle
 
