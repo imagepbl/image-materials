@@ -435,9 +435,11 @@ def preprocessing(base_dir: str):
         name="vehicle_lifetime"
     )
 
+    all_modes = list(material_fractions_typical.coords['Type'].values)
+
     maintenance_material_per_year = (maintenance_material / expected_lifetimes)
     maintenance_material_per_year_broadcasted = vehicle_knowledge_graph.rebroadcast_xarray_impute(
-        maintenance_material_per_year, modes)
+        maintenance_material_per_year, all_modes)
 
     # Calculate maintenace material need in kg material per year per kg vehicle
 
