@@ -17,7 +17,7 @@ import numpy as np
 
 from imagematerials.distribution import ALL_DISTRIBUTIONS, NAME_TO_DIST
 from imagematerials.read_mym import read_mym_df
-from imagematerials.util import dataset_to_array, pandas_to_xarray, compute_expected_folded, compute_expected_weibull
+from imagematerials.util import dataset_to_array, pandas_to_xarray
 from imagematerials.vehicles.constants import (
     END_YEAR,
     FOLDER,
@@ -51,10 +51,9 @@ from imagematerials.vehicles.constants import (
     unit_mapping,
     years_range,
     maintenance_lifetime_per_mode,
-    all_types
 )
 from imagematerials.vehicles.modelling_functions import interpolate, tkms_to_nr_of_vehicles_fixed
-from imagematerials.concepts import vehicle_knowledge_graph
+#from imagematerials.concepts import vehicle_knowledge_graph
 
 
 def preprocess(base_dir: str):
@@ -436,11 +435,11 @@ def preprocess(base_dir: str):
         name="vehicle_lifetime"
     )
 
-    all_modes = list(material_fractions_typical.coords['Type'].values)
+    #all_modes = list(material_fractions_typical.coords['Type'].values)
 
-    maintenance_material_per_year = (maintenance_material / expected_lifetimes)
-    maintenance_material_per_year_broadcasted = vehicle_knowledge_graph.rebroadcast_xarray_impute(
-        maintenance_material_per_year, all_types)
+    maintenance_material_per_year_broadcasted = (maintenance_material / expected_lifetimes)
+    #maintenance_material_per_year_broadcasted = vehicle_knowledge_graph.rebroadcast_xarray_impute(
+    #    maintenance_material_per_year, all_types)
 
     # Calculate maintenace material need in kg material per year per kg vehicle
 
@@ -696,21 +695,6 @@ def preprocess(base_dir: str):
     preprocessing_results_xarray["lifetimes"] = convert_life_time_vehicles(preprocessing_results_xarray["lifetimes"])
     preprocessing_results_xarray["stocks"] = preprocessing_results_xarray.pop("total_nr_vehicles")
     preprocessing_results_xarray["shares"] = preprocessing_results_xarray.pop("vehicle_shares")
-
-    # Copy dimensiomns from material_fractions for xr_maintenance_material
-    materials = preprocessing_results_xarray['material_fractions'].coords["material"]
-    types = preprocessing_results_xarray['material_fractions'].coords["Type"]
-
-    # Initialize xr_maintenance_material with zeros
-    xr_maintenance_material = xr.DataArray(
-        np.zeros((len(materials), len(types))),  # Shape based on dimensions
-        dims=("material", "Type"),
-        coords={"material": materials, "Type": types}
-    )
-
-    # Assign values from data in xr_maintenance_material where Type contains "Cars"
-    cars_mask = np.char.find(types.astype(str), "Cars") >= 0  # Find entries containing "Cars"
-    xr_maintenance_material.loc[{"Type": types[cars_mask]}] = maintenance_material["total_material_per_km"].values.reshape(-1, 1)
 
     preprocessing_results_xarray["maintenance_material_fractions"] = maintenance_material_per_year_broadcasted
 
