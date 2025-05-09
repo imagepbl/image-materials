@@ -160,3 +160,14 @@ VARIANT = "2D_RE"
 PROJECT = "mock_project"
 FOLDER = SCEN + "_" + VARIANT
 OUTPUT_FOLDER = base_dir.joinpath("..", "..", "output", PROJECT, FOLDER)
+
+maintenance_lifetime_per_mode = {
+    'Cars': 14,
+    'Heavy Freight Trucks': 8,
+    'High Speed Trains': 30,
+    'Light Commercial Vehicles': 14,
+    'Medium Freight Trucks': 8,
+    'Midi Buses': 13,
+    'Regular Buses': 13,
+    'Trains': 35
+}

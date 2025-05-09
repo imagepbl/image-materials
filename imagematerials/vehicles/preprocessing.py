@@ -50,6 +50,7 @@ from imagematerials.vehicles.constants import (
     typical_modes,
     unit_mapping,
     years_range,
+    maintenance_lifetime_per_mode
 )
 from imagematerials.vehicles.modelling_functions import interpolate, tkms_to_nr_of_vehicles_fixed
 from imagematerials.concepts import vehicle_knowledge_graph
@@ -95,7 +96,7 @@ def preprocessing(base_dir: str):
     # market model & costs in https://doi.org/10.1016/j.resconrec.2020.105200 - since this is scenario dependent it's
     # placed under the "IMAGE" scenario folder
 
-    maintenance_material : pd.DataFrame = pd.read_csv(
+    maintenance_material_pd : pd.DataFrame = pd.read_csv(
         standard_input_data_path. joinpath("all_vehicle_maintenance_image.csv"), index_col=0)
 
     # Files related to the international shipping
@@ -204,11 +205,6 @@ def preprocessing(base_dir: str):
             0, 1])
     # The material fraction of storage technologies (used to get the vehicle
     # battery composition)
-
-    maintenance_material_pd : pd.DataFrame = pd.read_csv(
-        base_input_data_path. joinpath(
-            FOLDER,
-            "all_vehicle_maintenance_image.csv"), index_col=0)
 
     #  Reading all out files for vehicles and ships that are internal to IMAGE
 
@@ -415,33 +411,10 @@ def preprocessing(base_dir: str):
 
     # Calculate extended lifetime per mode
 
-    params_folded = lifetimes_vehicles.sel(Time=2020).drop_vars("Time")
-    params_weibull = lifetimes_vehicles.sel(Time=2020).drop_vars("Time")
 
-    expected_folded = xr.apply_ufunc(
-        compute_expected_folded,
-        params_folded,
-        input_core_dims=[["ScipyParam"]],
-        output_core_dims=[[]],
-        vectorize=True,
-        output_dtypes=[float]
-    )
-
-    expected_weibull = xr.apply_ufunc(
-        compute_expected_weibull,
-        params_weibull,
-        input_core_dims=[["ScipyParam"]],
-        output_core_dims=[[]],
-        vectorize=True,
-        output_dtypes=[float]
-    )
-
-    expected_lifetimes = expected_folded.fillna(expected_weibull)
+    
 
     # Calculate maintenace material need in kg material per kg vehicle
-    materials = material_fractions_simple.coords["material"]
-    types = material_fractions_simple.coords["Type"] #TODO how to relate this to the knowledge graph or data?
-
     maintenance_material_pd['Li'] = 0
     maintenance_material_pd['Mn'] = 0
     maintenance_material_pd['Ni'] = 0
@@ -454,9 +427,17 @@ def preprocessing(base_dir: str):
     stacked_maintenance_material_xr = stacked_maintenance_material.to_xarray()
     maintenance_material = dataset_to_array(stacked_maintenance_material_xr, ["Type", "material"], [])
 
+    modes = list(maintenance_material.coords['Type'].values)
+    expected_lifetimes = xr.DataArray(
+        data=[maintenance_lifetime_per_mode[mode] for mode in modes],
+        dims=["Type"],
+        coords={"Type": modes},
+        name="vehicle_lifetime"
+    )
+
     maintenance_material_per_year = (maintenance_material / expected_lifetimes)
     maintenance_material_per_year_broadcasted = vehicle_knowledge_graph.rebroadcast_xarray_impute(
-        maintenance_material_per_year, types.values)
+        maintenance_material_per_year, modes)
 
     # Calculate maintenace material need in kg material per year per kg vehicle
 
@@ -659,7 +640,6 @@ def preprocessing(base_dir: str):
         'battery_shares': battery_shares,
         'weight_boats': weight_boats,
         'vehicle_shares_typical': vehicle_shares_typical,
-        'maintenance_material_fractions': maintenance_material_per_year_broadcasted
     }
     
     
@@ -684,7 +664,6 @@ def preprocessing(base_dir: str):
         "battery_shares": (["Cohort"], ["battery"],),
         "weight_boats": (["Cohort"], ["size"],),
         "vehicle_shares_typical": (["Cohort"], ["Type", "SubType", "Region"], {"Type": ["Type", "SubType"]}),
-        'maintenance_material_fractions':(["Type","material"])
     }
     for df_name, df in results_dict.items():
         if df_name in conversion_table:
@@ -714,6 +693,7 @@ def preprocessing(base_dir: str):
     preprocessing_results_xarray["lifetimes"] = convert_life_time_vehicles(preprocessing_results_xarray["lifetimes"])
     preprocessing_results_xarray["stocks"] = preprocessing_results_xarray.pop("total_nr_vehicles")
     preprocessing_results_xarray["shares"] = preprocessing_results_xarray.pop("vehicle_shares")
+    preprocessing_results_xarray["maintenance_material_fractions"] = maintenance_material_per_year_broadcasted
 
     # TODO: vemamodelling.py works with dict of dfs and not only dict of xarrays, therefore now both are returned (for now)
     return results_dict, preprocessing_results_xarray
