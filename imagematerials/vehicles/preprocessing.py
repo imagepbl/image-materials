@@ -57,7 +57,7 @@ from imagematerials.vehicles.modelling_functions import interpolate, tkms_to_nr_
 from imagematerials.concepts import vehicle_knowledge_graph
 
 
-def preprocessing(base_dir: str):
+def preprocess(base_dir: str):
     """Wrapper function for the preprocessing part of the VEMA script.
 
     Args:
@@ -696,10 +696,31 @@ def preprocessing(base_dir: str):
     preprocessing_results_xarray["lifetimes"] = convert_life_time_vehicles(preprocessing_results_xarray["lifetimes"])
     preprocessing_results_xarray["stocks"] = preprocessing_results_xarray.pop("total_nr_vehicles")
     preprocessing_results_xarray["shares"] = preprocessing_results_xarray.pop("vehicle_shares")
+
+    # Copy dimensiomns from material_fractions for xr_maintenance_material
+    materials = preprocessing_results_xarray['material_fractions'].coords["material"]
+    types = preprocessing_results_xarray['material_fractions'].coords["Type"]
+
+    # Initialize xr_maintenance_material with zeros
+    xr_maintenance_material = xr.DataArray(
+        np.zeros((len(materials), len(types))),  # Shape based on dimensions
+        dims=("material", "Type"),
+        coords={"material": materials, "Type": types}
+    )
+
+    # Assign values from data in xr_maintenance_material where Type contains "Cars"
+    cars_mask = np.char.find(types.astype(str), "Cars") >= 0  # Find entries containing "Cars"
+    xr_maintenance_material.loc[{"Type": types[cars_mask]}] = maintenance_material["total_material_per_km"].values.reshape(-1, 1)
+
     preprocessing_results_xarray["maintenance_material_fractions"] = maintenance_material_per_year_broadcasted
 
+    # TODO: Check if this is correct
+    bad_coords = preprocessing_results_xarray["battery_materials"].coords["battery"]
+    new_coords = [x if x != "LMO" else "LMO/LCO" for x in bad_coords.values]
+    preprocessing_results_xarray["battery_materials"] = preprocessing_results_xarray["battery_materials"].assign_coords({"battery": new_coords})
+
     # TODO: vemamodelling.py works with dict of dfs and not only dict of xarrays, therefore now both are returned (for now)
-    return results_dict, preprocessing_results_xarray
+    return preprocessing_results_xarray
 
 
 

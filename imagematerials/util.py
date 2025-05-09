@@ -1,12 +1,11 @@
 from pathlib import Path
 from typing import Optional, Union
 
+import netCDF4
 import numpy as np
 import xarray as xr
 
-from scipy.stats import norm
-from scipy.special import gamma
-
+from imagematerials.concepts import KnowledgeGraph
 from imagematerials.constants import SUBTYPE_SEPARATOR
 
 
@@ -126,7 +125,7 @@ def merge_dims(xr_array, dim_one, dim_two):
     return new_array
 
 
-def export_to_netcdf(prep_data: dict, out_fp: Union[Path, str]):
+def export_to_netcdf(prep_data: dict, out_fp):
     """Export the xarray data to a netcdf4 file.
 
     Parameters
@@ -139,11 +138,12 @@ def export_to_netcdf(prep_data: dict, out_fp: Union[Path, str]):
     """
     new_prep_data = {key: val for key, val in prep_data.items()}
     lifetimes = new_prep_data.pop("lifetimes")
-    xr.Dataset(new_prep_data).to_netcdf(out_fp, group="main", engine="netcdf4")
+    # xr.Dataset(new_prep_data).to_netcdf(out_fp, group="main", engine="netcdf4")
     xr.Dataset(lifetimes).to_netcdf(out_fp, group="lifetimes", mode="a", engine="netcdf4")
+    for key, data in new_prep_data.items():
+        data.to_netcdf(out_fp, group=key, mode="a", engine="netcdf4")
 
-
-def import_from_netcdf(in_fp: Union[Path, str]) -> dict:
+def import_from_netcdf(in_fp) -> dict:
     """Import the xarray data from a netcdf4 file.
 
     Parameters
@@ -156,25 +156,54 @@ def import_from_netcdf(in_fp: Union[Path, str]) -> dict:
         Dictionary containing the data arrays and datasets.
 
     """
+    prep_data_dict = {}
     lt = xr.open_dataset(in_fp, group="lifetimes", engine="netcdf4").load()
-    prep_data = xr.open_dataset(in_fp, group="main", engine="netcdf4").load()
-    prep_data_dict = {key: value for key, value in prep_data.items()}
     prep_data_dict["lifetimes"] = {dist_name: arr.dropna("Type")
                                             for dist_name, arr in lt.items()}
+    # prep_data = xr.open_dataset(in_fp, group="main", engine="netcdf4").load()
+    # prep_data_dict = {key: value for key, value in prep_data.items()}
+    with netCDF4.Dataset(in_fp, "r") as data:
+        all_groups = list(data.groups.keys())
+    all_groups.remove("lifetimes")
+    for key in all_groups:
+        prep_data_dict[key] = xr.open_dataarray(in_fp, group=key, engine="netcdf4").load()
+        if key == "knowledge_graph":
+            prep_data_dict[key] = KnowledgeGraph.from_dataarray(prep_data_dict[key])
     return prep_data_dict
 
-def expected_weibull(shape, scale):
-    return scale * gamma(1 + 1 / shape)
+def summarize_prep_data(data):
+    all_summary = {}
+    for data_name, array in data.items():
+        if isinstance(array, (dict, xr.Dataset)):
+            all_summary[data_name] = summarize_prep_data(array)
+        elif isinstance(array, xr.DataArray):
+            all_summary[data_name] = _summarize_array(array)
+        elif isinstance(array, KnowledgeGraph):
+            continue
+        else:
+            raise ValueError(f"Cannot compare data with name '{data_name}' with type {type(array)}")
+    return all_summary
 
-def expected_folded_normal(mu, sigma):
-    return sigma * np.sqrt(2 / np.pi) * np.exp(-mu**2 / (2 * sigma**2)) + mu * (1 - 2 * norm.cdf(-mu / sigma))
+def _summarize_array(array):
+    all_summary = {}
+    for drop_coor in array.coords.keys():
+        sum_over = set(x for x in list(array.coords.keys())) - set({drop_coor})
+        summary = array.sum(sum_over)
+        all_summary[drop_coor] = _listify(summary.to_dict())
+    return all_summary
 
+def _listify(data):
+    if isinstance(data, dict):
+        return {key: _listify(value) for key, value in data.items()}
+    elif isinstance(data, tuple):
+        return list(data)
+    return data
 
-def compute_expected_weibull(params):
-    shape = params[0]
-    scale = params[1]
-    return expected_weibull(shape, scale)
-
-def compute_expected_folded(params):
-    mu, sigma = params[0], params[1]
-    return expected_folded_normal(mu, sigma)
+def rebroadcast_prep_data(prep_data, knowledge_graph, dim, output_coords):
+    new_prep_data = {}
+    for data_name, data in prep_data.items():
+        if not isinstance(data, xr.DataArray) or dim not in data.coords:
+            new_prep_data[data_name] = data
+        else:
+            new_prep_data[data_name] = knowledge_graph.rebroadcast_xarray(data, output_coords, dim=dim)
+    return new_prep_data
