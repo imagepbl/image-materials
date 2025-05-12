@@ -7,10 +7,32 @@ import scipy
 import warnings
 from pathlib import Path
 
+# path_current = Path(__file__).resolve().parent # absolute path of file
+# path_base = path_current.parent.parent # base path of the project -> image-materials
+# sys.path.append(str(path_base))
+
 from imagematerials.distribution import ALL_DISTRIBUTIONS, NAME_TO_DIST
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, pandas_to_xarray
-# from imagematerials.electricity.modelling_functions import
+# from imagematerials.electricity.modelling_functions import MNLogit, stock_tail #TODO: not working, why??
+def stock_tail(stock):
+    zero_value = [0 for i in range(0,regions)]
+    stock_used = pd.DataFrame(stock).reindex_like(stock)
+    stock_used.loc[first_year_grid] = zero_value  # set all regions to 0 in the year of initial operation
+    stock_new  = stock_used.reindex(list(range(first_year_grid,outyear+1))).interpolate()
+    return stock_new
+# Multinomial Logit function, assumes input of an ordered dataframe with rows as years and columns as technologies, values as prices. Logitpar is the calibrated Logit parameter (usually a nagetive number between 0 and 1)
+def MNLogit(df, logitpar):
+    new_dataframe = pd.DataFrame(index=df.index, columns=df.columns)
+    for year in range(df.index[0],df.index[-1]+1): #from first to last year
+        yearsum = 0
+        for column in df.columns:
+            yearsum += math.exp(logitpar * df.loc[year,column]) # calculate the sum of the prices
+        for column in df.columns:
+            new_dataframe.loc[year,column] = math.exp(logitpar * df.loc[year,column])/yearsum
+    return new_dataframe    # the retuned dataframe contains the market shares
+#-----------------------------------
+
 # from imagematerials.electricity.constants import ( # TODO: import not working at the moment
 #     START_YEAR,
 #     FIRST_YEAR,
@@ -204,6 +226,62 @@ for cat in list(storage_materials.columns.levels[1]):
    stor_materials_interpol.loc[idx[storage_materials.columns.levels[0].max(),:],cat] = storage_materials.loc[:, idx[storage_materials.columns.levels[0].max(),cat]].to_numpy()                # set the last year (2100) values to the last available values in the dataset (for the year 2050) 
    stor_materials_interpol.loc[idx[:,:],cat] = stor_materials_interpol.loc[idx[:,:],cat].unstack().astype('float64').interpolate().stack()
 
+# Lifetimes #
+
+# First the lifetime of storage technologies needs to be defined over time, before running the dynamic stock function
+# before 2018
+for year in reversed(range(startyear,storage_start)):
+    # storage_lifetime_interpol = pd.concat([storage_lifetime_interpol, pd.Series(storage_lifetime_interpol.loc[storage_lifetime_interpol.first_valid_index()], name=year)])
+    row = pd.DataFrame([storage_lifetime_interpol.loc[storage_lifetime_interpol.first_valid_index()]])
+    storage_lifetime_interpol.loc[year] = row.iloc[0]
+# after 2030
+for year in range(2030+1,outyear+1):
+    # storage_lifetime_interpol = pd.concat([storage_lifetime_interpol, pd.Series(storage_lifetime_interpol.loc[storage_lifetime_interpol.last_valid_index()], name=year)])
+    row = pd.DataFrame([storage_lifetime_interpol.loc[storage_lifetime_interpol.last_valid_index()]])
+    storage_lifetime_interpol.loc[year] = row.iloc[0]
+
+storage_lifetime_interpol = storage_lifetime_interpol.sort_index(axis=0)
+# drop the PHS from the interpolated lifetime frame, as the PHS is calculated separately
+storage_lifetime_interpol = storage_lifetime_interpol.drop(columns=['PHS'])
+
+# Market Shares #
+
+# Determine MARKET SHARE of the storage capacity using a multi-nomial logit function
+# determine the annual % decline of the costs based on the 2018-2030 data (original, before applying the malus)
+decline = ((storage_costs_interpol.loc[storage_start,:]-storage_costs_interpol.loc[storage_end,:])/(storage_end-storage_start))/storage_costs_interpol.loc[storage_start,:]
+decline_used = decline*storage_ltdecline
+
+# storage_costs_interpol.index = storage_malus_interpol.index # ADDED, to avoid index mismatch in the next step
+storage_costs_new = storage_costs_interpol * storage_malus_interpol
+
+# calculate the development from 2030 to 2050 (using annual price decline)
+for year in range(storage_end+1,2050+1):
+    # print(year)
+    # storage_costs_new = storage_costs_new.append(pd.Series(storage_costs_new.loc[storage_costs_new.last_valid_index()]*(1-decline_used), name=year))
+    # storage_costs_new = pd.concat([storage_costs_new, pd.Series(storage_costs_new.loc[storage_costs_new.last_valid_index()] * (1 - decline_used), name=year)])
+    row = pd.DataFrame([storage_costs_new.loc[storage_costs_new.last_valid_index()] * (1 - decline_used)])
+    storage_costs_new.loc[year] = row.iloc[0]
+
+# for historic price development, assume 2x AVERAGE annual price decline on all technologies, except lead-acid (so that lead-acid gets a relative price advantage from 1970-2018)
+for year in reversed(range(startyear,storage_start)):
+    # storage_costs_new = storage_costs_new.append(pd.Series(storage_costs_new.loc[storage_costs_new.first_valid_index()]*(1+(2*decline_used.mean())), name=year)).sort_index(axis=0)
+    row = pd.DataFrame([storage_costs_new.loc[storage_costs_new.first_valid_index()]*(1+(2*decline_used.mean()))])
+    storage_costs_new.loc[year] = row.iloc[0]
+
+storage_costs_new.sort_index(axis=0, inplace=True) 
+storage_costs_new.loc[1971:2017,'Deep-cycle Lead-Acid'] = storage_costs_new.loc[2018,'Deep-cycle Lead-Acid']        # restore the exception (set to constant 2018 values)
+
+# use the storage price development in the logit model to get market shares
+storage_market_share = MNLogit(storage_costs_new, -0.2)
+
+# fix the market share of storage technologies after 2050
+for year in range(2050+1,outyear+1):
+    # storage_market_share = storage_market_share.append(pd.Series(storage_market_share.loc[storage_market_share.last_valid_index()], name=year))
+    row = pd.DataFrame([storage_market_share.loc[storage_market_share.last_valid_index()]])
+    storage_market_share.loc[year] = row.iloc[0]
+
+
+
 # Car Batteries ----------
 
 # kilometrage is defined until 2008, fill 2008 values until 2100 
@@ -235,7 +313,9 @@ loadfactor.columns = region_list
 storage.columns = region_list
 
 
-# GENERATION ----------------------------------------------------------------
+#%% GENERATION ----------------------------------------------------------------
+
+region_list = list(kilometrage.columns.values)  # to get region list without running storage - TODO 
 
 gcap_tech_list = list(composition_generation.loc[:,idx[2020,:]].droplevel(axis=1, level=0).columns)    #list of names of the generation technologies (workaround to retain original order)
 gcap_material_list = list(composition_generation.index.values)  #list of materials the generation technologies
@@ -264,6 +344,19 @@ gcap_lifetime.index = gcap_lifetime.index.set_levels(gcap_tech_list, level=1)
 gcap_lifetime = gcap_lifetime.unstack().droplevel(axis=1, level=0)
 gcap_lifetime = gcap_lifetime.reindex(list(range(first_year_grid,outyear+1)), axis=0).interpolate(limit_direction='both')
 
+# Calculate the historic tail to the Gcap (stock) 
+gcap_new = pd.DataFrame(index=pd.MultiIndex.from_product([range(first_year_grid,outyear+1), region_list], names=['years', 'regions']), columns=gcap.columns)
+for tech in gcap_tech_list:
+    gcap_new.loc[idx[:,:],tech] = stock_tail(gcap.loc[idx[:,:],tech].unstack(level=1)).stack()
+
+
+# Bring dataframes into correct shape for the results_dict
+# I need: lifetimes, material intensities, stocks (GW), (sub type shares)
+
+# stocks: (years, regions) index and technologies as columns -> years as index and (technology, region) as columns
+gcap_stock = gcap_new.unstack(level='regions')
+
+
 
 ###########################################################################################################
 #%% Prep_data File
@@ -289,26 +382,42 @@ unit_mapping = {
 
 # Conversion table for all coordinates, to be removed/adapted after input tables are fixed.
 conversion_table = {
-    "total_nr_vehicles_simple": (["Time"], ["Type", "Region"],),
     "material_fractions_simple": (["Cohort"], ["Type", "material"],),
     "material_fractions_typical": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]}),
-    "vehicle_weights_simple": (["Cohort"], ["Type"],),
-    "vehicle_weights_typical": (["Cohort"], ["Type", "SubType"], {"Type": ["Type", "SubType"]}),
     "battery_weights_typical": (["Cohort"], ["Type", "SubType"], {"Type": ["Type", "SubType"]}),
     "battery_materials": (["Cohort"], ["material", "battery"],),
     "battery_shares": (["Cohort"], ["battery"],),
-    "weight_boats": (["Cohort"], ["size"],),
     "vehicle_shares_typical": (["Cohort"], ["Type", "SubType", "Region"], {"Type": ["Type", "SubType"]}),
-    "gcap_materials_interpol": (["Cohort"], ["material", "Type"],)
-    # "gcap_materials_interpol": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]})
+    # "gcap_materials_interpol": (["Cohort"], ["material", "Type"],)
+    "gcap_materials_interpol": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]})
 }
 
+gcap_materials_interpol.index.names = ["Year", "Material"]
+
+
+# results_dict = {
+#         'total_nr_vehicles_simple': total_nr_vehicles_simple,
+#         'material_fractions_simple': material_fractions_simple,
+#         'material_fractions_typical': material_fractions_typical,
+#         'vehicle_weights_simple': vehicle_weights_simple,
+#         'vehicle_weights_typical': vehicle_weights_typical,
+#         'lifetimes': lifetimes_vehicles,
+#         'battery_weights_typical': battery_weights_typical,
+#         'battery_materials': battery_materials,
+#         'battery_shares': battery_shares,
+#         'weight_boats': weight_boats,
+#         'vehicle_shares_typical': vehicle_shares_typical
+#     }
+    
+
 results_dict = {
+        'gcap_stock': gcap_stock,
         'gcap_materials_interpol': gcap_materials_interpol
 }
 
 # df = gcap_materials_interpol.copy()
 from imagematerials.util import dataset_to_array, pandas_to_xarray
+
 for df_name, df in results_dict.items():
         if df_name in conversion_table:
             data_xar_dataset = pandas_to_xarray(df, unit_mapping)
@@ -316,7 +425,30 @@ for df_name, df in results_dict.items():
 
 
 
+###########################################################################################################
+#%% Run Stock Model New
+###########################################################################################################
 
+
+
+# Define the complete timeline, including historic tail
+# time_start = prep_data["stocks"].coords["Time"].min().values
+time_start = 1960
+complete_timeline = prism.Timeline(time_start, 2060, 1)
+simulation_timeline = prism.Timeline(1970, 2060, 1)
+
+# Define the coordinates of all dimensions.
+Region = list(prep_data["stocks"].coords["Region"].values)
+Time = [t for t in complete_timeline]
+Cohort = Time
+Type = list(prep_data["stocks"].coords["Type"].values)
+material = list(prep_data["material_fractions"].coords["material"].values)
+
+# Create
+main_model_normal = GenericMainModel(
+    complete_timeline, Region=Region, Time=Time, Cohort=Cohort, Type=Type, prep_data=prep_data,
+    compute_materials=True, compute_battery_materials=False, compute_maintenance_materials=False, 
+    material=material)
 
 
 
