@@ -91,26 +91,7 @@ main_model_normal = GenericMainModel(
 #%% 0) Before we start the calculations we define the general functions used in multiple parts of the code
 ###########################################################################################################
 
-storage_lifetime_interpol = storage_lifetime.sort_index(axis=0).interpolate(axis=0)  # lifetime calculation continue with the material calculations
 
-
-# ----------------- |||| Loop to derive stock share from total stock and market (inflow) share \\\\\ ----------------------------------------------------------
-
-# First the lifetime of storage technologies needs to be defined over time, before running the dynamic stock function
-# before 2018
-for year in reversed(range(startyear,storage_start)):
-    # storage_lifetime_interpol = pd.concat([storage_lifetime_interpol, pd.Series(storage_lifetime_interpol.loc[storage_lifetime_interpol.first_valid_index()], name=year)])
-    row = pd.DataFrame([storage_lifetime_interpol.loc[storage_lifetime_interpol.first_valid_index()]])
-    storage_lifetime_interpol.loc[year] = row.iloc[0]
-# after 2030
-for year in range(2030+1,outyear+1):
-    # storage_lifetime_interpol = pd.concat([storage_lifetime_interpol, pd.Series(storage_lifetime_interpol.loc[storage_lifetime_interpol.last_valid_index()], name=year)])
-    row = pd.DataFrame([storage_lifetime_interpol.loc[storage_lifetime_interpol.last_valid_index()]])
-    storage_lifetime_interpol.loc[year] = row.iloc[0]
-
-storage_lifetime_interpol = storage_lifetime_interpol.sort_index(axis=0)
-# drop the PHS from the interpolated lifetime frame, as the PHS is calculated separately
-storage_lifetime_interpol = storage_lifetime_interpol.drop(columns=['PHS'])
 
 # Here, we define the market share of the stock based on a pre-calculation with several steps: 
 # 1) use Global total stock development, the market shares of the inflow and technology specific lifetimes to derive 
@@ -200,27 +181,23 @@ def stock_share_calc(stock, market_share, init_tech, techlist):
 
 ###########################################################################################################
 ###########################################################################################################
-#%% 1) start with materials in generation capacity (this is the easiest, as the stock AND the new capacity is pre-calculated in TIMER, 
+#%% 1) GENERATION
+###########################################################################################################
+###########################################################################################################
+
+#start with materials in generation capacity (this is the easiest, as the stock AND the new capacity is pre-calculated in TIMER, 
 # based on fixed lifetime assumptions, we only add the outflow, based on a fixed lifetime DSM and the same lifetimes as in TIMER)
-###########################################################################################################
-###########################################################################################################
 
 
 ###########################################################################################################
-#%% 1.1) Apply the DSM to find inflow & outflow of Generation capacity
+#%% 1.1) Stock Modelling (Generation)
 ###########################################################################################################
 
+# Apply the DSM to find inflow & outflow of Generation capacity
 
 from dynamic_stock_model import DynamicStockModel as DSM
    
-# In order to calculate inflow & outflow smoothly (without peaks for the initial years), we calculate a historic tail to the stock, 
-# by adding a 0 value for first year of operation (=1926), then interpolate values towards 1971
-def stock_tail(stock):
-    zero_value = [0 for i in range(0,regions)]
-    stock_used = pd.DataFrame(stock).reindex_like(stock)
-    stock_used.loc[first_year_grid] = zero_value  # set all regions to 0 in the year of initial operation
-    stock_new  = stock_used.reindex(list(range(first_year_grid,outyear+1))).interpolate()
-    return stock_new
+
 
 # first define a Function in which the stock-driven DSM is applied to return (the moving average of the) inflow & outflow for all regions
 def inflow_outflow(stock, lifetime, material_intensity, key):
@@ -261,11 +238,7 @@ def inflow_outflow(stock, lifetime, material_intensity, key):
         
     return pd.concat([inflow_mat.stack().unstack(level=1)], keys=[key], axis=1), pd.concat([outflow_mat.stack().unstack(level=1)], keys=[key], axis=1), pd.concat([stock_mat.stack().unstack(level=1)], keys=[key], axis=1)
 
-# Calculate the historic tail to the Gcap (stock) 
-gcap_new = pd.DataFrame(index=pd.MultiIndex.from_product([range(first_year_grid,outyear+1), region_list], names=['years', 'regions']), columns=gcap.columns)
 
-for tech in gcap_tech_list:
-    gcap_new.loc[idx[:,:],tech] = stock_tail(gcap.loc[idx[:,:],tech].unstack(level=1)).stack()
 
 # then apply the Dynamic Stock Model to find inflow & outflow (5yr moving average)
 index = pd.MultiIndex.from_product([list(range(startyear,outyear+1)), gcap.index.levels[1]])
@@ -276,6 +249,11 @@ gcap_stock   = pd.DataFrame(index=index, columns=pd.MultiIndex.from_product([gca
 # Materials in Gcap (in: Gcap: MW, lifetime: yrs, materials intensity: gram/MW)
 for tech in gcap_tech_list: 
     gcap_inflow.loc[idx[:,:],idx[tech,:]], gcap_outflow.loc[idx[:,:],idx[tech,:]], gcap_stock.loc[idx[:,:],idx[tech,:]] = inflow_outflow(gcap_new.loc[idx[:,:],tech].unstack(level=1), gcap_lifetime.loc[:,tech], gcap_materials_interpol.loc[idx[:,:],tech].unstack(), tech)
+
+
+###########################################################################################################
+#%% 1.2) Save Output (Generation)
+###########################################################################################################
 
 #prepare variables on materials in generation capacity (in gram) for output in csv
 gcap_stock = gcap_stock.stack().stack().unstack(level=0)               # use years as column names
@@ -295,9 +273,7 @@ gcap_materials_all = gcap_materials_all.reorder_levels([3, 2, 1, 0, 5, 4]) / 100
 gcap_materials_all.to_csv(path_elma / 'output' / scen_folder / sa_settings / 'gcap_materials_output_kt.csv') # in kt
 
 
-###########################################################################################################
-#%% Average generation material intensity calculations (originally weight is in grams)
-###########################################################################################################
+# Average generation material intensity calculations (originally weight is in grams)
 
 # total_global_gcap = gcap.sum(axis=0, level=0).loc[:outyear].sum(axis=1) # level argument in sum() has been deprecated in pandas 2.0 
 # First reset index to work more easily
@@ -312,54 +288,15 @@ total_global_wght = gcap_stock.groupby(level=[2]).sum() / 1000000      # Weight 
 intensity_gcap = total_global_wght.div(total_global_gcap, axis=1)
 intensity_gcap.to_csv(path_elma / 'output' / scen_folder / sa_settings / 'material_intensity_gcap_ton_per_MW.csv') # ton/MW
 
+
+
 ###########################################################################################################
-#%% 2) Determine MARKET SHARE of the storage capacity using a multi-nomial logit function
+###########################################################################################################
+#%% 2) STORAGE
+###########################################################################################################
 ###########################################################################################################
 
 
-# determine the annual % decline of the costs based on the 2018-2030 data (original, before applying the malus)
-decline = ((storage_costs_interpol.loc[storage_start,:]-storage_costs_interpol.loc[storage_end,:])/(storage_end-storage_start))/storage_costs_interpol.loc[storage_start,:]
-decline_used = decline*storage_ltdecline
-
-# storage_costs_interpol.index = storage_malus_interpol.index # ADDED, to avoid index mismatch in the next step
-storage_costs_new = storage_costs_interpol * storage_malus_interpol
-
-# calculate the development from 2030 to 2050 (using annual price decline)
-for year in range(storage_end+1,2050+1):
-    # print(year)
-    # storage_costs_new = storage_costs_new.append(pd.Series(storage_costs_new.loc[storage_costs_new.last_valid_index()]*(1-decline_used), name=year))
-    # storage_costs_new = pd.concat([storage_costs_new, pd.Series(storage_costs_new.loc[storage_costs_new.last_valid_index()] * (1 - decline_used), name=year)])
-    row = pd.DataFrame([storage_costs_new.loc[storage_costs_new.last_valid_index()] * (1 - decline_used)])
-    storage_costs_new.loc[year] = row.iloc[0]
-
-# for historic price development, assume 2x AVERAGE annual price decline on all technologies, except lead-acid (so that lead-acid gets a relative price advantage from 1970-2018)
-for year in reversed(range(startyear,storage_start)):
-    # storage_costs_new = storage_costs_new.append(pd.Series(storage_costs_new.loc[storage_costs_new.first_valid_index()]*(1+(2*decline_used.mean())), name=year)).sort_index(axis=0)
-    row = pd.DataFrame([storage_costs_new.loc[storage_costs_new.first_valid_index()]*(1+(2*decline_used.mean()))])
-    storage_costs_new.loc[year] = row.iloc[0]
-
-storage_costs_new.sort_index(axis=0, inplace=True) 
-storage_costs_new.loc[1971:2017,'Deep-cycle Lead-Acid'] = storage_costs_new.loc[2018,'Deep-cycle Lead-Acid']        # restore the exception (set to constant 2018 values)
-
-# Multinomial Logit function, assumes input of an ordered dataframe with rows as years and columns as technologies, values as prices. Logitpar is the calibrated Logit parameter (usually a nagetive number between 0 and 1)
-def MNLogit(df, logitpar):
-    new_dataframe = pd.DataFrame(index=df.index, columns=df.columns)
-    for year in range(df.index[0],df.index[-1]+1): #from first to last year
-        yearsum = 0
-        for column in df.columns:
-            yearsum += math.exp(logitpar * df.loc[year,column]) # calculate the sum of the prices
-        for column in df.columns:
-            new_dataframe.loc[year,column] = math.exp(logitpar * df.loc[year,column])/yearsum
-    return new_dataframe                                                                            # the retuned dataframe contains the market shares
-
-# use the storage price development in the logit model to get market shares
-storage_market_share = MNLogit(storage_costs_new, -0.2)
-
-# fix the market share of storage technologies after 2050
-for year in range(2050+1,outyear+1):
-    # storage_market_share = storage_market_share.append(pd.Series(storage_market_share.loc[storage_market_share.last_valid_index()], name=year))
-    row = pd.DataFrame([storage_market_share.loc[storage_market_share.last_valid_index()]])
-    storage_market_share.loc[year] = row.iloc[0]
 
 
 ###########################################################################################################
