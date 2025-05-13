@@ -694,8 +694,6 @@ def preprocess(base_dir: str):
                                            "Type": ["Vehicles"]})
     preprocessing_results_xarray["battery_weights"] = xr.concat((preprocessing_results_xarray["battery_weights"], xr_default_battery), dim="Type")
 
-    # Set default shares to 1..?
-
     return preprocessing_results_xarray
 
 
