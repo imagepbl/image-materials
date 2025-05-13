@@ -628,7 +628,7 @@ def preprocess(base_dir: str):
         "battery_weights_typical": (["Cohort"], ["Type", "SubType"], {"Type": ["Type", "SubType"]}),
         "battery_materials": (["Cohort"], ["material", "battery"],),
         "battery_shares": (["Cohort"], ["battery"],),
-        "weight_boats": (["Cohort"], ["size"],),
+        "weight_boats": (["Cohort"], ["Type"],),
         "vehicle_shares_typical": (["Cohort"], ["Type", "SubType", "Region"], {"Type": ["Type", "SubType"]})
     }
     for df_name, df in results_dict.items():
@@ -682,7 +682,18 @@ def preprocess(base_dir: str):
     new_coords = [x if x != "LMO" else "LMO/LCO" for x in bad_coords.values]
     preprocessing_results_xarray["battery_materials"] = preprocessing_results_xarray["battery_materials"].assign_coords({"battery": new_coords})
 
-    # TODO: vemamodelling.py works with dict of dfs and not only dict of xarrays, therefore now both are returned (for now)
+    # Fix coordinates of weight_boats and concatenate to vehicle weights
+    xr_ships = preprocessing_results_xarray.pop("weight_boats")
+    xr_ships.coords["Type"] = [f"{x} Ships" for x in xr_ships.coords["Type"].values]
+    preprocessing_results_xarray["vehicle_weights"] = xr.concat((preprocessing_results_xarray["vehicle_weights"], xr_ships), dim="Type")
+
+    # Set default battery weight to 0
+    xr_default_battery = xr.DataArray(0.0, dims=("Cohort", "Type"),
+                                      coords={
+                                          "Cohort": preprocessing_results_xarray["battery_weights"].coords["Cohort"],
+                                           "Type": ["Vehicles"]})
+    preprocessing_results_xarray["battery_weights"] = xr.concat((preprocessing_results_xarray["battery_weights"], xr_default_battery), dim="Type")
+
     return preprocessing_results_xarray
 
 
