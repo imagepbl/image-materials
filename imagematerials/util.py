@@ -205,6 +205,5 @@ def rebroadcast_prep_data(prep_data, knowledge_graph, dim, output_coords):
         if not isinstance(data, xr.DataArray) or dim not in data.coords:
             new_prep_data[data_name] = data
         else:
-            print(data_name)
             new_prep_data[data_name] = knowledge_graph.rebroadcast_xarray(data, output_coords, dim=dim)
     return new_prep_data
