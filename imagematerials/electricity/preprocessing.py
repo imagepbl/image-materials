@@ -351,12 +351,25 @@ for tech in gcap_tech_list:
 
 
 # Bring dataframes into correct shape for the results_dict
-# I need: lifetimes, material intensities, stocks (GW), (sub type shares)
+# I need:
+#   A. with only Types: stocks Types (GW), lifetimes Types, material intensities Types
+#   B. with also SubTypes: stocks Types (GW), lifetimes SubTypes, material intensities SubTypes, market shares SubTypes
 
+# A.
 # stocks: (years, regions) index and technologies as columns -> years as index and (technology, region) as columns
 gcap_stock = gcap_new.unstack(level='regions')
 
+# lifetimes
+df_mean = gcap_lifetime.copy()
+df_stdev = df_mean * stdev_mult
+df_mean.columns = [(col, 'mean') for col in df_mean.columns] # Rename columns to multi-level tuples
+df_stdev.columns = [(col, 'stdev') for col in df_stdev.columns]
+gcap_lifetime_distr = pd.concat([df_mean, df_stdev], axis=1) # Concatenate along columns
 
+# MIs: (years, material) index and technologies as columns -> years as index and (technology, Material) as columns
+gcap_materials_interpol.index.names = ["Year", "Material"]
+gcap_materials_interpol = gcap_materials_interpol.loc[:, ~(gcap_materials_interpol == 0.0).all()]
+gcap_types_materials = gcap_materials_interpol.unstack(level='Material')
 
 ###########################################################################################################
 #%% Prep_data File
@@ -378,21 +391,18 @@ unit_mapping = {
     'yr': ureg.year,
     '%': ureg.percent,
     't': ureg.tonne,
+    'MW': ureg.megawatt, #added
+    'GW': ureg.gigawatt, #added
 }
 
 # Conversion table for all coordinates, to be removed/adapted after input tables are fixed.
 conversion_table = {
-    "material_fractions_simple": (["Cohort"], ["Type", "material"],),
-    "material_fractions_typical": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]}),
-    "battery_weights_typical": (["Cohort"], ["Type", "SubType"], {"Type": ["Type", "SubType"]}),
-    "battery_materials": (["Cohort"], ["material", "battery"],),
-    "battery_shares": (["Cohort"], ["battery"],),
-    "vehicle_shares_typical": (["Cohort"], ["Type", "SubType", "Region"], {"Type": ["Type", "SubType"]}),
-    # "gcap_materials_interpol": (["Cohort"], ["material", "Type"],)
-    "gcap_materials_interpol": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]})
+    "gcap_stock": (["Time"], ["Type", "Region"],),
+    "gcap_types_materials": (["Cohort"], ["Type", "material"],)
+    # "gcap_materials_interpol": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]})
 }
 
-gcap_materials_interpol.index.names = ["Year", "Material"]
+
 
 
 # results_dict = {
@@ -412,7 +422,7 @@ gcap_materials_interpol.index.names = ["Year", "Material"]
 
 results_dict = {
         'gcap_stock': gcap_stock,
-        'gcap_materials_interpol': gcap_materials_interpol
+        'gcap_types_materials': gcap_types_materials
 }
 
 # df = gcap_materials_interpol.copy()
