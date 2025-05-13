@@ -10,6 +10,14 @@ class Node():
     synonyms: list[str] = field(default_factory=list)
     inherits_from: Optional[str] = None
 
+    def __post_init__(self):
+        if self.inherits_from is not None:
+            try:
+                self.match_coords(self.inherits_from)
+                raise ValueError(f"Cannot create node that inherits from itself: {self}.")
+            except KeyError:
+                pass
+
     def match_coords(self, input_coords):
         if isinstance(input_coords, str):
             input_coords = [input_coords]
@@ -25,34 +33,27 @@ class Node():
                            "inherits_from": self.inherits_from}
     @classmethod
     def from_dict(cls, node_dict):
-        # node_dict = json.loads(json_str)
         return cls(**node_dict)
 
 class KnowledgeGraph():
     def __init__(self, *items):
-        # nx.Graph()
         self._items: list[Node] = []
         for item in items:
             self.add(item)
-    # def __init__(self, *args):
-        # self._items = args
-        # self._items_dict = {item.name: item for item in self._items}
-        # self.validate()
 
     def add(self, node: Node):
-        """_summary_
+        """Add new node to knowledge graph and validate it.
 
         Parameters
         ----------
         node
-            _description_
+            New node to be added.
 
         Raises
         ------
         ValueError
-            _description_
-        ValueError
-            _description_
+            If the node already exists or the parent does not exist.
+
         """
         if node.name in self._items:
             raise ValueError("Node already exists.")
@@ -74,50 +75,12 @@ class KnowledgeGraph():
                 return item
             if node_name in item.synonyms:
                 return item
-        raise KeyError("Key with {}")
-
-    # def validate(self):
-    #     if len(self._items) != len(self._items_dict):
-    #         raise ValueError("Validation error: items with the same name in the knowledge graph.")
-    #     for item in self._items:
-    #         if item.inherits_from is not None and item.inherits_from not in self._items_dict:
-    #             raise ValueError(f"Validation error: {item.name} inherits from unknown item "
-    #                              f"{item.inherits_from}")
-    #     # TODO: check for cycles
+        raise KeyError(f"Key {node_name} does not exist")
 
     def find_relations(self, input_coords, output_coords):
         relations = {}
         for cur_out_coord in output_coords:
             relations[cur_out_coord] = self.find_one_relation(input_coords, cur_out_coord)
-            # if cur_out_coord in input_coords:
-            #     relations[cur_out_coord] = [cur_out_coord]
-            #     continue
-
-            # output_node = self[cur_out_coord]
-            # print([output_node.name], output_node.synonyms)
-            # if set([output_node.name] + output_node.synonyms).intersection(input_coords):
-            #     for syn in set([output_node.name] + output_node.synonyms):
-            #         if syn in input_coords:
-            #             relations[cur_out_coord] = [syn]
-            #             break
-            #     continue
-            # try:
-            #     ancestors = self._find_ancestors(input_coords, output_node)
-            # except KeyError:
-            #     ancestors = []
-            # try:
-            #     descendants = self._find_descendants(input_coords, output_node)
-            # except KeyError:
-            #     descendants = []
-
-            # if len(ancestors) > 0 and len(descendants) > 0:
-            #     raise ValueError(f"Cannot find relations, because {output_node} has both ancestors "
-            #                      "and descendants")
-            # if len(ancestors) + len(descendants) == 0:
-            #     raise ValueError("Cannot find relations of {output_node} in input coordinates.")
-
-            # print(ancestors, descendants)
-            # relations[cur_out_coord] = ancestors + descendants
         return relations
 
     def find_one_relation(self, input_coords: list[str], output_name: str) -> list[str]:
@@ -175,16 +138,6 @@ class KnowledgeGraph():
                 all_descendants.extend(self._find_descendants(input_coords, item))
         return all_descendants
 
-
-    # def _find_closest_parent(self, key: str, input_coords):
-    #     if key in input_coords:
-    #         return key
-    #     parent = self._items_dict[key].inherits_from
-    #     if parent is not None and parent in input_coords:
-    #         return parent
-    #     # TODO: Also allow parents more than one level up.
-    #     raise KeyError(f"Cannot find any available parent for {key}")
-
     def rebroadcast_xarray(self, input_array, output_coords, dim="Type"):
         if list(input_array.coords.values()) == list(output_coords):
             return input_array
@@ -225,26 +178,27 @@ def create_vehicle_graph():
     vehicle_supertypes = ["Cars", "Heavy Freight Trucks", "Light Commercial Vehicles",
                         "Medium Freight Trucks", "Regular Buses", "Midi Buses"]
 
-    vehicle_knowledge_graph = KnowledgeGraph()
-    vehicle_knowledge_graph.add(Node("Bikes"))
-    vehicle_knowledge_graph.add(Node("Airplanes"))
+    vehicle_knowledge_graph = KnowledgeGraph(Node("Vehicles"))
+    vehicle_knowledge_graph.add(Node("Bikes", inherits_from="Vehicles"))
+    vehicle_knowledge_graph.add(Node("Airplanes", inherits_from="Vehicles"))
     for subtype in ["Freight Planes", "Passenger Planes"]:
         vehicle_knowledge_graph.add(Node(subtype, inherits_from="Airplanes"))
 
     # Ships
-    vehicle_knowledge_graph.add(Node("Ships"))
+    vehicle_knowledge_graph.add(Node("Ships", inherits_from="Vehicles"))
     for subtype in ["Small Ships", "Medium Ships", "Large Ships", "Very Large Ships",
                     "Inland Ships"]:
         vehicle_knowledge_graph.add(Node(subtype, inherits_from="Ships"))
-    vehicle_knowledge_graph.add(Node("Trains"))
+    vehicle_knowledge_graph.add(Node("Trains", inherits_from="Vehicles"))
 
     # Trains
+    # TODO: Fix Trains -> Regular Trains
     for subtype in ["Freight Trains", "Trains", "High Speed Trains"]:
-        vehicle_knowledge_graph.add(Node(subtype, inherits_from="Trains"))
+        vehicle_knowledge_graph.add(Node(subtype, inherits_from="Vehicles"))
 
     # Cars, Trucks, Buses
-    vehicle_knowledge_graph.add(Node("Buses"))
-    vehicle_knowledge_graph.add(Node("Trucks"))
+    vehicle_knowledge_graph.add(Node("Buses", inherits_from="Vehicles"))
+    vehicle_knowledge_graph.add(Node("Trucks", inherits_from="Vehicles"))
     for super_type in vehicle_supertypes:
         if super_type in ["Heavy Freight Trucks", "Light Commercial Vehicles",
                           "Medium Freight Trucks"]:
