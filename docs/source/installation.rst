@@ -42,14 +42,16 @@ Step 5: Install imagematerials
 To Ensure you have the necessary dependencies installed:
 
 .. code-block:: console
+
 	pip install -r requirements.txt
 
 For **pint-xarray**, install it using:
 
 .. code-block:: console
+
 	pip install git+https://github.com/xarray-contrib/pint-xarray
 
-Step 4: Verifying Installation
+Step 6: Verifying Installation
 -------------------------------
 
 To ensure ``imagematerials`` has been successfully installed, run the following command in a Python console:
