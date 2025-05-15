@@ -68,15 +68,12 @@ def calculate_gdp(end_year_gdp_pc: int = 47, end_year_pop: int = 48,
         
         gdp_pc_2100 = gdp_pc.iloc[:, :] # 1971 - 2100 & removed global
 
-        
         pop = pop.drop(columns=['class_ 27']) #drop empty global column
         pop['class_ 27'] = pop.sum(axis = 1)
         
         pop_100 = pop_100.drop(columns=['class_ 27']) #drop empty global column
         pop_100['class_ 27'] = pop_100.sum(axis = 1)
     
-
-    # from gdp per capita and population calculate total gdp per IMAGE region and sum to get global GDP
     gdp = gdp_pc_2017*pop
     
     # depending wether global values are kept
@@ -91,8 +88,11 @@ def calculate_gdp(end_year_gdp_pc: int = 47, end_year_pop: int = 48,
     
     # fill population data with missing years by interpolation to use as x axis
     pop_100 = pop_100.reindex(list(range(1971, 2101))).interpolate(method = 'linear')
+    
+    # from gdp per capita and population calculate total gdp per IMAGE region and sum to get global GDP
+    gdp_100 = gdp_pc_2100*pop_100
 
-    return gdp, gdp_global, gdp_pc_2017, pop, gdp_pc_2100, pop_100
+    return gdp, gdp_global, gdp_pc_2017, pop, gdp_pc_2100, pop_100, gdp_100
 
 
 def summarize_IMAGE_regions(material_to_region_dict: dict,
@@ -133,14 +133,22 @@ def summarize_IMAGE_regions(material_to_region_dict: dict,
     pop_adapted = pd.DataFrame()
     pop_100_adapted = pd.DataFrame()
     gdp_pc_100_adapted = pd.DataFrame()
+    gdp_100_adapted = pd.DataFrame()
     
+    # calculate gdp until 100 
+    gdp_100 = gdp_pc_100*pop_100
+
     # bring gdp and population data to same resultion as  available source for specific material 
     # Sum IMAGE classes (regions) according to material_to_region_dict
     for value, key in material_to_region_dict.items():
         gdp_adapted[value] = gdp[key].sum(axis = 1)
         pop_adapted[value] = pop[key].sum(axis = 1)
         pop_100_adapted[value] = pop_100[key].sum(axis=1)
-        gdp_pc_100_adapted[value] = gdp_pc_100[key].sum(axis = 1)
+        gdp_100_adapted[value] = gdp_100[key].sum(axis=1)
+
+    # gdp pc can not be summed but needs to be rescaled to per capita level
+    
+    gdp_pc_100_adapted = gdp_100_adapted/pop_100_adapted
         
     return gdp_adapted, pop_adapted, pop_100_adapted, gdp_pc_100_adapted
 
