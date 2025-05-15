@@ -46,7 +46,8 @@ class ResourceModel():
         # IMAGE data regarding gdp, population, ...
         (self.gdp_original, self.gdp_global_original, 
          self.gdp_pc_original, self.pop_original, 
-         self.gdp_pc_100_original, self.pop_100_original) = calculate_gdp()
+         self.gdp_pc_100_original, self.pop_100_original,
+         self.gdp_100) = calculate_gdp()
         
         
     def data_grouped_regions(self, regions_grouping):
@@ -144,7 +145,7 @@ class ResourceModel():
                                                                 self.region_groups)           
             
               
-    def project_on_total(self, regions_list, REGION_TO_CLASS_DICT):
+    def project_on_total(self, regions_list, REGION_TO_CLASS_DICT, gdp_pc):
         self.projection_per_region = []
 
         # loop over every region
