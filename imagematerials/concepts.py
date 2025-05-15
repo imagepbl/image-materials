@@ -189,7 +189,7 @@ def create_vehicle_graph():
     for subtype in ["Small Ships", "Medium Ships", "Large Ships", "Very Large Ships",
                     "Inland Ships"]:
         vehicle_knowledge_graph.add(Node(subtype, inherits_from="Ships"))
-    vehicle_knowledge_graph.add(Node("Trains", inherits_from="Vehicles"))
+    #vehicle_knowledge_graph.add(Node("Trains", inherits_from="Vehicles"))
 
     # Trains
     # TODO: Fix Trains -> Regular Trains

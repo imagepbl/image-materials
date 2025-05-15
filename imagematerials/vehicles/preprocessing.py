@@ -715,6 +715,12 @@ def preprocess(base_dir: str):
                                            "Type": ["Vehicles"]})
     preprocessing_results_xarray["battery_weights"] = xr.concat((preprocessing_results_xarray["battery_weights"], xr_default_battery), dim="Type")
 
+    xr_default_maintenace = xr.DataArray(0.0, dims=("Type", "material"),
+                                    coords={
+                                        "Type": ["Vehicles"],
+                                        "material": preprocessing_results_xarray["maintenance_material_fractions"].coords["material"]})
+    preprocessing_results_xarray["maintenance_material_fractions"] = xr.concat((preprocessing_results_xarray["maintenance_material_fractions"], xr_default_maintenace), dim="Type")
+
     return preprocessing_results_xarray
 
 
