@@ -11,7 +11,7 @@ lifetimes = '....csv'
 material_composation = '.csv'
 weights = '.csv'
 
-[vehicles.lifetime_increase_percent_slow]
+[vehicles.lifetime_increase_percent]
 air_pas = 10
 air_freight = 10
 rail_reg = 38
@@ -31,33 +31,33 @@ bicycle = 20
 car = 22.5
 
 [buildings.residential.lifetime_2020]
-Canada = 51-90	
-"Central Europe" =	70-75	
+Canada = 51
+"Central Europe" =	70
 China = 40
-India =	50-60	
-Japan =	36-55	
-USA = 77-90	
-"Western Europe" = 63-120	
-"Latin America"	= 50-100	
-"Middle East and North Africa" = 50-60	
-"Other Asia" = 50-60	
-"Other OECD" = 50-83	
-"Reforming Economies" =	60-75	
-"Sub-Saharan Africa" = 50-60	
+India =	50	
+Japan =	36
+USA = 77
+"Western Europe" = 63
+"Latin America"	= 50
+"Middle East and North Africa" = 50
+"Other Asia" = 50
+"Other OECD" = 50
+"Reforming Economies" =	60
+"Sub-Saharan Africa" = 50
 
 [buildings.non_residential.lifetime_2020]
 Canada = 45	
-"Central Europe" =	45-60	
-China = 30-45
+"Central Europe" =	45	
+China = 30
 India =	45
-Japan =	38-45	
+Japan =	38
 USA = 45
-"Western Europe" = 45-80
+"Western Europe" = 45
 "Latin America"	= 45
 "Middle East and North Africa" = 45
 "Other Asia" = 45
-"Other OECD" = 45-50
-"Reforming Economies" =	45-60
+"Other OECD" = 45
+"Reforming Economies" =	45
 "Sub-Saharan Africa" = 45	
 
 [buildings.residential.lifetime_increase_percent]

@@ -75,7 +75,7 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
     if 'slow' in circular_economy_config.keys():
         target_year = circular_economy_config['slow']['vehicles']['target_year']
         base_year = circular_economy_config['slow']['vehicles']['base_year']
-        lifetime_increase = circular_economy_config['slow']['vehicles']['lifetime_increase_percent_slow']
+        lifetime_increase = circular_economy_config['slow']['vehicles']['lifetime_increase_percent']
 
 
     # Reading all csv files for vehicles and ships that are external to IMAGE
