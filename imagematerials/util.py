@@ -1,9 +1,15 @@
 from pathlib import Path
+import sys
 from typing import Optional, Union
 
 import netCDF4
 import numpy as np
 import xarray as xr
+
+if sys.version_info < (3, 11):
+    import tomli as tomllib
+else:
+    import tomllib
 
 from imagematerials.concepts import KnowledgeGraph
 from imagematerials.constants import SUBTYPE_SEPARATOR
@@ -207,3 +213,59 @@ def rebroadcast_prep_data(prep_data, knowledge_graph, dim, output_coords):
         else:
             new_prep_data[data_name] = knowledge_graph.rebroadcast_xarray(data, output_coords, dim=dim)
     return new_prep_data
+
+def read_climate_policy_config(scenario_folder) -> dict:
+    """
+    Extracts data from a .toml-file.
+
+    Parameters
+    ----------
+    scenario_folder
+        Path to file that must be read
+
+    Returns
+    -------
+        Dictionary containing the contents of the toml-file
+    """
+    return _read_config(scenario_folder)
+
+def read_circular_economy_config(scenario_folders: dict) -> dict:
+    """
+    Extracts data from multiple .toml-files and joins it together.
+
+    Parameters
+    ----------
+    scenario_folders
+        Dictionary with labelled paths to the files that must be read.
+
+    Returns
+    -------
+        Dictionary containing the contents of all toml-file, accessible
+        under the specified labels.
+    """
+    config_dict = {}
+    for key, scenario_folder in scenario_folders.items():
+        config_dict[key] = _read_config(scenario_folder)
+    return config_dict
+
+def _read_config(scenario_folder) -> dict:
+    """
+    Extracts data from a .toml-file.
+
+    Parameters
+    ----------
+    scenario_folder
+        Path to file that must be read
+
+    Returns
+    -------
+        Dictionary containing the contents of the toml-file
+    """
+    # Turn the path into a Path object, if it wasn't already
+    scenario_folder = Path(scenario_folder)
+    with open(scenario_folder / "config.toml", "rb") as f:
+        config_dict = tomllib.load(f)
+    
+    config_dict['config_file_path'] = scenario_folder.resolve()
+
+    return config_dict
