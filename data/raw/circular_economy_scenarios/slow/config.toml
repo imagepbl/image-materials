@@ -1,7 +1,6 @@
 [vehicles]
 base_year = 2019
 target_year = 2060
-circular_economy_scenario = 'slow'
 
 [vehicles.data_files]
 lifetimes = '....csv'
