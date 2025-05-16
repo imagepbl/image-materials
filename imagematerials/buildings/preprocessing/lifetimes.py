@@ -78,6 +78,8 @@ def convert_lifetimes_buildings(lifetimes, distribution_type="folded_norm"):
     scipy_lifetimes.attrs["loc"] = loc
     scipy_lifetimes.coords["ScipyParam"] = ["c", "scale"]
     scipy_lifetimes.coords["Region"] = [str(x) for x in scipy_lifetimes.coords["Region"].values]
-    return xr.Dataset({distribution_type: scipy_lifetimes.drop("Parameter").transpose(
+    lifetimes_xr = xr.Dataset({distribution_type: scipy_lifetimes.drop("Parameter").transpose(
         "Time", "Region", "Type", "ScipyParam", transpose_coords=True)})
+    return {dist_name: arr.dropna("Type")
+            for dist_name, arr in lifetimes_xr.items()}
 

@@ -8,7 +8,6 @@ import xarray as xr
 
 from imagematerials.constants import SUBTYPE_SEPARATOR
 from imagematerials.distribution import NAME_TO_DIST
-from imagematerials.concepts import vehicle_knowledge_graph
 
 
 class SurvivalMatrix:
@@ -24,7 +23,7 @@ class SurvivalMatrix:
 
         Parameters
         ----------
-        survival
+        survival : object
             The survival object is a class that knows how to compute the survival matrix.
             It contains the information on which dimensions the life times of the stocks
             depend, which could be the "Type", "region", both or neither.
@@ -39,7 +38,19 @@ class SurvivalMatrix:
         self.survival = survival
 
     def __getitem__(self, idx):
-        """Use the survival matrix as a numpy array."""
+        """Use the survival matrix as a numpy array for the specified time and cohort.
+
+        Parameters
+        ----------
+        idx : tuple
+            A tuple of (time, cohort) to retrieve the survival matrix value for the 
+            specified time and cohort.
+
+        Returns
+        -------
+        xr.DataArray
+            The survival matrix for the specified time and cohort.
+        """
         # TODO: make the computation dependent on t_idx
         # We know that if t_idx < cohort_idx, the result is 0,
         # So if we compute s[t, :], we know that we only need to compute
@@ -75,18 +86,19 @@ class ScipySurvival():
     """
 
     def __init__(self, lifetime_parameters: dict[str, xr.DataArray],
-                 output_modes: Union[None, list, xr.DataArray] = None):
+                 output_modes: Union[None, list, xr.DataArray] = None,
+                 knowledge_graph = None):
         """Initialize scipysurvival class.
 
         Parameters
         ----------
-        lifetime_parameters
+        lifetime_parameters : dict[str, xr.DataArray]
             Output from convert_life_time_vehicles function. This should be a dictionary, with
             the keys the name of the distribution, and the values a xr.DataArray with the scipy
             parameters. E.g. weibull or folded_normal.
             mandatory dimensions for the arrays: Cohort, Type, ScipyParam
             optional dimension: Region
-        output_modes:
+        output_modes : list or xr.DataArray, optional
             To allow for sub types that have the same lifetime as the super type.
             By default, this value is None, in which case it is assumed that all sub types
             (if any) have their lifetimes specified.
@@ -102,12 +114,14 @@ class ScipySurvival():
                 self._output_modes = output_modes
         else:
             self._output_modes = None
+        self.knowledge_graph = knowledge_graph
 
     def new_matrix(self):
         """Create a new data array with zeros everywhere.
 
         Returns
         -------
+        xr.DataArray
             A DataArray with the correct dimensions and zeros everywhere.
 
         """
@@ -123,12 +137,13 @@ class ScipySurvival():
 
         Parameters
         ----------
-        cohort
+        cohort : int
             The cohort for which to compute the survival matrix. This should
             not be the cohort index.
 
         Returns
         -------
+        xr.DataArray
             An array with the survival fractions for the current cohort at all
             future times.
 
@@ -161,25 +176,10 @@ class ScipySurvival():
             # Not needed to deal with subtypes
             return base_array
 
-        vehicle_knowledge_graph.rebroadcast_xarray(base_array, self._output_modes)
-
-        # # Deal with subtypes/submodes of the form "{mode} - {submode}"
-        # base_modes = base_array.coords["Type"].values
-        # keep_modes = []
-        # coords = {coord.name: coord for coord in base_array.coords.values()}
-        # coords["Type"] = self._output_modes
-        # new_array = xr.DataArray(0.0, dims=base_array.dims, coords=coords)
-        # for mode in self.modes:
-        #     base_mode = mode.split(SUBTYPE_SEPARATOR)[0]
-        #     if mode in base_modes:
-        #         keep_modes.append(mode)
-        #     elif base_mode in base_modes:
-        #         new_array.loc[{"Type": mode}] = base_array.loc[{"Type": base_mode}]
-        #     else:
-        #         raise ValueError(f"Unknown mode '{mode}' needed for survival matrix, "
-        #                          "but lifetime unknown.")
-        # new_array.loc[{"Type": keep_modes}] = base_array.loc[{"Type": keep_modes}]
-        # return new_array
+        if (self.knowledge_graph is None and
+                list(base_array.coords.values()) != list(self._output_modes)):
+            raise ValueError(f"Need knowledge graph for broadcasting to {self._output_modes}.")
+        return self.knowledge_graph.rebroadcast_xarray(base_array, self._output_modes)
 
     @cached_property
     def modes(self) -> list[str]:
@@ -189,6 +189,7 @@ class ScipySurvival():
 
         Returns
         -------
+        list of str
             All the modes for which there is a survival distribution in list form.
 
         """
@@ -202,12 +203,25 @@ class ScipySurvival():
 
     @property
     def time_series(self) -> xr.DataArray:
-        """Get all the time values in the simulation."""
+        """Get all the time values in the simulation.
+
+        Returns
+        -------
+        xarray.DataArray
+            Time coordinate values from the simulation.
+        """
         first_array = list(self.lifetime_parameters.values())[0]
         return first_array.coords["Time"]
 
     @cached_property
     def extra_dims(self) -> list[str]:
+        """Get extra dimensions in the lifetime parameters.
+
+        Returns
+        -------
+        list of str
+            List of extra dimensions in the lifetime parameters.
+        """
         dims = []
         first_array = list(self.lifetime_parameters.values())[0]
         for dim in first_array.dims:
@@ -217,6 +231,13 @@ class ScipySurvival():
 
     @cached_property
     def extra_coords(self) -> list[list]:
+        """Get extra coordinates for the lifetime parameters.
+
+        Returns
+        -------
+        list
+            List of extra coordinates for the lifetime parameters.
+        """
         first_array = list(self.lifetime_parameters.values())[0]
         coords = {}
         for dim in self.extra_dims:
@@ -228,6 +249,13 @@ class ScipySurvival():
 
     @cached_property
     def dt(self) -> int:
+        """Get the time step used in the simulation.
+
+        Returns
+        -------
+        int
+            The time step value used in the simulation.
+        """
         first_array = list(self.lifetime_parameters.values())[0]
         dt = first_array.coords["Time"].values[1] - first_array.coords["Time"].values[0]
         assert dt == 1

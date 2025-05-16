@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  pull_request:
+    branches: 
+      - development
+  push:
+    branches:
+      - development
+
+env:
+  PYM_VERSION: v0.3.2 # check this is compatible with the dependency in pyproject.toml
+  PRISM_VERSION: v0.6.0
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      # default python in ubuntu-latest is currently 3.10, we want 3.11
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.11"
+
+
+      - name: Checkout pym
+        uses: actions/checkout@v3
+        with:
+          repository: imagepbl/pym
+          ref: ${{ env.PYM_VERSION }}
+          path: pym
+          ssh-key: ${{ secrets.PYM_DEPLOY_PRIVATE_KEY }}
+
+      - name: Install pym
+        run: pip install ./pym
+
+      - name: Checkout prism
+        uses: actions/checkout@v3
+        with:
+          repository: imagepbl/prism
+          ref: ${{ env.PRISM_VERSION }}
+          path: prism
+          ssh-key: ${{ secrets.PRISM_DEPLOY_PRIVATE_KEY }}
+
+      - name: Install prism
+        run: pip install ./prism
+
+      - name: Checkout imagematerials
+        uses: actions/checkout@v3
+
+      - name: Install imagematerials
+        run: pip install -e ".[all]"
+
+      - name: Run tests
+        run:  pytest tests
