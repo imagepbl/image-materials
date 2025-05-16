@@ -2,7 +2,7 @@
 base_year = 2020
 target_year = 2060
 
-[transport]
+[vehicles]
 base_year = 2019
 target_year = 2060
 
@@ -36,19 +36,19 @@ USA = -35.0
 "Other OECD" = -20.0
 "Subsaharan Africa" = -15.0
 
-[transport.passenger]
+[vehicles.passenger]
 kilometers = -25
 
-[transport.passenger.mileage]
+[vehicles.freight]
+kilometers = -13
+
+[vehicles.mileage]
 cars = 20
 bus = 10
 rail = 10
 bicycle = 10
-
-[transport.freight]
-kilometers = -13
-
-[transport.freight.mileage]
 light_commercial_vehicles = 10
 rail = 10
 ships_inland = 10
+
+
