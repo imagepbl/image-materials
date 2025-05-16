@@ -6,7 +6,7 @@ target_year = 2060
 base_year = 2019
 target_year = 2060
 
-[buildings.residential.m2_%change_pc]
+[buildings.residential.m2_percent_change_pc]
 Canada = -35.0
 China = -19.2
 India = -12.5
@@ -21,7 +21,7 @@ USA = -35.0
 "Other OECD" = -27.5
 "Subsaharan Africa" = -15.0
 
-[buildings.non_residential.m2_%change_pc]
+[buildings.non_residential.m2_percent_change_pc]
 Canada = -35.0
 China = -19.2
 India = -12.5
@@ -48,7 +48,6 @@ bus = 10
 rail = 10
 bicycle = 10
 light_commercial_vehicles = 10
-rail = 10
 ships_inland = 10
 
 
