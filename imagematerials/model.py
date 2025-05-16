@@ -13,8 +13,12 @@ STOCK_TYPE = prism.Dimension("Type")
 COHORT = prism.Dimension("Cohort")
 TIME = prism.Dimension("Time")
 MATERIAL_TYPE = prism.Dimension("material")
+<<<<<<< HEAD
 BATTERY_TYPE = prism.Dimension("battery")
 
+=======
+EOL_TYPE = prism.Dimension("eol")
+>>>>>>> 820f8ea (add structure for EndOfLife class)
 
 @prism.interface
 class GenericStocks(prism.Model):
@@ -398,3 +402,27 @@ class GenericMainModel(prism.Model):
                                                   stock_by_cohort=self.stock_model.stock_by_cohort,)
 
 
+
+@prism.interface
+class EndOfLife(prism.Model):
+    # Input data
+    collection: xr.DataArray
+    reuse: xr.DataArray
+    recycling: xr.DataArray
+
+    # Dimensions
+    Region: prism.Coords[REGION]
+    Type: prism.Coords[STOCK_TYPE]
+    Time: prism.Coords[TIME]
+    material: prism.Coords[MATERIAL_TYPE]
+    eol: prism.Coords [EOL_TYPE]
+
+    # Data dependencies
+    input_data: tuple[str] = ("collection", "reuse", "recycling",
+                              "outflow_materials")
+    
+    output_data: tuple[str] = ("demand_image_materials", # I'm calling this 'demand_image_materials' to make it different from the 'rest-of' demand. I expect "demand_image_materials" = inflows - reuse 
+                               "end_of_life_materials")
+    # Output data
+    inflow_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
+    end_of_life_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, EOL_TYPE "count"] = prism.export()
