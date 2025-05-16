@@ -11,7 +11,7 @@ lifetimes = '....csv'
 material_composation = '.csv'
 weights = '.csv'
 
-[vehicles.lifetime_increase_percent]
+[vehicles.lifetime_increase_percent_slow]
 air_pas = 10
 air_freight = 10
 rail_reg = 38
