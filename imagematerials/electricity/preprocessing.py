@@ -6,10 +6,14 @@ import math
 import scipy
 import warnings
 from pathlib import Path
+import pint
+import xarray as xr
+from collections import defaultdict
 
 # path_current = Path(__file__).resolve().parent # absolute path of file
 # path_base = path_current.parent.parent # base path of the project -> image-materials
 # sys.path.append(str(path_base))
+
 
 from imagematerials.distribution import ALL_DISTRIBUTIONS, NAME_TO_DIST
 from imagematerials.read_mym import read_mym_df
@@ -31,6 +35,22 @@ def MNLogit(df, logitpar):
         for column in df.columns:
             new_dataframe.loc[year,column] = math.exp(logitpar * df.loc[year,column])/yearsum
     return new_dataframe    # the retuned dataframe contains the market shares
+# ensure consistent spelling of the time index
+def standardize_index_spelling(df: pd.DataFrame) -> pd.DataFrame:
+    """Standardize the index name of a DataFrame related to time/year information."""
+    index_name = df.index.name
+    if index_name is None:
+        return df  # Nothing to standardize
+    standard_map = {
+        "Time": "time",
+        "Year": "year",
+        "yr": "year",
+        "years": "year",
+    }
+    # Convert exact matches
+    if index_name in standard_map:
+        df.index.name = standard_map[index_name]
+    return df
 #-----------------------------------
 
 # from imagematerials.electricity.constants import ( # TODO: import not working at the moment
@@ -80,7 +100,8 @@ years = endyear - startyear  + 1
 switchtime = 1990
 vehicles = 25
 regions = 26
-epg_techs = 34          # number of electricity generation technologies
+epg_techs = 34          # number of electricity generation technologies -> 33 technologies + 1 empty row
+# epg_techs = 33
 
 weibull_shape = 1.89
 weibull_scale = 10.3
@@ -128,9 +149,10 @@ storage_materials = pd.read_csv(path_external_data_standard / 'storage_materials
 
 # lifetimes of Gcap tech (original data according to van Vuuren 2006, PhD Thesis)
 gcap_lifetime = pd.read_csv(path_external_data_scenario / 'LTTechnical_dynamic.csv', index_col=['Year','DIM_1'])        
-
+# gcap_lifetime = standardize_index_spelling(gcap_lifetime) # standardize the index name
 # material compositions (generation capacity)
 composition_generation = pd.read_csv(path_external_data_scenario / 'composition_generation.csv',index_col=[0,1]).transpose()  # in gram/MW
+# composition_generation = composition_generation.drop(columns=[col for col in composition_generation.columns if col[1] == '<EMPTY>'])
 
 
 
@@ -368,7 +390,7 @@ gcap_lifetime_distr = pd.concat([df_mean, df_stdev], axis=1) # Concatenate along
 
 # MIs: (years, material) index and technologies as columns -> years as index and (technology, Material) as columns
 gcap_materials_interpol.index.names = ["Year", "Material"]
-gcap_materials_interpol = gcap_materials_interpol.loc[:, ~(gcap_materials_interpol == 0.0).all()]
+# gcap_materials_interpol = gcap_materials_interpol.loc[:, ~(gcap_materials_interpol == 0.0).all()] # delete empty columns
 gcap_types_materials = gcap_materials_interpol.unstack(level='Material')
 
 ###########################################################################################################
@@ -377,16 +399,76 @@ gcap_types_materials = gcap_materials_interpol.unstack(level='Material')
 
 #%%% Generation
 
+def convert_life_time_vehicles(life_time_vehicles: xr.Dataset) -> dict[str, xr.DataArray]:
+    """Convert lifetime vehicles dataset to a more appropriate data format.
 
-from imagematerials.util import dataset_to_array, pandas_to_xarray
-import pint
+    This conversion should probably move to the preprocessing stage after we figure out
+    the exact details of what the output should look like.
+
+    Parameters
+    ----------
+    life_time_vehicles
+        The input life_time_vehicles xarray dataset. It is supposed to be in a very particular format:
+        it contains the parameters for each of the modes. However, the distribution types are not
+        the same for each of the modes. Thus, the distribution types need to be inferred from the
+        names of the parameters that are given. If multiple parameter sets for multiple distributions
+        are given, the Weibull distribution is given preference over the FoldedNormal distribution.
+
+    Returns
+    -------
+        A dictionary that contains a data array for each of the distributions. Given the setup there is
+        an implicit assumption that only one distribution is used for each of the modes. If distribution
+        types change over time, this data structure needs to be adjusted.
+
+    """
+    # Create a dictionary to find which parameters are available for which mode.
+    mode_param = defaultdict(list)
+    for mode, par in life_time_vehicles.data_vars:
+        mode_param[mode].append(par)
+
+    # Create a dictionary that says which modes are tied to which distribution.
+    dist_mode = defaultdict(list)
+    modes_done = set()  # temporary
+    for dist in ALL_DISTRIBUTIONS:
+        for mode, param in mode_param.items():
+            if mode not in modes_done and dist.has_param(param):
+                dist_mode[dist.name].append(mode)
+                modes_done.add(mode)
+
+    # Iterate over all distributions to create a data array for each of them.
+    ret_scipy_params = {}
+    for dist_name, mode_list in dist_mode.items():
+        if len(mode_list) == 0:
+            continue
+        dist = NAME_TO_DIST[dist_name]
+
+        # param_arrays = {}
+        array = xr.DataArray(
+            0.0, dims=("Time", "Type", "ScipyParam"),
+            coords={
+                "Time": life_time_vehicles.coords["Year"].to_numpy(),
+                "Type": mode_list,
+                "ScipyParam": dist.variable_scipy_param})
+        for mode in mode_list:
+            orig_param_dict = {}
+            for param in dist.params:
+                orig_param_dict[param] = life_time_vehicles.data_vars[str(mode), param].to_numpy()
+            scipy_params = dist.get_param(orig_param_dict)
+            for cur_scipy_key, cur_scipy_par in scipy_params.items():
+                if cur_scipy_key in dist.variable_scipy_param:
+                    array.loc[:, str(mode), cur_scipy_key] = cur_scipy_par
+                else:
+                    array.attrs[cur_scipy_key] = cur_scipy_par
+        ret_scipy_params[dist_name] = array
+    return ret_scipy_params
+
 
 ureg = pint.UnitRegistry(force_ndarray_like=True)
-
 # Define the units for each dimension
 unit_mapping = {
     'time': ureg.year,
     'year': ureg.year,
+    'Year': ureg.year,
     'kg': ureg.kilogram,
     'yr': ureg.year,
     '%': ureg.percent,
@@ -403,8 +485,6 @@ conversion_table = {
 }
 
 
-
-
 # results_dict = {
 #         'total_nr_vehicles_simple': total_nr_vehicles_simple,
 #         'material_fractions_simple': material_fractions_simple,
@@ -418,32 +498,51 @@ conversion_table = {
 #         'weight_boats': weight_boats,
 #         'vehicle_shares_typical': vehicle_shares_typical
 #     }
-    
-
 results_dict = {
         'gcap_stock': gcap_stock,
-        'gcap_types_materials': gcap_types_materials
+        'gcap_types_materials': gcap_types_materials,
+        'gcap_lifetime_distr': gcap_lifetime_distr,
 }
 
 # df = gcap_materials_interpol.copy()
-from imagematerials.util import dataset_to_array, pandas_to_xarray
+
+
+# Convert the DataFrames to xarray Datasets and apply units
+preprocessing_results_xarray = {}
+
 
 for df_name, df in results_dict.items():
-        if df_name in conversion_table:
-            data_xar_dataset = pandas_to_xarray(df, unit_mapping)
-            data_xarray = dataset_to_array(data_xar_dataset, *conversion_table[df_name])
+    if df_name in conversion_table:
+        data_xar_dataset = pandas_to_xarray(df, unit_mapping)
+        data_xarray = dataset_to_array(data_xar_dataset, *conversion_table[df_name])
+    else:
+        # lifetimes_vehicles does not need to be converted in the same way.
+        data_xarray = pandas_to_xarray(df, unit_mapping)
+    preprocessing_results_xarray[df_name] = data_xarray
 
 
+
+
+
+preprocessing_results_xarray["lifetimes"] = convert_life_time_vehicles(preprocessing_results_xarray["gcap_lifetime_distr"])
+preprocessing_results_xarray["stocks"] = preprocessing_results_xarray.pop("gcap_stock")
+preprocessing_results_xarray["material_intensities"] = preprocessing_results_xarray.pop("gcap_types_materials")
+# preprocessing_results_xarray["shares"] = preprocessing_results_xarray.pop("vehicle_shares")
+
+# a = preprocessing_results_xarray["lifetimes"]
 
 ###########################################################################################################
 #%% Run Stock Model New
 ###########################################################################################################
+import prism
+from imagematerials.model import GenericMainModel, GenericMaterials, GenericStocks, Maintenance, MaterialIntensities
+from imagematerials.factory import ModelFactory
 
+prep_data = preprocessing_results_xarray.copy()
 
-
-# Define the complete timeline, including historic tail
-# time_start = prep_data["stocks"].coords["Time"].min().values
-time_start = 1960
+# # Define the complete timeline, including historic tail
+time_start = prep_data["stocks"].coords["Time"].min().values
+# time_start = 1960
 complete_timeline = prism.Timeline(time_start, 2060, 1)
 simulation_timeline = prism.Timeline(1970, 2060, 1)
 
@@ -452,13 +551,28 @@ Region = list(prep_data["stocks"].coords["Region"].values)
 Time = [t for t in complete_timeline]
 Cohort = Time
 Type = list(prep_data["stocks"].coords["Type"].values)
-material = list(prep_data["material_fractions"].coords["material"].values)
+# material = list(prep_data["material_fractions"].coords["material"].values)
+material = list(prep_data["material_intensities"].coords["material"].values)
 
 # Create
-main_model_normal = GenericMainModel(
-    complete_timeline, Region=Region, Time=Time, Cohort=Cohort, Type=Type, prep_data=prep_data,
-    compute_materials=True, compute_battery_materials=False, compute_maintenance_materials=False, 
-    material=material)
+# main_model_normal = GenericMainModel(
+#     complete_timeline, Region=Region, Time=Time, Cohort=Cohort, Type=Type, prep_data=prep_data,
+#     compute_materials=True, compute_battery_materials=False, compute_maintenance_materials=False, 
+#     material=material)
+
+new_prep_data = prep_data.copy()
+# new_prep_data["knowledge_graph"] = create_building_graph()
+
+
+main_model_factory = ModelFactory(
+    new_prep_data, complete_timeline
+    ).add(GenericStocks
+    ).add(MaterialIntensities
+    ).finish()
+
+main_model_factory.simulate(simulation_timeline)
+
+list(main_model_factory.default)
 
 
 
