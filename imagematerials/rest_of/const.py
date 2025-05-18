@@ -132,7 +132,6 @@ REGION_TO_CLASS_DICT_IMAGE_MAT = {
     'Rest S.Africa': 'class_ 26',
     'Global': 'class_ 27'}
 
-
 COPPER_REGIONS_TO_IMAGE = {
     'Other North America countries' : ['class_ 1'],
     'United States': ['class_ 2'], 
@@ -174,6 +173,9 @@ ALUMINIUM_TO_IMAGE = {
 
 # get list of all IMAGE regions
 all_regions_list = list(CLASS_TO_REGION_DICT.copy().values())
+
+all_regions_list_class = list(REGION_TO_CLASS_DICT.values())
+
 
 # SAND region grouping
 # groups in IMAGE that are collectively being fitted for models because their similarity in consumption
