@@ -561,19 +561,21 @@ material = list(prep_data["material_intensities"].coords["material"].values)
 #     material=material)
 
 new_prep_data = prep_data.copy()
-# new_prep_data["knowledge_graph"] = create_building_graph()
+new_prep_data["knowledge_graph"] = create_electricity_graph()
 
 
-main_model_factory = ModelFactory(
-    new_prep_data, complete_timeline
-    ).add(GenericStocks
-    ).add(MaterialIntensities
-    ).finish()
+# main_model_factory = ModelFactory(
+#     new_prep_data, complete_timeline
+#     ).add(GenericStocks
+#     ).add(MaterialIntensities
+#     ).finish()
 
-main_model_factory.simulate(simulation_timeline)
+# main_model_factory.simulate(simulation_timeline)
 
-list(main_model_factory.default)
-
-
+# list(main_model_factory.default)
 
 
+
+
+
+# %%
