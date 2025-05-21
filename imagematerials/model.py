@@ -402,9 +402,9 @@ class GenericMainModel(prism.Model):
                                                   stock_by_cohort=self.stock_model.stock_by_cohort,)
 
 
-
 @prism.interface
-class EndOfLife(prism.Model):
+class GenericEndOfLife(prism.Model):
+
     # Input data
     collection: xr.DataArray
     reuse: xr.DataArray
@@ -419,10 +419,11 @@ class EndOfLife(prism.Model):
 
     # Data dependencies
     input_data: tuple[str] = ("collection", "reuse", "recycling",
-                              "outflow_materials")
-    
-    output_data: tuple[str] = ("demand_image_materials", # I'm calling this 'demand_image_materials' to make it different from the 'rest-of' demand. I expect "demand_image_materials" = inflows - reuse 
+                              "outflow_by_cohort_materials")
+   
+    output_data: tuple[str] = ("inflow_materials",
                                "end_of_life_materials")
     # Output data
     inflow_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
-    end_of_life_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, EOL_TYPE "count"] = prism.export()
+    end_of_life_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, EOL_TYPE, "count"] = prism.export()
+
