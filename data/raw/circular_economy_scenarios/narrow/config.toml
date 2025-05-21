@@ -1,0 +1,54 @@
+[buildings]
+base_year = 2020
+target_year = 2060
+
+[transport]
+base_year = 2019
+target_year = 2060
+
+[buildings.residential.m2_%change_pc]
+Canada = -35.0%
+China = -19.2%
+India = -12.5%
+Japan = -15.0%
+USA = -35.0%
+"Western Europe" = -23.3%
+"Central Europe" = -10.0%
+"Latin America" = -20.0%
+"Middle East and North Africa" = -23.3%
+"Reforming Economies" = -13.3%
+"Other Asia" = -12.5%
+"Other OECD" = -27.5%
+"Subsaharan Africa" = -15.0%
+
+[buildings.non_residential.m2_%change_pc]
+Canada = -35.0%
+China = -19.2%
+India = -12.5%
+Japan = -20.0%
+USA = -35.0%
+"Western Europe" = -23.3%
+"Central Europe" = -15.0%
+"Latin America" = -12.5%
+"Middle East and North Africa" = -23.3%
+"Reforming Economies" = -13.3%
+"Other Asia" = -12.5%
+"Other OECD" = -20.0%
+"Subsaharan Africa" = -15.0%
+
+[transport.passenger]
+kilometers = -25%
+
+[transport.passenger.mileage]
+cars = 20%
+bus = 10%
+rail = 10%
+bicycle = 10%
+
+[transport.freight]
+kilometers = -13%
+
+[transport.freight.mileage]
+light_commercial_vehicles = 10%
+rail = 10%
+ships_inland = 10%

@@ -1,0 +1,29 @@
+[buildings]
+base_year = 2020
+target_year = 2060
+
+[buildings.residential.2020.useful_floor_pc]
+Canada = 60.6
+"Central Europe" = 27.7
+China = 39
+India = 13.2
+Japan = 39.7
+USA = 60.2
+"Western Europe" = 39.7
+
+[buildings.residential.2060.useful_floor_pc]
+Canada = 60.6
+"Central Europe" = 41.2
+China = 39
+India = 25.3
+Japan = 39.7
+USA = 62.8
+"Western Europe" = 39.7
+
+[buildings.non_residential.2020.useful_floor_pc]
+"Central Europe" = 8.7
+"Western Europe" = 14.1
+
+[buildings.non_residential.2060.useful_floor_pc]
+"Central Europe" = 41.2
+"Western Europe" = 14.1
