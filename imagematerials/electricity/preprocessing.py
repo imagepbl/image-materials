@@ -537,6 +537,7 @@ preprocessing_results_xarray["material_intensities"] = preprocessing_results_xar
 import prism
 from imagematerials.model import GenericMainModel, GenericMaterials, GenericStocks, Maintenance, MaterialIntensities
 from imagematerials.factory import ModelFactory
+from imagematerials.concepts import create_electricity_graph
 
 prep_data = preprocessing_results_xarray.copy()
 
@@ -551,7 +552,6 @@ Region = list(prep_data["stocks"].coords["Region"].values)
 Time = [t for t in complete_timeline]
 Cohort = Time
 Type = list(prep_data["stocks"].coords["Type"].values)
-# material = list(prep_data["material_fractions"].coords["material"].values)
 material = list(prep_data["material_intensities"].coords["material"].values)
 
 # Create
@@ -564,18 +564,97 @@ new_prep_data = prep_data.copy()
 new_prep_data["knowledge_graph"] = create_electricity_graph()
 
 
-# main_model_factory = ModelFactory(
-#     new_prep_data, complete_timeline
-#     ).add(GenericStocks
-#     ).add(MaterialIntensities
-#     ).finish()
+main_model_factory = ModelFactory(
+    new_prep_data, complete_timeline
+    ).add(GenericStocks
+    ).add(MaterialIntensities
+    ).finish()
 
-# main_model_factory.simulate(simulation_timeline)
+main_model_factory.simulate(simulation_timeline)
 
-# list(main_model_factory.default)
+list(main_model_factory.default)
+
+main_model_factory.inflow
 
 
+tv = main_model_factory.inflow
+
+# Extract years
+years = np.arange(tv.timeline.start, tv.timeline.end + 1, tv.timeline.stepsize)
+
+# Extract dimension labels and coordinates
+dim_labels = [d.label for d in tv.dims]
+dim_coords = {d.label: d.coords for d in tv.dims}
+
+# Example: extract regions and types
+regions = [str(r) for r in dim_coords["Region"]]
+types = [str(t) for t in dim_coords["Type"]]
+a = tv[2000]
+a2 = tv.loc['Brazil', 'Biomass + CCS']
+data = np.array(tv)
+print(regions)
 
 
+da_inflow = xr.DataArray(
+    data=tv.values,  # or np.array(tv) if it's a wrapper
+    coords={"Time": years, "Type": types, "Region": regions},
+    dims=["Time", "Type", "Region"],
+    name="YourVariableName"
+)
 
 # %%
+import matplotlib.pyplot as plt
+
+
+da_stocks = main_model_factory.stocks.copy()
+
+regions = da_stocks.Region.values[:2]  # First 2 regions
+types_to_plot = da_stocks.Type.values[1:10]  # First 3 types
+
+fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(12, 5), sharey=True)
+
+for ax, region in zip(axes, regions):
+    for t in types_to_plot:
+        da_stocks.sel(Type=t, Region=region).plot(ax=ax, label=t)
+    ax.set_title(region)
+    ax.set_xlabel("Time")
+    ax.legend()
+    
+axes[0].set_ylabel("Value")
+plt.tight_layout()
+plt.show()
+
+
+da_stocks = main_model_factory.inflow_materials#.copy()
+
+regions = da_stocks.Region.values[:2]  # First 2 regions
+types_top = da_stocks.Type.values[1:15]   # Types 1–10
+types_bottom = da_stocks.Type.values[15:30]  # Types 11–20
+
+fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(14, 8), sharex=True, sharey=True)
+
+for i, region in enumerate(regions):
+    # Top row: Types 1–10
+    for t in types_top:
+        da_stocks.sel(Type=t, Region=region).plot(ax=axes[0, i], label=t)
+    axes[0, i].set_title(f"{region} (Types 1–10)")
+    axes[0, i].legend()
+
+    # Bottom row: Types 11–20
+    for t in types_bottom:
+        da_stocks.sel(Type=t, Region=region).plot(ax=axes[1, i], label=t)
+    axes[1, i].set_title(f"{region} (Types 11–20)")
+    axes[1, i].set_xlabel("Time")
+    axes[1, i].legend(loc ='upper left')
+
+# Label only left side with y-axis label
+axes[0, 0].set_ylabel("Value")
+axes[1, 0].set_ylabel("Value")
+
+plt.tight_layout()
+plt.show()
+
+
+
+
+
