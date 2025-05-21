@@ -169,7 +169,8 @@ maintenance_lifetime_per_mode = {
     'Medium Freight Trucks': 8,
     'Midi Buses': 13,
     'Regular Buses': 13,
-    'Trains': 35
+    'Trains': 35,
+    'Buses': 13,
 }
 
 all_types = ['Bikes', 'Cars', 'Cars - BEV', 'Cars - FCV', 'Cars - HEV',
