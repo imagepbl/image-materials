@@ -17,7 +17,7 @@ from collections import defaultdict
 
 from imagematerials.distribution import ALL_DISTRIBUTIONS, NAME_TO_DIST
 from imagematerials.read_mym import read_mym_df
-from imagematerials.util import dataset_to_array, pandas_to_xarray
+from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_life_time_vehicles
 # from imagematerials.electricity.modelling_functions import MNLogit, stock_tail #TODO: not working, why??
 def stock_tail(stock):
     zero_value = [0 for i in range(0,regions)]
@@ -397,71 +397,6 @@ gcap_types_materials = gcap_materials_interpol.unstack(level='Material')
 #%% Prep_data File
 ###########################################################################################################
 
-#%%% Generation
-
-def convert_life_time_vehicles(life_time_vehicles: xr.Dataset) -> dict[str, xr.DataArray]:
-    """Convert lifetime vehicles dataset to a more appropriate data format.
-
-    This conversion should probably move to the preprocessing stage after we figure out
-    the exact details of what the output should look like.
-
-    Parameters
-    ----------
-    life_time_vehicles
-        The input life_time_vehicles xarray dataset. It is supposed to be in a very particular format:
-        it contains the parameters for each of the modes. However, the distribution types are not
-        the same for each of the modes. Thus, the distribution types need to be inferred from the
-        names of the parameters that are given. If multiple parameter sets for multiple distributions
-        are given, the Weibull distribution is given preference over the FoldedNormal distribution.
-
-    Returns
-    -------
-        A dictionary that contains a data array for each of the distributions. Given the setup there is
-        an implicit assumption that only one distribution is used for each of the modes. If distribution
-        types change over time, this data structure needs to be adjusted.
-
-    """
-    # Create a dictionary to find which parameters are available for which mode.
-    mode_param = defaultdict(list)
-    for mode, par in life_time_vehicles.data_vars:
-        mode_param[mode].append(par)
-
-    # Create a dictionary that says which modes are tied to which distribution.
-    dist_mode = defaultdict(list)
-    modes_done = set()  # temporary
-    for dist in ALL_DISTRIBUTIONS:
-        for mode, param in mode_param.items():
-            if mode not in modes_done and dist.has_param(param):
-                dist_mode[dist.name].append(mode)
-                modes_done.add(mode)
-
-    # Iterate over all distributions to create a data array for each of them.
-    ret_scipy_params = {}
-    for dist_name, mode_list in dist_mode.items():
-        if len(mode_list) == 0:
-            continue
-        dist = NAME_TO_DIST[dist_name]
-
-        # param_arrays = {}
-        array = xr.DataArray(
-            0.0, dims=("Time", "Type", "ScipyParam"),
-            coords={
-                "Time": life_time_vehicles.coords["Year"].to_numpy(),
-                "Type": mode_list,
-                "ScipyParam": dist.variable_scipy_param})
-        for mode in mode_list:
-            orig_param_dict = {}
-            for param in dist.params:
-                orig_param_dict[param] = life_time_vehicles.data_vars[str(mode), param].to_numpy()
-            scipy_params = dist.get_param(orig_param_dict)
-            for cur_scipy_key, cur_scipy_par in scipy_params.items():
-                if cur_scipy_key in dist.variable_scipy_param:
-                    array.loc[:, str(mode), cur_scipy_key] = cur_scipy_par
-                else:
-                    array.attrs[cur_scipy_key] = cur_scipy_par
-        ret_scipy_params[dist_name] = array
-    return ret_scipy_params
-
 
 ureg = pint.UnitRegistry(force_ndarray_like=True)
 # Define the units for each dimension
@@ -529,7 +464,7 @@ preprocessing_results_xarray["stocks"] = preprocessing_results_xarray.pop("gcap_
 preprocessing_results_xarray["material_intensities"] = preprocessing_results_xarray.pop("gcap_types_materials")
 # preprocessing_results_xarray["shares"] = preprocessing_results_xarray.pop("vehicle_shares")
 
-# a = preprocessing_results_xarray["lifetimes"]
+
 
 ###########################################################################################################
 #%% Run Stock Model New
@@ -572,10 +507,14 @@ main_model_factory = ModelFactory(
 
 main_model_factory.simulate(simulation_timeline)
 
+
+
+###########################################################################################################
+#%% Tests: Check results
+
 list(main_model_factory.default)
 
 main_model_factory.inflow
-
 
 tv = main_model_factory.inflow
 
@@ -589,43 +528,16 @@ dim_coords = {d.label: d.coords for d in tv.dims}
 # Example: extract regions and types
 regions = [str(r) for r in dim_coords["Region"]]
 types = [str(t) for t in dim_coords["Type"]]
-a = tv[2000]
-a2 = tv.loc['Brazil', 'Biomass + CCS']
-data = np.array(tv)
-print(regions)
 
 
-da_inflow = xr.DataArray(
-    data=tv.values,  # or np.array(tv) if it's a wrapper
-    coords={"Time": years, "Type": types, "Region": regions},
-    dims=["Time", "Type", "Region"],
-    name="YourVariableName"
-)
 
-# %%
+
+###########################################################################################################
+#%% Visualize Stocks
 import matplotlib.pyplot as plt
 
 
 da_stocks = main_model_factory.stocks.copy()
-
-regions = da_stocks.Region.values[:2]  # First 2 regions
-types_to_plot = da_stocks.Type.values[1:10]  # First 3 types
-
-fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(12, 5), sharey=True)
-
-for ax, region in zip(axes, regions):
-    for t in types_to_plot:
-        da_stocks.sel(Type=t, Region=region).plot(ax=ax, label=t)
-    ax.set_title(region)
-    ax.set_xlabel("Time")
-    ax.legend()
-    
-axes[0].set_ylabel("Value")
-plt.tight_layout()
-plt.show()
-
-
-da_stocks = main_model_factory.inflow_materials#.copy()
 
 regions = da_stocks.Region.values[:2]  # First 2 regions
 types_top = da_stocks.Type.values[1:15]   # Types 1–10
@@ -656,5 +568,61 @@ plt.show()
 
 
 
+###########################################################################################################
+#%% Visualize Inflow Materials
 
 
+
+# da_x = main_model_factory.inflow.to_array()
+da_x = main_model_factory.inflow_materials.to_array()
+da_x = main_model_factory.inflow_materials.to_array().sum('Type')
+
+regions = da_x.Region.values[:2]  # First 2 regions
+# types_top = da_x.material.values[1:6]   # Types 1–10
+# types_bottom = da_x.material.values[6:12]  # Types 11–20
+types_level1 = [m for m in da_x.material.values if m in ["Steel", "Concrete"]]
+types_level2 = [m for m in da_x.material.values if m in ["Aluminium", "Cu"]]
+types_level3 = [m for m in da_x.material.values if m not in (types_level1 + types_level2)]
+
+fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(14, 12), sharex=True)
+
+axes[0, 1].sharey(axes[0, 0])
+axes[1, 1].sharey(axes[1, 0])
+axes[2, 1].sharey(axes[2, 0])
+
+for i, region in enumerate(regions):
+    # Top row: 
+    for t in types_level1:
+        da_x.sel(material=t, Region=region).plot(ax=axes[0, i], label=t)
+    axes[0, i].set_title(f"{region}")
+    axes[0, i].set_xlabel("Time")
+    axes[0, i].legend()
+
+    # Middle row: 
+    for t in types_level2:
+        da_x.sel(material=t, Region=region).plot(ax=axes[1, i], label=t)
+    axes[1, i].set_title(f"{region}")
+    axes[1, i].set_xlabel("Time")
+    axes[1, i].legend(loc ='upper left')
+
+    # Bottom row: 
+    for t in types_level3:
+        da_x.sel(material=t, Region=region).plot(ax=axes[2, i], label=t)
+    axes[2, i].set_title(f"{region}")
+    axes[2, i].set_xlabel("Time")
+    axes[2, i].legend(loc ='upper left')
+
+# Label only left side with y-axis label
+axes[0, 0].set_ylabel("Value")
+axes[1, 0].set_ylabel("Value")
+axes[2, 0].set_ylabel("Value")
+
+plt.tight_layout()
+plt.show()
+
+
+
+
+
+
+# %%
