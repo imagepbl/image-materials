@@ -269,3 +269,84 @@ def _read_config(scenario_folder) -> dict:
     config_dict['config_file_path'] = scenario_folder.resolve()
 
     return config_dict
+
+def apply_immediate_implementation(df, base_year, target_year, increase_dict):
+    """
+    Immediately applies an increase starting the year after the target year.
+
+    Parameters:
+        df (pd.DataFrame): Original time series (indexed by year).
+        base_year (int): Year to take base values from.
+        target_year (int): Year after which new values apply.
+        increase_dict (dict): {column_name: % increase}
+
+    Returns:
+        pd.DataFrame: Extended with immediate increase applied.
+    """
+    result = df.copy()
+    jump_year = target_year + 1
+    result.loc[jump_year] = result.loc[base_year]
+
+    for col, increase in increase_dict.items():
+        if col in result.columns:
+            base_val = result.loc[base_year, col]
+            result.loc[jump_year, col] = base_val * (1 + increase / 100)
+        else:
+            print(f"Warning: Column {col} not found in DataFrame.")
+
+    return result.sort_index()
+
+def apply_linear_implementation(df, base_year, target_year, increase_dict):
+    """
+    Linearly interpolates an increase between base and target year.
+
+    Parameters:
+        df (pd.DataFrame): Original time series (indexed by year).
+        base_year (int): Year to take base values from.
+        target_year (int): Year by which increase should be reached.
+        increase_dict (dict): {column_name: % increase}
+
+    Returns:
+        pd.DataFrame: Extended with linear interpolation.
+    """
+    result = df.copy()
+    result.loc[target_year] = result.loc[base_year]
+
+    for col, increase in increase_dict.items():
+        if col in result.columns:
+            base_val = result.loc[base_year, col]
+            result.loc[target_year, col] = base_val * (1 + increase / 100)
+        else:
+            print(f"Warning: Column {col} not found in DataFrame.")
+
+    return result.sort_index().interpolate(method='linear')
+
+def apply_scurve_implementation(df, base_year, target_year, increase_dict, steepness=0.5):
+    """
+    Applies an S-curve (logistic) implementation between base and target year.
+
+    Parameters:
+        df (pd.DataFrame): Original time series (indexed by year).
+        base_year (int): Start year of implementation.
+        target_year (int): End year of implementation.
+        increase_dict (dict): {column_name: % increase}
+        steepness (float): Controls how steep the S-curve is.
+
+    Returns:
+        pd.DataFrame: Extended with S-curve applied.
+    """
+    result = df.copy()
+    mid_year = (base_year + target_year) / 2
+    years = list(range(base_year, target_year + 1))
+
+    for col, increase in increase_dict.items():
+        if col in result.columns:
+            base_val = result.loc[base_year, col]
+            target_val = base_val * (1 + increase / 100)
+            for year in years:
+                progress = 1 / (1 + np.exp(-steepness * (year - mid_year)))
+                result.loc[year, col] = base_val + (target_val - base_val) * progress
+        else:
+            print(f"Warning: Column {col} not found in DataFrame.")
+
+    return result.sort_index()

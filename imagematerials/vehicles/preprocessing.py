@@ -17,7 +17,13 @@ import numpy as np
 
 from imagematerials.distribution import ALL_DISTRIBUTIONS, NAME_TO_DIST
 from imagematerials.read_mym import read_mym_df
-from imagematerials.util import dataset_to_array, pandas_to_xarray
+from imagematerials.util import (
+    dataset_to_array, 
+    pandas_to_xarray, 
+    apply_immediate_implementation,
+    apply_scurve_implementation,
+    apply_linear_implementation
+)
 from imagematerials.vehicles.constants import (
     END_YEAR,
     FOLDER,
@@ -72,13 +78,6 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
     standard_input_data_path = base_input_data_path.joinpath("standard_data")
 
     idx = pd.IndexSlice          # needed for slicing multi-index
-
-    # Scenario settings
-    if 'slow' in circular_economy_config.keys():
-        target_year = circular_economy_config['slow']['vehicles']['target_year']
-        base_year = circular_economy_config['slow']['vehicles']['base_year']
-        lifetime_increase = circular_economy_config['slow']['vehicles']['lifetime_increase_percent_slow']
-
 
     # Reading all csv files for vehicles and ships that are external to IMAGE
 
@@ -411,20 +410,40 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
     lifetimes_vehicles = lifetimes_vehicles[(lifetimes_vehicles.T != 0)]
     lifetimes_vehicles = lifetimes_vehicles.unstack(['mode', 'data'])
     lifetimes_vehicles = interpolate(pd.DataFrame(lifetimes_vehicles))
+    print(circular_economy_config.keys())
+    print(lifetimes_vehicles)
 
 
     if 'slow' in circular_economy_config.keys():
-        lifetimes_vehicles = lifetimes_vehicles[lifetimes_vehicles.index <= base_year].copy()
-        lifetimes_vehicles.loc[target_year] = lifetimes_vehicles.loc[base_year]
+        target_year = circular_economy_config['slow']['vehicles']['target_year']
+        base_year = circular_economy_config['slow']['vehicles']['base_year']
+        lifetime_increase = circular_economy_config['slow']['vehicles']['lifetime_increase_percent_slow']
+        implementation_rate = circular_economy_config['slow']['vehicles']['implementation_rate']
+        # possibilities for implementation rate are: linear, immediate, s-curve
 
-        for mode, increase in lifetime_increase.items():
-            col = (mode, 'mean')
-            if col in lifetimes_vehicles.columns:
-                base_val = lifetimes_vehicles.loc[base_year, col]
-                lifetimes_vehicles.loc[target_year, col] = base_val * (1 + increase / 100)
-            else:
-                print(f"Missing mode: {col}")
-        lifetimes_vehicles = interpolate(pd.DataFrame(lifetimes_vehicles))
+
+        if implementation_rate == 'immediate':
+            lifetimes_vehicles = apply_immediate_implementation(lifetimes_vehicles, base_year, target_year, lifetime_increase)
+        elif implementation_rate == 'linear':
+            lifetimes_vehicles = apply_linear_implementation(lifetimes_vehicles, base_year, target_year, lifetime_increase)
+        elif implementation_rate == 's-curve':
+            lifetimes_vehicles = apply_scurve_implementation(lifetimes_vehicles, base_year, target_year, lifetime_increase, steepness=0.5)
+        else: 
+            raise ValueError(f"Unknown implementation method: '{implementation_rate}'. Supported methods are 'immediate', 'linear', and 's-curve'.")
+
+
+        
+        #lifetimes_vehicles = lifetimes_vehicles[lifetimes_vehicles.index <= base_year].copy()
+        #lifetimes_vehicles.loc[target_year] = lifetimes_vehicles.loc[base_year]
+
+        #for mode, increase in lifetime_increase.items():
+        #    col = (mode, 'mean')
+        #    if col in lifetimes_vehicles.columns:
+        #        base_val = lifetimes_vehicles.loc[base_year, col]
+        #        lifetimes_vehicles.loc[target_year, col] = base_val * (1 + increase / 100)
+        #    else:
+        #        print(f"Missing mode: {col}")
+        #lifetimes_vehicles = interpolate(pd.DataFrame(lifetimes_vehicles))
 
     # Calculate extended lifetime per mode
 
