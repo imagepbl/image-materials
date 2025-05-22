@@ -236,6 +236,26 @@ def create_building_graph():
     # )
     return building_knowledge_graph
 
+def create_electricity_graph():
+    generation_types = ["Solar PV", "Solar PV residential", "CSP", "Wind onshore", "Wind offshore", 
+                        "Wave", "Hydro", "Other Renewables", "Geothermal", "Nuclear", "Conv. Coal",
+                        "Conv. Oil", "Conv. Natural Gas","Waste", "IGCC", "OGCC", "NG CC", "Biomass CC",
+                        "Coal + CCS", "Oil/Coal + CCS", "Natural Gas + CCS", "Biomass + CCS",
+                        "CHP Coal", "CHP Oil", "CHP Natural Gas", "CHP Biomass","CHP Geothermal", "CHP Hydrogen",
+                        "CHP Coal + CCS", "CHP Oil + CCS", "CHP Natural Gas + CCS", "CHP Biomass + CCS"]
+    # generation_subtypes = ["c-Si", "a-Si", "CIGS", "CdTe", "Perovskite", 
+    #                        "Fresnel Reflector", "Central Receiver", "Parabolic Trough", "Parabolic Dish",
+    #                        "Geared - High Speed", "Geared - Medium speed", "Direct Drive"]
+    # generation_supertypes = ["Renewables", "Non-Renewables"]
+
+    electricity_knowledge_graph = KnowledgeGraph(Node("Electricity"))
+    electricity_knowledge_graph.add(Node("Generation", inherits_from="Electricity"))
+    # electricity_knowledge_graph.add(Node("Storage", inherits_from="Electricity"))
+    # electricity_knowledge_graph.add(Node("Transmission", inherits_from="Electricity"))
+    for type in generation_types:
+        electricity_knowledge_graph.add(Node(type, inherits_from="Generation"))
+
+    return electricity_knowledge_graph
 
 
 knowledge_graph = KnowledgeGraph(*create_building_graph()._items, *create_vehicle_graph()._items, *create_electricity_graph()._items)
