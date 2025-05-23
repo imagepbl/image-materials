@@ -434,13 +434,15 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
         lifetimes_vehicles.loc[target_year] = lifetimes_vehicles.loc[base_year]
 
         for mode, increase in lifetime_increase.items():
+            # Implement for folded normal
             col = (mode, 'mean')
             if col in lifetimes_vehicles.columns:
                 base_val = lifetimes_vehicles.loc[base_year, col]
                 lifetimes_vehicles.loc[target_year, col] = base_val * (1 + increase / 100)
             else:
                 print(f"Missing mode: {col}")
-            col = (mode, 'scale')
+            # Implement for weibull
+            col = ("Cars", 'scale')
             if col in lifetimes_vehicles.columns:
                 base_val = lifetimes_vehicles.loc[base_year, col]
                 lifetimes_vehicles.loc[target_year, col] = base_val * (1 + increase / 100)
