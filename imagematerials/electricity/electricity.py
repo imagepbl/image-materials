@@ -15,6 +15,10 @@ Output: Total global material use (stocks, inflow & outflow) in the electricity 
 2) 'high_stor'  defines a pessimistic setting with regard to storage demand (high) and availability (low)
 3) 'high_grid'  defines alternative assumptions with respect to the growth of the grid (not relevant here, see grid_materials.py)
 
+
+Sebastiaans Electricity_sector.py should be splitted into preprocessing.py and electricity.py.
+This is still work in progress. The preprocessing.py file is already available and some parts are already transferred.
+
 """
 ###########################################################################################################
 #%% define imports, counters & settings
@@ -303,19 +307,11 @@ intensity_gcap.to_csv(path_elma / 'output' / scen_folder / sa_settings / 'materi
 ###########################################################################################################
 
 
-
-
+#----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
+#%% 2.1) Vehicles
 ###########################################################################################################
-#%% 2) Second Section: Availability of storage in vehicles & pumped hydro. 
-###########################################################################################################
-###########################################################################################################
-
-
-###########################################################################################################
-#%% 2.1) Vehicles (total nr. of)
-###########################################################################################################
-
+#----------------------------------------------------------------------------------------------------------
 
 # BEV & PHEV vehicle stats
 BEV_capacity  = 59.6    #kWh current battery capacity of full electric vehicles, see current_specs.xlsx
@@ -351,7 +347,7 @@ for year in list(range(startyear,outyear+1)):
         market_share_EVs.loc[year, tech] = storage_market_share[EV_battery_list].loc[year,tech] /storage_market_share[EV_battery_list].loc[year].sum()
 
 ###########################################################################################################
-#%%% 2.x) Stock Modelling
+#%%% 2.1.1) Stock Modelling
 ###########################################################################################################
 
 
@@ -361,7 +357,7 @@ EV_inflow_by_tech, EV_stock_cohorts, EV_outflow_cohorts = stock_share_calc(vehic
 
 
 ###########################################################################################################
-#%%% 2.x) Save Output
+#%%% 2.1.2) Save Output
 ###########################################################################################################
 
 
@@ -427,9 +423,16 @@ for region in region_list:
 
 storage_vehicles = storage_BEV + storage_PHEV
 
+
+
+
+#----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
-#%% 2.2) Take the TIMER Hydro-dam capacity (MW) & compare it to Pumped hydro capacity (MW) projections from the International Hydropower Association
+#%% 2.2) Hydro Power
 ###########################################################################################################
+#----------------------------------------------------------------------------------------------------------
+
+# Take the TIMER Hydro-dam capacity (MW) & compare it to Pumped hydro capacity (MW) projections from the International Hydropower Association
 
 Gcap_hydro = gcap_data[['time','DIM_1', 7]].pivot_table(index='time', columns='DIM_1')   # IMAGE-TIMER Hydro dam capacity (power, in MW)
 Gcap_hydro.columns = region_list
@@ -491,41 +494,26 @@ storage_out.to_csv(path_elma / 'output' / scen_folder / sa_settings / 'storage_b
 PHS_kg_perkWh = 26.8                                    # kg per kWh storage capacity (as weight addition to existing hydro plants to make them pumped) 
 phs_storage_stock_tail   = stock_tail(phs_storage.astype(float))
 storage_lifetime_PHS = storage_lifetime['PHS'].reindex(list(range(first_year_grid,outyear+1)), axis=0).interpolate(limit_direction='both')
+
+
+
+###########################################################################################################
+#%%% 2.2.1) Stock Modelling
+###########################################################################################################
+
+
 phs_storage_inflow, phs_storage_outflow, phs_storage_stock  = inflow_outflow(phs_storage_stock_tail, storage_lifetime_PHS, stor_materials_interpol.loc[idx[:,:],'PHS'].unstack() * PHS_kg_perkWh * 1000, 'PHS')    # PHS lifetime is fixed at 60 yrs anyway so, we simply select 1 value
-
-###########################################################################################################
-#%% Graphs output
-###########################################################################################################
-
-
-import graphs_elec
-
-graphs_elec.graph_global_ev_capacity(BEV_dynamic_capacity, PHEV_dynamic_capacity,  max_capacity_BEV, max_capacity_PHEV, scen_folder, sa_settings) # make a graph on the average capacity of EVs and their availability to V2G
-graphs_elec.graph_regional_storage(region_list, storage_PHEV, storage_BEV, storage, scen_folder, scenario, sa_settings)                           # make a graph on regional storage demand vs V2G supply
-graphs_elec.graph_storage_demand_vs_availability(region_list, phs_storage_theoretical, storage_vehicles, storage, scen_folder, sa_settings)       # make a graph on storage demand vs the availability in 3 different storage types (phs, evs and dedicated) 
-graphs_elec.graph_regional_dedicated_storage(oth_storage, scen_folder, scenario, sa_settings)                                                     # make a graph on regional dedicated storage demand
-graphs_elec.graph_market_share(storage_market_share, scen_folder, sa_settings)                                                                    # make a graph on the market shares of storage technologies
-graphs_elec.graph_market_share_pie(storage_market_share, scen_folder, sa_settings)                                                                # make a pie chart on the market share of dedicated storage technologies
-
-###########################################################################################################
-###########################################################################################################
-#%% 3) Calculate the materials in dedicated electricity storage capacity
-###########################################################################################################
-###########################################################################################################
-
-###########################################################################################################
-#%% 3.2) apply the dedicated electricity storage market shares to the demand for dedicated (other) storage to find storage by type and by region
-###########################################################################################################
-
-
-
-###########################################################################################################
-#%% -------- INflow & OUTflow calculations ---------
-###########################################################################################################
-
 
 # then, calculate the market share of technologies in the stock (for region & by year), also a global total market share of the stock is calculated to compare to the inflow market share 
 inflow_by_tech, stock_cohorts, outflow_cohorts = stock_share_calc(oth_storage, storage_market_share, 'Deep-cycle Lead-Acid', list(storage_lifetime_interpol.columns)) # run the function that calculates stock shares from total stock & inflow shares
+
+
+
+###########################################################################################################
+#%%% 2.2.2) Further Processing
+###########################################################################################################
+
+# apply the dedicated electricity storage market shares to the demand for dedicated (other) storage to find storage by type and by region
 stock = stock_cohorts.loc[idx[:,:],idx[:,:]].sum(axis=1, level=0)
 storage_stock_abs = stock.sum(axis=0, level=1)                              # sum over all regions to get the global share of the stock
 stock_total = stock.sum(axis=1).unstack(level=0)                            # total stock by region
@@ -541,9 +529,27 @@ outflow_total = outflow.sum(axis=1).unstack(level=0)                        # to
 inflow_total = inflow_by_tech.sum(axis=1).unstack(level=0)
 
 
+
+###########################################################################################################
+#%%% 2.2.3) Graphs output
+###########################################################################################################
+
+
+import graphs_elec
+
+graphs_elec.graph_global_ev_capacity(BEV_dynamic_capacity, PHEV_dynamic_capacity,  max_capacity_BEV, max_capacity_PHEV, scen_folder, sa_settings) # make a graph on the average capacity of EVs and their availability to V2G
+graphs_elec.graph_regional_storage(region_list, storage_PHEV, storage_BEV, storage, scen_folder, scenario, sa_settings)                           # make a graph on regional storage demand vs V2G supply
+graphs_elec.graph_storage_demand_vs_availability(region_list, phs_storage_theoretical, storage_vehicles, storage, scen_folder, sa_settings)       # make a graph on storage demand vs the availability in 3 different storage types (phs, evs and dedicated) 
+graphs_elec.graph_regional_dedicated_storage(oth_storage, scen_folder, scenario, sa_settings)                                                     # make a graph on regional dedicated storage demand
+graphs_elec.graph_market_share(storage_market_share, scen_folder, sa_settings)                                                                    # make a graph on the market shares of storage technologies
+graphs_elec.graph_market_share_pie(storage_market_share, scen_folder, sa_settings)                                                                # make a pie chart on the market share of dedicated storage technologies
+
+
+
+
 ###########################################################################################################
 ###########################################################################################################
-#%% 4) ---------- Material calculations ---------------
+#%% 3) Material calculations
 ###########################################################################################################
 ###########################################################################################################
 
