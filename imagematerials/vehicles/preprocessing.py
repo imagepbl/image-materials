@@ -433,6 +433,7 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
         lifetimes_vehicles = lifetimes_vehicles[lifetimes_vehicles.index <= base_year].copy()
         lifetimes_vehicles.loc[target_year] = lifetimes_vehicles.loc[base_year]
 
+        #TODO make a function
         for mode, increase in lifetime_increase.items():
             # Implement for folded normal
             col = (mode, 'mean')
@@ -442,12 +443,13 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
             else:
                 print(f"Missing mode: {col}")
             # Implement for weibull
-            col = ("Cars", 'scale')
-            if col in lifetimes_vehicles.columns:
-                base_val = lifetimes_vehicles.loc[base_year, col]
-                lifetimes_vehicles.loc[target_year, col] = base_val * (1 + increase / 100)
-            else:
-                print(f"Missing mode: {col}")
+            if mode == 'Cars':
+                col = (mode, 'scale')
+                if col in lifetimes_vehicles.columns:
+                    base_val = lifetimes_vehicles.loc[base_year, col]
+                    lifetimes_vehicles.loc[target_year, col] = base_val * (1 + increase / 100)
+                else:
+                    print(f"Missing mode: {col}")
         lifetimes_vehicles = interpolate(pd.DataFrame(lifetimes_vehicles))
 
     # Calculate extended lifetime per mode
