@@ -410,8 +410,6 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
     lifetimes_vehicles = lifetimes_vehicles[(lifetimes_vehicles.T != 0)]
     lifetimes_vehicles = lifetimes_vehicles.unstack(['mode', 'data'])
     lifetimes_vehicles = interpolate(pd.DataFrame(lifetimes_vehicles))
-    print(circular_economy_config.keys())
-    print(lifetimes_vehicles)
 
 
     if 'slow' in circular_economy_config.keys():
@@ -422,28 +420,33 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
         # possibilities for implementation rate are: linear, immediate, s-curve
 
 
-        if implementation_rate == 'immediate':
-            lifetimes_vehicles = apply_immediate_implementation(lifetimes_vehicles, base_year, target_year, lifetime_increase)
-        elif implementation_rate == 'linear':
-            lifetimes_vehicles = apply_linear_implementation(lifetimes_vehicles, base_year, target_year, lifetime_increase)
-        elif implementation_rate == 's-curve':
-            lifetimes_vehicles = apply_scurve_implementation(lifetimes_vehicles, base_year, target_year, lifetime_increase, steepness=0.5)
-        else: 
-            raise ValueError(f"Unknown implementation method: '{implementation_rate}'. Supported methods are 'immediate', 'linear', and 's-curve'.")
-
+        #if implementation_rate == 'immediate':
+        #    lifetimes_vehicles = apply_immediate_implementation(lifetimes_vehicles, base_year, target_year, lifetime_increase)
+        #elif implementation_rate == 'linear':
+        #    lifetimes_vehicles = apply_linear_implementation(lifetimes_vehicles, base_year, target_year, lifetime_increase)
+        #elif implementation_rate == 's-curve':
+        #    lifetimes_vehicles = apply_scurve_implementation(lifetimes_vehicles, base_year, target_year, lifetime_increase, steepness=0.5)
+        #else: 
+        #    raise ValueError(f"Unknown implementation method: '{implementation_rate}'. Supported methods are 'immediate', 'linear', and 's-curve'.")
 
         
-        #lifetimes_vehicles = lifetimes_vehicles[lifetimes_vehicles.index <= base_year].copy()
-        #lifetimes_vehicles.loc[target_year] = lifetimes_vehicles.loc[base_year]
+        lifetimes_vehicles = lifetimes_vehicles[lifetimes_vehicles.index <= base_year].copy()
+        lifetimes_vehicles.loc[target_year] = lifetimes_vehicles.loc[base_year]
 
-        #for mode, increase in lifetime_increase.items():
-        #    col = (mode, 'mean')
-        #    if col in lifetimes_vehicles.columns:
-        #        base_val = lifetimes_vehicles.loc[base_year, col]
-        #        lifetimes_vehicles.loc[target_year, col] = base_val * (1 + increase / 100)
-        #    else:
-        #        print(f"Missing mode: {col}")
-        #lifetimes_vehicles = interpolate(pd.DataFrame(lifetimes_vehicles))
+        for mode, increase in lifetime_increase.items():
+            col = (mode, 'mean')
+            if col in lifetimes_vehicles.columns:
+                base_val = lifetimes_vehicles.loc[base_year, col]
+                lifetimes_vehicles.loc[target_year, col] = base_val * (1 + increase / 100)
+            else:
+                print(f"Missing mode: {col}")
+            col = (mode, 'scale')
+            if col in lifetimes_vehicles.columns:
+                base_val = lifetimes_vehicles.loc[base_year, col]
+                lifetimes_vehicles.loc[target_year, col] = base_val * (1 + increase / 100)
+            else:
+                print(f"Missing mode: {col}")
+        lifetimes_vehicles = interpolate(pd.DataFrame(lifetimes_vehicles))
 
     # Calculate extended lifetime per mode
 
