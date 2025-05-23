@@ -15,9 +15,7 @@ from imagematerials.buildings.constants import (
     REGIONS,
     REGIONS_RANGE,
     START_YEAR,
-    YEAR_LIST_SVA,
     YEARS,
-    SCENARIO_SELECT
 )
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, merge_dims
