@@ -13,7 +13,14 @@ from imagematerials.buildings.constants import (
 from imagematerials.util import dataset_to_array
 from imagematerials.read_mym import read_mym_df
 
-prism.unit_registry.load_definitions(files("imagematerials") / "units.txt")
+far_start_year = 1721
+start_year = 1820
+end_year = 1970
+
+years_1721_1820 = xr.DataArray(np.arange(far_start_year, start_year), dims=["Time"], coords={"Time": np.arange(far_start_year, start_year)})
+years_1820_1970 = xr.DataArray(np.arange(start_year, end_year), dims=["Time"], coords={"Time": np.arange(start_year, end_year)})
+
+def compute_population(base_directory):
 
 def compute_population(image_directory, base_directory):
     # Compute total/rural/urban populations
