@@ -14,13 +14,7 @@ end_year = 1970
 years_1721_1820 = xr.DataArray(np.arange(far_start_year, start_year), dims=["Time"], coords={"Time": np.arange(far_start_year, start_year)})
 years_1820_1970 = xr.DataArray(np.arange(start_year, end_year), dims=["Time"], coords={"Time": np.arange(start_year, end_year)})
 
-def compute_population(base_directory = Path("..", "IMAGE-Mat_old_version", "IMAGE-Mat", "BUMA")):
-
-    # Set the correct directories
-    database_directory = base_directory / "files_DB" / SCENARIO_SELECT
-    image_directory = base_directory / "files_IMAGE" / SCENARIO_SELECT
-    assert database_directory.is_dir(), database_directory
-    assert image_directory.is_dir()
+def compute_population(base_directory):
 
     # Compute total/rural/urban populations
     tot_population = compute_total_population(image_directory, base_directory)
