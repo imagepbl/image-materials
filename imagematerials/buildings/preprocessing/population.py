@@ -10,12 +10,14 @@ from importlib.resources import files
 from imagematerials.buildings.constants import (
     urban_share_1820)
 
+from imagematerials.buildings.constants import (
+    YEARS, 
+    far_start_year, 
+    start_year,
+    end_year)
+
 from imagematerials.util import dataset_to_array
 from imagematerials.read_mym import read_mym_df
-
-far_start_year = 1721
-start_year = 1820
-end_year = 1970
 
 years_1721_1820 = xr.DataArray(np.arange(far_start_year, start_year), dims=["Time"], coords={"Time": np.arange(far_start_year, start_year)})
 years_1820_1970 = xr.DataArray(np.arange(start_year, end_year), dims=["Time"], coords={"Time": np.arange(start_year, end_year)})
@@ -50,42 +52,32 @@ def compute_population(image_directory, base_directory):
 
 
 def compute_total_population(image_directory, base_directory):
-    # Pop; unit: million of people; meaning: global population (over time, by region)            
+
+    # import total population 1971 - 2100 from IMAGE
     population_1970_future_df: pd.DataFrame = read_mym_df(image_directory.joinpath("Socioeconomic", "pop.scn"))
+    # drop empty and global region
+    population_1970_future_df = population_1970_future_df.loc[:, :26]
 
     # initial population as a percentage of the 1970 population; unit: %; according to the Maddison Project Database (MPD) 2018 (Groningen University)
     historic_population_df = pd.read_csv(base_directory / 'buildings' / 'files_initial_stock' /'hist_pop.csv', index_col = [0])  
-    print(historic_population_df.columns, historic_population_df.index)
+    historic_population_df.columns = historic_population_df.columns.astype(int) # for multiplication both indexes must be int
 
     population_1970_future_df = population_1970_future_df.rename_axis(index = "Time", columns = "Region")
 
     # Deriving historic population tail based on fraction for 1971
     population_1971 = population_1970_future_df.loc[1971]
-    print(population_1971.index)
 
+    # multiply shares from historic populatin with last year from IMAGE data 
     historic_population = historic_population_df.multiply(population_1971, axis=1)
-    
 
     population_1820_future_df = pd.concat([historic_population.loc[:1970], population_1970_future_df])
     population_1820_future_df = population_1820_future_df.rename_axis(index = "Time", columns = "Region")
 
-    # create pd dataframe with regionalized total population based on shares in 1971
-    regionalized_total_pop = pd.DataFrame(index=historic_pop.index, columns=share_regionalization_1971.index)
-
-    for region in share_regionalization_1971.index:
-        regionalized_total_pop[region] = historic_pop * share_regionalization_1971[region]
-
-    # concat total population data
-    regionalized_total_pop_history_future = pd.concat([regionalized_total_pop, population_1971_future_df])
-
-    # to xarry
-    regionalized_total_pop_history_future = regionalized_total_pop_history_future.rename_axis(index = "Time", columns = "Region")
-
-    regionalized_total_pop_history_future_xr = xr.DataArray(
-        data=regionalized_total_pop_history_future.values,                # Data values from the DataFrame
-        dims=["Time", "Region"],                                          # Names for the two dimensions
-        coords={"Time": regionalized_total_pop_history_future.index,      # Time coordinates from the DataFrame index
-                "Region": regionalized_total_pop_history_future.columns}  # Region coordinates from the DataFrame columns
+    population_1820_future = xr.DataArray(
+        data=population_1820_future_df.values,                # Data values from the DataFrame
+        dims=["Time", "Region"],                  # Names for the two dimensions
+        coords={"Time": population_1820_future_df.index,      # Time coordinates from the DataFrame index
+                "Region": population_1820_future_df.columns}  # Region coordinates from the DataFrame columns
     )
 
 
