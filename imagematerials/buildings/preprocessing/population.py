@@ -20,8 +20,6 @@ end_year = 1970
 years_1721_1820 = xr.DataArray(np.arange(far_start_year, start_year), dims=["Time"], coords={"Time": np.arange(far_start_year, start_year)})
 years_1820_1970 = xr.DataArray(np.arange(start_year, end_year), dims=["Time"], coords={"Time": np.arange(start_year, end_year)})
 
-def compute_population(base_directory):
-
 def compute_population(image_directory, base_directory):
     # Compute total/rural/urban populations
     tot_population_xr, _ = compute_total_population(image_directory, base_directory)
@@ -52,21 +50,24 @@ def compute_population(image_directory, base_directory):
 
 
 def compute_total_population(image_directory, base_directory):
+    # Pop; unit: million of people; meaning: global population (over time, by region)            
+    population_1970_future_df: pd.DataFrame = read_mym_df(image_directory.joinpath("Socioeconomic", "pop.scn"))
 
-    # import total population 1971 - 2100 from IMAGE
-    population_1971_future_df: pd.DataFrame = read_mym_df(image_directory.joinpath("Socioeconomic", "pop.scn"))
-    population_1971_future_df = population_1971_future_df.loc[:, :26]
-    population_1971_future_df.columns = population_1971_future_df.columns.astype(str)
+    # initial population as a percentage of the 1970 population; unit: %; according to the Maddison Project Database (MPD) 2018 (Groningen University)
+    historic_population_df = pd.read_csv(base_directory / 'buildings' / 'files_initial_stock' /'hist_pop.csv', index_col = [0])  
+    print(historic_population_df.columns, historic_population_df.index)
 
-    # read in historic global population from Maddison Project Database 2020 & 1700 value from https://www.johnstonsarchive.net/other/worldpop.html in 1000 people
-    historic_pop = pd.read_csv(base_directory / 'buildings' / 'standard_data' / 'historic_population.csv', index_col=0, header = 0)
-    historic_pop = historic_pop.loc[:1971] / 1000 # unit conversion
+    population_1970_future_df = population_1970_future_df.rename_axis(index = "Time", columns = "Region")
 
-    # interpolate for missing years 
-    historic_pop = historic_pop.reindex(range(historic_pop.index.min(), historic_pop.index.max() + 1)).interpolate(method="linear") # with cubic interpolation we see a drop at 1700
+    # Deriving historic population tail based on fraction for 1971
+    population_1971 = population_1970_future_df.loc[1971]
+    print(population_1971.index)
 
-    # regionalize data to IMAGE regions accoring to 1971 regionalization
-    share_regionalization_1971 = population_1971_future_df.loc[1971]/population_1971_future_df.loc[1971].sum()
+    historic_population = historic_population_df.multiply(population_1971, axis=1)
+    
+
+    population_1820_future_df = pd.concat([historic_population.loc[:1970], population_1970_future_df])
+    population_1820_future_df = population_1820_future_df.rename_axis(index = "Time", columns = "Region")
 
     # create pd dataframe with regionalized total population based on shares in 1971
     regionalized_total_pop = pd.DataFrame(index=historic_pop.index, columns=share_regionalization_1971.index)
@@ -92,8 +93,13 @@ def compute_total_population(image_directory, base_directory):
 
     
 
-def compute_rur_urb_pop(image_directory, base_directory):
-    (_, regionalized_total_pop_history_future) = compute_total_population(image_directory, base_directory)
+def compute_rurpop_share(image_directory):
+    # rurpop; unit: %; meaning: the share of people living in rural areas (over time, by region)
+    # TODO: seems to be a fraction, so no % units, check!
+
+    # total 
+
+    raw_rural_population: pd.DataFrame = pd.read_csv(image_directory. joinpath('rurpop.csv'), index_col = [0])
 
     #rural population total meaning [Million]: the total of people living in rural areas (over time, by region)
     rural_population: pd.DataFrame = read_mym_df(image_directory.joinpath("Socioeconomic", "RURPOPTOT.out"))
