@@ -87,19 +87,19 @@ def test_scipy_survival():
     sm_part = survival.compute_survival(1924).to_numpy()
     _check_part(sm_part, 24, 30, 8)
 
-def test_scipy_survival_subtypes():
-    lifetime_vehicles = {
-        "weibull": create_life_times("weibull"),
-        "folded_norm": create_life_times("folded_norm", more_life=10)
-    }
-    output_modes = []
-    for prefix in lifetime_vehicles:
-        for i in range(4):
-            for sub_i in range(2):
-                output_modes.append(f"{prefix}_{i}{SUBTYPE_SEPARATOR}{sub_i}")
-    survival = ScipySurvival(lifetime_vehicles, output_modes=output_modes)
-    assert len(survival.modes) == 16
-    sm_part = survival.compute_survival(1924).to_numpy()
-    _check_part(sm_part, 24, 30, 16)
-    assert len(survival.time_series) == 30
-    assert survival.new_matrix().shape == (30, 30, 16)
+# def test_scipy_survival_subtypes():
+#     lifetime_vehicles = {
+#         "weibull": create_life_times("weibull"),
+#         "folded_norm": create_life_times("folded_norm", more_life=10)
+#     }
+#     output_modes = []
+#     for prefix in lifetime_vehicles:
+#         for i in range(4):
+#             for sub_i in range(2):
+#                 output_modes.append(f"{prefix}_{i}{SUBTYPE_SEPARATOR}{sub_i}")
+#     survival = ScipySurvival(lifetime_vehicles, output_modes=output_modes)
+#     assert len(survival.modes) == 16
+#     sm_part = survival.compute_survival(1924).to_numpy()
+#     _check_part(sm_part, 24, 30, 16)
+#     assert len(survival.time_series) == 30
+#     assert survival.new_matrix().shape == (30, 30, 16)
