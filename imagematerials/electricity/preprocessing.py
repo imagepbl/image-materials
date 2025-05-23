@@ -9,6 +9,7 @@ from pathlib import Path
 import pint
 import xarray as xr
 from collections import defaultdict
+import matplotlib.pyplot as plt
 
 # path_current = Path(__file__).resolve().parent # absolute path of file
 # path_base = path_current.parent.parent # base path of the project -> image-materials
@@ -121,13 +122,14 @@ idx = pd.IndexSlice             # needed for slicing multi-index
 ###########################################################################################################
 
 
-
+#----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
 #%%% 1.1) Read in files
 ###########################################################################################################
+#----------------------------------------------------------------------------------------------------------
+
 
 # 1. External Data ======================================================================================== 
-
 
 # lifetimes of Gcap tech (original data according to van Vuuren 2006, PhD Thesis)
 gcap_lifetime = pd.read_csv(path_external_data_scenario / 'LTTechnical_dynamic.csv', index_col=['Year','DIM_1'])        
@@ -139,18 +141,18 @@ composition_generation = pd.read_csv(path_external_data_scenario / 'composition_
 
 # 2. IMAGE/TIMER files ====================================================================================
 
-
 # Generation capacity (stock & inflow/new) in MW peak capacity, FILES from TIMER
 gcap_data = read_mym_df(path_image_output / 'Gcap.out')
 
 
-
+#----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
 #%%% 1.2) Prepare model specific variables
 ###########################################################################################################
+#----------------------------------------------------------------------------------------------------------
 
-
-region_list = list(kilometrage.columns.values)  # to get region list without running storage - TODO 
+kilometrage = pd.read_csv(path_external_data_scenario / 'kilometrage.csv', index_col='t')  # to get region list without running storage - TODO: get regions from different source
+region_list = list(kilometrage.columns.values)   
 
 gcap_tech_list = list(composition_generation.loc[:,idx[2020,:]].droplevel(axis=1, level=0).columns)    #list of names of the generation technologies (workaround to retain original order)
 gcap_material_list = list(composition_generation.index.values)  #list of materials the generation technologies
@@ -207,10 +209,11 @@ gcap_materials_interpol.index.names = ["Year", "Material"]
 gcap_types_materials = gcap_materials_interpol.unstack(level='Material')
 
 
-
+#----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
 #%%% 1.3) Prep_data File
 ###########################################################################################################
+#----------------------------------------------------------------------------------------------------------
 
 
 ureg = pint.UnitRegistry(force_ndarray_like=True)
@@ -277,11 +280,12 @@ preprocessing_results_xarray["stocks"] = preprocessing_results_xarray.pop("gcap_
 preprocessing_results_xarray["material_intensities"] = preprocessing_results_xarray.pop("gcap_types_materials")
 # preprocessing_results_xarray["shares"] = preprocessing_results_xarray.pop("vehicle_shares")
 
-
+#----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
 #%%% 1.4) Run Stock Model New
 ###########################################################################################################
 # TODO: move this to electricity.py
+#----------------------------------------------------------------------------------------------------------
 
 import prism
 from imagematerials.model import GenericMainModel, GenericMaterials, GenericStocks, Maintenance, MaterialIntensities
@@ -431,6 +435,7 @@ axes[0, 0].set_ylabel("Value")
 axes[1, 0].set_ylabel("Value")
 axes[2, 0].set_ylabel("Value")
 
+plt.suptitle("Inflow Materials for electricity generation", fontsize=16)
 plt.tight_layout()
 plt.show()
 
@@ -446,10 +451,11 @@ plt.show()
 
 
 
-
+#----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
 #%%% 2.1) Read in files
 ###########################################################################################################
+#----------------------------------------------------------------------------------------------------------
 
 
 # 1. External Data ======================================================================================== 
@@ -503,15 +509,18 @@ passengerkms_data = read_mym_df(path_image_output / 'trp_trvl_pkm.out')   # pass
 
 vehicleshare_data = read_mym_df(path_image_output / 'trp_trvl_Vshare_car.out')
 
+# Generation capacity (stock & inflow/new) in MW peak capacity, FILES from TIMER
+gcap_data = read_mym_df(path_image_output / 'Gcap.out') # needed to get hydro power for storage
+gcap_data = gcap_data.iloc[:, :26]
 
-
-
+#----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
 #%% 2.2) Prepare model specific variables
 ###########################################################################################################
+#----------------------------------------------------------------------------------------------------------
 
 
-storage.drop(storage.iloc[:, -2:], inplace = True, axis = 1)    # drop global total column and empty (27) column
+storage = storage.iloc[:, :26]    # drop global total column and empty (27) column
 
 if sa_settings == 'high_stor':
    storage_multiplier = storage
@@ -623,8 +632,10 @@ for year in range(2050+1,outyear+1):
     storage_market_share.loc[year] = row.iloc[0]
 
 
+###########################################################################################################
+#%% 2.2.1) Vehicles
+###########################################################################################################
 
-# Car Batteries ----------
 
 # kilometrage is defined until 2008, fill 2008 values until 2100 
 kilometrage = kilometrage.reindex(list(range(startyear,endyear))).interpolate(limit_direction='both')
@@ -655,10 +666,124 @@ loadfactor.columns = region_list
 storage.columns = region_list
 
 
+
+# BEV & PHEV vehicle stats
+BEV_capacity  = 59.6    #kWh current battery capacity of full electric vehicles, see current_specs.xlsx
+PHEV_capacity = 11.2    #kWh current battery capacity of plugin electric vehicles, see current_specs.xlsx
+
+if sa_settings == 'high_stor':
+   capacity_usable_PHEV = 0.025   # 2.5% of capacity of PHEV is usable as storage (in the pessimistic sensitivity variant)
+   capacity_usable_BEV  = 0.05    # 5  % of capacity of BEVs is usable as storage (in the pessimistic sensitivity variant)
+else: 
+   capacity_usable_PHEV = 0.05    # 5% of capacity of PHEV is usable as storage
+   capacity_usable_BEV  = 0.10    # 10% of capacity of BEVs is usable as storage
+
+vehicle_kms = passengerkms.loc[:outyear] * 1_000_000_000_000 / loadfactor.loc[:outyear]        # conversion from tera-Tkms  
+vehicles_all = vehicle_kms / kilometrage.loc[:outyear]
+
+vehicles_PHEV = vehicles_all * PHEV_share.loc[:outyear]
+vehicles_BEV = vehicles_all * BEV_share.loc[:outyear]
+vehicles_EV = vehicles_PHEV + vehicles_BEV
+
+# For the availability of vehicle store capacity we apply the assumption of fixed weight,
+# So we first need to know the average density of the stock of EV batteries
+# to get there we need to know the share of the technologies in the stock (based on lifetime & share in the inflow/purchases)
+# to get there, we first need to know the market share of new stock additions (=inflow/purchases)
+
+#First we calculate the share of the inflow using only a few of the technologies in the storage market share
+#The selection represents only the batteries that are suitable for EV & mobile applications
+EV_battery_list = ['NiMH', 'LMO', 'NMC', 'NCA', 'LFP', 'Lithium Sulfur', 'Lithium Ceramic ', 'Lithium-air']
+#normalize the selection of market shares, so that total market share is 1 again (taking the relative share in the selected battery techs)
+market_share_EVs = pd.DataFrame().reindex_like(storage_market_share[EV_battery_list])
+
+for year in list(range(startyear,outyear+1)):
+    for tech in EV_battery_list:
+        market_share_EVs.loc[year, tech] = storage_market_share[EV_battery_list].loc[year,tech] /storage_market_share[EV_battery_list].loc[year].sum()
+
+# Next step: stock modelling
+# EV_inflow_by_tech, EV_stock_cohorts, EV_outflow_cohorts = stock_share_calc(vehicles_EV, market_share_EVs, 'NiMH', ['NiMH', 'LMO', 'NMC', 'NCA', 'LFP', 'Lithium Sulfur', 'Lithium Ceramic ', 'Lithium-air'])
+
+
+
 ###########################################################################################################
-#%%% 1.3) Prep_data File
+#%% 2.2.2) Hydro Power & Other Storage
 ###########################################################################################################
 
+# Take the TIMER Hydro-dam capacity (MW) & compare it to Pumped hydro capacity (MW) projections from the International Hydropower Association
+
+Gcap_hydro = gcap_data[['time','DIM_1', 7]].pivot_table(index='time', columns='DIM_1')   # IMAGE-TIMER Hydro dam capacity (power, in MW)
+Gcap_hydro = Gcap_hydro.iloc[:, :26]
+Gcap_hydro.columns = region_list
+Gcap_hydro = Gcap_hydro.loc[:outyear]
+
+#storage capacity in MW (power capacity), to compare it to Pumped hydro storage projections (also given in MW, power capacity)              
+storage_power.drop(storage_power.iloc[:, -2:], inplace = True, axis = 1)    
+storage_power.columns = region_list
+storage_power = storage_power.loc[:outyear]
+
+#Disaggregate the Pumped hydro-storgae projections to 26 IMAGE regions according to the relative Hydro-dam power capacity (also MW) within 5 regions reported by the IHS (international Hydropwer Association)
+phs_regions = [[10,11],[19],[1],[22],[0,2,3,4,5,6,7,8,9,12,13,14,15,16,17,18,20,21,23,24,25]]   # subregions in IHS data for Europe, China, US, Japan, RoW, MIND: region refers to IMAGE region MINUS 1
+phs_projections_IMAGE = pd.DataFrame(index=Gcap_hydro.index, columns=Gcap_hydro.columns)        # empty dataframe
+
+for column in range(0,len(phs_regions)):
+    sum_data = Gcap_hydro.iloc[:,phs_regions[column]].sum(axis=1)                               # first, get the sum of all hydropower in the IHS regions (to divide over in second step)
+    for region in range(0,regions):
+        if region in phs_regions[column]:
+            phs_projections_IMAGE.iloc[:,region] = phs_projections.iloc[:,column] * (Gcap_hydro.iloc[:,region]/sum_data)
+
+# Then fill the years after 2030 (end of IHS projections) according to the Gcap annual growth rate (assuming a fixed percentage of Hydro dams will be built with Pumped hydro capabilities after )
+if sa_settings == 'high_stor':
+   phs_projections_IMAGE.loc[2030:outyear] =  phs_projections_IMAGE.loc[2030] * (Gcap_hydro.loc[2030:outyear]/Gcap_hydro.loc[2030:outyear])  # no growth after 2030 in the high_stor sensitivity variant
+else:
+   phs_projections_IMAGE.loc[2030:outyear] =  phs_projections_IMAGE.loc[2030] * (Gcap_hydro.loc[2030:outyear]/Gcap_hydro.loc[2030])
+
+# Calculate the fractions of the storage capacity that is provided through pumped hydro-storage, electric vehicles or other storage (larger than 1 means the capacity superseeds the demand for energy storage, in terms of power in MW or enery in MWh) 
+phs_storage_fraction = phs_projections_IMAGE.divide(storage_power.loc[:outyear]).clip(upper=1)      # the phs storage fraction deployed to fulfill storage demand, both phs & storage_power here are expressed in MW
+storage_remaining = storage.loc[:outyear] * (1 - phs_storage_fraction)
+
+if sa_settings == 'high_stor':
+   oth_storage_fraction = 0.5 * storage_remaining 
+   oth_storage_fraction += ((storage_remaining * 0.5) - storage_vehicles).clip(lower=0)    
+   oth_storage_fraction = oth_storage_fraction.divide(storage).where(oth_storage_fraction > 0, 0).clip(lower=0) 
+   evs_storage_fraction = 1 - (phs_storage_fraction + oth_storage_fraction)     # electric vehicle storage (BEV + PHEV) capacity and total storage demand are expressed as MWh
+else: 
+   oth_storage_fraction = (storage_remaining - storage_vehicles).clip(lower=0)    
+   oth_storage_fraction = oth_storage_fraction.divide(storage.loc[:outyear]).where(oth_storage_fraction > 0, 0).clip(lower=0)      
+   evs_storage_fraction = 1 - (phs_storage_fraction + oth_storage_fraction)     # electric vehicle storage (BEV + PHEV) capacity and total storage demand are expressed as MWh
+   
+checksum = phs_storage_fraction + evs_storage_fraction + oth_storage_fraction   # should be 1 for all fields
+
+# absolute storage capacity (MWh)
+phs_storage_theoretical = phs_projections_IMAGE.divide(storage_power) * storage.loc[:outyear]       # theoretically available PHS storage (MWh; fraction * total) only used in the graphs that show surplus capacity
+phs_storage = phs_storage_fraction * storage.loc[:outyear]
+evs_storage = evs_storage_fraction * storage.loc[:outyear]
+oth_storage = oth_storage_fraction * storage.loc[:outyear]
+
+#output for Main text figure 2 (storage reservoir, in MWh for 3 storage types)
+storage_out_phs = pd.concat([phs_storage], keys=['phs'], names=['type']) 
+storage_out_evs = pd.concat([evs_storage], keys=['evs'], names=['type']) 
+storage_out_oth = pd.concat([oth_storage], keys=['oth'], names=['type']) 
+storage_out = pd.concat([storage_out_phs, storage_out_evs, storage_out_oth])
+storage_out.to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test'  / 'storage_by_type_MWh.csv')        # in MWh
+
+# derive inflow & outflow (in MWh) for PHS, for later use in the material calculations 
+PHS_kg_perkWh = 26.8                                    # kg per kWh storage capacity (as weight addition to existing hydro plants to make them pumped) 
+phs_storage_stock_tail   = stock_tail(phs_storage.astype(float))
+storage_lifetime_PHS = storage_lifetime['PHS'].reindex(list(range(first_year_grid,outyear+1)), axis=0).interpolate(limit_direction='both')
+
+
+# Next step: stock modelling
+# phs_storage_inflow, phs_storage_outflow, phs_storage_stock  = inflow_outflow(phs_storage_stock_tail, storage_lifetime_PHS, stor_materials_interpol.loc[idx[:,:],'PHS'].unstack() * PHS_kg_perkWh * 1000, 'PHS')    # PHS lifetime is fixed at 60 yrs anyway so, we simply select 1 value
+# inflow_by_tech, stock_cohorts, outflow_cohorts = stock_share_calc(oth_storage, storage_market_share, 'Deep-cycle Lead-Acid', list(storage_lifetime_interpol.columns)) # run the function that calculates stock shares from total stock & inflow shares
+
+
+#----------------------------------------------------------------------------------------------------------
+###########################################################################################################
+#%%% 2.3) Prep_data File
+###########################################################################################################
+#----------------------------------------------------------------------------------------------------------
+
+#%%%% Vehicles -----------------------------------------------------------------
 
 ureg = pint.UnitRegistry(force_ndarray_like=True)
 # Define the units for each dimension
@@ -723,4 +848,8 @@ preprocessing_results_xarray["lifetimes"] = convert_life_time_vehicles(preproces
 preprocessing_results_xarray["stocks"] = preprocessing_results_xarray.pop("gcap_stock")
 preprocessing_results_xarray["material_intensities"] = preprocessing_results_xarray.pop("gcap_types_materials")
 # preprocessing_results_xarray["shares"] = preprocessing_results_xarray.pop("vehicle_shares")
+
+
+
+#%%%% Hydro Power & Other Storage -----------------------------------------------------------------
 
