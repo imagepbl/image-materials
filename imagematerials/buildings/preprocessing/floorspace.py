@@ -17,6 +17,7 @@ from imagematerials.buildings.constants import (
     START_YEAR,
     YEAR_LIST_SVA,
     YEARS,
+    SCENARIO_SELECT
 )
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, merge_dims
@@ -34,17 +35,16 @@ years_1820_1970 = xr.DataArray(np.arange(start_year, end_year), dims=["Time"], c
 def get_gompertz(base_directory):
     # Load fitted regression parameters
     if FLAG_ALPHA == 0:
-        gompertz = pd.read_csv(base_directory / 'files_commercial/Gompertz_parameters.csv', index_col = [0])
+        gompertz = pd.read_csv(base_directory / 'buildings/files_commercial/Gompertz_parameters.csv', index_col = [0])
     else:
-        gompertz = pd.read_csv(base_directory / 'files_commercial/Gompertz_parameters_alpha.csv', index_col = [0])
+        gompertz = pd.read_csv(base_directory / 'buildings/files_commercial/Gompertz_parameters_alpha.csv', index_col = [0])
     return gompertz
 
 def get_service_value_added(image_directory):
     # we use the inflation corrected SVA to adjust for the fact that IMAGE provides gdp/cap in 2005 US$
-    service_value_added_2005: pd.DataFrame = pd.read_csv(image_directory.joinpath('sva_pc.csv'), index_col = [0])
+    # TODO: check with IMAGE team if SVA is still given in 2005 values --> if not correct inflation factor
+    service_value_added_2005: pd.DataFrame = read_mym_df(image_directory.joinpath("Socioeconomic", "sva_pc.scn"))
     service_value_added = service_value_added_2005 * INFLATION
-    # added cubic interpolation to the sva_pc (presumed linear interpolation between 5-year original data caused sawtooth demand/inflow throughout the scenario projection after 2025)
-    service_value_added = service_value_added.loc[YEAR_LIST_SVA,:].reindex(list(range(1970, END_YEAR + 1,1))).interpolate(method='cubic') 
     return service_value_added
 
 def get_image_floorspace(image_directory, base_directory):

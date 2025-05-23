@@ -21,7 +21,7 @@ flag_Mean   = 0     # switch to choose between material intensity settings (0 = 
 
 # scenario selection
 base_scenario    = "SSP2"
-scenario_variant = "2D_RE"    # CP = Current Policies, 2D = 2-Degree Climate Policy, RE indicates additional resource efficiency assumptions
+scenario_variant = "CP"    # CP = Current Policies, 2D = 2-Degree Climate Policy, RE indicates additional resource efficiency assumptions
 
 # scenario assumptions
 if scenario_variant == "CP_RE" or scenario_variant == "2D_RE":
