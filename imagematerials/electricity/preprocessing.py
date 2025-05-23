@@ -144,6 +144,9 @@ kilometrage = pd.read_csv(path_external_data_scenario / 'kilometrage.csv', index
 # material compositions (storage)
 storage_materials = pd.read_csv(path_external_data_standard / 'storage_materials_dynamic.csv',index_col=[0,1]).transpose()  # wt% of total battery weight for various materials, total battery weight is given by the density file above
 
+# Hydro-dam power capacity (also MW) within 5 regions reported by the IHS (international Hydropwer Association)
+phs_projections = pd.read_csv(path_external_data_standard / 'PHS.csv', index_col='t')   # pumped hydro storage capacity (MW)
+
 
 # GENERATION ------------------------------------------------------
 
@@ -169,6 +172,9 @@ composition_generation = pd.read_csv(path_external_data_scenario / 'composition_
 # read TIMER installed storage capacity (MWh, reservoir)
 storage = read_mym_df(path_image_output.joinpath("StorResTot.out"))   #storage capacity in MWh (reservoir, so energy capacity, not power capacity, the latter is used later on in the pumped hydro storage calculations)
     
+#storage capacity in MW (power capacity), to compare it to Pumped hydro storage projections (also given in MW, power capacity)
+storage_power = read_mym_df(path_image_output / 'StorCapTot.out')  
+
 loadfactor_data = read_mym_df(path_image_output / 'trp_trvl_Load.out') 
   
 passengerkms_data = read_mym_df(path_image_output / 'trp_trvl_pkm.out')   # passenger kilometers in Tera pkm
