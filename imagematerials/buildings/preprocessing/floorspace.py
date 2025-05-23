@@ -19,7 +19,6 @@ from imagematerials.buildings.constants import (
     REGIONS_RANGE,
     START_YEAR,
     YEARS,
-    SCENARIO_SELECT
 )
 from imagematerials.buildings.preprocessing.circular_economy_measures import ce_measures_residential_housing
 

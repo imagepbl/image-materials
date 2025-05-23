@@ -1,5 +1,4 @@
 import xarray as xr
-import numpy as np
 
 # Set general constants
 REGIONS = 26         # 26 IMAGE regions
@@ -15,7 +14,9 @@ YEARS = range(START_YEAR-1, END_YEAR + 1)
 ALL_YEARS = list(range(HIST_YEAR, END_YEAR+1))
 REGIONS_RANGE = range(1, REGIONS+1)
 
-urban_share_1820 = 0.072 #https://www2.census.gov/programs-surveys/decennial/1990/tables/cph-2/table-4.pdf
+far_start_year = 1721
+start_year = 1820
+end_year = 1970
 
 # Set Flags for sensitivity analysis
 FLAG_ALPHA  = 0     # switch for the sensitivity analysis on alpha, if 1 the maximum alpha is 10% above the maximum found in the data
