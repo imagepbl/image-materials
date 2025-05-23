@@ -139,11 +139,11 @@ class KnowledgeGraph():
         return all_descendants
 
     def rebroadcast_xarray(self, input_array, output_coords, dim="Type"):
-        if list(input_array.coords.values()) == list(output_coords):
+        input_coords = input_array.coords[dim].values
+        if list(input_coords) == list(output_coords):
             return input_array
         new_coords = {coord.name: coord for coord in input_array.coords.values()}
         new_coords[dim] = output_coords
-        input_coords = input_array.coords[dim].values
 
         keep_coords = []
         new_array = xr.DataArray(0.0, dims=input_array.dims, coords=new_coords)
@@ -189,7 +189,7 @@ def create_vehicle_graph():
     for subtype in ["Small Ships", "Medium Ships", "Large Ships", "Very Large Ships",
                     "Inland Ships"]:
         vehicle_knowledge_graph.add(Node(subtype, inherits_from="Ships"))
-    vehicle_knowledge_graph.add(Node("Trains", inherits_from="Vehicles"))
+    #vehicle_knowledge_graph.add(Node("Trains", inherits_from="Vehicles"))
 
     # Trains
     # TODO: Fix Trains -> Regular Trains

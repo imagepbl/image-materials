@@ -1,9 +1,15 @@
 from pathlib import Path
+import sys
 from typing import Optional, Union
 
 import netCDF4
 import numpy as np
 import xarray as xr
+
+if sys.version_info < (3, 11):
+    import tomli as tomllib
+else:
+    import tomllib
 
 from imagematerials.concepts import KnowledgeGraph
 from imagematerials.constants import SUBTYPE_SEPARATOR
@@ -207,3 +213,140 @@ def rebroadcast_prep_data(prep_data, knowledge_graph, dim, output_coords):
         else:
             new_prep_data[data_name] = knowledge_graph.rebroadcast_xarray(data, output_coords, dim=dim)
     return new_prep_data
+
+def read_climate_policy_config(scenario_folder) -> dict:
+    """
+    Extracts data from a .toml-file.
+
+    Parameters
+    ----------
+    scenario_folder
+        Path to file that must be read
+
+    Returns
+    -------
+        Dictionary containing the contents of the toml-file
+    """
+    return _read_config(scenario_folder)
+
+def read_circular_economy_config(scenario_folders: dict) -> dict:
+    """
+    Extracts data from multiple .toml-files and joins it together.
+
+    Parameters
+    ----------
+    scenario_folders
+        Dictionary with labelled paths to the files that must be read.
+
+    Returns
+    -------
+        Dictionary containing the contents of all toml-file, accessible
+        under the specified labels.
+    """
+    config_dict = {}
+    for key, scenario_folder in scenario_folders.items():
+        config_dict[key] = _read_config(scenario_folder)
+    return config_dict
+
+def _read_config(scenario_folder) -> dict:
+    """
+    Extracts data from a .toml-file.
+
+    Parameters
+    ----------
+    scenario_folder
+        Path to file that must be read
+
+    Returns
+    -------
+        Dictionary containing the contents of the toml-file
+    """
+    # Turn the path into a Path object, if it wasn't already
+    scenario_folder = Path(scenario_folder)
+    with open(scenario_folder / "config.toml", "rb") as f:
+        config_dict = tomllib.load(f)
+    
+    config_dict['config_file_path'] = scenario_folder.resolve()
+
+    return config_dict
+
+def apply_immediate_implementation(df, base_year, target_year, increase_dict):
+    """
+    Immediately applies an increase starting the year after the target year.
+
+    Parameters:
+        df (pd.DataFrame): Original time series (indexed by year).
+        base_year (int): Year to take base values from.
+        target_year (int): Year after which new values apply.
+        increase_dict (dict): {column_name: % increase}
+
+    Returns:
+        pd.DataFrame: Extended with immediate increase applied.
+    """
+    result = df.copy()
+    jump_year = target_year + 1
+    result.loc[jump_year] = result.loc[base_year]
+
+    for col, increase in increase_dict.items():
+        if col in result.columns:
+            base_val = result.loc[base_year, col]
+            result.loc[jump_year, col] = base_val * (1 + increase / 100)
+        else:
+            print(f"Warning: Column {col} not found in DataFrame.")
+
+    return result.sort_index()
+
+def apply_linear_implementation(df, base_year, target_year, increase_dict):
+    """
+    Linearly interpolates an increase between base and target year.
+
+    Parameters:
+        df (pd.DataFrame): Original time series (indexed by year).
+        base_year (int): Year to take base values from.
+        target_year (int): Year by which increase should be reached.
+        increase_dict (dict): {column_name: % increase}
+
+    Returns:
+        pd.DataFrame: Extended with linear interpolation.
+    """
+    result = df.copy()
+    result.loc[target_year] = result.loc[base_year]
+
+    for col, increase in increase_dict.items():
+        if col in result.columns:
+            base_val = result.loc[base_year, col]
+            result.loc[target_year, col] = base_val * (1 + increase / 100)
+        else:
+            print(f"Warning: Column {col} not found in DataFrame.")
+
+    return result.sort_index().interpolate(method='linear')
+
+def apply_scurve_implementation(df, base_year, target_year, increase_dict, steepness=0.5):
+    """
+    Applies an S-curve (logistic) implementation between base and target year.
+
+    Parameters:
+        df (pd.DataFrame): Original time series (indexed by year).
+        base_year (int): Start year of implementation.
+        target_year (int): End year of implementation.
+        increase_dict (dict): {column_name: % increase}
+        steepness (float): Controls how steep the S-curve is.
+
+    Returns:
+        pd.DataFrame: Extended with S-curve applied.
+    """
+    result = df.copy()
+    mid_year = (base_year + target_year) / 2
+    years = list(range(base_year, target_year + 1))
+
+    for col, increase in increase_dict.items():
+        if col in result.columns:
+            base_val = result.loc[base_year, col]
+            target_val = base_val * (1 + increase / 100)
+            for year in years:
+                progress = 1 / (1 + np.exp(-steepness * (year - mid_year)))
+                result.loc[year, col] = base_val + (target_val - base_val) * progress
+        else:
+            print(f"Warning: Column {col} not found in DataFrame.")
+
+    return result.sort_index()
