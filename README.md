@@ -12,11 +12,13 @@ It is recommended to use a virtual environment for installing dependencies. See 
 
 ### Prerequisites
 
-Ensure you have the necessary dependencies installed:
+General dependencies are listed in the pyproject.toml file and will be installed automatically when you install the image-materials package.
+For developers: to install additional dependencies for documentation and testing, run
 
 ```bash
-pip install -r requirements.txt
+pip install -e ".[all]"
 ```
+after you installed the package.
 
 For **pint-xarray**, install it using:
 
@@ -36,7 +38,7 @@ pip install ./pym
 pip install ./prism
 ```
 
-### Installing imagematerials
+### Installing image-materials
 
 Install the package locally in the parent directory of image-materials with:
 
