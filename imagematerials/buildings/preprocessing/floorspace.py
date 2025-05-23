@@ -52,6 +52,12 @@ def get_service_value_added(image_directory):
     # TODO: check with IMAGE team if SVA is still given in 2005 values --> if not correct inflation factor
     service_value_added_2005: pd.DataFrame = read_mym_df(image_directory.joinpath("Socioeconomic", "sva_pc.scn"))
     service_value_added = service_value_added_2005 * INFLATION
+    
+    # extrapolate to 1970, therefore first add empty 1970 value with nans
+    service_value_added.loc[1970] = np.nan
+    # TODO cubic does not work, replaced with linear for now, Sebastiaans code had cubic, seems like now just value from 1971 is copied
+    service_value_added = service_value_added.sort_index().interpolate(method='linear', limit_direction="both") 
+
     return service_value_added
 
 def get_image_floorspace(image_directory, base_directory):
@@ -115,7 +121,7 @@ def extrapolate_floorspace(floorspace_image, minimum_comm):
 
 def get_floorspace_urban_rural(image_directory):
     # load IMAGE data-files (MyM file format)
-    floorspace: pd.DataFrame = read_mym_df(image_directory.joinpath("EnergyServices", "res_FloorSpace.out"))
+    floorspace: pd.DataFrame = read_mym_df(image_directory.joinpath("EnergyServices", "res_Floorspace.out"))
     floorspace = floorspace[['time','DIM_1',2,3]].rename(columns={"DIM_1": "Region", 'time':'t', 2:'Urban', 3:'Rural'})
     # the other columns are average per capita floorspace per quintile (we also exclude the average per capita floorspace of the total population in column 1, 
     # because we use the urban & rural specific totals)
