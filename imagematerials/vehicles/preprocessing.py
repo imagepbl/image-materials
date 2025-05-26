@@ -470,19 +470,21 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
             mileages, base_year, target_year, 
             mileage_increase, implementation_rate)
 
-        # Cars are saved seperatly since they are not defined in the general kilometrage dataframe
-        kilometrage = apply_change_per_region(
-            kilometrage, base_year, target_year, 
-            region_mileage['Cars'], implementation_rate
-        )
-        kilometrage_bus = apply_change_per_region(
-            kilometrage_bus, base_year, target_year, 
-            mileage_increase['Midi Buses'], implementation_rate
-        )
-        kilometrage_midi_bus = apply_change_per_region(
-            kilometrage_midi_bus, base_year, target_year, 
-            mileage_increase['Regular Buses'], implementation_rate
-        )
+    if 'narrow' in circular_economy_config.keys():
+        target_year = circular_economy_config['narrow']['vehicles']['target_year']
+        base_year = circular_economy_config['narrow']['vehicles']['base_year']
+        mileage_change = circular_economy_config['narrow']['vehicles']['mileage']
+
+        for mode, increase in mileage_change.items():
+            col = (mode, 'mileage')
+            if col in mileages.columns:
+                base_val = mileages.loc[base_year, col]
+                mileages.loc[target_year, col] = base_val * (1 + increase / 100)
+            else:
+                print(f"Missing mode in mileages: {col}")
+
+        mileages = interpolate(pd.DataFrame(mileages))
+
 
         print("implemented 'narrow' for Vehicles (increase mileage)")
     
