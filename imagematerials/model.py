@@ -419,11 +419,47 @@ class GenericEndOfLife(prism.Model):
 
     # Data dependencies
     input_data: tuple[str] = ("collection", "reuse", "recycling",
-                              "outflow_by_cohort_materials")
+                              "outflow_by_cohort_materials")        # I think that's the variable needed as input from all sectors, but I'm not sure. I'm assuming this is the material outflows from each sector and type, per region and material   
    
-    output_data: tuple[str] = ("inflow_materials",
-                               "end_of_life_materials")
+    output_data: tuple[str] = ("end_of_life_materials")
+
     # Output data
-    inflow_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
     end_of_life_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, EOL_TYPE, "count"] = prism.export()
+
+    def compute_initial_values(self, time: prism.Timeline):
+        self.end_of_life_materials = xr.DataArray(
+            0.0, dims=("Time", "Region", "Type", "material","eol"),
+            coords={"Time": self.Time,
+                    "Region": self.Region,
+                    "Type": self.Type,
+                    "material": self.material,
+                    "eol": self.eol
+                    }
+                    )
+
+    def compute_values(self, time: prism.Time, outflow_by_cohort_materials, collection, reuse, recycling): 
+        """
+        Computes reused material within sector and recyclable material from each sector/type, given collection, 
+        reuse and recycling rates at each time step 
+
+        Parameters
+        ----------
+        time : prism.Time
+            The current simulation time step.
+        outflow_by_cohort_materials : xr.DataArray
+            Outflow data after lifetime.
+        collection : xr.DataArray
+            Collection rate data by material and type. 
+        reuse: xr.DataArray
+            Reuse rate data by material and type.
+        recycling: xr.DataArray
+            Recycling rate data by material and type.
+        """
+        t, dt = time.t, time.dt
+        self.collected[t] = outflow_by_cohort_materials[t] * self.collection        
+        #self.losses[t] = outflow_by_cohort_materials[t] - self.collected[t]     # non-collected waste
+        #self.reusable [t] = self.collected[t] * self.reuse 
+        #self.remaining [t] = self.collected[t] - self.reusable [t]              # non-reused but collected waste
+        #self.recyclable [t] = self.remaining[t] * self.recycling 
+        #self.losses [t] += (self.remaining[t] -  self.recyclable [t])           # non-reused/recycled but collected waste
 
