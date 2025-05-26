@@ -112,16 +112,20 @@ def tkms_to_nr_of_vehicles_fixed(tera_tkms, mileage, load, loadfactor):
     nr_of_vehicles = vkms.div(mileage, axis=0)
     return nr_of_vehicles
 
-def slow_lifetime(df, base_year, target_year, lifetime_increase, implementation_rate, steepness=0.5):
+def increase_value(df, base_year, target_year, lifetime_increase, implementation_rate, data_type, steepness=0.5):
     result = df[df.index <= base_year].copy()
     result.loc[target_year] = result.loc[base_year]
 
     for mode, increase in lifetime_increase.items():
-        col = (mode, 'mean')
-        if mode == 'Cars':
-            col = (mode, 'scale')
-        else:
-            col = (mode, 'mean')
+        if data_type == "lifetime":
+            if mode == 'Cars':
+                col = (mode, 'scale')
+            else:
+                col = (mode, 'mean')
+        elif data_type == "mileages":
+            #print(result)
+            #break
+            col = mode
 
         base_val = result.loc[base_year, col]
         if col in result.columns:
@@ -140,9 +144,27 @@ def slow_lifetime(df, base_year, target_year, lifetime_increase, implementation_
             else: 
                 raise ValueError(f"Unknown implementation method: '{implementation_rate}'. Supported methods are 'immediate', 'linear', and 's-curve'.")
         else:
-            print(f"Warning: Column {col} not found in DataFrame.")
+            raise ValueError(f"Column {col} not found in DataFrame.")
     result = interpolate(result)
     return result
+
+def apply_increase_per_region(df, base_year, target_year, increase, implementation_rate, data_type, steepness=0.5):
+    results = []
+    for region in df.columns:
+        regional_df = df[[region]].copy()  # Keep as DataFrame for compatibility
+        result = increase_value(
+            regional_df, 
+            base_year=base_year, 
+            target_year=target_year, 
+            lifetime_increase={region: increase}, 
+            implementation_rate=implementation_rate, 
+            data_type=data_type, 
+            steepness=steepness
+        )
+        results.append(result)
+    # Concatenate results along columns (axis=1), aligning on index
+    return pd.concat(results, axis=1)
+
 
 # apply the dynamic stock model
 

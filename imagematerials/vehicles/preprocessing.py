@@ -56,7 +56,7 @@ from imagematerials.vehicles.constants import (
     maintenance_lifetime_per_mode,
 )
 from imagematerials.vehicles.modelling_functions import (interpolate, tkms_to_nr_of_vehicles_fixed,  
-    slow_lifetime)
+    increase_value, apply_increase_per_region)
 #from imagematerials.concepts import vehicle_knowledge_graph
 
 
@@ -417,60 +417,52 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
         implementation_rate = circular_economy_config['slow']['vehicles']['implementation_rate']
         # possibilities for implementation rate are: linear, immediate, s-curve
 
-        lifetimes_vehicles = slow_lifetime(lifetimes_vehicles, base_year, target_year, lifetime_increase, implementation_rate)
-
-
-        #if implementation_rate == 'immediate':
-        #    print("applying immidiate")
-        #    lifetimes_vehicles = apply_immediate_implementation(lifetimes_vehicles, base_year, target_year, lifetime_increase)
-        #elif implementation_rate == 'linear':
-        #    print("applying linear")
-        #    lifetimes_vehicles = apply_linear_implementation(lifetimes_vehicles, base_year, target_year, lifetime_increase)
-        #elif implementation_rate == 's-curve':
-        #    print("applying s-curve")
-        #    lifetimes_vehicles = apply_scurve_implementation(lifetimes_vehicles, base_year, target_year, lifetime_increase, steepness=0.5)
-        #else: 
-        #    raise ValueError(f"Unknown implementation method: '{implementation_rate}'. Supported methods are 'immediate', 'linear', and 's-curve'.")
-
-        
-        #lifetimes_vehicles = lifetimes_vehicles[lifetimes_vehicles.index <= base_year].copy()
-        #lifetimes_vehicles.loc[target_year] = lifetimes_vehicles.loc[base_year]
-
-        #TODO make a function
-        #for mode, increase in lifetime_increase.items():
-            # Implement for folded normal
-        #    col = (mode, 'mean')
-        #    if col in lifetimes_vehicles.columns:
-        #        base_val = lifetimes_vehicles.loc[base_year, col]
-        #        lifetimes_vehicles.loc[target_year, col] = base_val * (1 + increase / 100)
-        #    else:
-        #        print(f"Missing mode: {col}")
-            # Implement for weibull
-        #    if mode == 'Cars':
-        #        col = (mode, 'scale')
-        #        if col in lifetimes_vehicles.columns:
-        #            base_val = lifetimes_vehicles.loc[base_year, col]
-        #            lifetimes_vehicles.loc[target_year, col] = base_val * (1 + increase / 100)
-        #        else:
-        #            print(f"Missing mode: {col}")
-        #lifetimes_vehicles = interpolate(pd.DataFrame(lifetimes_vehicles))
+        lifetimes_vehicles = increase_value(lifetimes_vehicles, base_year, target_year, lifetime_increase, implementation_rate, "lifetime")
 
     # Calculate extended lifetime per mode
 
     if 'narrow' in circular_economy_config.keys():
         target_year = circular_economy_config['narrow']['vehicles']['target_year']
         base_year = circular_economy_config['narrow']['vehicles']['base_year']
-        mileage_change = circular_economy_config['narrow']['vehicles']['mileage']
+        mileage_increase = circular_economy_config['narrow']['vehicles']['mileage']
+        region_mileage = circular_economy_config['narrow']['vehicles']['region_mileage']
+        implementation_rate = circular_economy_config['narrow']['vehicles']['implementation_rate']
 
-        for mode, increase in mileage_change.items():
-            col = (mode, 'mileage')
-            if col in mileages.columns:
-                base_val = mileages.loc[base_year, col]
-                mileages.loc[target_year, col] = base_val * (1 + increase / 100)
-            else:
-                print(f"Missing mode in mileages: {col}")
+        mileages = increase_value(mileages, base_year, target_year, mileage_increase, implementation_rate, "mileages")
 
-        mileages = interpolate(pd.DataFrame(mileages))
+        kilometrage = apply_increase_per_region(
+            kilometrage,
+            base_year=base_year,
+            target_year=target_year,
+            increase=region_mileage['Cars'],  # Not a dict here—just the % value
+            implementation_rate=implementation_rate,
+            data_type='mileages'
+        )
+        kilometrage_bus = apply_increase_per_region(
+            kilometrage_bus,
+            base_year=base_year,
+            target_year=target_year,
+            increase=mileage_increase['Midi Buses'],  # Not a dict here—just the % value
+            implementation_rate=implementation_rate,
+            data_type='mileages'
+        )
+        kilometrage_midi_bus = apply_increase_per_region(
+            kilometrage_midi_bus,
+            base_year=base_year,
+            target_year=target_year,
+            increase=mileage_increase['Regular Buses'],  # Not a dict here—just the % value
+            implementation_rate=implementation_rate,
+            data_type='mileages'
+        )
+        #for mode, increase in mileage_change.items():
+        #    col = (mode, 'mileage')
+        #    if col in mileages.columns:
+        #        base_val = mileages.loc[base_year, col]
+        #        mileages.loc[target_year, col] = base_val * (1 + increase / 100)
+        #    else:
+        #        print(f"Missing mode in mileages: {col}")
+
+        #mileages = interpolate(pd.DataFrame(mileages))
 
 
     
