@@ -83,7 +83,7 @@ idx = pd.IndexSlice             # needed for slicing multi-index
 
 
 # read TIMER installed storage capacity (MWh, reservoir)
-storage = read_mym_df(path_scenario_output.joinpath("StorResTot.out"))                 #storage capacity in MWh (reservoir, so energy capacity, not power capacity, the latter is used later on in the pumped hydro storage calculations)
+storage = read_mym_df(path_scenario_output.joinpath("StorResTot.out"))    #storage capacity in MWh (reservoir, so energy capacity, not power capacity, the latter is used later on in the pumped hydro storage calculations)
 storage.drop(storage.iloc[:, -2:], inplace = True, axis = 1)    # drop global total column and empty (27) column
 
 if sa_settings == 'high_stor':
@@ -289,12 +289,12 @@ def stock_share_calc(stock, market_share, init_tech, techlist):
     for region in stock.columns:
         
         # pre-calculate the stock by cohort of the initial stock of Lead-acid
-        multiplier_pre = stock.loc[switchtime,region]/survival_init.sum()                                    # the stock is subdivided by the previous cohorts according to the survival function (only allowed when assuming steady stock inflow) 
+        multiplier_pre = stock.loc[switchtime,region]/survival_init.sum()  # the stock is subdivided by the previous cohorts according to the survival function (only allowed when assuming steady stock inflow) 
         
         #pre-calculate the stock as lists (for efficiency)
         initial_stock_years = [np.flip(survival_init[0:pre_time+1]) * multiplier_pre]
             
-        for year in range(1, (outyear-switchtime)+1):                                                                   # then fill the columns with the remaining fractions
+        for year in range(1, (outyear-switchtime)+1):    # then fill the columns with the remaining fractions
             initial_stock_years.append(initial_stock_years[0] * survival_init[year])
     
         stock_cohorts.loc[idx[region,:],idx[init_tech, list(range(switchtime-pre_time,switchtime+1))]] = initial_stock_years       # fill the stock dataframe according to the pre-calculated stock 
@@ -303,7 +303,7 @@ def stock_share_calc(stock, market_share, init_tech, techlist):
         # set the other stock cohorts to zero
         stock_cohorts.loc[idx[region,:],idx[techlist_new, pre_year_list]] = 0
         outflow_cohorts.loc[idx[region,:],idx[techlist_new, pre_year_list]] = 0
-        inflow_by_tech.loc[idx[region, switchtime], techlist_new] = 0                                                   # inflow of other technologies in 1990 = 0
+        inflow_by_tech.loc[idx[region, switchtime], techlist_new] = 0    # inflow of other technologies in 1990 = 0
         
         # except for outflow and inflow in 1990 (switchtime), which can be pre-calculated for Deep-cycle Lead Acid (@ steady state inflow, inflow = outflow = stock/lifetime)
         outflow_cohorts.loc[idx[region, switchtime], idx[init_tech,:]] = outflow_cohorts.loc[idx[region, switchtime+1], idx[init_tech,:]]     # given the assumption of steady state inflow (pre switchtime), we can determine that the outflow is the same in switchyear as in switchyear+1                                        
@@ -355,7 +355,7 @@ def stock_share_calc(stock, market_share, init_tech, techlist):
 ###########################################################################################################
 
 
-from dynamic_stock_model import DynamicStockModel as DSM
+from dynamic_stock_model import Vehic as DSM
    
 # In order to calculate inflow & outflow smoothly (without peaks for the initial years), we calculate a historic tail to the stock, 
 # by adding a 0 value for first year of operation (=1926), then interpolate values towards 1971
@@ -483,7 +483,7 @@ for year in reversed(range(startyear,storage_start)):
     storage_costs_new.loc[year] = row.iloc[0]
 
 storage_costs_new.sort_index(axis=0, inplace=True) 
-storage_costs_new.loc[1971:2017,'Deep-cycle Lead-Acid'] = storage_costs_new.loc[2018,'Deep-cycle Lead-Acid']        # restore the exception (set to constant 2018 values)
+storage_costs_new.loc[1971:2017,'Deep-cycle Lead-Acid'] = storage_costs_new.loc[2018,'Deep-cycle Lead-Acid']  # restore the exception (set to constant 2018 values)
 
 # Multinomial Logit function, assumes input of an ordered dataframe with rows as years and columns as technologies, values as prices. Logitpar is the calibrated Logit parameter (usually a nagetive number between 0 and 1)
 def MNLogit(df, logitpar):
@@ -494,7 +494,7 @@ def MNLogit(df, logitpar):
             yearsum += math.exp(logitpar * df.loc[year,column]) # calculate the sum of the prices
         for column in df.columns:
             new_dataframe.loc[year,column] = math.exp(logitpar * df.loc[year,column])/yearsum
-    return new_dataframe                                                                            # the retuned dataframe contains the market shares
+    return new_dataframe      # the retuned dataframe contains the market shares
 
 # use the storage price development in the logit model to get market shares
 storage_market_share = MNLogit(storage_costs_new, -0.2)
@@ -678,7 +678,7 @@ storage_out = pd.concat([storage_out_phs, storage_out_evs, storage_out_oth])
 storage_out.to_csv(path_elma / 'output' / scen_folder / sa_settings / 'storage_by_type_MWh.csv')        # in MWh
 
 # derive inflow & outflow (in MWh) for PHS, for later use in the material calculations 
-PHS_kg_perkWh = 26.8                                    # kg per kWh storage capacity (as weight addition to existing hydro plants to make them pumped) 
+PHS_kg_perkWh = 26.8    # kg per kWh storage capacity (as weight addition to existing hydro plants to make them pumped) 
 phs_storage_stock_tail   = stock_tail(phs_storage.astype(float))
 storage_lifetime_PHS = storage_lifetime['PHS'].reindex(list(range(first_year_grid,outyear+1)), axis=0).interpolate(limit_direction='both')
 phs_storage_inflow, phs_storage_outflow, phs_storage_stock  = inflow_outflow(phs_storage_stock_tail, storage_lifetime_PHS, stor_materials_interpol.loc[idx[:,:],'PHS'].unstack() * PHS_kg_perkWh * 1000, 'PHS')    # PHS lifetime is fixed at 60 yrs anyway so, we simply select 1 value

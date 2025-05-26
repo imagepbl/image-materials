@@ -2,7 +2,6 @@
 import pandas as pd
 import numpy as np
 import os
-import math
 import scipy
 import warnings
 from pathlib import Path
@@ -19,55 +18,45 @@ import matplotlib.pyplot as plt
 from imagematerials.distribution import ALL_DISTRIBUTIONS, NAME_TO_DIST
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_life_time_vehicles
-# from imagematerials.electricity.modelling_functions import MNLogit, stock_tail #TODO: not working, why??
-def stock_tail(stock):
-    zero_value = [0 for i in range(0,regions)]
-    stock_used = pd.DataFrame(stock).reindex_like(stock)
-    stock_used.loc[first_year_grid] = zero_value  # set all regions to 0 in the year of initial operation
-    stock_new  = stock_used.reindex(list(range(first_year_grid,outyear+1))).interpolate()
-    return stock_new
-# Multinomial Logit function, assumes input of an ordered dataframe with rows as years and columns as technologies, values as prices. Logitpar is the calibrated Logit parameter (usually a nagetive number between 0 and 1)
-def MNLogit(df, logitpar):
-    new_dataframe = pd.DataFrame(index=df.index, columns=df.columns)
-    for year in range(df.index[0],df.index[-1]+1): #from first to last year
-        yearsum = 0
-        for column in df.columns:
-            yearsum += math.exp(logitpar * df.loc[year,column]) # calculate the sum of the prices
-        for column in df.columns:
-            new_dataframe.loc[year,column] = math.exp(logitpar * df.loc[year,column])/yearsum
-    return new_dataframe    # the retuned dataframe contains the market shares
+from imagematerials.electricity.utils import MNLogit, stock_tail #TODO: not working, why??
+
 # ensure consistent spelling of the time index
-def standardize_index_spelling(df: pd.DataFrame) -> pd.DataFrame:
-    """Standardize the index name of a DataFrame related to time/year information."""
-    index_name = df.index.name
-    if index_name is None:
-        return df  # Nothing to standardize
-    standard_map = {
-        "Time": "time",
-        "Year": "year",
-        "yr": "year",
-        "years": "year",
-    }
-    # Convert exact matches
-    if index_name in standard_map:
-        df.index.name = standard_map[index_name]
-    return df
+# def standardize_index_spelling(df: pd.DataFrame) -> pd.DataFrame:
+#     """Standardize the index name of a DataFrame related to time/year information."""
+#     index_name = df.index.name
+#     if index_name is None:
+#         return df  # Nothing to standardize
+#     standard_map = {
+#         "Time": "time",
+#         "Year": "year",
+#         "yr": "year",
+#         "years": "year",
+#     }
+#     # Convert exact matches
+#     if index_name in standard_map:
+#         df.index.name = standard_map[index_name]
+#     return df
 #-----------------------------------
 
-# from imagematerials.electricity.constants import ( # TODO: import not working at the moment
-#     START_YEAR,
-#     FIRST_YEAR,
-#     END_YEAR,
-#     OUT_YEAR,
-#     SCEN,
-#     REGIONS,
-#     MEGA_TO_TERA,
-#     PKMS_TO_VKMS,
-#     TONNES_TO_KGS,
-#     LOAD_FACTOR
-# )
-SCEN = 'SSP2' 
-VARIANT = '2D_RE'
+from imagematerials.electricity.constants import ( # TODO: import not working at the moment
+    YEAR_START,
+    YEAR_FIRST,
+    YEAR_FIRST_GRID,
+    YEAR_END,
+    YEAR_OUT,
+    YEAR_SWITCH,
+    SCEN,
+    VARIANT,
+    REGIONS,
+    MEGA_TO_TERA,
+    PKMS_TO_VKMS,
+    TONNES_TO_KGS,
+    LOAD_FACTOR,
+    BEV_CAPACITY_CURRENT,
+    PHEV_CAPACITY_CURRENT
+)
+# SCEN = 'SSP2' 
+# VARIANT = '2D_RE'
 # import inspect
 # path_current = Path(inspect.getfile(inspect.currentframe())).resolve()#.parent
 
@@ -89,15 +78,15 @@ assert path_image_output.is_dir()
 assert path_external_data_standard.is_dir()
 assert path_external_data_scenario.is_dir()
 
-sa_settings = "default"         # settings for the sensitivity analysis (default, high_stor, high_grid)
+sa_settings = "default"  # settings for the sensitivity analysis (default, high_stor, high_grid)
 
 # Define constants ---------------------------------------------------------------
 cohorts = 50
 startyear = 1971
-endyear = 2060
+endyear = 2060 # YEAR_END
 outyear = 2060                  # latest year of output data
 first_year_grid = 1926          # UK Electricity supply act - https://www.bbc.com/news/uk-politics-11619751   
-years = endyear - startyear  + 1
+years = YEAR_END - YEAR_START  + 1
 switchtime = 1990
 vehicles = 25
 regions = 26
@@ -107,7 +96,6 @@ epg_techs = 34          # number of electricity generation technologies -> 33 te
 weibull_shape = 1.89
 weibull_scale = 10.3
 stdev_mult = 0.214      # multiplier that defines the standard deviation (standard deviation = mean * multiplier)
-LOAD_FACTOR = 1.6       # reference loadfactor of cars in TIMER (the trp_trvl_Load.out file is relative to this BASE loadfcator (persons/car))
 
 # from past.builtins import execfile
 # execfile('read_mym.py')
@@ -158,20 +146,20 @@ gcap_tech_list = list(composition_generation.loc[:,idx[2020,:]].droplevel(axis=1
 gcap_material_list = list(composition_generation.index.values)  #list of materials the generation technologies
 
 gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
-gcap = pd.pivot_table(gcap_data[gcap_data['time'].isin(list(range(startyear,endyear+1)))], index=['time','DIM_1'], values=list(range(1,epg_techs+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (34));  the last column in gcap_data (= totals) is now removed
+gcap = pd.pivot_table(gcap_data[gcap_data['time'].isin(list(range(YEAR_START,YEAR_END+1)))], index=['time','DIM_1'], values=list(range(1,epg_techs+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (34));  the last column in gcap_data (= totals) is now removed
 
 # renaming multi-index dataframe: generation capacity, based on the regions in grid_length_Hv & technologies as given
-gcap.index = pd.MultiIndex.from_product([list(range(startyear,endyear+1)), region_list], names=['years', 'regions'])
+gcap.index = pd.MultiIndex.from_product([list(range(YEAR_START,YEAR_END+1)), region_list], names=['years', 'regions'])
 gcap.columns = gcap_tech_list
 
 # Interpolate material intensities (dynamic content for gcap & storage technologies between 1926 to 2100, based on data files)
-index = pd.MultiIndex.from_product([list(range(first_year_grid, outyear+1)), list(composition_generation.index)])
+index = pd.MultiIndex.from_product([list(range(YEAR_FIRST_GRID, YEAR_OUT+1)), list(composition_generation.index)])
 gcap_materials_interpol = pd.DataFrame(index=index, columns=composition_generation.columns.levels[1])
 
 # material intensities for gcap
 for cat in list(composition_generation.columns.levels[1]):
    gcap_materials_1st   = composition_generation.loc[:,idx[composition_generation.columns[0][0],cat]]
-   gcap_materials_interpol.loc[idx[first_year_grid ,:],cat] = gcap_materials_1st.to_numpy()                # set the first year (1926) values to the first available values in the dataset (for the year 2000) 
+   gcap_materials_interpol.loc[idx[YEAR_FIRST_GRID ,:],cat] = gcap_materials_1st.to_numpy()                # set the first year (1926) values to the first available values in the dataset (for the year 2000) 
    gcap_materials_interpol.loc[idx[composition_generation.columns.levels[0].min(),:],cat] = composition_generation.loc[:, idx[composition_generation.columns.levels[0].min(),cat]].to_numpy()                # set the middle year (2000) values to the first available values in the dataset (for the year 2000) 
    gcap_materials_interpol.loc[idx[composition_generation.columns.levels[0].max(),:],cat] = composition_generation.loc[:, idx[composition_generation.columns.levels[0].max(),cat]].to_numpy()                # set the last year (2100) values to the last available values in the dataset (for the year 2050) 
    gcap_materials_interpol.loc[idx[:,:],cat] = gcap_materials_interpol.loc[idx[:,:],cat].unstack().astype('float64').interpolate().stack()
@@ -179,10 +167,10 @@ for cat in list(composition_generation.columns.levels[1]):
 # interpolate Gcap (technical) lifetime data
 gcap_lifetime.index = gcap_lifetime.index.set_levels(gcap_tech_list, level=1)
 gcap_lifetime = gcap_lifetime.unstack().droplevel(axis=1, level=0)
-gcap_lifetime = gcap_lifetime.reindex(list(range(first_year_grid,outyear+1)), axis=0).interpolate(limit_direction='both')
+gcap_lifetime = gcap_lifetime.reindex(list(range(YEAR_FIRST_GRID,YEAR_OUT+1)), axis=0).interpolate(limit_direction='both')
 
 # Calculate the historic tail to the Gcap (stock) 
-gcap_new = pd.DataFrame(index=pd.MultiIndex.from_product([range(first_year_grid,outyear+1), region_list], names=['years', 'regions']), columns=gcap.columns)
+gcap_new = pd.DataFrame(index=pd.MultiIndex.from_product([range(YEAR_FIRST_GRID,YEAR_OUT+1), region_list], names=['years', 'regions']), columns=gcap.columns)
 for tech in gcap_tech_list:
     gcap_new.loc[idx[:,:],tech] = stock_tail(gcap.loc[idx[:,:],tech].unstack(level=1)).stack()
 
@@ -443,6 +431,17 @@ plt.show()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
 ###########################################################################################################
 ###########################################################################################################
 #%% 2) STORAGE
@@ -513,12 +512,20 @@ vehicleshare_data = read_mym_df(path_image_output / 'trp_trvl_Vshare_car.out')
 gcap_data = read_mym_df(path_image_output / 'Gcap.out') # needed to get hydro power for storage
 gcap_data = gcap_data.iloc[:, :26]
 
+
+
 #----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
-#%% 2.2) Prepare model specific variables
+#%% 2.2) Prepare general variables
 ###########################################################################################################
 #----------------------------------------------------------------------------------------------------------
 
+# Calculations used in both 'vehicle battery storage' and 'other storage'
+
+
+##################
+# Interpolations #
+##################
 
 storage = storage.iloc[:, :26]    # drop global total column and empty (27) column
 
@@ -526,7 +533,7 @@ if sa_settings == 'high_stor':
    storage_multiplier = storage
    for year in range(2021,2051):
         storage_multiplier.loc[year] = storage.loc[year] * (1 + (1/30*(year-2020)))
-   for year in range(2051,endyear+1):
+   for year in range(2051,YEAR_END+1):
         storage_multiplier.loc[year] = storage.loc[year] * 2
 
 
@@ -552,41 +559,43 @@ storage_density_interpol = storage_density.sort_index(axis=0).interpolate(axis=0
 storage_lifetime_interpol = storage_lifetime.sort_index(axis=0).interpolate(axis=0)  # lifetime calculation continue with the material calculations
 
 # fix the energy density (kg/kwh) of storage technologies after 2030
-for year in range(2030+1,outyear+1):
+for year in range(2030+1,YEAR_OUT+1):
     # storage_density_interpol = storage_density_interpol.append(pd.Series(storage_density_interpol.loc[storage_density_interpol.last_valid_index()], name=year))
     row = storage_density_interpol.loc[[storage_density_interpol.last_valid_index()]]
     row.index = [year]
     storage_density_interpol = pd.concat([storage_density_interpol, row])
     
 # assumed fixed energy densities before 2018
-for year in reversed(range(switchtime,storage_start)):
+for year in reversed(range(YEAR_SWITCH,storage_start)):
     # storage_density_interpol = storage_density_interpol.append(pd.Series(storage_density_interpol.loc[storage_density_interpol.first_valid_index()], name=year)).sort_index(axis=0)
     row = storage_density_interpol.loc[[storage_density_interpol.first_valid_index()]]
     row.index = [year]
     storage_density_interpol = pd.concat([storage_density_interpol, row]).sort_index(axis=0)
 
 # Interpolate material intensities (dynamic content for gcap & storage technologies between 1926 to 2100, based on data files)
-index = pd.MultiIndex.from_product([list(range(first_year_grid, outyear+1)), list(storage_materials.index)])
+index = pd.MultiIndex.from_product([list(range(YEAR_FIRST_GRID, YEAR_OUT+1)), list(storage_materials.index)])
 stor_materials_interpol = pd.DataFrame(index=index, columns=storage_materials.columns.levels[1])
 
 # material intensities for storage
 for cat in list(storage_materials.columns.levels[1]):
    stor_materials_1st   = storage_materials.loc[:,idx[storage_materials.columns[0][0],cat]]
-   stor_materials_interpol.loc[idx[first_year_grid ,:],cat] = stor_materials_1st.to_numpy()                # set the first year (1926) values to the first available values in the dataset (for the year 2000) 
+   stor_materials_interpol.loc[idx[YEAR_FIRST_GRID ,:],cat] = stor_materials_1st.to_numpy()                # set the first year (1926) values to the first available values in the dataset (for the year 2000) 
    stor_materials_interpol.loc[idx[storage_materials.columns.levels[0].min(),:],cat] = storage_materials.loc[:, idx[storage_materials.columns.levels[0].min(),cat]].to_numpy()                # set the middle year (2000) values to the first available values in the dataset (for the year 2000) 
    stor_materials_interpol.loc[idx[storage_materials.columns.levels[0].max(),:],cat] = storage_materials.loc[:, idx[storage_materials.columns.levels[0].max(),cat]].to_numpy()                # set the last year (2100) values to the last available values in the dataset (for the year 2050) 
    stor_materials_interpol.loc[idx[:,:],cat] = stor_materials_interpol.loc[idx[:,:],cat].unstack().astype('float64').interpolate().stack()
 
+#############
 # Lifetimes #
+#############
 
 # First the lifetime of storage technologies needs to be defined over time, before running the dynamic stock function
 # before 2018
-for year in reversed(range(startyear,storage_start)):
+for year in reversed(range(YEAR_START,storage_start)):
     # storage_lifetime_interpol = pd.concat([storage_lifetime_interpol, pd.Series(storage_lifetime_interpol.loc[storage_lifetime_interpol.first_valid_index()], name=year)])
     row = pd.DataFrame([storage_lifetime_interpol.loc[storage_lifetime_interpol.first_valid_index()]])
     storage_lifetime_interpol.loc[year] = row.iloc[0]
 # after 2030
-for year in range(2030+1,outyear+1):
+for year in range(2030+1,YEAR_OUT+1):
     # storage_lifetime_interpol = pd.concat([storage_lifetime_interpol, pd.Series(storage_lifetime_interpol.loc[storage_lifetime_interpol.last_valid_index()], name=year)])
     row = pd.DataFrame([storage_lifetime_interpol.loc[storage_lifetime_interpol.last_valid_index()]])
     storage_lifetime_interpol.loc[year] = row.iloc[0]
@@ -595,7 +604,9 @@ storage_lifetime_interpol = storage_lifetime_interpol.sort_index(axis=0)
 # drop the PHS from the interpolated lifetime frame, as the PHS is calculated separately
 storage_lifetime_interpol = storage_lifetime_interpol.drop(columns=['PHS'])
 
+#################
 # Market Shares #
+#################
 
 # Determine MARKET SHARE of the storage capacity using a multi-nomial logit function
 # determine the annual % decline of the costs based on the 2018-2030 data (original, before applying the malus)
@@ -614,7 +625,7 @@ for year in range(storage_end+1,2050+1):
     storage_costs_new.loc[year] = row.iloc[0]
 
 # for historic price development, assume 2x AVERAGE annual price decline on all technologies, except lead-acid (so that lead-acid gets a relative price advantage from 1970-2018)
-for year in reversed(range(startyear,storage_start)):
+for year in reversed(range(YEAR_START,storage_start)):
     # storage_costs_new = storage_costs_new.append(pd.Series(storage_costs_new.loc[storage_costs_new.first_valid_index()]*(1+(2*decline_used.mean())), name=year)).sort_index(axis=0)
     row = pd.DataFrame([storage_costs_new.loc[storage_costs_new.first_valid_index()]*(1+(2*decline_used.mean()))])
     storage_costs_new.loc[year] = row.iloc[0]
@@ -626,27 +637,30 @@ storage_costs_new.loc[1971:2017,'Deep-cycle Lead-Acid'] = storage_costs_new.loc[
 storage_market_share = MNLogit(storage_costs_new, -0.2)
 
 # fix the market share of storage technologies after 2050
-for year in range(2050+1,outyear+1):
+for year in range(2050+1,YEAR_OUT+1):
     # storage_market_share = storage_market_share.append(pd.Series(storage_market_share.loc[storage_market_share.last_valid_index()], name=year))
     row = pd.DataFrame([storage_market_share.loc[storage_market_share.last_valid_index()]])
     storage_market_share.loc[year] = row.iloc[0]
 
 
+#----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
-#%% 2.2.1) Vehicles
+#%% 2.3) Vehicles
 ###########################################################################################################
+#----------------------------------------------------------------------------------------------------------
 
+# Vehicle specific variables
 
 # kilometrage is defined until 2008, fill 2008 values until 2100 
-kilometrage = kilometrage.reindex(list(range(startyear,endyear))).interpolate(limit_direction='both')
+kilometrage = kilometrage.reindex(list(range(YEAR_START,YEAR_END))).interpolate(limit_direction='both')
 region_list = list(kilometrage.columns.values)                          # get a list with region names
 
 loadfactor = loadfactor_data[['time','DIM_1', 5]].pivot_table(index='time', columns='DIM_1') # loadfactor for cars (in persons per vehicle)
-loadfactor = loadfactor.loc[list(range(startyear,endyear+1))] * LOAD_FACTOR  # car loadfactor is expressed compared to an average global loadfactor from the IMAGE-TIMER-TRAVEL model (original: Girod, 2012; further elaborations by Edelenbosch et al.) 
+loadfactor = loadfactor.loc[list(range(YEAR_START,YEAR_END+1))] * LOAD_FACTOR  # car loadfactor is expressed compared to an average global loadfactor from the IMAGE-TIMER-TRAVEL model (original: Girod, 2012; further elaborations by Edelenbosch et al.) 
   
 indexNames = passengerkms_data[ passengerkms_data['DIM_1'] >= 27 ].index
 passengerkms_data.drop(indexNames , inplace=True)
-passengerkms = passengerkms_data[['time','DIM_1', 5]].pivot_table(index='time', columns='DIM_1').loc[list(range(startyear,endyear+1))]
+passengerkms = passengerkms_data[['time','DIM_1', 5]].pivot_table(index='time', columns='DIM_1').loc[list(range(YEAR_START,YEAR_END+1))]
   
 BEV_collist = [22, 23, 24, 25] # battery electric vehicles
 PHEV_collist= [21, 20, 19, 18, 17, 16] # plug-in hybrid electric vehicles
@@ -655,8 +669,10 @@ vehicleshare_data['battery'] = vehicleshare_data[BEV_collist].sum(axis=1)
 vehicleshare_data['PHEV'] = vehicleshare_data[PHEV_collist].sum(axis=1)
 
 # get the regional sum of the BEV & PHEV fraction of the fleet, and replace the column names with the region names
-PHEV_share = vehicleshare_data[['time','DIM_1', 'PHEV']].pivot_table(index='time',columns='DIM_1').loc[list(range(startyear,endyear+1))]
-BEV_share = vehicleshare_data[['time','DIM_1', 'battery']].pivot_table(index='time',columns='DIM_1').loc[list(range(startyear,endyear+1))]
+PHEV_share = vehicleshare_data[['time','DIM_1', 'PHEV']].pivot_table(index='time',columns='DIM_1').loc[list(range(YEAR_START,YEAR_END+1))]
+BEV_share = vehicleshare_data[['time','DIM_1', 'battery']].pivot_table(index='time',columns='DIM_1').loc[list(range(YEAR_START,YEAR_END+1))]
+
+# storage.drop(storage.iloc[:, -2:], inplace = True, axis = 1)    # drop global total column and empty (27) column
 
 # before we run any calculations, replace the column names to region names
 PHEV_share.columns = region_list
@@ -668,8 +684,6 @@ storage.columns = region_list
 
 
 # BEV & PHEV vehicle stats
-BEV_capacity  = 59.6    #kWh current battery capacity of full electric vehicles, see current_specs.xlsx
-PHEV_capacity = 11.2    #kWh current battery capacity of plugin electric vehicles, see current_specs.xlsx
 
 if sa_settings == 'high_stor':
    capacity_usable_PHEV = 0.025   # 2.5% of capacity of PHEV is usable as storage (in the pessimistic sensitivity variant)
@@ -678,11 +692,11 @@ else:
    capacity_usable_PHEV = 0.05    # 5% of capacity of PHEV is usable as storage
    capacity_usable_BEV  = 0.10    # 10% of capacity of BEVs is usable as storage
 
-vehicle_kms = passengerkms.loc[:outyear] * 1_000_000_000_000 / loadfactor.loc[:outyear]        # conversion from tera-Tkms  
-vehicles_all = vehicle_kms / kilometrage.loc[:outyear]
+vehicle_kms = passengerkms.loc[:YEAR_OUT] * PKMS_TO_VKMS / loadfactor.loc[:YEAR_OUT]        # conversion from tera-Tkms  
+vehicles_all = vehicle_kms / kilometrage.loc[:YEAR_OUT]
 
-vehicles_PHEV = vehicles_all * PHEV_share.loc[:outyear]
-vehicles_BEV = vehicles_all * BEV_share.loc[:outyear]
+vehicles_PHEV = vehicles_all * PHEV_share.loc[:YEAR_OUT]
+vehicles_BEV = vehicles_all * BEV_share.loc[:YEAR_OUT]
 vehicles_EV = vehicles_PHEV + vehicles_BEV
 
 # For the availability of vehicle store capacity we apply the assumption of fixed weight,
@@ -696,94 +710,17 @@ EV_battery_list = ['NiMH', 'LMO', 'NMC', 'NCA', 'LFP', 'Lithium Sulfur', 'Lithiu
 #normalize the selection of market shares, so that total market share is 1 again (taking the relative share in the selected battery techs)
 market_share_EVs = pd.DataFrame().reindex_like(storage_market_share[EV_battery_list])
 
-for year in list(range(startyear,outyear+1)):
+for year in list(range(YEAR_START,YEAR_OUT+1)):
     for tech in EV_battery_list:
         market_share_EVs.loc[year, tech] = storage_market_share[EV_battery_list].loc[year,tech] /storage_market_share[EV_battery_list].loc[year].sum()
 
-# Next step: stock modelling
-# EV_inflow_by_tech, EV_stock_cohorts, EV_outflow_cohorts = stock_share_calc(vehicles_EV, market_share_EVs, 'NiMH', ['NiMH', 'LMO', 'NMC', 'NCA', 'LFP', 'Lithium Sulfur', 'Lithium Ceramic ', 'Lithium-air'])
 
 
 
 ###########################################################################################################
-#%% 2.2.2) Hydro Power & Other Storage
+#%%% 2.3.1) Prep_data File
 ###########################################################################################################
 
-# Take the TIMER Hydro-dam capacity (MW) & compare it to Pumped hydro capacity (MW) projections from the International Hydropower Association
-
-Gcap_hydro = gcap_data[['time','DIM_1', 7]].pivot_table(index='time', columns='DIM_1')   # IMAGE-TIMER Hydro dam capacity (power, in MW)
-Gcap_hydro = Gcap_hydro.iloc[:, :26]
-Gcap_hydro.columns = region_list
-Gcap_hydro = Gcap_hydro.loc[:outyear]
-
-#storage capacity in MW (power capacity), to compare it to Pumped hydro storage projections (also given in MW, power capacity)              
-storage_power.drop(storage_power.iloc[:, -2:], inplace = True, axis = 1)    
-storage_power.columns = region_list
-storage_power = storage_power.loc[:outyear]
-
-#Disaggregate the Pumped hydro-storgae projections to 26 IMAGE regions according to the relative Hydro-dam power capacity (also MW) within 5 regions reported by the IHS (international Hydropwer Association)
-phs_regions = [[10,11],[19],[1],[22],[0,2,3,4,5,6,7,8,9,12,13,14,15,16,17,18,20,21,23,24,25]]   # subregions in IHS data for Europe, China, US, Japan, RoW, MIND: region refers to IMAGE region MINUS 1
-phs_projections_IMAGE = pd.DataFrame(index=Gcap_hydro.index, columns=Gcap_hydro.columns)        # empty dataframe
-
-for column in range(0,len(phs_regions)):
-    sum_data = Gcap_hydro.iloc[:,phs_regions[column]].sum(axis=1)                               # first, get the sum of all hydropower in the IHS regions (to divide over in second step)
-    for region in range(0,regions):
-        if region in phs_regions[column]:
-            phs_projections_IMAGE.iloc[:,region] = phs_projections.iloc[:,column] * (Gcap_hydro.iloc[:,region]/sum_data)
-
-# Then fill the years after 2030 (end of IHS projections) according to the Gcap annual growth rate (assuming a fixed percentage of Hydro dams will be built with Pumped hydro capabilities after )
-if sa_settings == 'high_stor':
-   phs_projections_IMAGE.loc[2030:outyear] =  phs_projections_IMAGE.loc[2030] * (Gcap_hydro.loc[2030:outyear]/Gcap_hydro.loc[2030:outyear])  # no growth after 2030 in the high_stor sensitivity variant
-else:
-   phs_projections_IMAGE.loc[2030:outyear] =  phs_projections_IMAGE.loc[2030] * (Gcap_hydro.loc[2030:outyear]/Gcap_hydro.loc[2030])
-
-# Calculate the fractions of the storage capacity that is provided through pumped hydro-storage, electric vehicles or other storage (larger than 1 means the capacity superseeds the demand for energy storage, in terms of power in MW or enery in MWh) 
-phs_storage_fraction = phs_projections_IMAGE.divide(storage_power.loc[:outyear]).clip(upper=1)      # the phs storage fraction deployed to fulfill storage demand, both phs & storage_power here are expressed in MW
-storage_remaining = storage.loc[:outyear] * (1 - phs_storage_fraction)
-
-if sa_settings == 'high_stor':
-   oth_storage_fraction = 0.5 * storage_remaining 
-   oth_storage_fraction += ((storage_remaining * 0.5) - storage_vehicles).clip(lower=0)    
-   oth_storage_fraction = oth_storage_fraction.divide(storage).where(oth_storage_fraction > 0, 0).clip(lower=0) 
-   evs_storage_fraction = 1 - (phs_storage_fraction + oth_storage_fraction)     # electric vehicle storage (BEV + PHEV) capacity and total storage demand are expressed as MWh
-else: 
-   oth_storage_fraction = (storage_remaining - storage_vehicles).clip(lower=0)    
-   oth_storage_fraction = oth_storage_fraction.divide(storage.loc[:outyear]).where(oth_storage_fraction > 0, 0).clip(lower=0)      
-   evs_storage_fraction = 1 - (phs_storage_fraction + oth_storage_fraction)     # electric vehicle storage (BEV + PHEV) capacity and total storage demand are expressed as MWh
-   
-checksum = phs_storage_fraction + evs_storage_fraction + oth_storage_fraction   # should be 1 for all fields
-
-# absolute storage capacity (MWh)
-phs_storage_theoretical = phs_projections_IMAGE.divide(storage_power) * storage.loc[:outyear]       # theoretically available PHS storage (MWh; fraction * total) only used in the graphs that show surplus capacity
-phs_storage = phs_storage_fraction * storage.loc[:outyear]
-evs_storage = evs_storage_fraction * storage.loc[:outyear]
-oth_storage = oth_storage_fraction * storage.loc[:outyear]
-
-#output for Main text figure 2 (storage reservoir, in MWh for 3 storage types)
-storage_out_phs = pd.concat([phs_storage], keys=['phs'], names=['type']) 
-storage_out_evs = pd.concat([evs_storage], keys=['evs'], names=['type']) 
-storage_out_oth = pd.concat([oth_storage], keys=['oth'], names=['type']) 
-storage_out = pd.concat([storage_out_phs, storage_out_evs, storage_out_oth])
-storage_out.to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test'  / 'storage_by_type_MWh.csv')        # in MWh
-
-# derive inflow & outflow (in MWh) for PHS, for later use in the material calculations 
-PHS_kg_perkWh = 26.8                                    # kg per kWh storage capacity (as weight addition to existing hydro plants to make them pumped) 
-phs_storage_stock_tail   = stock_tail(phs_storage.astype(float))
-storage_lifetime_PHS = storage_lifetime['PHS'].reindex(list(range(first_year_grid,outyear+1)), axis=0).interpolate(limit_direction='both')
-
-
-# Next step: stock modelling
-# phs_storage_inflow, phs_storage_outflow, phs_storage_stock  = inflow_outflow(phs_storage_stock_tail, storage_lifetime_PHS, stor_materials_interpol.loc[idx[:,:],'PHS'].unstack() * PHS_kg_perkWh * 1000, 'PHS')    # PHS lifetime is fixed at 60 yrs anyway so, we simply select 1 value
-# inflow_by_tech, stock_cohorts, outflow_cohorts = stock_share_calc(oth_storage, storage_market_share, 'Deep-cycle Lead-Acid', list(storage_lifetime_interpol.columns)) # run the function that calculates stock shares from total stock & inflow shares
-
-
-#----------------------------------------------------------------------------------------------------------
-###########################################################################################################
-#%%% 2.3) Prep_data File
-###########################################################################################################
-#----------------------------------------------------------------------------------------------------------
-
-#%%%% Vehicles -----------------------------------------------------------------
 
 ureg = pint.UnitRegistry(force_ndarray_like=True)
 # Define the units for each dimension
@@ -851,5 +788,103 @@ preprocessing_results_xarray["material_intensities"] = preprocessing_results_xar
 
 
 
-#%%%% Hydro Power & Other Storage -----------------------------------------------------------------
+
+###########################################################################################################
+#%%% 2.3.2) Stock Modelling
+###########################################################################################################
+# TODO: move this to electricity.py
+
+# EV_inflow_by_tech, EV_stock_cohorts, EV_outflow_cohorts = stock_share_calc(vehicles_EV, market_share_EVs, 'NiMH', ['NiMH', 'LMO', 'NMC', 'NCA', 'LFP', 'Lithium Sulfur', 'Lithium Ceramic ', 'Lithium-air'])
+
+
+
+
+
+
+
+###########################################################################################################
+#%% 2.4) Hydro Power & Other Storage
+###########################################################################################################
+
+# Take the TIMER Hydro-dam capacity (MW) & compare it to Pumped hydro capacity (MW) projections from the International Hydropower Association
+
+Gcap_hydro = gcap_data[['time','DIM_1', 7]].pivot_table(index='time', columns='DIM_1')   # IMAGE-TIMER Hydro dam capacity (power, in MW)
+Gcap_hydro = Gcap_hydro.iloc[:, :26]
+Gcap_hydro.columns = region_list
+Gcap_hydro = Gcap_hydro.loc[:YEAR_OUT]
+
+#storage capacity in MW (power capacity), to compare it to Pumped hydro storage projections (also given in MW, power capacity)              
+storage_power.drop(storage_power.iloc[:, -2:], inplace = True, axis = 1)    
+storage_power.columns = region_list
+storage_power = storage_power.loc[:YEAR_OUT]
+
+#Disaggregate the Pumped hydro-storgae projections to 26 IMAGE regions according to the relative Hydro-dam power capacity (also MW) within 5 regions reported by the IHS (international Hydropwer Association)
+phs_regions = [[10,11],[19],[1],[22],[0,2,3,4,5,6,7,8,9,12,13,14,15,16,17,18,20,21,23,24,25]]   # subregions in IHS data for Europe, China, US, Japan, RoW, MIND: region refers to IMAGE region MINUS 1
+phs_projections_IMAGE = pd.DataFrame(index=Gcap_hydro.index, columns=Gcap_hydro.columns)        # empty dataframe
+
+for column in range(0,len(phs_regions)):
+    sum_data = Gcap_hydro.iloc[:,phs_regions[column]].sum(axis=1)                               # first, get the sum of all hydropower in the IHS regions (to divide over in second step)
+    for region in range(0,REGIONS):
+        if region in phs_regions[column]:
+            phs_projections_IMAGE.iloc[:,region] = phs_projections.iloc[:,column] * (Gcap_hydro.iloc[:,region]/sum_data)
+
+# Then fill the years after 2030 (end of IHS projections) according to the Gcap annual growth rate (assuming a fixed percentage of Hydro dams will be built with Pumped hydro capabilities after )
+if sa_settings == 'high_stor':
+   phs_projections_IMAGE.loc[2030:YEAR_OUT] =  phs_projections_IMAGE.loc[2030] * (Gcap_hydro.loc[2030:YEAR_OUT]/Gcap_hydro.loc[2030:YEAR_OUT])  # no growth after 2030 in the high_stor sensitivity variant
+else:
+   phs_projections_IMAGE.loc[2030:YEAR_OUT] =  phs_projections_IMAGE.loc[2030] * (Gcap_hydro.loc[2030:YEAR_OUT]/Gcap_hydro.loc[2030])
+
+# Calculate the fractions of the storage capacity that is provided through pumped hydro-storage, electric vehicles or other storage (larger than 1 means the capacity superseeds the demand for energy storage, in terms of power in MW or enery in MWh) 
+phs_storage_fraction = phs_projections_IMAGE.divide(storage_power.loc[:YEAR_OUT]).clip(upper=1)      # the phs storage fraction deployed to fulfill storage demand, both phs & storage_power here are expressed in MW
+storage_remaining = storage.loc[:YEAR_OUT] * (1 - phs_storage_fraction)
+
+if sa_settings == 'high_stor':
+   oth_storage_fraction = 0.5 * storage_remaining 
+   oth_storage_fraction += ((storage_remaining * 0.5) - storage_vehicles).clip(lower=0)    
+   oth_storage_fraction = oth_storage_fraction.divide(storage).where(oth_storage_fraction > 0, 0).clip(lower=0) 
+   evs_storage_fraction = 1 - (phs_storage_fraction + oth_storage_fraction)     # electric vehicle storage (BEV + PHEV) capacity and total storage demand are expressed as MWh
+else: 
+   oth_storage_fraction = (storage_remaining - storage_vehicles).clip(lower=0)    
+   oth_storage_fraction = oth_storage_fraction.divide(storage.loc[:YEAR_OUT]).where(oth_storage_fraction > 0, 0).clip(lower=0)      
+   evs_storage_fraction = 1 - (phs_storage_fraction + oth_storage_fraction)     # electric vehicle storage (BEV + PHEV) capacity and total storage demand are expressed as MWh
+   
+checksum = phs_storage_fraction + evs_storage_fraction + oth_storage_fraction   # should be 1 for all fields
+
+# absolute storage capacity (MWh)
+phs_storage_theoretical = phs_projections_IMAGE.divide(storage_power) * storage.loc[:YEAR_OUT]       # theoretically available PHS storage (MWh; fraction * total) only used in the graphs that show surplus capacity
+phs_storage = phs_storage_fraction * storage.loc[:YEAR_OUT]
+evs_storage = evs_storage_fraction * storage.loc[:YEAR_OUT]
+oth_storage = oth_storage_fraction * storage.loc[:YEAR_OUT]
+
+#output for Main text figure 2 (storage reservoir, in MWh for 3 storage types)
+storage_out_phs = pd.concat([phs_storage], keys=['phs'], names=['type']) 
+storage_out_evs = pd.concat([evs_storage], keys=['evs'], names=['type']) 
+storage_out_oth = pd.concat([oth_storage], keys=['oth'], names=['type']) 
+storage_out = pd.concat([storage_out_phs, storage_out_evs, storage_out_oth])
+storage_out.to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test'  / 'storage_by_type_MWh.csv')        # in MWh
+
+# derive inflow & outflow (in MWh) for PHS, for later use in the material calculations 
+PHS_kg_perkWh = 26.8   # kg per kWh storage capacity (as weight addition to existing hydro plants to make them pumped) 
+phs_storage_stock_tail   = stock_tail(phs_storage.astype(float))
+storage_lifetime_PHS = storage_lifetime['PHS'].reindex(list(range(YEAR_FIRST_GRID,YEAR_OUT+1)), axis=0).interpolate(limit_direction='both')
+
+
+###########################################################################################################
+#%%% 2.4.1) Prep_data File
+###########################################################################################################
+
+
+
+###########################################################################################################
+#%%% 2.4.2) Stock Modelling
+###########################################################################################################
+# TODO: move this to electricity.py
+
+
+# Next step: stock modelling
+# phs_storage_inflow, phs_storage_outflow, phs_storage_stock  = inflow_outflow(phs_storage_stock_tail, storage_lifetime_PHS, stor_materials_interpol.loc[idx[:,:],'PHS'].unstack() * PHS_kg_perkWh * 1000, 'PHS')    # PHS lifetime is fixed at 60 yrs anyway so, we simply select 1 value
+# inflow_by_tech, stock_cohorts, outflow_cohorts = stock_share_calc(oth_storage, storage_market_share, 'Deep-cycle Lead-Acid', list(storage_lifetime_interpol.columns)) # run the function that calculates stock shares from total stock & inflow shares
+
+
+
 
