@@ -2,7 +2,25 @@
 import numpy as np
 import pandas as pd
 import xarray as xr
+import math
+import scipy.stats
 
+from imagematerials.electricity.constants import (
+    YEAR_START,
+    YEAR_FIRST,
+    YEAR_FIRST_GRID,
+    YEAR_END,
+    YEAR_OUT,
+    YEAR_SWITCH,
+    SCEN,
+    REGIONS,
+    MEGA_TO_TERA,
+    PKMS_TO_VKMS,
+    TONNES_TO_KGS,
+    LOAD_FACTOR,
+    BEV_CAPACITY_CURRENT,
+    PHEV_CAPACITY_CURRENT
+)
 # from imagematerials.vehicles.constants import END_YEAR, FIRST_YEAR, REGIONS
 
 # from read_scripts.dynamic_stock_model_BM import DynamicStockModel as DSM
@@ -12,10 +30,10 @@ idx = pd.IndexSlice
 # In order to calculate inflow & outflow smoothly (without peaks for the initial years), we calculate a historic tail to the stock, 
 # by adding a 0 value for first year of operation (=1926), then interpolate values towards 1971
 def stock_tail(stock):
-    zero_value = [0 for i in range(0,regions)]
+    zero_value = [0 for i in range(0,REGIONS)]
     stock_used = pd.DataFrame(stock).reindex_like(stock)
-    stock_used.loc[first_year_grid] = zero_value  # set all regions to 0 in the year of initial operation
-    stock_new  = stock_used.reindex(list(range(first_year_grid,outyear+1))).interpolate()
+    stock_used.loc[FIRST_YEAR_GRID] = zero_value  # set all regions to 0 in the year of initial operation
+    stock_new  = stock_used.reindex(list(range(FIRST_YEAR_GRID,OUT_YEAR+1))).interpolate()
     return stock_new
 
 # Multinomial Logit function, assumes input of an ordered dataframe with rows as years and columns as technologies, values as prices. Logitpar is the calibrated Logit parameter (usually a nagetive number between 0 and 1)

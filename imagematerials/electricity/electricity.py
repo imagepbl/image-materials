@@ -313,38 +313,6 @@ intensity_gcap.to_csv(path_elma / 'output' / scen_folder / sa_settings / 'materi
 ###########################################################################################################
 #----------------------------------------------------------------------------------------------------------
 
-# BEV & PHEV vehicle stats
-BEV_capacity  = 59.6    #kWh current battery capacity of full electric vehicles, see current_specs.xlsx
-PHEV_capacity = 11.2    #kWh current battery capacity of plugin electric vehicles, see current_specs.xlsx
-
-if sa_settings == 'high_stor':
-   capacity_usable_PHEV = 0.025   # 2.5% of capacity of PHEV is usable as storage (in the pessimistic sensitivity variant)
-   capacity_usable_BEV  = 0.05    # 5  % of capacity of BEVs is usable as storage (in the pessimistic sensitivity variant)
-else: 
-   capacity_usable_PHEV = 0.05    # 5% of capacity of PHEV is usable as storage
-   capacity_usable_BEV  = 0.10    # 10% of capacity of BEVs is usable as storage
-
-vehicle_kms = passengerkms.loc[:outyear] * 1_000_000_000_000 / loadfactor.loc[:outyear]        # conversion from tera-Tkms  
-vehicles_all = vehicle_kms / kilometrage.loc[:outyear]
-
-vehicles_PHEV = vehicles_all * PHEV_share.loc[:outyear]
-vehicles_BEV = vehicles_all * BEV_share.loc[:outyear]
-vehicles_EV = vehicles_PHEV + vehicles_BEV
-
-# For the availability of vehicle store capacity we apply the assumption of fixed weight,
-# So we first need to know the average density of the stock of EV batteries
-# to get there we need to know the share of the technologies in the stock (based on lifetime & share in the inflow/purchases)
-# to get there, we first need to know the market share of new stock additions (=inflow/purchases)
-
-#First we calculate the share of the inflow using only a few of the technologies in the storage market share
-#The selection represents only the batteries that are suitable for EV & mobile applications
-EV_battery_list = ['NiMH', 'LMO', 'NMC', 'NCA', 'LFP', 'Lithium Sulfur', 'Lithium Ceramic ', 'Lithium-air']
-#normalize the selection of market shares, so that total market share is 1 again (taking the relative share in the selected battery techs)
-market_share_EVs = pd.DataFrame().reindex_like(storage_market_share[EV_battery_list])
-
-for year in list(range(startyear,outyear+1)):
-    for tech in EV_battery_list:
-        market_share_EVs.loc[year, tech] = storage_market_share[EV_battery_list].loc[year,tech] /storage_market_share[EV_battery_list].loc[year].sum()
 
 ###########################################################################################################
 #%%% 2.1.1) Stock Modelling
@@ -431,69 +399,6 @@ storage_vehicles = storage_BEV + storage_PHEV
 #%% 2.2) Hydro Power
 ###########################################################################################################
 #----------------------------------------------------------------------------------------------------------
-
-# Take the TIMER Hydro-dam capacity (MW) & compare it to Pumped hydro capacity (MW) projections from the International Hydropower Association
-
-Gcap_hydro = gcap_data[['time','DIM_1', 7]].pivot_table(index='time', columns='DIM_1')   # IMAGE-TIMER Hydro dam capacity (power, in MW)
-Gcap_hydro.columns = region_list
-Gcap_hydro = Gcap_hydro.loc[:outyear]
-
-#storage capacity in MW (power capacity), to compare it to Pumped hydro storage projections (also given in MW, power capacity)
-storage_power = read_mym_df(path_scenario_output / 'StorCapTot.out')                 
-storage_power.drop(storage_power.iloc[:, -2:], inplace = True, axis = 1)    
-storage_power.columns = region_list
-storage_power = storage_power.loc[:outyear]
-
-#Disaggregate the Pumped hydro-storgae projections to 26 IMAGE regions according to the relative Hydro-dam power capacity (also MW) within 5 regions reported by the IHS (international Hydropwer Association)
-phs_projections = pd.read_csv(path_scenario_output / 'PHS.csv', index_col='t')                                  # pumped hydro storage capacity (MW)
-phs_regions = [[10,11],[19],[1],[22],[0,2,3,4,5,6,7,8,9,12,13,14,15,16,17,18,20,21,23,24,25]]   # subregions in IHS data for Europe, China, US, Japan, RoW, MIND: region refers to IMAGE region MINUS 1
-phs_projections_IMAGE = pd.DataFrame(index=Gcap_hydro.index, columns=Gcap_hydro.columns)        # empty dataframe
-
-for column in range(0,len(phs_regions)):
-    sum_data = Gcap_hydro.iloc[:,phs_regions[column]].sum(axis=1)                               # first, get the sum of all hydropower in the IHS regions (to divide over in second step)
-    for region in range(0,regions):
-        if region in phs_regions[column]:
-            phs_projections_IMAGE.iloc[:,region] = phs_projections.iloc[:,column] * (Gcap_hydro.iloc[:,region]/sum_data)
-
-# Then fill the years after 2030 (end of IHS projections) according to the Gcap annual growth rate (assuming a fixed percentage of Hydro dams will be built with Pumped hydro capabilities after )
-if sa_settings == 'high_stor':
-   phs_projections_IMAGE.loc[2030:outyear] =  phs_projections_IMAGE.loc[2030] * (Gcap_hydro.loc[2030:outyear]/Gcap_hydro.loc[2030:outyear])  # no growth after 2030 in the high_stor sensitivity variant
-else:
-   phs_projections_IMAGE.loc[2030:outyear] =  phs_projections_IMAGE.loc[2030] * (Gcap_hydro.loc[2030:outyear]/Gcap_hydro.loc[2030])
-
-# Calculate the fractions of the storage capacity that is provided through pumped hydro-storage, electric vehicles or other storage (larger than 1 means the capacity superseeds the demand for energy storage, in terms of power in MW or enery in MWh) 
-phs_storage_fraction = phs_projections_IMAGE.divide(storage_power.loc[:outyear]).clip(upper=1)      # the phs storage fraction deployed to fulfill storage demand, both phs & storage_power here are expressed in MW
-storage_remaining = storage.loc[:outyear] * (1 - phs_storage_fraction)
-
-if sa_settings == 'high_stor':
-   oth_storage_fraction = 0.5 * storage_remaining 
-   oth_storage_fraction += ((storage_remaining * 0.5) - storage_vehicles).clip(lower=0)    
-   oth_storage_fraction = oth_storage_fraction.divide(storage).where(oth_storage_fraction > 0, 0).clip(lower=0) 
-   evs_storage_fraction = 1 - (phs_storage_fraction + oth_storage_fraction)     # electric vehicle storage (BEV + PHEV) capacity and total storage demand are expressed as MWh
-else: 
-   oth_storage_fraction = (storage_remaining - storage_vehicles).clip(lower=0)    
-   oth_storage_fraction = oth_storage_fraction.divide(storage.loc[:outyear]).where(oth_storage_fraction > 0, 0).clip(lower=0)      
-   evs_storage_fraction = 1 - (phs_storage_fraction + oth_storage_fraction)     # electric vehicle storage (BEV + PHEV) capacity and total storage demand are expressed as MWh
-   
-checksum = phs_storage_fraction + evs_storage_fraction + oth_storage_fraction   # should be 1 for all fields
-
-# absolute storage capacity (MWh)
-phs_storage_theoretical = phs_projections_IMAGE.divide(storage_power) * storage.loc[:outyear]       # theoretically available PHS storage (MWh; fraction * total) only used in the graphs that show surplus capacity
-phs_storage = phs_storage_fraction * storage.loc[:outyear]
-evs_storage = evs_storage_fraction * storage.loc[:outyear]
-oth_storage = oth_storage_fraction * storage.loc[:outyear]
-
-#output for Main text figure 2 (storage reservoir, in MWh for 3 storage types)
-storage_out_phs = pd.concat([phs_storage], keys=['phs'], names=['type']) 
-storage_out_evs = pd.concat([evs_storage], keys=['evs'], names=['type']) 
-storage_out_oth = pd.concat([oth_storage], keys=['oth'], names=['type']) 
-storage_out = pd.concat([storage_out_phs, storage_out_evs, storage_out_oth])
-storage_out.to_csv(path_elma / 'output' / scen_folder / sa_settings / 'storage_by_type_MWh.csv')        # in MWh
-
-# derive inflow & outflow (in MWh) for PHS, for later use in the material calculations 
-PHS_kg_perkWh = 26.8                                    # kg per kWh storage capacity (as weight addition to existing hydro plants to make them pumped) 
-phs_storage_stock_tail   = stock_tail(phs_storage.astype(float))
-storage_lifetime_PHS = storage_lifetime['PHS'].reindex(list(range(first_year_grid,outyear+1)), axis=0).interpolate(limit_direction='both')
 
 
 
