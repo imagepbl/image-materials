@@ -1,6 +1,8 @@
 [vehicles]
-base_year = 2019
+base_year = 2025
 target_year = 2060
+implementation_rate = 'linear'
+# possibilities for implementation rate are: linear, immediate, s-curve
 
 [buildings]
 base_year = 2020
@@ -12,23 +14,23 @@ material_composation = '.csv'
 weights = '.csv'
 
 [vehicles.lifetime_increase_percent_slow]
-air_pas = 10
-air_freight = 10
-rail_reg = 38
-rail_hst = 38
-rail_freight = 38
-sea_shipping_small = 33
-sea_shipping_med = 33
-sea_shipping_large = 33
-sea_shipping_vl = 33
-LCV = 10
-MFT = 10
-HFT = 10
-midi_bus = 20
-reg_bus = 20
-inland_shipping = 33
-bicycle = 20
-car = 22.5
+"Passenger Planes" = 10
+"Freight Planes" = 10
+"Trains" = 38
+"High Speed Trains" = 38
+"Freight Trains" = 38
+"Small Ships" = 33
+"Medium Ships" = 33
+"Large Ships" = 33
+"Very Large Ships" = 33
+"Light Commercial Vehicles" = 10
+"Medium Freight Trucks" = 10
+"Heavy Freight Trucks" = 10
+"Midi Buses" = 20
+"Regular Buses" = 20
+"Inland Ships" = 33
+"Bikes" = 20
+"Cars" = 22.5
 
 [buildings.residential.lifetime_2020]
 Canada = 51

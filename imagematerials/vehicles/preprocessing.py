@@ -17,7 +17,13 @@ import numpy as np
 
 from imagematerials.distribution import ALL_DISTRIBUTIONS, NAME_TO_DIST
 from imagematerials.read_mym import read_mym_df
-from imagematerials.util import dataset_to_array, pandas_to_xarray
+from imagematerials.util import (
+    dataset_to_array, 
+    pandas_to_xarray, 
+    apply_immediate_implementation,
+    apply_scurve_implementation,
+    apply_linear_implementation
+)
 from imagematerials.vehicles.constants import (
     END_YEAR,
     FOLDER,
@@ -51,12 +57,13 @@ from imagematerials.vehicles.constants import (
     unit_mapping,
     years_range,
     maintenance_lifetime_per_mode,
+    maintenance_lifetime_per_mode,
 )
 from imagematerials.vehicles.modelling_functions import interpolate, tkms_to_nr_of_vehicles_fixed
 #from imagematerials.concepts import vehicle_knowledge_graph
 
 
-def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_config: dict):
+def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_config: dict, climate_policy_config: dict, circular_economy_config: dict):
     """Wrapper function for the preprocessing part of the VEMA script.
 
     Args:
@@ -475,6 +482,81 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
 
     # Calculate maintenace material need in kg material per year per kg vehicle
 
+
+    if 'slow' in circular_economy_config.keys():
+        target_year = circular_economy_config['slow']['vehicles']['target_year']
+        base_year = circular_economy_config['slow']['vehicles']['base_year']
+        lifetime_increase = circular_economy_config['slow']['vehicles']['lifetime_increase_percent_slow']
+        implementation_rate = circular_economy_config['slow']['vehicles']['implementation_rate']
+        # possibilities for implementation rate are: linear, immediate, s-curve
+
+
+        #if implementation_rate == 'immediate':
+        #    lifetimes_vehicles = apply_immediate_implementation(lifetimes_vehicles, base_year, target_year, lifetime_increase)
+        #elif implementation_rate == 'linear':
+        #    lifetimes_vehicles = apply_linear_implementation(lifetimes_vehicles, base_year, target_year, lifetime_increase)
+        #elif implementation_rate == 's-curve':
+        #    lifetimes_vehicles = apply_scurve_implementation(lifetimes_vehicles, base_year, target_year, lifetime_increase, steepness=0.5)
+        #else: 
+        #    raise ValueError(f"Unknown implementation method: '{implementation_rate}'. Supported methods are 'immediate', 'linear', and 's-curve'.")
+
+        
+        lifetimes_vehicles = lifetimes_vehicles[lifetimes_vehicles.index <= base_year].copy()
+        lifetimes_vehicles.loc[target_year] = lifetimes_vehicles.loc[base_year]
+
+        #TODO make a function
+        for mode, increase in lifetime_increase.items():
+            # Implement for folded normal
+            col = (mode, 'mean')
+            if col in lifetimes_vehicles.columns:
+                base_val = lifetimes_vehicles.loc[base_year, col]
+                lifetimes_vehicles.loc[target_year, col] = base_val * (1 + increase / 100)
+            else:
+                print(f"Missing mode: {col}")
+            # Implement for weibull
+            if mode == 'Cars':
+                col = (mode, 'scale')
+                if col in lifetimes_vehicles.columns:
+                    base_val = lifetimes_vehicles.loc[base_year, col]
+                    lifetimes_vehicles.loc[target_year, col] = base_val * (1 + increase / 100)
+                else:
+                    print(f"Missing mode: {col}")
+        lifetimes_vehicles = interpolate(pd.DataFrame(lifetimes_vehicles))
+
+    # Calculate extended lifetime per mode
+
+
+    
+
+    # Calculate maintenace material need in kg material per kg vehicle
+    maintenance_material_pd['Li'] = 0
+    maintenance_material_pd['Mn'] = 0
+    maintenance_material_pd['Ni'] = 0
+    maintenance_material_pd['Ti'] = 0
+
+    stacked_maintenance_material = maintenance_material_pd.set_index("Type").stack().rename_axis(index=["Type", "material"]).reset_index(name="value")
+
+    stacked_maintenance_material = stacked_maintenance_material.set_index(["Type", "material"])
+
+    stacked_maintenance_material_xr = stacked_maintenance_material.to_xarray()
+    maintenance_material = dataset_to_array(stacked_maintenance_material_xr, ["Type", "material"], [])
+
+    modes = list(maintenance_material.coords['Type'].values)
+    expected_lifetimes = xr.DataArray(
+        data=[maintenance_lifetime_per_mode[mode] for mode in modes],
+        dims=["Type"],
+        coords={"Type": modes},
+        name="vehicle_lifetime"
+    )
+
+    #all_modes = list(material_fractions_typical.coords['Type'].values)
+
+    maintenance_material_per_year_broadcasted = (maintenance_material / expected_lifetimes)
+    #maintenance_material_per_year_broadcasted = vehicle_knowledge_graph.rebroadcast_xarray_impute(
+    #    maintenance_material_per_year, all_types)
+
+    # Calculate maintenace material need in kg material per year per kg vehicle
+
     # TODO align dataframe structures below to the now changed dataframe
     # formats
 
@@ -673,7 +755,7 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
         'battery_materials': battery_materials,
         'battery_shares': battery_shares,
         'weight_boats': weight_boats,
-        'vehicle_shares_typical': vehicle_shares_typical,
+        'vehicle_shares_typical': vehicle_shares_typical,,
     }
     
     
@@ -729,6 +811,7 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
     preprocessing_results_xarray["shares"] = preprocessing_results_xarray.pop("vehicle_shares")
 
     preprocessing_results_xarray["maintenance_material_fractions"] = maintenance_material_per_year_broadcasted
+    preprocessing_results_xarray["maintenance_material_fractions"] = maintenance_material_per_year_broadcasted
 
     # TODO: Check if this is correct
     bad_coords = preprocessing_results_xarray["battery_materials"].coords["battery"]
@@ -746,6 +829,12 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
                                           "Cohort": preprocessing_results_xarray["battery_weights"].coords["Cohort"],
                                            "Type": ["Vehicles"]})
     preprocessing_results_xarray["battery_weights"] = xr.concat((preprocessing_results_xarray["battery_weights"], xr_default_battery), dim="Type")
+
+    xr_default_maintenace = xr.DataArray(0.0, dims=("Type", "material"),
+                                    coords={
+                                        "Type": ["Vehicles"],
+                                        "material": preprocessing_results_xarray["maintenance_material_fractions"].coords["material"]})
+    preprocessing_results_xarray["maintenance_material_fractions"] = xr.concat((preprocessing_results_xarray["maintenance_material_fractions"], xr_default_maintenace), dim="Type")
 
     xr_default_maintenace = xr.DataArray(0.0, dims=("Type", "material"),
                                     coords={

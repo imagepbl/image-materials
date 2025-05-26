@@ -156,7 +156,7 @@ vshares_label    = ['ICE', 'HEV', 'PHEV', 'BEV', 'FCV', 'Trolley']
 # Scenario settings
 SCEN = "SSP2"
 # CP or 2D (Add "_RE" for Resource Efficiency)
-VARIANT = "2D_RE"
+VARIANT = "CP"
 PROJECT = "mock_project"
 FOLDER = SCEN + "_" + VARIANT
 OUTPUT_FOLDER = base_dir.joinpath("..", "..", "output", PROJECT, FOLDER)
@@ -169,7 +169,8 @@ maintenance_lifetime_per_mode = {
     'Medium Freight Trucks': 8,
     'Midi Buses': 13,
     'Regular Buses': 13,
-    'Trains': 35
+    'Trains': 35,
+    'Buses': 13,
 }
 
 all_types = ['Bikes', 'Cars', 'Cars - BEV', 'Cars - FCV', 'Cars - HEV',
