@@ -1,7 +1,7 @@
 [vehicles]
 base_year = 2025
 target_year = 2060
-implementation_rate = 'linear'
+implementation_rate = 's-curve'
 # possibilities for implementation rate are: linear, immediate, s-curve
 
 [buildings]
