@@ -454,6 +454,21 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
 
     # Calculate extended lifetime per mode
 
+    if 'narrow' in circular_economy_config.keys():
+        target_year = circular_economy_config['narrow']['vehicles']['target_year']
+        base_year = circular_economy_config['narrow']['vehicles']['base_year']
+        mileage_change = circular_economy_config['narrow']['vehicles']['mileage']
+
+        for mode, increase in mileage_change.items():
+            col = (mode, 'mileage')
+            if col in mileages.columns:
+                base_val = mileages.loc[base_year, col]
+                mileages.loc[target_year, col] = base_val * (1 + increase / 100)
+            else:
+                print(f"Missing mode in mileages: {col}")
+
+        mileages = interpolate(pd.DataFrame(mileages))
+
 
     
 
