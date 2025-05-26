@@ -56,9 +56,8 @@ from imagematerials.vehicles.constants import (
     years_range,
     maintenance_lifetime_per_mode,
 )
-from imagematerials.concepts import create_vehicle_graph
 from imagematerials.vehicles.modelling_functions import (interpolate, tkms_to_nr_of_vehicles_fixed,  
-    scenario_change, apply_change_per_region)
+    slow_lifetime)
 #from imagematerials.concepts import vehicle_knowledge_graph
 
 
@@ -451,20 +450,43 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
         implementation_rate = circular_economy_config['slow']['vehicles']['implementation_rate']
         # possibilities for implementation rate are: linear, immediate, s-curve
 
-        lifetimes_vehicles = scenario_change(
-            lifetimes_vehicles, base_year, target_year, 
-            lifetime_increase, implementation_rate, "lifetime")
-        
-        print("implemented 'slow' for Vehicles (extend lifetimes)")
+        lifetimes_vehicles = slow_lifetime(lifetimes_vehicles, base_year, target_year, lifetime_increase, implementation_rate)
 
-    
-    # increase mileages\kilometrages
-    if 'narrow' in circular_economy_config.keys():
-        target_year = circular_economy_config['narrow']['vehicles']['target_year']
-        base_year = circular_economy_config['narrow']['vehicles']['base_year']
-        mileage_increase = circular_economy_config['narrow']['vehicles']['mileage']
-        region_mileage = circular_economy_config['narrow']['vehicles']['region_mileage']
-        implementation_rate = circular_economy_config['narrow']['vehicles']['implementation_rate']
+
+        #if implementation_rate == 'immediate':
+        #    print("applying immidiate")
+        #    lifetimes_vehicles = apply_immediate_implementation(lifetimes_vehicles, base_year, target_year, lifetime_increase)
+        #elif implementation_rate == 'linear':
+        #    print("applying linear")
+        #    lifetimes_vehicles = apply_linear_implementation(lifetimes_vehicles, base_year, target_year, lifetime_increase)
+        #elif implementation_rate == 's-curve':
+        #    print("applying s-curve")
+        #    lifetimes_vehicles = apply_scurve_implementation(lifetimes_vehicles, base_year, target_year, lifetime_increase, steepness=0.5)
+        #else: 
+        #    raise ValueError(f"Unknown implementation method: '{implementation_rate}'. Supported methods are 'immediate', 'linear', and 's-curve'.")
+
+        
+        #lifetimes_vehicles = lifetimes_vehicles[lifetimes_vehicles.index <= base_year].copy()
+        #lifetimes_vehicles.loc[target_year] = lifetimes_vehicles.loc[base_year]
+
+        #TODO make a function
+        #for mode, increase in lifetime_increase.items():
+            # Implement for folded normal
+        #    col = (mode, 'mean')
+        #    if col in lifetimes_vehicles.columns:
+        #        base_val = lifetimes_vehicles.loc[base_year, col]
+        #        lifetimes_vehicles.loc[target_year, col] = base_val * (1 + increase / 100)
+        #    else:
+        #        print(f"Missing mode: {col}")
+            # Implement for weibull
+        #    if mode == 'Cars':
+        #        col = (mode, 'scale')
+        #        if col in lifetimes_vehicles.columns:
+        #            base_val = lifetimes_vehicles.loc[base_year, col]
+        #            lifetimes_vehicles.loc[target_year, col] = base_val * (1 + increase / 100)
+        #        else:
+        #            print(f"Missing mode: {col}")
+        #lifetimes_vehicles = interpolate(pd.DataFrame(lifetimes_vehicles))
 
         mileages = scenario_change(
             mileages, base_year, target_year, 
