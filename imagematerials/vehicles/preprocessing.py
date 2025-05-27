@@ -409,7 +409,7 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
     lifetimes_vehicles = lifetimes_vehicles.unstack(['mode', 'data'])
     lifetimes_vehicles = interpolate(pd.DataFrame(lifetimes_vehicles))
 
-
+    # Calculate extended lifetime per mode
     if 'slow' in circular_economy_config.keys():
         target_year = circular_economy_config['slow']['vehicles']['target_year']
         base_year = circular_economy_config['slow']['vehicles']['base_year']
@@ -417,10 +417,12 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
         implementation_rate = circular_economy_config['slow']['vehicles']['implementation_rate']
         # possibilities for implementation rate are: linear, immediate, s-curve
 
-        lifetimes_vehicles = increase_value(lifetimes_vehicles, base_year, target_year, lifetime_increase, implementation_rate, "lifetime")
+        lifetimes_vehicles = increase_value(
+            lifetimes_vehicles, base_year, target_year, 
+            lifetime_increase, implementation_rate, "lifetime")
 
-    # Calculate extended lifetime per mode
-
+    
+    # increase mileages\kilometrages
     if 'narrow' in circular_economy_config.keys():
         target_year = circular_economy_config['narrow']['vehicles']['target_year']
         base_year = circular_economy_config['narrow']['vehicles']['base_year']
@@ -428,43 +430,23 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
         region_mileage = circular_economy_config['narrow']['vehicles']['region_mileage']
         implementation_rate = circular_economy_config['narrow']['vehicles']['implementation_rate']
 
-        mileages = increase_value(mileages, base_year, target_year, mileage_increase, implementation_rate, "mileages")
+        mileages = increase_value(
+            mileages, base_year, target_year, 
+            mileage_increase, implementation_rate, "mileages")
 
+        # Cars are saved seperatly since they are not defined in the general kilometrage dataframe
         kilometrage = apply_increase_per_region(
-            kilometrage,
-            base_year=base_year,
-            target_year=target_year,
-            increase=region_mileage['Cars'],  # Not a dict here—just the % value
-            implementation_rate=implementation_rate,
-            data_type='mileages'
+            kilometrage, base_year, target_year, 
+            region_mileage['Cars'], implementation_rate, 'mileages'
         )
         kilometrage_bus = apply_increase_per_region(
-            kilometrage_bus,
-            base_year=base_year,
-            target_year=target_year,
-            increase=mileage_increase['Midi Buses'],  # Not a dict here—just the % value
-            implementation_rate=implementation_rate,
-            data_type='mileages'
+            kilometrage_bus, base_year, target_year, 
+            mileage_increase['Midi Buses'], implementation_rate,'mileages'
         )
         kilometrage_midi_bus = apply_increase_per_region(
-            kilometrage_midi_bus,
-            base_year=base_year,
-            target_year=target_year,
-            increase=mileage_increase['Regular Buses'],  # Not a dict here—just the % value
-            implementation_rate=implementation_rate,
-            data_type='mileages'
+            kilometrage_midi_bus, base_year, target_year, 
+            mileage_increase['Regular Buses'], implementation_rate, 'mileages'
         )
-        #for mode, increase in mileage_change.items():
-        #    col = (mode, 'mileage')
-        #    if col in mileages.columns:
-        #        base_val = mileages.loc[base_year, col]
-        #        mileages.loc[target_year, col] = base_val * (1 + increase / 100)
-        #    else:
-        #        print(f"Missing mode in mileages: {col}")
-
-        #mileages = interpolate(pd.DataFrame(mileages))
-
-
     
 
     # Calculate maintenace material need in kg material per kg vehicle

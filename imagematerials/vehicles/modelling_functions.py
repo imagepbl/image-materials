@@ -112,6 +112,7 @@ def tkms_to_nr_of_vehicles_fixed(tera_tkms, mileage, load, loadfactor):
     nr_of_vehicles = vkms.div(mileage, axis=0)
     return nr_of_vehicles
 
+
 def increase_value(df, base_year, target_year, lifetime_increase, implementation_rate, data_type, steepness=0.5):
     result = df[df.index <= base_year].copy()
     result.loc[target_year] = result.loc[base_year]
@@ -147,6 +148,7 @@ def increase_value(df, base_year, target_year, lifetime_increase, implementation
             raise ValueError(f"Column {col} not found in DataFrame.")
     result = interpolate(result)
     return result
+
 
 def apply_increase_per_region(df, base_year, target_year, increase, implementation_rate, data_type, steepness=0.5):
     results = []
