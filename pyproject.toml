@@ -24,13 +24,13 @@ classifiers = [
 
 dependencies = [
     "prism>=0.2",
-    # "xarray",
-    # "netCDF4",
-    # "pint",
-    # "pandas",
-    # "numpy",
-    # "scipy",
-    # "pint-xarray"  # git+https://github.com/xarray-contrib/pint-xarray@20a9301b0dac02bf16d4c883c68c2eb9231e68b9
+    "xarray",
+    "netCDF4",
+    "pint",
+    "pandas",
+    "numpy",
+    "scipy",
+    "pint-xarray@git+https://github.com/xarray-contrib/pint-xarray@20a9301b0dac02bf16d4c883c68c2eb9231e68b9"
 ]
 
 dynamic = ["version"]
@@ -47,11 +47,15 @@ test = [
     "ruff",
     "mypy",
     "types-tqdm",
-    "sphinx<8", "sphinx-rtd-theme", "sphinxcontrib-napoleon",
-    "sphinx-autodoc-typehints", "sphinx_inline_tabs", "sphinx_copybutton",
     "ruff"
 ]
-
+docs = [
+    "sphinx<8", "sphinx-rtd-theme", "sphinxcontrib-napoleon",
+    "sphinx-autodoc-typehints", "sphinx_inline_tabs", "sphinx_copybutton",
+]
+all = [
+    "imagematerials[test,docs]"
+]
 
 # [project.scripts]
 # ibridges = "ibridges.__main__:main"

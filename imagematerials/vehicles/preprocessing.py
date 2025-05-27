@@ -17,7 +17,10 @@ import numpy as np
 
 from imagematerials.distribution import ALL_DISTRIBUTIONS, NAME_TO_DIST
 from imagematerials.read_mym import read_mym_df
-from imagematerials.util import dataset_to_array, pandas_to_xarray
+from imagematerials.util import (
+    dataset_to_array, 
+    pandas_to_xarray,
+)
 from imagematerials.vehicles.constants import (
     END_YEAR,
     FOLDER,
@@ -50,11 +53,14 @@ from imagematerials.vehicles.constants import (
     typical_modes,
     unit_mapping,
     years_range,
+    maintenance_lifetime_per_mode,
 )
-from imagematerials.vehicles.modelling_functions import interpolate, tkms_to_nr_of_vehicles_fixed
+from imagematerials.vehicles.modelling_functions import (interpolate, tkms_to_nr_of_vehicles_fixed,  
+    increase_value, apply_increase_per_region)
+#from imagematerials.concepts import vehicle_knowledge_graph
 
 
-def preprocessing(base_dir: str):
+def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_config: dict):
     """Wrapper function for the preprocessing part of the VEMA script.
 
     Args:
@@ -68,11 +74,6 @@ def preprocessing(base_dir: str):
     # %%
     base_input_data_path = base_path.joinpath("vehicles")
     standard_input_data_path = base_input_data_path.joinpath("standard_data")
-    image_folder = base_path.joinpath(SCEN)
-    # standard_output_folder = base_path.joinpath("..", "..", "output", PROJECT,
-    #                                           FOLDER)
-
-    # st = time.time()
 
     idx = pd.IndexSlice          # needed for slicing multi-index
 
@@ -94,8 +95,8 @@ def preprocessing(base_dir: str):
     # market model & costs in https://doi.org/10.1016/j.resconrec.2020.105200 - since this is scenario dependent it's
     # placed under the "IMAGE" scenario folder
 
-    maintenance_material : pd.DataFrame = pd.read_csv(
-        standard_input_data_path. joinpath("maintenance_passenger_cars.csv"), index_col=0)
+    maintenance_material_pd : pd.DataFrame = pd.read_csv(
+        standard_input_data_path. joinpath("all_vehicle_maintenance_image.csv"), index_col=0)
 
     # Files related to the international shipping
     nr_of_boats: pd.DataFrame = pd.read_csv(
@@ -147,6 +148,7 @@ def preprocessing(base_dir: str):
     # Average End-of-Life of vehicles in years, this file also contains the setting for the choice of distribution and
     # other lifetime related settings (standard devition, or alternative
     # parameterisation)
+
     kilometrage: pd.DataFrame = pd.read_csv(base_input_data_path.
                                             joinpath(
                                                 FOLDER, "kilometrage.csv"),
@@ -208,39 +210,39 @@ def preprocessing(base_dir: str):
 
     # IMAGE scenario files (total demand in Tkms & Pkms + vehicle shares)
     tonkms_Mtkms: pd.DataFrame = read_mym_df(
-        image_folder.joinpath("trp_frgt_Tkm.out")). rename(
+        climate_policy_config['config_file_path'] / climate_policy_config['data_files']['transport']['freight']['Tkm']). rename(
         columns={
             "DIM_1": "region"})
     # The tonne kilometres of freight vehicles of the IMAGE/TIMER SSP2 (in
     # Mega Tkm)
     passengerkms_Tpkms: pd.DataFrame = read_mym_df(
-        image_folder.joinpath("trp_trvl_pkm.out")). rename(
+        climate_policy_config['config_file_path'] / climate_policy_config['data_files']['transport']['passenger']['kilometers']). rename(
         columns={
             "DIM_1": "region"})
     # The passenger kilometres from the IMAGE/TIMER SSP2 (in Tera Pkm)
     buses_vshares: pd.DataFrame = read_mym_df(
-        image_folder.joinpath("trp_trvl_Vshare_bus.out")). rename(
+        climate_policy_config['config_file_path'] / climate_policy_config['data_files']['transport']['passenger']['Vshare_bus']). rename(
         columns={
             "DIM_1": "region"})
     # The vehicle shares of buses of the SSP2                            MIND!
     # FOR the BL this is still the OLD SSP2 file REPLACE LATER
     car_vshares: pd.DataFrame = read_mym_df(
-        image_folder.joinpath("trp_trvl_Vshare_car.out")). rename(
+        climate_policy_config['config_file_path'] / climate_policy_config['data_files']['transport']['passenger']['Vshare_car']). rename(
         columns={
             "DIM_1": "region"})
     # The vehicle shares of passenger cars of the SSP2
     medtruck_vshares: pd.DataFrame = read_mym_df(
-        image_folder. joinpath("trp_frgt_Vshare_MedTruck.out")). rename(
+        climate_policy_config['config_file_path'] / climate_policy_config['data_files']['transport']['freight']['Vshare_MedTruck']). rename(
         columns={
             "DIM_1": "region"})
     # The vehicle shares of trucks (medium) of the SSP2
     hvytruck_vshares: pd.DataFrame = read_mym_df(
-        image_folder. joinpath("trp_frgt_Vshare_HvyTruck.out")). rename(
+        climate_policy_config['config_file_path'] / climate_policy_config['data_files']['transport']['freight']['Vshare_HvyTruck']). rename(
         columns={
             "DIM_1": "region"})
     # The vehicle shares of trucks (heavy) of the SSP2
     loadfactor_car_data: pd.DataFrame = read_mym_df(
-        image_folder.joinpath("trp_trvl_Load.out")). rename(
+        climate_policy_config['config_file_path'] / climate_policy_config['data_files']['transport']['passenger']['load']). rename(
         columns={
             "DIM_1": "region"})
     # The loadfactor of passenger vehicles (occupation in nr of
@@ -406,6 +408,75 @@ def preprocessing(base_dir: str):
     lifetimes_vehicles = lifetimes_vehicles[(lifetimes_vehicles.T != 0)]
     lifetimes_vehicles = lifetimes_vehicles.unstack(['mode', 'data'])
     lifetimes_vehicles = interpolate(pd.DataFrame(lifetimes_vehicles))
+
+    # Calculate extended lifetime per mode
+    if 'slow' in circular_economy_config.keys():
+        target_year = circular_economy_config['slow']['vehicles']['target_year']
+        base_year = circular_economy_config['slow']['vehicles']['base_year']
+        lifetime_increase = circular_economy_config['slow']['vehicles']['lifetime_increase_percent_slow']
+        implementation_rate = circular_economy_config['slow']['vehicles']['implementation_rate']
+        # possibilities for implementation rate are: linear, immediate, s-curve
+
+        lifetimes_vehicles = increase_value(
+            lifetimes_vehicles, base_year, target_year, 
+            lifetime_increase, implementation_rate, "lifetime")
+
+    
+    # increase mileages\kilometrages
+    if 'narrow' in circular_economy_config.keys():
+        target_year = circular_economy_config['narrow']['vehicles']['target_year']
+        base_year = circular_economy_config['narrow']['vehicles']['base_year']
+        mileage_increase = circular_economy_config['narrow']['vehicles']['mileage']
+        region_mileage = circular_economy_config['narrow']['vehicles']['region_mileage']
+        implementation_rate = circular_economy_config['narrow']['vehicles']['implementation_rate']
+
+        mileages = increase_value(
+            mileages, base_year, target_year, 
+            mileage_increase, implementation_rate, "mileages")
+
+        # Cars are saved seperatly since they are not defined in the general kilometrage dataframe
+        kilometrage = apply_increase_per_region(
+            kilometrage, base_year, target_year, 
+            region_mileage['Cars'], implementation_rate, 'mileages'
+        )
+        kilometrage_bus = apply_increase_per_region(
+            kilometrage_bus, base_year, target_year, 
+            mileage_increase['Midi Buses'], implementation_rate,'mileages'
+        )
+        kilometrage_midi_bus = apply_increase_per_region(
+            kilometrage_midi_bus, base_year, target_year, 
+            mileage_increase['Regular Buses'], implementation_rate, 'mileages'
+        )
+    
+
+    # Calculate maintenace material need in kg material per kg vehicle
+    maintenance_material_pd['Li'] = 0
+    maintenance_material_pd['Mn'] = 0
+    maintenance_material_pd['Ni'] = 0
+    maintenance_material_pd['Ti'] = 0
+
+    stacked_maintenance_material = maintenance_material_pd.set_index("Type").stack().rename_axis(index=["Type", "material"]).reset_index(name="value")
+
+    stacked_maintenance_material = stacked_maintenance_material.set_index(["Type", "material"])
+
+    stacked_maintenance_material_xr = stacked_maintenance_material.to_xarray()
+    maintenance_material = dataset_to_array(stacked_maintenance_material_xr, ["Type", "material"], [])
+
+    modes = list(maintenance_material.coords['Type'].values)
+    expected_lifetimes = xr.DataArray(
+        data=[maintenance_lifetime_per_mode[mode] for mode in modes],
+        dims=["Type"],
+        coords={"Type": modes},
+        name="vehicle_lifetime"
+    )
+
+    #all_modes = list(material_fractions_typical.coords['Type'].values)
+
+    maintenance_material_per_year_broadcasted = (maintenance_material / expected_lifetimes)
+    #maintenance_material_per_year_broadcasted = vehicle_knowledge_graph.rebroadcast_xarray_impute(
+    #    maintenance_material_per_year, all_types)
+
+    # Calculate maintenace material need in kg material per year per kg vehicle
 
     # TODO align dataframe structures below to the now changed dataframe
     # formats
@@ -605,7 +676,7 @@ def preprocessing(base_dir: str):
         'battery_materials': battery_materials,
         'battery_shares': battery_shares,
         'weight_boats': weight_boats,
-        'vehicle_shares_typical': vehicle_shares_typical
+        'vehicle_shares_typical': vehicle_shares_typical,
     }
     
     
@@ -628,7 +699,7 @@ def preprocessing(base_dir: str):
         "battery_weights_typical": (["Cohort"], ["Type", "SubType"], {"Type": ["Type", "SubType"]}),
         "battery_materials": (["Cohort"], ["material", "battery"],),
         "battery_shares": (["Cohort"], ["battery"],),
-        "weight_boats": (["Cohort"], ["size"],),
+        "weight_boats": (["Cohort"], ["Type"],),
         "vehicle_shares_typical": (["Cohort"], ["Type", "SubType", "Region"], {"Type": ["Type", "SubType"]})
     }
     for df_name, df in results_dict.items():
@@ -660,25 +731,32 @@ def preprocessing(base_dir: str):
     preprocessing_results_xarray["stocks"] = preprocessing_results_xarray.pop("total_nr_vehicles")
     preprocessing_results_xarray["shares"] = preprocessing_results_xarray.pop("vehicle_shares")
 
-    # Copy dimensiomns from material_fractions for xr_maintenance_material
-    materials = preprocessing_results_xarray['material_fractions'].coords["material"]
-    types = preprocessing_results_xarray['material_fractions'].coords["Type"]
+    preprocessing_results_xarray["maintenance_material_fractions"] = maintenance_material_per_year_broadcasted
 
-    # Initialize xr_maintenance_material with zeros
-    xr_maintenance_material = xr.DataArray(
-        np.zeros((len(materials), len(types))),  # Shape based on dimensions
-        dims=("material", "Type"),
-        coords={"material": materials, "Type": types}
-    )
+    # TODO: Check if this is correct
+    bad_coords = preprocessing_results_xarray["battery_materials"].coords["battery"]
+    new_coords = [x if x != "LMO" else "LMO/LCO" for x in bad_coords.values]
+    preprocessing_results_xarray["battery_materials"] = preprocessing_results_xarray["battery_materials"].assign_coords({"battery": new_coords})
 
-    # Assign values from data in xr_maintenance_material where Type contains "Cars"
-    cars_mask = np.char.find(types.astype(str), "Cars") >= 0  # Find entries containing "Cars"
-    xr_maintenance_material.loc[{"Type": types[cars_mask]}] = maintenance_material["total_material_per_km"].values.reshape(-1, 1)
-    
-    preprocessing_results_xarray["maintenance_material_fractions"] = xr_maintenance_material
+    # Fix coordinates of weight_boats and concatenate to vehicle weights
+    xr_ships = preprocessing_results_xarray.pop("weight_boats")
+    xr_ships.coords["Type"] = [f"{x} Ships" for x in xr_ships.coords["Type"].values]
+    preprocessing_results_xarray["vehicle_weights"] = xr.concat((preprocessing_results_xarray["vehicle_weights"], xr_ships), dim="Type")
 
-    # TODO: vemamodelling.py works with dict of dfs and not only dict of xarrays, therefore now both are returned (for now)
-    return results_dict, preprocessing_results_xarray
+    # Set default battery weight to 0
+    xr_default_battery = xr.DataArray(0.0, dims=("Cohort", "Type"),
+                                      coords={
+                                          "Cohort": preprocessing_results_xarray["battery_weights"].coords["Cohort"],
+                                           "Type": ["Vehicles"]})
+    preprocessing_results_xarray["battery_weights"] = xr.concat((preprocessing_results_xarray["battery_weights"], xr_default_battery), dim="Type")
+
+    xr_default_maintenace = xr.DataArray(0.0, dims=("Type", "material"),
+                                    coords={
+                                        "Type": ["Vehicles"],
+                                        "material": preprocessing_results_xarray["maintenance_material_fractions"].coords["material"]})
+    preprocessing_results_xarray["maintenance_material_fractions"] = xr.concat((preprocessing_results_xarray["maintenance_material_fractions"], xr_default_maintenace), dim="Type")
+
+    return preprocessing_results_xarray
 
 
 

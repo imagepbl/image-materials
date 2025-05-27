@@ -2,6 +2,7 @@
 
 examples/*.nc
 examples/all.prof
+scripts/*.nc
 
 
 # Byte-compiled / optimized / DLL files
@@ -181,4 +182,4 @@ IMAGE-Mat/output/
 
 prism/
 pym/
-scripts
+scripts/

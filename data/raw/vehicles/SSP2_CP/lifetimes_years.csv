@@ -1,4 +1,4 @@
-year,data,air_pas,air_freight,rail_reg,rail_hst,rail_freight,sea_shipping_small,sea_shipping_med,sea_shipping_large,sea_shipping_vl,LCV,MFT,HFT,midi_bus,reg_bus,inland_shipping,bicycle,car
+year,data,Passenger Planes,Freight Planes,Trains,High Speed Trains,Freight Trains,Small Ships,Medium Ships,Large Ships,Very Large Ships,Light Commercial Vehicles,Medium Freight Trucks,Heavy Freight Trucks,Midi Buses,Regular Buses,Inland Ships,Bikes,Cars
 2020,mean,20,21,35,30,38,26,26,26,26,14,8,8,13,13,40,10,14.74
 2020,stdev,0.281,0.281,0.266,0.266,0.266,0.266,0.266,0.266,0.266,0.196,0.266,0.266,0.322,0.322,0.266,0.266,0.4
 2020,shape,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2.01

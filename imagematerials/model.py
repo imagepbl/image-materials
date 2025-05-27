@@ -1,8 +1,10 @@
 from typing import Callable, ClassVar, Optional
 
+import prism
 import xarray as xr
 
-import prism
+from imagematerials.concepts import KnowledgeGraph
+from imagematerials.maintenance import Maintenance
 from imagematerials.stock import (
     compute_dynamic_stock_driven,
 )
@@ -56,10 +58,11 @@ class GenericStocks(prism.Model):
     stocks: xr.DataArray #TODO check how to have property that can be both input and output within prism
     # stock_function: Callable    # defines the stock function to use e.g. stock or inflow driven
     shares: Optional[xr.DataArray]
+    knowledge_graph: KnowledgeGraph
 
     # For module dependency, ignored by prism
     input_data: tuple[str] = ("stocks", "lifetimes")
-    optional_input_data: tuple[str] = ("shares",)
+    optional_input_data: tuple[str] = ("shares", "knowledge_graph")
     output_data: tuple[str] = ("outflow_by_cohort", "inflow", "stock_by_cohort")
 
     # stock_by_cohort: prism.TimeVariable[Region, Mode, Cohort, "count"] = prism.export(initial_value = prism.Array[Region, Mode, Cohort, 'count'](0.0))
@@ -75,7 +78,9 @@ class GenericStocks(prism.Model):
             The simulation timeline.
         """
 
-        self.survival_matrix = SurvivalMatrix(ScipySurvival(self.lifetimes, self.stocks.coords["Type"]))
+        survival = ScipySurvival(self.lifetimes, self.stocks.coords["Type"],
+                                 knowledge_graph=self.knowledge_graph)
+        self.survival_matrix = SurvivalMatrix(survival)
         self.stock_by_cohort = xr.DataArray(
             0.0,
             dims=("Time", "Cohort", "Region", "Type"),
@@ -158,7 +163,6 @@ class GenericMaterials(prism.Model):
         time : prism.Timeline
             The simulation timeline.
         """
-                
         self.stock_by_cohort_materials = xr.DataArray(
             0.0, dims=("Time", "Region", "Type", "material"),
             coords={"Time": self.Time,
@@ -188,6 +192,24 @@ class GenericMaterials(prism.Model):
         self.inflow_materials[t] = inflow[t]*self.material_fractions.sel(Cohort=t).drop_vars("Cohort")*self.weights.sel(Cohort=t).drop_vars("Cohort")
         self.outflow_by_cohort_materials[t] = (outflow_by_cohort[t]*self.material_fractions*self.weights).sum("Cohort")
         self.stock_by_cohort_materials.loc[t] = (stock_by_cohort.loc[t]*self.material_fractions*self.weights).sum("Cohort")
+
+@prism.interface
+class RestModel(prism.Model):
+    # Input data
+    total_inflow_materials_class: int  # Fix
+    gdp_per_capita: xr.DataArray  # Will be a prism time variable probably
+    population: xr.DataArray
+
+    # Output data
+    inflow_materials_rest: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
+
+    input_data: tuple[str] = ("total_inflow_materials_class", "gdp_per_capita", "population")
+    output_data: tuple[str] = ("inflow_materials_rest")
+
+    def compute_values(self, time: prism.Time, total_inflow_materials_class, gdp_per_capita, population):
+        t = time.t
+        self.total_inflow_materials_rest[t] = self.total_inflow_materials_class.predict(self.gdp_per_capita)*self.population
+
 
 @prism.interface
 class MaterialIntensities(prism.Model):

@@ -1,0 +1,93 @@
+[vehicles]
+base_year = 2025
+target_year = 2060
+# possibilities for implementation rate are: linear, immediate, s-curve
+implementation_rate = 'linear'
+
+[buildings]
+base_year = 2020
+target_year = 2060
+
+[vehicles.data_files]
+lifetimes = '....csv'
+material_composation = '.csv'
+weights = '.csv'
+
+[vehicles.lifetime_increase_percent_slow]
+"Passenger Planes" = 10
+"Freight Planes" = 10
+"Trains" = 38
+"High Speed Trains" = 38
+"Freight Trains" = 38
+"Small Ships" = 33
+"Medium Ships" = 33
+"Large Ships" = 33
+"Very Large Ships" = 33
+"Light Commercial Vehicles" = 10
+"Medium Freight Trucks" = 10
+"Heavy Freight Trucks" = 10
+"Midi Buses" = 20
+"Regular Buses" = 20
+"Inland Ships" = 33
+"Bikes" = 20
+"Cars" = 22.5
+
+[buildings.residential.lifetime_2020]
+Canada = 51
+"Central Europe" =	70
+China = 40
+India =	50	
+Japan =	36
+USA = 77
+"Western Europe" = 63
+"Latin America"	= 50
+"Middle East and North Africa" = 50
+"Other Asia" = 50
+"Other OECD" = 50
+"Reforming Economies" =	60
+"Sub-Saharan Africa" = 50
+
+[buildings.non_residential.lifetime_2020]
+Canada = 45	
+"Central Europe" =	45	
+China = 30
+India =	45
+Japan =	38
+USA = 45
+"Western Europe" = 45
+"Latin America"	= 45
+"Middle East and North Africa" = 45
+"Other Asia" = 45
+"Other OECD" = 45
+"Reforming Economies" =	45
+"Sub-Saharan Africa" = 45	
+
+[buildings.residential.lifetime_increase_percent]
+Canada = 90
+"Central Europe" =	30
+China = 90
+India =	60
+Japan =	90	
+USA = 30
+"Western Europe" = 30
+"Latin America"	= 60
+"Middle East and North Africa" = 60
+"Other Asia" = 60
+"Other OECD" = 60
+"Reforming Economies" =	30
+"Sub-Saharan Africa" = 60	
+
+[buildings.non_residential.lifetime_increase_percent]
+Canada = 90
+"Central Europe" =	90
+China = 90
+India =	90
+Japan =	90	
+USA = 90
+"Western Europe" = 90
+"Latin America"	= 90
+"Middle East and North Africa" = 90
+"Other Asia" = 90
+"Other OECD" = 60
+"Reforming Economies" =	90
+"Sub-Saharan Africa" = 60	
