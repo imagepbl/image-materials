@@ -8,6 +8,7 @@ from imagematerials.maintenance import Maintenance
 from imagematerials.survival import ScipySurvival, SurvivalMatrix
 from imagematerials.vehicles.battery import Battery
 
+
 REGION = prism.Dimension("Region")
 STOCK_TYPE = prism.Dimension("Type")
 COHORT = prism.Dimension("Cohort")
@@ -415,6 +416,7 @@ class GenericEndOfLife(prism.Model):
     Type: prism.Coords[STOCK_TYPE]
     Time: prism.Coords[TIME]
     material: prism.Coords[MATERIAL_TYPE]
+    # eol: EolTypes
     eol: prism.Coords [EOL_TYPE]
 
     # Data dependencies
@@ -433,7 +435,7 @@ class GenericEndOfLife(prism.Model):
                     "Region": self.Region,
                     "Type": self.Type,
                     "material": self.material,
-                    "eol": self.eol
+                    "eol": [ "reusable", "recyclable", "losses", "surplus losses" ]
                     }
                     )
 

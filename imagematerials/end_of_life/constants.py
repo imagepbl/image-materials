@@ -20,6 +20,6 @@ EolTypes = prism.Dimension("eol", [
     "reusable",
     "recyclable",
     "losses",
-    "surplus losses"
+    "surplus losses"  # Currently unused.
 ]
 )
