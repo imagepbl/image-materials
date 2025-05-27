@@ -25,7 +25,7 @@ class ModelFactory():
 
     """
 
-    def __init__(self, prep_data: dict[str, Any], complete_timeline: prism.Timeline,
+    def __init__(self, namespaces: dict[str, Any], complete_timeline: prism.Timeline,
                  check_coordinates: bool = True):
         """Initialize the factory with prepocessing data.
 
@@ -39,51 +39,10 @@ class ModelFactory():
             Whether to check the compatibility of the input coordinates.
 
         """
-        if all([isinstance(p, dict) for p in prep_data.values()]):
-            self.prep_data = prep_data
-        else:
-            self.prep_data = {_DEFAULT_NAMESPACE: prep_data}
-        # Preprocessing data + output data of the submodels
-        self.all_data = {namespace: {} for namespace in self.prep_data}
-        self.coordinates = {namespace: {} for namespace in self.prep_data}
+        self.namespaces = {ns.name: ns for ns in namespaces}
         self.models = []
         self.complete_timeline = complete_timeline
         self.check_coordinates = check_coordinates
-
-    def _add_input_data(self, namespace, input_name, model_class, optional=False):
-        if not isinstance(namespace, str):
-            for ns in namespace:
-                self._add_input_data(ns, input_name, model_class, optional=optional)
-            return
-
-        # for input_name in input_data:
-        if input_name in self.all_data[namespace]:
-            return
-
-        if input_name not in self.prep_data[namespace] and not optional:
-            raise ValueError(f"Cannot find input data '{input_name}' in namespace '{namespace}'"
-                                f" for model class '{model_class}'.")
-
-        self.all_data[namespace][input_name] = self.prep_data[namespace].get(input_name, None)
-
-        if not isinstance(self.all_data[namespace][input_name], xr.DataArray):
-            return
-
-        # Add the new coordinates
-        for coord in self.all_data[namespace][input_name].coords.values():
-            coord_list = list(coord.values)
-            if coord.name not in self.coordinates[namespace]:
-                self.coordinates[namespace][coord.name] = (coord_list, [input_name])
-                if coord.name == "Time" and "Cohort" not in self.coordinates[namespace]:
-                    self.coordinates[namespace]["Cohort"] = (coord_list, [input_name])
-            elif self.check_coordinates:
-                if coord_list != self.coordinates[namespace][coord.name][0]:
-                    raise ValueError(
-                        f"Mismatch in coordinates with dimension '{coord.name}'"
-                        f" with data array '{input_name}' having different coordinates"
-                        f" than previous models '{self.coordinates[namespace][coord.name][1]}'."
-                        f"{coord_list} vs {self.coordinates[namespace][coord.name][0]}")
-                self.coordinates[namespace][coord.name][1].append(input_name)
 
     def _get_linked_input_data(self, namespace, input_sources, input_data, optional_input_data):
         linked_input_data = []
@@ -91,19 +50,19 @@ class ModelFactory():
         for var_name in input_data + optional_input_data:
             cur_namespace = input_sources.get(var_name, namespace)
             if isinstance(cur_namespace, str):
-                prep_data = self.prep_data[namespace]
-                all_data = self.all_data[namespace]
-                if var_name in prep_data or var_name in optional_input_data:
-                    arguments_dict[var_name] = all_data[var_name]
+                ns = self.namespaces[cur_namespace]
+                if var_name in ns.prep_data:
+                    arguments_dict[var_name] = ns.all_data[var_name]
+                elif var_name in optional_input_data:
+                    arguments_dict[var_name] = None
                 else:
-                    linked_input_data.append((namespace, var_name))
+                    linked_input_data.append((cur_namespace, var_name))
             else:
-                if all(var_name in self.prep_data[ns] for ns in cur_namespace):
-                    arguments_dict[var_name] = [self.all_data[ns][var_name] for ns in cur_namespace]
+                if all(var_name in self.namespaces[ns_name].prep_data for ns_name in cur_namespace):
+                    arguments_dict[var_name] = [self.namespaces[ns].all_data[var_name] for ns in cur_namespace]
                 else:
                     linked_input_data.append((cur_namespace, var_name))
         return arguments_dict, linked_input_data
-
 
     def add(self, model_class, namespace=_DEFAULT_NAMESPACE, input_sources: Optional[dict] = None):
         """Add a submodel to the main model.
@@ -125,8 +84,8 @@ class ModelFactory():
                 self.add(model_class, namespace=ns, input_sources=input_sources)
             return self
 
-        if namespace not in self.all_data:
-            raise KeyError(f"Cannot find namespace '{namespace}'. Available: {list(self.all_data)}.")
+        if namespace not in self.namespaces:
+            raise KeyError(f"Cannot find namespace '{namespace}'. Available: {self.name_list}.")
 
         # Find default data names
         input_data = getattr(model_class, "input_data", tuple())
@@ -135,37 +94,11 @@ class ModelFactory():
 
         input_sources = {} if input_sources is None else input_sources
 
-        # Check existance of datasets for input data and add them to the data store.
-        for input_name in input_data:
-            cur_namespace = input_sources.get(input_name, namespace)
-            self._add_input_data(cur_namespace, input_name, model_class, False)
-
-        # Check existance of datasets for optional input data and add them to the data store.
-        for input_name in optional_input_data:
-            cur_namespace = input_sources.get(input_data, namespace)
-            self._add_input_data(cur_namespace, input_name, model_class, True)
-
         arguments_dict = {}
         # Add coordinates
         for dim_name, dim_type in model_class.__annotations__.items():
             if isinstance(dim_type, prism._typing.CoordsType):
-                try:
-                    arguments_dict[dim_name] = self.coordinates[namespace][dim_name][0]
-                except KeyError as exc:
-                    other_namespaces = set()
-                    for input_name, namespaces in input_sources.items():
-                        if isinstance(namespaces, str):
-                            other_namespaces.add(namespaces)
-                        else:
-                            other_namespaces = other_namespaces | set(namespaces)
-                    found_coord = False
-                    for other_ns in other_namespaces:
-                        if dim_name in self.coordinates[other_ns]:
-                            arguments_dict[dim_name] = self.coordinates[other_ns][dim_name][0]
-                            found_coord = True
-                            break
-                    if not found_coord:
-                        raise exc
+                arguments_dict[dim_name] = self.namespaces[namespace].coordinates[dim_name]
 
         # Add input data either from the preprocessing data or other submodels.
         new_arguments_dict, linked_input_data = self._get_linked_input_data(
@@ -179,7 +112,7 @@ class ModelFactory():
 
         # Add output data of sub model to dictionary.
         for output_name in output_data:
-            self.all_data[namespace][output_name] = getattr(new_sub_model, output_name)
+            self.namespaces[namespace].all_data[output_name] = getattr(new_sub_model, output_name)
 
         # Add the new submodel to the list of submodels.
         new_sub_model.linked_input_data = linked_input_data
@@ -241,6 +174,41 @@ class ModelFactory():
 
         # Link all input data in the main model, so that you can do model.stocks
         # instead of model.submodels[0].stocks.
-        for data_name, data in self.all_data.items():
-            setattr(main_model, data_name, data)
+        for ns in self.namespaces.values():
+            setattr(main_model, ns.name, ns.all_data)
         return main_model
+
+
+class Namespace():
+    def __init__(self, name, data, coordinates = None, check_coordinates = True):
+        self.name = name
+        self.prep_data = {k: v for k, v in data.items()}
+        self.all_data = {k: v for k, v in data.items()}
+        self.check_coordinates = check_coordinates
+
+        coordinates = {} if coordinates is None else {k: v for k, v in coordinates.items()}
+
+        self.coordinates, self.coordinate_sources = self._add_data_coordinates(data, coordinates)
+
+    def _add_data_coordinates(self, data, coordinates):
+        coordinate_sources = {name: "manually set" for name in coordinates}
+        # Add the new coordinates
+        for input_name, array in data.items():
+            if not isinstance(array, xr.DataArray):
+                continue
+            for coord in array.coords.values():
+                coord_list = list(coord.values)
+                if coord.name not in coordinates:
+                    coordinates[coord.name] = coord_list
+                    coordinate_sources[coord.name] = [input_name]
+                elif self.check_coordinates:
+                    if coord_list != coordinates[coord.name]:
+                        raise ValueError(
+                            f"Mismatch in coordinates with dimension '{coord.name}'"
+                            f" with data array '{input_name}' having different coordinates"
+                            f" than previously assumed in '{self.coordinate_sources[coord.name]}'."
+                            f"New: {coord_list}\n\nOld:{self.coordinates[coord.name]}")
+                    coordinate_sources[coord.name].append(input_name)
+        return coordinates, coordinate_sources
+
+
