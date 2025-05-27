@@ -188,7 +188,7 @@ def apply_change_per_region(df, base_year, target_year, increase, implementation
             regional_df, 
             base_year=base_year, 
             target_year=target_year, 
-            lifetime_increase={region: increase}, 
+            change={region: increase}, 
             implementation_rate=implementation_rate, 
             data_type=data_type, 
             steepness=steepness
