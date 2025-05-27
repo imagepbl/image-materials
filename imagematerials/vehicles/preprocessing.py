@@ -57,7 +57,7 @@ from imagematerials.vehicles.constants import (
     maintenance_lifetime_per_mode,
 )
 from imagematerials.vehicles.modelling_functions import (interpolate, tkms_to_nr_of_vehicles_fixed,  
-    increase_value, apply_increase_per_region)
+    change_value, apply_change_per_region)
 #from imagematerials.concepts import vehicle_knowledge_graph
 
 
@@ -450,11 +450,9 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
         implementation_rate = circular_economy_config['slow']['vehicles']['implementation_rate']
         # possibilities for implementation rate are: linear, immediate, s-curve
 
-        lifetimes_vehicles = increase_value(lifetimes_vehicles, base_year, target_year, lifetime_increase, implementation_rate, "lifetime")
-
-        mileages = scenario_change(
-            mileages, base_year, target_year, 
-            mileage_increase, implementation_rate)
+        lifetimes_vehicles = change_value(
+            lifetimes_vehicles, base_year, target_year, 
+            lifetime_increase, implementation_rate, "lifetime")
 
     if 'narrow' in circular_economy_config.keys():
         target_year = circular_economy_config['narrow']['vehicles']['target_year']
@@ -463,31 +461,22 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
         region_mileage = circular_economy_config['narrow']['vehicles']['region_mileage']
         implementation_rate = circular_economy_config['narrow']['vehicles']['implementation_rate']
 
-        mileages = increase_value(mileages, base_year, target_year, mileage_increase, implementation_rate, "mileages")
+        mileages = change_value(
+            mileages, base_year, target_year, 
+            mileage_increase, implementation_rate)
 
-        kilometrage = apply_increase_per_region(
-            kilometrage,
-            base_year=base_year,
-            target_year=target_year,
-            increase=region_mileage['Cars'],  # Not a dict here—just the % value
-            implementation_rate=implementation_rate,
-            data_type='mileages'
+        # Cars are saved seperatly since they are not defined in the general kilometrage dataframe
+        kilometrage = apply_change_per_region(
+            kilometrage, base_year, target_year, 
+            region_mileage['Cars'], implementation_rate
         )
-        kilometrage_bus = apply_increase_per_region(
-            kilometrage_bus,
-            base_year=base_year,
-            target_year=target_year,
-            increase=mileage_increase['Midi Buses'],  # Not a dict here—just the % value
-            implementation_rate=implementation_rate,
-            data_type='mileages'
+        kilometrage_bus = apply_change_per_region(
+            kilometrage_bus, base_year, target_year, 
+            mileage_increase['Midi Buses'], implementation_rate
         )
-        kilometrage_midi_bus = apply_increase_per_region(
-            kilometrage_midi_bus,
-            base_year=base_year,
-            target_year=target_year,
-            increase=mileage_increase['Regular Buses'],  # Not a dict here—just the % value
-            implementation_rate=implementation_rate,
-            data_type='mileages'
+        kilometrage_midi_bus = apply_change_per_region(
+            kilometrage_midi_bus, base_year, target_year, 
+            mileage_increase['Regular Buses'], implementation_rate
         )
         #for mode, increase in mileage_change.items():
         #    col = (mode, 'mileage')
