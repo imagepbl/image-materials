@@ -43,6 +43,7 @@ def compute_total_population(image_directory, base_directory):
     # import total population 1971 - 2100 from IMAGE
     population_1971_future_df: pd.DataFrame = read_mym_df(image_directory.joinpath("Socioeconomic", "pop.scn"))
     population_1971_future_df = population_1971_future_df.loc[:, :26]
+    population_1971_future_df.columns = population_1971_future_df.columns.astype(str)
 
     # read in historic global population from Maddison Project Database 2020 & 1700 value from https://www.johnstonsarchive.net/other/worldpop.html in 1000 people
     historic_pop = pd.read_csv(base_directory / 'buildings' / 'standard_data' / 'historic_population.csv', index_col=0, header = 0)
@@ -83,12 +84,14 @@ def compute_rur_urb_pop(image_directory, base_directory):
 
     #rural population total meaning [Million]: the total of people living in rural areas (over time, by region)
     rural_population: pd.DataFrame = read_mym_df(image_directory.joinpath("Socioeconomic", "RURPOPTOT.out"))
+    rural_population.columns = rural_population.columns.astype(str)
 
     #urban population total meaning [Million]: the total of people living in urban areas (over time, by region)
     urban_population: pd.DataFrame = read_mym_df(image_directory.joinpath("Socioeconomic", "URBPOPTOT.out"))
+    urban_population.columns = urban_population.columns.astype(str)
 
     # remove emty and global region
-    rural_population, urban_population = rural_population.loc[:, :26], urban_population.loc[:, :26]
+    rural_population, urban_population = rural_population.loc[:, :"26"], urban_population.loc[:, :"26"]
 
     # split up in rural and urban
     # get urban share for base year
