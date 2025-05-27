@@ -48,6 +48,8 @@ def buildings_preprocessing(base_directory, climate_policy_config: dict, circula
 
     floorspace_residential = compute_housing_residential(population, average_m2_capita, housing_type, floorspace_rururb)
 
+    floorspace_residential
+
     floorspace = xr.concat((floorspace_residential, floorspace_commercial), dim="Type")
 
     # Lifetime computations, see lifetimes.py
