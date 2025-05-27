@@ -16,6 +16,7 @@ from imagematerials.buildings.constants import (
     REGIONS_RANGE,
     START_YEAR,
     YEARS,
+    SCENARIO_SELECT
 )
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, merge_dims
@@ -198,7 +199,7 @@ def compute_housing_type(database_directory):
     return housing_type_xr
 
 def compute_average_m2_capita(base_directory):
-    average_m2_capita_df: pd.DataFrame = pd.read_csv(base_directory.joinpath('files_DB','Average_m2_per_cap.csv'), index_col = [0,1]) 
+    average_m2_capita_df: pd.DataFrame = pd.read_csv(base_directory.joinpath('buildings', 'files_DB','Average_m2_per_cap.csv'), index_col = [0,1]) 
     column_mapping = {'1': 'Detached', '2': 'Semi-detached', '3': 'Appartment', '4': 'High-rise'}
     average_m2_capita_df.rename(columns=column_mapping, inplace=True)
     average_m2_capita = dataset_to_array(average_m2_capita_df.to_xarray(), ["Region", "Area"], ["Type"])
