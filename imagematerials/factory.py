@@ -1,5 +1,5 @@
 """Module to dynamically create models."""
-from typing import Any
+from typing import Any, Optional
 
 import prism
 import xarray as xr
@@ -50,37 +50,62 @@ class ModelFactory():
         self.complete_timeline = complete_timeline
         self.check_coordinates = check_coordinates
 
-    def _add_input_data(self, namespace, input_data, model_class, optional=False):
-        for input_name in input_data:
-            if input_name in self.all_data[namespace]:
-                continue
+    def _add_input_data(self, namespace, input_name, model_class, optional=False):
+        if not isinstance(namespace, str):
+            for ns in namespace:
+                self._add_input_data(ns, input_name, model_class, optional=optional)
+            return
 
-            if input_name not in self.prep_data[namespace] and not optional:
-                raise ValueError(f"Cannot find input data '{input_name}' in namespace '{namespace}'"
-                                 f" for model class '{model_class}'.")
+        # for input_name in input_data:
+        if input_name in self.all_data[namespace]:
+            return
 
-            self.all_data[namespace][input_name] = self.prep_data[namespace].get(input_name, None)
+        if input_name not in self.prep_data[namespace] and not optional:
+            raise ValueError(f"Cannot find input data '{input_name}' in namespace '{namespace}'"
+                                f" for model class '{model_class}'.")
 
-            if not isinstance(self.all_data[namespace][input_name], xr.DataArray):
-                continue
+        self.all_data[namespace][input_name] = self.prep_data[namespace].get(input_name, None)
 
-            # Add the new coordinates
-            for coord in self.all_data[namespace][input_name].coords.values():
-                coord_list = list(coord.values)
-                if coord.name not in self.coordinates[namespace]:
-                    self.coordinates[namespace][coord.name] = (coord_list, [input_name])
-                    if coord.name == "Time" and "Cohort" not in self.coordinates[namespace]:
-                        self.coordinates[namespace]["Cohort"] = (coord_list, [input_name])
-                elif self.check_coordinates:
-                    if coord_list != self.coordinates[namespace][coord.name][0]:
-                        raise ValueError(
-                            f"Mismatch in coordinates with dimension '{coord.name}'"
-                            f" with data array '{input_name}' having different coordinates"
-                            f" than previous models '{self.coordinates[namespace][coord.name][1]}'."
-                            f"{coord_list} vs {self.coordinates[namespace][coord.name][0]}")
-                    self.coordinates[namespace][coord.name][1].append(input_name)
+        if not isinstance(self.all_data[namespace][input_name], xr.DataArray):
+            return
 
-    def add(self, model_class, namespace=_DEFAULT_NAMESPACE):
+        # Add the new coordinates
+        for coord in self.all_data[namespace][input_name].coords.values():
+            coord_list = list(coord.values)
+            if coord.name not in self.coordinates[namespace]:
+                self.coordinates[namespace][coord.name] = (coord_list, [input_name])
+                if coord.name == "Time" and "Cohort" not in self.coordinates[namespace]:
+                    self.coordinates[namespace]["Cohort"] = (coord_list, [input_name])
+            elif self.check_coordinates:
+                if coord_list != self.coordinates[namespace][coord.name][0]:
+                    raise ValueError(
+                        f"Mismatch in coordinates with dimension '{coord.name}'"
+                        f" with data array '{input_name}' having different coordinates"
+                        f" than previous models '{self.coordinates[namespace][coord.name][1]}'."
+                        f"{coord_list} vs {self.coordinates[namespace][coord.name][0]}")
+                self.coordinates[namespace][coord.name][1].append(input_name)
+
+    def _get_linked_input_data(self, namespace, input_sources, input_data, optional_input_data):
+        linked_input_data = []
+        arguments_dict = {}
+        for var_name in input_data + optional_input_data:
+            cur_namespace = input_sources.get(var_name, namespace)
+            if isinstance(cur_namespace, str):
+                prep_data = self.prep_data[namespace]
+                all_data = self.all_data[namespace]
+                if var_name in prep_data or var_name in optional_input_data:
+                    arguments_dict[var_name] = all_data[var_name]
+                else:
+                    linked_input_data.append((namespace, var_name))
+            else:
+                if all(var_name in self.prep_data[ns] for ns in cur_namespace):
+                    arguments_dict[var_name] = [self.all_data[ns][var_name] for ns in cur_namespace]
+                else:
+                    linked_input_data.append((cur_namespace, var_name))
+        return arguments_dict, linked_input_data
+
+
+    def add(self, model_class, namespace=_DEFAULT_NAMESPACE, input_sources: Optional[dict] = None):
         """Add a submodel to the main model.
 
         Parameters
@@ -95,29 +120,58 @@ class ModelFactory():
             The factory itself, so that the creation of the model can be stacked.
 
         """
+        if isinstance(namespace, list):
+            for ns in namespace:
+                self.add(model_class, namespace=ns, input_sources=input_sources)
+            return self
+
+        if namespace not in self.all_data:
+            raise KeyError(f"Cannot find namespace '{namespace}'. Available: {list(self.all_data)}.")
+
         # Find default data names
         input_data = getattr(model_class, "input_data", tuple())
         optional_input_data = getattr(model_class, "optional_input_data", tuple())
         output_data = getattr(model_class, "output_data", tuple())
 
-        self._add_input_data(namespace, input_data, model_class, False)
-        self._add_input_data(namespace, optional_input_data, model_class, True)
+        input_sources = {} if input_sources is None else input_sources
+
+        # Check existance of datasets for input data and add them to the data store.
+        for input_name in input_data:
+            cur_namespace = input_sources.get(input_name, namespace)
+            self._add_input_data(cur_namespace, input_name, model_class, False)
+
+        # Check existance of datasets for optional input data and add them to the data store.
+        for input_name in optional_input_data:
+            cur_namespace = input_sources.get(input_data, namespace)
+            self._add_input_data(cur_namespace, input_name, model_class, True)
 
         arguments_dict = {}
         # Add coordinates
         for dim_name, dim_type in model_class.__annotations__.items():
             if isinstance(dim_type, prism._typing.CoordsType):
-                arguments_dict[dim_name] = self.coordinates[namespace][dim_name][0]
+                try:
+                    arguments_dict[dim_name] = self.coordinates[namespace][dim_name][0]
+                except KeyError as exc:
+                    other_namespaces = set()
+                    for input_name, namespaces in input_sources.items():
+                        if isinstance(namespaces, str):
+                            other_namespaces.add(namespaces)
+                        else:
+                            other_namespaces = other_namespaces | set(namespaces)
+                    found_coord = False
+                    for other_ns in other_namespaces:
+                        if dim_name in self.coordinates[other_ns]:
+                            arguments_dict[dim_name] = self.coordinates[other_ns][dim_name][0]
+                            found_coord = True
+                            break
+                    if not found_coord:
+                        raise exc
 
         # Add input data either from the preprocessing data or other submodels.
-        linked_input_data = []
-        for var_name in input_data + optional_input_data:
-            prep_data = self.prep_data[namespace]
-            all_data = self.all_data[namespace]
-            if var_name in prep_data or var_name in optional_input_data:
-                arguments_dict[var_name] = all_data[var_name]
-            else:
-                linked_input_data.append((namespace, var_name))
+        new_arguments_dict, linked_input_data = self._get_linked_input_data(
+            namespace, input_sources, input_data, optional_input_data)
+
+        arguments_dict.update(new_arguments_dict)
 
         # Initialize the new submodel.
         new_sub_model = model_class(self.complete_timeline, **arguments_dict)
@@ -167,8 +221,13 @@ class ModelFactory():
 
             def _compute_one_timestep(self, time: prism.Time):
                 for model in self.submodels:
-                    model.compute_values(time, **{var_name: getattr(self, namespace)[var_name]
-                                                  for namespace, var_name in model.linked_input_data})
+                    linked_args = {}
+                    for namespace, var_name in model.linked_input_data:
+                        if isinstance(namespace, str):
+                            linked_args[var_name] = getattr(self, namespace)[var_name]
+                        else:
+                            linked_args[var_name] = [getattr(self, ns)[var_name] for ns in namespace]
+                    model.compute_values(time, **linked_args)
 
             def __getattribute__(self, attr):
                 try:

@@ -5,8 +5,8 @@ target_year = 2060
 [vehicles]
 base_year = 2019
 target_year = 2060
-implementation_rate = 'linear'
 # possibilities for implementation rate are: linear, immediate, s-curve
+implementation_rate = 'linear'
 
 [buildings.residential.m2_change_pc]
 Canada = -35.0
