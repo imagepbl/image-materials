@@ -22,6 +22,7 @@ end_year = 1970
 # Given global populations
 global_pop_1700 = 679 # [million] https://www.johnstonsarchive.net/other/worldpop.html
 global_pop_1820 = 1_033.538 # [million] https://www.rug.nl/ggdc/historicaldevelopment/maddison/releases/maddison-project-database-2020
+urban_share_1820 = 7.2 #https://www2.census.gov/programs-surveys/decennial/1990/tables/cph-2/table-4.pdf
 known_years = [1700, 1820, 1971]
 # Create a full range of years
 full_years_pop = np.arange(1700, 1972)
