@@ -39,7 +39,7 @@ class Battery(prism.Model):
     # Input data
     battery_weights: xr.DataArray
     battery_shares: xr.DataArray
-    battery_material_fractions: xr.DataArray
+    battery_materials: xr.DataArray
 
     # Dimensions
     Region: prism.Coords[REGION]
@@ -50,14 +50,16 @@ class Battery(prism.Model):
     battery: prism.Coords[BATTERY_TYPE] 
 
     # Data dependencies
-    input_data: tuple[str] = ("battery_weights", "battery_material_fractions",
-                              "stock_by_cohort", "inflow")
-    output_data: tuple[str] = ("inflow_battery",
-                               "stock_battery")
+    input_data: tuple[str] = ("battery_weights", "battery_materials", "battery_shares",
+                              "stock_by_cohort", "inflow", "outflow_by_cohort")
+    output_data: tuple[str] = ("inflow_battery",)
+                               #"stock_battery")
 
     # Output data
-    inflow_battery: prism.TimeVariable[REGION, BATTERY_TYPE, MATERIAL_TYPE, "count"] = prism.export()
-    stock_battery: prism.TimeVariable[REGION, BATTERY_TYPE, MATERIAL_TYPE, "count"] = prism.export()
+    #inflow_battery: prism.TimeVariable[REGION, BATTERY_TYPE, MATERIAL_TYPE, "count"] = prism.export()
+    #stock_battery: prism.TimeVariable[REGION, BATTERY_TYPE, MATERIAL_TYPE, STOCK_TYPE, COHORT, "count"] = prism.export()
+    #outflow_battery: prism.TimeVariable[REGION, BATTERY_TYPE, MATERIAL_TYPE, STOCK_TYPE, COHORT, "count"] = prism.export()
+    
 
     def compute_initial_values(self, time: prism.Timeline):
         """
@@ -68,9 +70,26 @@ class Battery(prism.Model):
         time : prism.Timeline
             The simulation timeline.
         """
+        self.inflow_battery = xr.DataArray(
+            0.0,
+            dims=("Time", "Region", "Type","material","battery"),
+            coords={"Time": self.Time,
+                    "Region": self.Region,
+                    "Type": self.Type,
+                    "material": self.material,
+                    "battery": self.battery})
+        
+        self.stock_battery = xr.DataArray(
+            0.0,
+            dims=("Time", "Region", "Type","material","battery"),
+            coords={"Time": self.Time,
+                    "Region": self.Region,
+                    "Type": self.Type,
+                    "material": self.material,
+                    "battery": self.battery})
         
 
-    def compute_values(self, time: prism.Time, stock_by_cohort):
+    def compute_values(self, time: prism.Time, inflow, stock_by_cohort, outflow_by_cohort):
         """
         Computes the maintenance material usage by stock cohort at each time step.
         
@@ -84,7 +103,12 @@ class Battery(prism.Model):
          
         t, dt = time.t, time.dt
 
-        self.inflow_battery[t] = (stock_by_cohort.loc[t]*battery_weights[t]).sum("Type")
+        self.inflow_battery.loc[t] = inflow[t] * self.battery_weights.sel(Cohort = t) * \
+                self.battery_shares.sel(Cohort = t) * self.battery_materials.sel(Cohort = t)
+        
+        self.stock_battery.loc[t] = (stock_by_cohort.loc[t]*self.battery_weights * \
+                self.battery_shares * self.battery_materials).sum("Cohort")
+        #self.outflow_battery[t] = (outflow_by_cohort.loc[t]*battery_this_year).sum("Type")
                                   
         #                          self.maintenance_material_fractions*
         #                              self.weights.sel(Cohort=t).drop_vars("Cohort")).sum("Cohort")
