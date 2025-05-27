@@ -5,10 +5,13 @@ import pandas as pd
 import xarray as xr
 
 from imagematerials.buildings.constants import (
-    YEARS, 
     far_start_year, 
     start_year,
-    end_year)
+    end_year, 
+    global_pop_1700,
+    global_pop_1820, 
+    known_years,
+    full_years_pop)
 
 from imagematerials.util import dataset_to_array
 from imagematerials.read_mym import read_mym_df
@@ -63,49 +66,64 @@ def compute_total_population(image_directory, base_directory):
     population_1721_1820 = (population_1820_future[0]*(1-(start_year - years_1721_1820)/(start_year-far_start_year+1))).transpose()
     population = xr.concat((population_1721_1820, population_1820_future), dim="Time")
 
-    return population
+    return population, population_1970_future_df
 
     
 
-def compute_rurpop_share(image_directory):
-    # rurpop; unit: %; meaning: the share of people living in rural areas (over time, by region)
-    # TODO: seems to be a fraction, so no % units, check!
+def compute_rur_urb_pop(image_directory, population_1970_future_df):
+    #rural population total meaning [Million]: the total of people living in rural areas (over time, by region)
+    rural_population: pd.DataFrame = read_mym_df(image_directory.joinpath("Socioeconomic", "RURPOPTOT.out"))
 
-    # total 
+    #urban population total meaning [Million]: the total of people living in urban areas (over time, by region)
+    urban_population: pd.DataFrame = read_mym_df(image_directory.joinpath("Socioeconomic", "URBPOPTOT.out"))
 
-    raw_rural_population: pd.DataFrame = pd.read_csv(image_directory. joinpath('rurpop.csv'), index_col = [0])
+    # remove emty and global region
+    rural_population = rural_population.loc[:, :26]
+    urban_population = urban_population.loc[:, :26]
 
-    # Interpolate population and rural population data (fills in missing years with cubic interpolation)
-    rural_population = raw_rural_population.reindex(YEARS).interpolate(method='cubic')
+    # extrapolate to history:
+    # Calculate each region's share of global population in the base year
+    regional_shares = population_1970_future_df.loc[1971]/population_1970_future_df.loc[1971].sum()
 
-    maximum_rural_population = rural_population.values.max()
+    # Calculate total population for 1971 and regional shares
+    regional_pop_1971 = population_1970_future_df.loc[1971]
+    regional_shares = regional_pop_1971 / regional_pop_1971.sum()
 
-    # Get the rural population share from 1970-future directly from the data
-    rurpop_share_1970_future = dataset_to_array(rural_population.to_xarray(), ["Time"], ["Region"])
+    # Urban share in 1971 per region (percent)
+    urban_share_1971 = (urban_population.loc[1971] / regional_pop_1971) * 100
 
-    # Get the growth or rural population by year (average for the first 10 years of IMAGE data)
-    # TODO: This trend computation seems wrong, find yearly increase with log instead.
-    # TODO: Also there is unneccessary multiplication by 100
-    rural_population_trend = ((1-rural_population.loc[1980]/rural_population.loc[1970])/10)*100
-    rurpop_trend_xr = rural_population_trend.to_xarray().rename({"index": "Region"})
-    rurpop_share_1820_1970 = (rurpop_share_1970_future.loc[1970] * ((100+rurpop_trend_xr)/100)**(1970-years_1820_1970)).transpose()
-    rurpop_share_1820_1970 = rurpop_share_1820_1970.where(rurpop_share_1820_1970 <= maximum_rural_population,
-                                                          maximum_rural_population)
+    # Urban share known values for each region
+    urban_share_known = pd.DataFrame(index=known_years, columns=regional_shares.index)
 
-    # Compute the rural population share for the first part.
-    # TODO: Rural population share goes to zero (took it from the original), but probably should go to one.
-    rurpop_share_1721_1820 = 0*years_1721_1820 + rurpop_share_1820_1970.loc[1820]
-    # rurpop_share_1721_1820 = rurpop_share_1820_1970.loc[1820] - (rurpop_share_1820_1970.loc[1820])*(1820-years_1721_1820)/100
-    # rurpop_share_1721_1820 = rurpop_share_1721_1820.transpose()
-    # rurpop_share_1721_1820 = rurpop_share_1721_1820.where(rurpop_share_1721_1820 >= 0, 0)
+    for region in regional_shares.index:
+        urban_share_known.loc[1700, region] = 0.0
+        urban_share_known.loc[1820, region] = 7.2 #https://www2.census.gov/programs-surveys/decennial/1990/tables/cph-2/table-4.pdf
+        urban_share_known.loc[1971, region] = urban_share_1971[region]
 
-    # Concatenate timeline together
-    # TODO: I think there is a bug in the old code where urbpop_share + rurpop_share != 1, check this.
-    rurpop_share = xr.concat((rurpop_share_1721_1820, rurpop_share_1820_1970, rurpop_share_1970_future), dim="Time")
-    urbpop_share = 1-rurpop_share
+    # Total global population known values
+    total_global_pop_known = pd.Series(data=[global_pop_1700, global_pop_1820, regional_pop_1971.sum()], index=known_years)
 
-    # TODO: Remove this BUG
-    rurpop_share.loc[1721:1819] = rurpop_share.loc[1721:1819] * (years_1721_1820-1720)/100
-    urbpop_share.loc[1721:1819] = urbpop_share.loc[1721:1819] * (years_1721_1820-1720)/100
+    # Interpolate urban share for all years and regions
+    urban_share_interp = pd.DataFrame(index=full_years_pop, columns=regional_shares.index, dtype=float)
 
-    return rurpop_share, urbpop_share
+    urban_share_known = urban_share_known.astype(float)
+    for region in regional_shares.index:
+        urban_share_interp[region] = np.interp(full_years_pop, known_years, urban_share_known[region])
+
+    # Calculate rural share = 100 - urban share
+    rural_share_interp = 100 - urban_share_interp
+
+    # Interpolate total global population for all years
+    total_global_pop_interp = np.interp(full_years_pop, known_years, total_global_pop_known)
+
+    # Calculate total population per region for all years by scaling with constant regional shares
+
+    total_pop_interp = pd.DataFrame(index=full_years_pop, columns=regional_shares.index, dtype=float)
+    for year_idx, year in enumerate(full_years_pop):
+        total_pop_interp.loc[year] = regional_shares * total_global_pop_interp[year_idx]
+
+    # Calculate urban and rural populations per region and year
+    urban_pop_interp = total_pop_interp * (urban_share_interp / 100)
+    rural_pop_interp = total_pop_interp * (rural_share_interp / 100)
+
+    return rural_pop_interp, urban_pop_interp
