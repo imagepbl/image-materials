@@ -7,10 +7,10 @@ from pathlib import Path
 from imagematerials.end_of_life.constants import SCENARIO_SELECT, start_year, end_year
 from imagematerials.end_of_life.preprocessing.preprocessing import compute_eol
 
-def eol_preprocessing (collection_in, reuse_in, recycling_in):
-    collection_in = pd.read_csv(Path("data", "raw", "end_of_life","SSP2_2D_RE", "collection.csv"))
-    reuse_in = pd.read_csv(Path("data", "raw", "end_of_life", "SSP2_2D_RE", "reuse.csv"))
-    recycling_in = pd.read_csv(Path("data","raw", "end_of_life","SSP2_2D_RE","recycling.csv"))
+def eol_preprocessing(base_dir):
+    collection_in = pd.read_csv(Path(base_dir, "end_of_life","SSP2_2D_RE", "collection.csv"))
+    reuse_in = pd.read_csv(Path(base_dir, "end_of_life", "SSP2_2D_RE", "reuse.csv"))
+    recycling_in = pd.read_csv(Path(base_dir, "end_of_life","SSP2_2D_RE","recycling.csv"))
 
     # renaming columns for consistency
     collection_in = collection_in.rename(columns={'regions': 'region'})
@@ -59,4 +59,8 @@ def eol_preprocessing (collection_in, reuse_in, recycling_in):
     reuse = compute_eol(xr_reuse, start_year= start_year, end_year=end_year,min_value = 0,max_value = 1)
     recycling = compute_eol(xr_recycling, start_year= start_year, end_year=end_year,min_value = 0,max_value = 1)
 
-    return collection, reuse, recycling
+    return {
+        "collection": collection,
+        "reuse": reuse,
+        "recycling": recycling,
+    }

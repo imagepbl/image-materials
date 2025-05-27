@@ -421,7 +421,7 @@ class GenericEndOfLife(prism.Model):
     input_data: tuple[str] = ("collection", "reuse", "recycling",
                               "outflow_by_cohort_materials")        # I think that's the variable needed as input from all sectors, but I'm not sure. I'm assuming this is the material outflows from each sector and type, per region and material   
    
-    output_data: tuple[str] = ("end_of_life_materials")
+    output_data: tuple[str] = ("end_of_life_materials", )
 
     # Output data
     end_of_life_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, EOL_TYPE, "count"] = prism.export()
