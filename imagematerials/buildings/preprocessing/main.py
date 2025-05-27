@@ -22,10 +22,10 @@ from imagematerials.concepts import knowledge_graph
 
 def buildings_preprocessing(base_directory, climate_policy_config: dict, circular_economy_config: dict):
     base_directory = Path(base_directory)
-    database_directory = base_directory / "files_DB" / SCENARIO_SELECT
-    image_directory = base_directory / "files_IMAGE" / SCENARIO_SELECT
+    database_directory = base_directory / "buildings" / SCENARIO_SELECT
+    image_directory = base_directory / "image" / SCENARIO_SELECT
     assert database_directory.is_dir(), database_directory
-    assert image_directory.is_dir()
+    assert image_directory.is_dir(), image_directory
 
 
     # Get floorspace for commercial + urban/rural
@@ -41,7 +41,7 @@ def buildings_preprocessing(base_directory, climate_policy_config: dict, circula
     floorspace_commercial = floorspace_commercial_rururb.sel(
         {"Type": [x.values for x in floorspace_commercial_rururb.coords["Type"] if x.values not in ["Urban", "Rural"]]})
 
-    population = compute_population(base_directory)
+    population = compute_population(image_directory, base_directory)
     average_m2_capita = compute_average_m2_capita(base_directory)
 
     housing_type = compute_housing_type(database_directory)

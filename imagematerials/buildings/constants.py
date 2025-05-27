@@ -1,3 +1,6 @@
+import xarray as xr
+import numpy as np
+
 # Set general constants
 REGIONS = 26        # 26 IMAGE regions
 #building_types = 4  # 4 building types: detached, semi-detached, appartments & high-rise 
@@ -8,10 +11,20 @@ START_YEAR = 1971   # starting year of IMAGE data files
 END_YEAR = 2060     # year for which the output is generated (e.g. choose 2050 for shorter runtime & smaller filesize)
 HIST_YEAR = 1721    # historick stock-tail is pre-caluculated from this year onward
 #switch_year = 2019  # year that the data on building type split (of the stock) ends
-YEAR_LIST_SVA   = [*range(1970, 2025), *range(2030, 2101, 5)]
 YEARS = range(START_YEAR-1, END_YEAR + 1)
 ALL_YEARS = list(range(HIST_YEAR, END_YEAR+1))
 REGIONS_RANGE = range(1, REGIONS+1)
+
+far_start_year = 1721
+start_year = 1820
+end_year = 1970
+
+# Given global populations
+global_pop_1700 = 679 # [million] https://www.johnstonsarchive.net/other/worldpop.html
+global_pop_1820 = 1_033.538 # [million] https://www.rug.nl/ggdc/historicaldevelopment/maddison/releases/maddison-project-database-2020
+known_years = [1700, 1820, 1971]
+# Create a full range of years
+full_years_pop = np.arange(1700, 1972)
 
 # Set Flags for sensitivity analysis
 FLAG_ALPHA  = 0     # switch for the sensitivity analysis on alpha, if 1 the maximum alpha is 10% above the maximum found in the data
@@ -21,7 +34,7 @@ flag_Mean   = 0     # switch to choose between material intensity settings (0 = 
 
 # scenario selection
 base_scenario    = "SSP2"
-scenario_variant = "2D_RE"    # CP = Current Policies, 2D = 2-Degree Climate Policy, RE indicates additional resource efficiency assumptions
+scenario_variant = "CP"    # CP = Current Policies, 2D = 2-Degree Climate Policy, RE indicates additional resource efficiency assumptions
 
 # scenario assumptions
 if scenario_variant == "CP_RE" or scenario_variant == "2D_RE":
