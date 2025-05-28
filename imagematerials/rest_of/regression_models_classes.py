@@ -113,8 +113,6 @@ class OLS_Model:
 
 #%% NLS class
 
-# TODO: bounds Q Lars? to limit models that grow to infinity???????????????
-
 class NLS_Model:
     def __init__(self, y: pd.DataFrame, *X: tuple[pd.DataFrame]):
         # Prepare regression data

@@ -215,6 +215,7 @@ def match_regions_to_best_model(rmse_r2_groups: dict, model_groups: dict,
     for group_name, region_list in regions_groups_dict.items():
         if group_name == 'all_regions':
             continue
+
         for region in region_list:
             region_model_match[region] = model_groups[group_name][models_output_dict[best_rmse_models[group_name]]]
     
