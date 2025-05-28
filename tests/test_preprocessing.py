@@ -71,6 +71,9 @@ def _check_data_same(orig_data, new_data, name=""):
     if isinstance(orig_data, KnowledgeGraph):
         assert len(orig_data._items) == len(new_data._items)
         return
+    if orig_data is None:
+        assert orig_data == new_data
+        return
 
     if isinstance(orig_data, xr.DataArray):
         assert orig_data.shape == new_data.shape, f"Wrong array shape: {name}"
