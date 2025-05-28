@@ -148,33 +148,7 @@ class ModelFactory():
         # Add coordinates
         for dim_name, dim_type in model_class.__annotations__.items():
             if isinstance(dim_type, prism._typing.CoordsType):
-<<<<<<< HEAD
                 init_args[dim_name] = sector.coordinates[dim_name]
-=======
-                try:
-                    arguments_dict[dim_name] = self.coordinates[namespace][dim_name][0]
-                except KeyError as exc:
-                    other_namespaces = set()
-                    for input_name, namespaces in input_sources.items():
-                        if isinstance(namespaces, str):
-                            other_namespaces.add(namespaces)
-                        else:
-                            other_namespaces = other_namespaces | set(namespaces)
-                    found_coord = False
-                    for other_ns in other_namespaces:
-                        if dim_name in self.coordinates[other_ns]:
-                            arguments_dict[dim_name] = self.coordinates[other_ns][dim_name][0]
-                            found_coord = True
-                            break
-                    if dim_name == "eol":
-                        from imagematerials.end_of_life.constants import EolTypes
-
-                        arguments_dict[dim_name] = EolTypes
-                    elif not found_coord:
-                        
-                        # pass
-                        raise exc
->>>>>>> 9aebca9 (Continue work on eol/factory)
 
         def _get_data(var_name):
             """Get the preprocessing/output data from the sectors."""
