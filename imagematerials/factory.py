@@ -102,39 +102,6 @@ class ModelFactory():
         self.models = []
         self.complete_timeline = complete_timeline
 
-    def _get_linked_input_data(self, sector, input_sources, input_data, optional_input_data):
-        linked_input_data = []
-        arguments_dict = {}
-        for var_name in input_data + optional_input_data:
-            cur_sector_names = input_sources.get(var_name, sector.name)  # default: internal sector
-            if isinstance(cur_sector_names, str):  # Single sector supplied to source the data
-                cur_sector = self.sectors[cur_sector_names]
-                if var_name in cur_sector.prep_data:  # Data available from preprocessing
-                    arguments_dict[var_name] = cur_sector.all_data[var_name]
-                elif var_name in optional_input_data:  # Can't be found, but optional
-                    arguments_dict[var_name] = None
-                else:  # Data assumed to become available during modeling, output of other step.
-                    linked_input_data.append((cur_sector_names, var_name))
-            else:  # Multiple sectors supply input data
-                cur_simulated_sectors = []
-                cur_preprocess_sectors = []
-                for sec_name in cur_sector_names:
-                    cur_sector = self.sectors[sec_name]
-                    if var_name in cur_sector.prep_data:
-                        cur_preprocess_sectors.append(cur_sector.all_data[var_name])
-                    else:
-                        cur_simulated_sectors.append(sec_name)
-                if len(cur_simulated_sectors) > 0:
-                    linked_input_data.append((cur_simulated_sectors, var_name))
-                # if len(cur_preprocess_sectors) > 0:
-                arguments_dict[var_name] = cur_preprocess_sectors
-                # if all(var_name in self.namespaces[ns_name].prep_data
-                    #    for ns_name in cur_sector_names):
-                    # arguments_dict[var_name] = [self.namespaces[ns].all_data[var_name] for ns in cur_namespace]
-                # else:
-                    # linked_input_data.append((cur_namespace, var_name))
-        return arguments_dict, linked_input_data
-
     def add(self,
             model_class: prism.Model,
             sector_name: Union[None, str, list[str]] = None,
@@ -145,9 +112,12 @@ class ModelFactory():
         ----------
         model_class
             The class of the model to be added uninitialized.
-        sectors:
+        sector_name:
             Sectors for the model class to be run on, can be one, multiple or None in which case
             there is assumed to be a single sector.
+        input_sources:
+            Dictionary to find the input data of the model if they are not (only) in the current
+            sector. Example: {"stocks": "bld"} or {"stocks": ["bld", "vhc"]}.
 
         Returns
         -------
@@ -171,7 +141,6 @@ class ModelFactory():
 
         # Find default data names
         input_data = getattr(model_class, "input_data", tuple())
-        # optional_input_data = getattr(model_class, "optional_input_data", tuple())
         output_data = getattr(model_class, "output_data", tuple())
 
         input_sources = {} if input_sources is None else input_sources
@@ -184,12 +153,15 @@ class ModelFactory():
                 init_args[dim_name] = sector.coordinates[dim_name]
 
         def _get_data(var_name):
+            """Get the preprocessing/output data from the sectors."""
             cur_sector_names = input_sources.get(var_name, sector_name)
+            # Only one sector to get the data from.
             if isinstance(cur_sector_names, str):
                 cur_sector = self.sectors[cur_sector_names]
                 if var_name not in cur_sector.all_data:
                     raise KeyError(f"Cannot find '{var_name}' in sector '{cur_sector_names}'")
                 return cur_sector.all_data[var_name]
+            # Multiple sectors -> return a list of data for each of the sectors.
             else:
                 data = []
                 for cur_sec_name in cur_sector_names:
@@ -200,17 +172,10 @@ class ModelFactory():
                 return data
 
         for var_name in input_data:
-            # Static data
-            if var_name in model_class.__annotations__:
+            if var_name in model_class.__annotations__:  # Static data
                 init_args[var_name] = _get_data(var_name)
-            else:
+            else:  # Dynamic data
                 compute_args[var_name] = _get_data(var_name)
-
-        # Add input data either from the preprocessing data or other submodels.
-        # new_arguments_dict, linked_input_data = self._get_linked_input_data(
-            # sector, input_sources, input_data, optional_input_data)
-
-        # arguments_dict.update(new_arguments_dict)
 
         # Initialize the new submodel.
         new_sub_model = model_class(self.complete_timeline, **init_args)
@@ -219,7 +184,8 @@ class ModelFactory():
         # Add output data of sub model to dictionary.
         for output_name in output_data:
             if not hasattr(new_sub_model, output_name):
-                raise ValueError(f"Error in model '{new_sub_model}': initialization did not create '{output_name}'")
+                raise ValueError(f"Error in model '{new_sub_model}': "
+                                 f"initialization did not create '{output_name}'")
             sector.all_data[output_name] = getattr(new_sub_model, output_name)
 
         # Add the new submodel to the list of submodels.
@@ -265,6 +231,11 @@ class ModelFactory():
                     model.compute_values(time, **model.compute_args)
 
             def __getattribute__(self, attr):
+                """Get the attributes of the main module.
+
+                It also returns the data as attributes. So model.stocks will
+                give the stocks of all sectors.
+                """
                 try:
                     return super().__getattribute__(attr)
                 except AttributeError:
