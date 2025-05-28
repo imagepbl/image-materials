@@ -4,13 +4,13 @@ Contains functions used for the preprocessing.
 constants.py
 contains important constants used
 
-Electricity_sector_new
+Electricity_sector_new.py
 Sebastiaans ELMA code
 
-Electricity_sector_new_JT
+Electricity_sector_new_JT.py
 Same, just formatted a bit cleaner and some minor changes to accomodate package changes (not supported functionality)
 
-Electricity_sector_restructured_oldstockmodeling
+Electricity_sector_restructured.py
 Same, but restructured: separated generation and storage; clearer devision between read in of files, preprocessing, modelling and postprocessing.
 
 preprocessing.py
