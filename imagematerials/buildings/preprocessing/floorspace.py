@@ -104,7 +104,7 @@ def extrapolate_floorspace(floorspace_image, minimum_comm):
 
 def get_floorspace_urban_rural(image_directory):
     # load IMAGE data-files (MyM file format)
-    floorspace: pd.DataFrame = read_mym_df(image_directory.joinpath("EnergyServices", "res_Floorspace.out"))
+    floorspace: pd.DataFrame = read_mym_df(image_directory.joinpath("EnergyServices", "res_FloorSpace.out"))
     floorspace = floorspace[['time','DIM_1',2,3]].rename(columns={"DIM_1": "Region", 'time':'t', 2:'Urban', 3:'Rural'})
     # the other columns are average per capita floorspace per quintile (we also exclude the average per capita floorspace of the total population in column 1, 
     # because we use the urban & rural specific totals)
