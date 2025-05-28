@@ -99,7 +99,7 @@ def compute_rur_urb_pop(image_directory, base_directory):
     urban_share.loc[1700] = 0
     # interpolate urban share
     urban_share = urban_share.interpolate()
-    rural_share = 1- urban_share
+    rural_share = 1 - urban_share
 
     urban_pop_total = urban_share*regionalized_total_pop_history_future
     rural_pop_total = rural_share*regionalized_total_pop_history_future
