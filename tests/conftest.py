@@ -21,7 +21,7 @@ def vhc_prep_data():
         warnings.simplefilter("ignore")
         climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
         circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
-       
+
         prep_data = vhc.preprocess(Path("data", "raw"), climate_policy_config, circular_economy_config)
     knowledge_graph = create_vehicle_graph()
     new_prep_data = rebroadcast_prep_data(prep_data, knowledge_graph, dim="Type", output_coords=prep_data["shares"].coords["Type"].values)
