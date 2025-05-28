@@ -35,4 +35,5 @@ def bld_prep_data():
     prep_data = bld.preprocess(Path("IMAGE-Mat_old_version", "IMAGE-Mat", "BUMA"))
     new_prep_data = {k: v for k, v in prep_data.items()}
     new_prep_data["knowledge_graph"] = create_building_graph()
+    new_prep_data["shares"] = None
     return new_prep_data
