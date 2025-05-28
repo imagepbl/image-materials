@@ -4,8 +4,6 @@ from typing import Any, Optional, Union
 import prism
 import xarray as xr
 
-_DEFAULT_SECTOR = "default"
-
 
 class Sector():
     """Sector containing its preprocessing data and coordinates."""
