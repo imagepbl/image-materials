@@ -19,16 +19,16 @@ def compute_population(image_directory, base_directory):
     #TODO: use function from util if possible? problem: extra_dims?
     rurpop_total_xr = xr.DataArray(
     data=rurpop_total.values,                # Data values from the DataFrame
-    dims=["Time", "Region"],                                          # Names for the two dimensions
+    dims=["Time", "Region"],                 # Names for the two dimensions
     coords={"Time": rurpop_total.index,      # Time coordinates from the DataFrame index
-        "Region": rurpop_total.columns}  # Region coordinates from the DataFrame columns
+            "Region": rurpop_total.columns}  # Region coordinates from the DataFrame columns
         )
 
     urbpop_total_xr = xr.DataArray(
     data=urbpop_total.values,                # Data values from the DataFrame
-    dims=["Time", "Region"],                                          # Names for the two dimensions
+    dims=["Time", "Region"],                 # Names for the two dimensions
     coords={"Time": urbpop_total.index,      # Time coordinates from the DataFrame index
-        "Region": urbpop_total.columns}  # Region coordinates from the DataFrame columns
+            "Region": urbpop_total.columns}  # Region coordinates from the DataFrame columns
         )
 
     all_population = xr.concat((tot_population_xr, rurpop_total_xr, urbpop_total_xr), dim="Area")
