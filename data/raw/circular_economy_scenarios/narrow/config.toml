@@ -1,0 +1,59 @@
+[buildings]
+base_year = 2020
+target_year = 2060
+
+[vehicles]
+base_year = 2019
+target_year = 2060
+# possibilities for implementation rate are: linear, immediate, s-curve
+implementation_rate = 'linear'
+
+[buildings.residential.m2_change_pc]
+Canada = -35.0
+China = -19.2
+India = -12.5
+Japan = -15.0
+USA = -35.0
+"Western Europe" = -23.3
+"Central Europe" = -10.0
+"Latin America" = -20.0
+"Middle East and North Africa" = -23.3
+"Reforming Economies" = -13.3
+"Other Asia" = -12.5
+"Other OECD" = -27.5
+"Subsaharan Africa" = -15.0
+
+[buildings.non_residential.m2_change_pc]
+Canada = -35.0
+China = -19.2
+India = -12.5
+Japan = -20.0
+USA = -35.0
+"Western Europe" = -23.3
+"Central Europe" = -15.0
+"Latin America" = -12.5
+"Middle East and North Africa" = -23.3
+"Reforming Economies" = -13.3
+"Other Asia" = -12.5
+"Other OECD" = -20.0
+"Subsaharan Africa" = -15.0
+
+[vehicles.passenger]
+kilometers = -25
+
+[vehicles.mileage]
+"Midi Buses" = 10
+"Regular Buses" = 10
+"Trains" = 10
+"High Speed Trains" = 10
+"Freight Trains" = 10
+"Bikes" = 10
+"Light Commercial Vehicles" = 10
+"Inland Ships" = 10
+
+[vehicles.region_mileage]
+"Cars" = 20
+
+[vehicles.freight]
+kilometers = -13
+

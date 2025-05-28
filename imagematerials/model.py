@@ -58,8 +58,7 @@ class GenericStocks(prism.Model):
     knowledge_graph: KnowledgeGraph
 
     # For module dependency, ignored by prism
-    input_data: tuple[str] = ("stocks", "lifetimes")
-    optional_input_data: tuple[str] = ("shares", "knowledge_graph")
+    input_data: tuple[str] = ("stocks", "lifetimes", "knowledge_graph", "shares")
     output_data: tuple[str] = ("outflow_by_cohort", "inflow", "stock_by_cohort")
 
     # stock_by_cohort: prism.TimeVariable[Region, Mode, Cohort, "count"] = prism.export(initial_value = prism.Array[Region, Mode, Cohort, 'count'](0.0))

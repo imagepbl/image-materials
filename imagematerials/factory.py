@@ -1,10 +1,65 @@
 """Module to dynamically create models."""
-from typing import Any
+from typing import Any, Optional, Union
 
 import prism
 import xarray as xr
 
-_DEFAULT_NAMESPACE = "default"
+
+class Sector():
+    """Sector containing its preprocessing data and coordinates."""
+
+    def __init__(self, name: str,
+                 data: dict[str, Any],
+                 coordinates: Optional[dict[str, list]] = None,
+                 check_coordinates: bool = True):
+        """Initialize the sector.
+
+        Parameters
+        ----------
+        name
+            Name of the sector, e.g. vehicles, buildings.
+        data
+            Preprocessing data for the sector.
+        coordinates, optional
+            (Extra) coordinates for the sectors. Any coordinates available in the preprocessing
+            are added when creating the sector, by default None.
+        check_coordinates, optional
+            Whether to check the compatibility of the coordinates of the sector, by default True
+
+        """
+        self.name = name
+        self.prep_data = {k: v for k, v in data.items()}  # Read-only copy
+        self.all_data = {k: v for k, v in data.items()}  # Outputs of calculations + preprocessing
+        self.check_coordinates = check_coordinates
+
+        coordinates = {} if coordinates is None else {k: v for k, v in coordinates.items()}
+
+        # Add the coordinates present in the data and check compatibility.
+        self.coordinates, self.coordinate_sources = self._add_data_coordinates(data, coordinates)
+
+    def _add_data_coordinates(self, data: dict[str, Any], coordinates: dict[str, list]):
+        # Keep track of the arrays in which coordinates were present, used for error messages.
+        coordinate_sources = {name: "manually set" for name in coordinates}
+        # Add the new coordinates
+        for input_name, array in data.items():
+            if not isinstance(array, xr.DataArray):
+                continue
+            for coord in array.coords.values():
+                coord_list = list(coord.values)
+                # New coordinate
+                if coord.name not in coordinates:
+                    coordinates[coord.name] = coord_list
+                    coordinate_sources[coord.name] = [input_name]
+                elif self.check_coordinates:
+                    # Coordinate mismatch
+                    if coord_list != coordinates[coord.name]:
+                        raise ValueError(
+                            f"Mismatch in coordinates with dimension '{coord.name}'"
+                            f" with data array '{input_name}' having different coordinates"
+                            f" than previously assumed in '{self.coordinate_sources[coord.name]}'."
+                            f"New: {coord_list}\n\nOld:{self.coordinates[coord.name]}")
+                    coordinate_sources[coord.name].append(input_name)
+        return coordinates, coordinate_sources
 
 
 class ModelFactory():
@@ -25,110 +80,114 @@ class ModelFactory():
 
     """
 
-    def __init__(self, prep_data: dict[str, Any], complete_timeline: prism.Timeline,
-                 check_coordinates: bool = True):
+    def __init__(self, sectors: list[Sector],
+                 complete_timeline: prism.Timeline):
         """Initialize the factory with prepocessing data.
 
         Parameters
         ----------
-        prep_data:
-            Preprocessing data
+        sectors:
+            Preprocessing data and coordinates for a sector, see :class:`Sector`.
         complete_timeline:
             The complete timeline of the data, including both the historic tail and simulation part.
         check_coordinates:
             Whether to check the compatibility of the input coordinates.
 
         """
-        if all([isinstance(p, dict) for p in prep_data.values()]):
-            self.prep_data = prep_data
-        else:
-            self.prep_data = {_DEFAULT_NAMESPACE: prep_data}
-        # Preprocessing data + output data of the submodels
-        self.all_data = {namespace: {} for namespace in self.prep_data}
-        self.coordinates = {namespace: {} for namespace in self.prep_data}
+        if isinstance(sectors, Sector):
+            sectors = [sectors]
+        self.sectors = {sec.name: sec for sec in sectors}
         self.models = []
         self.complete_timeline = complete_timeline
-        self.check_coordinates = check_coordinates
 
-    def _add_input_data(self, namespace, input_data, model_class, optional=False):
-        for input_name in input_data:
-            if input_name in self.all_data[namespace]:
-                continue
-
-            if input_name not in self.prep_data[namespace] and not optional:
-                raise ValueError(f"Cannot find input data '{input_name}' in namespace '{namespace}'"
-                                 f" for model class '{model_class}'.")
-
-            self.all_data[namespace][input_name] = self.prep_data[namespace].get(input_name, None)
-
-            if not isinstance(self.all_data[namespace][input_name], xr.DataArray):
-                continue
-
-            # Add the new coordinates
-            for coord in self.all_data[namespace][input_name].coords.values():
-                coord_list = list(coord.values)
-                if coord.name not in self.coordinates[namespace]:
-                    self.coordinates[namespace][coord.name] = (coord_list, [input_name])
-                    if coord.name == "Time" and "Cohort" not in self.coordinates[namespace]:
-                        self.coordinates[namespace]["Cohort"] = (coord_list, [input_name])
-                elif self.check_coordinates:
-                    if coord_list != self.coordinates[namespace][coord.name][0]:
-                        raise ValueError(
-                            f"Mismatch in coordinates with dimension '{coord.name}'"
-                            f" with data array '{input_name}' having different coordinates"
-                            f" than previous models '{self.coordinates[namespace][coord.name][1]}'."
-                            f"{coord_list} vs {self.coordinates[namespace][coord.name][0]}")
-                    self.coordinates[namespace][coord.name][1].append(input_name)
-
-    def add(self, model_class, namespace=_DEFAULT_NAMESPACE):
+    def add(self,
+            model_class: prism.Model,
+            sector_name: Union[None, str, list[str]] = None,
+            input_sources: Optional[dict] = None):
         """Add a submodel to the main model.
 
         Parameters
         ----------
         model_class
             The class of the model to be added uninitialized.
-        namespace:
-            Name space for the model class to be run on.
+        sector_name:
+            Sectors for the model class to be run on, can be one, multiple or None in which case
+            there is assumed to be a single sector.
+        input_sources:
+            Dictionary to find the input data of the model if they are not (only) in the current
+            sector. Example: {"stocks": "bld"} or {"stocks": ["bld", "vhc"]}.
 
         Returns
         -------
             The factory itself, so that the creation of the model can be stacked.
 
         """
+        # Parse sectors argument
+        if isinstance(sector_name, (list, tuple)):
+            for sec in sector_name:
+                self.add(model_class, sector_name=sec, input_sources=input_sources)
+            return self
+        if sector_name is None:
+            if len(self.sectors) != 1:
+                raise ValueError(f"Cannot add model '{model_class}', need a value for sector,"
+                                 f"since multiple sectors are available: {self.sectors}.")
+            sector_name = list(self.sectors)[0]
+        sector = self.sectors[sector_name]
+
+        if sector_name not in self.sectors:
+            raise KeyError(f"Cannot find sector '{sector_name}'. Available: {list(self.sectors)}.")
+
         # Find default data names
         input_data = getattr(model_class, "input_data", tuple())
-        optional_input_data = getattr(model_class, "optional_input_data", tuple())
         output_data = getattr(model_class, "output_data", tuple())
 
-        self._add_input_data(namespace, input_data, model_class, False)
-        self._add_input_data(namespace, optional_input_data, model_class, True)
+        input_sources = {} if input_sources is None else input_sources
 
-        arguments_dict = {}
+        init_args = {}  # Arguments to be passed to the model at initialization.
+        compute_args = {}
         # Add coordinates
         for dim_name, dim_type in model_class.__annotations__.items():
             if isinstance(dim_type, prism._typing.CoordsType):
-                arguments_dict[dim_name] = self.coordinates[namespace][dim_name][0]
+                init_args[dim_name] = sector.coordinates[dim_name]
 
-        # Add input data either from the preprocessing data or other submodels.
-        linked_input_data = []
-        for var_name in input_data + optional_input_data:
-            prep_data = self.prep_data[namespace]
-            all_data = self.all_data[namespace]
-            if var_name in prep_data or var_name in optional_input_data:
-                arguments_dict[var_name] = all_data[var_name]
+        def _get_data(var_name):
+            """Get the preprocessing/output data from the sectors."""
+            cur_sector_names = input_sources.get(var_name, sector_name)
+            # Only one sector to get the data from.
+            if isinstance(cur_sector_names, str):
+                cur_sector = self.sectors[cur_sector_names]
+                if var_name not in cur_sector.all_data:
+                    raise KeyError(f"Cannot find '{var_name}' in sector '{cur_sector_names}'")
+                return cur_sector.all_data[var_name]
+            # Multiple sectors -> return a list of data for each of the sectors.
             else:
-                linked_input_data.append((namespace, var_name))
+                data = []
+                for cur_sec_name in cur_sector_names:
+                    cur_sector = self.sectors[cur_sec_name]
+                    if var_name not in cur_sector.all_data:
+                        raise KeyError(f"Cannot find '{var_name}' in sector '{cur_sector_names}'")
+                    data.append(cur_sector.all_data[var_name])
+                return data
+
+        for var_name in input_data:
+            if var_name in model_class.__annotations__:  # Static data
+                init_args[var_name] = _get_data(var_name)
+            else:  # Dynamic data
+                compute_args[var_name] = _get_data(var_name)
 
         # Initialize the new submodel.
-        new_sub_model = model_class(self.complete_timeline, **arguments_dict)
+        new_sub_model = model_class(self.complete_timeline, **init_args)
         new_sub_model.compute_initial_values(self.complete_timeline)
 
         # Add output data of sub model to dictionary.
         for output_name in output_data:
-            self.all_data[namespace][output_name] = getattr(new_sub_model, output_name)
+            if not hasattr(new_sub_model, output_name):
+                raise ValueError(f"Error in model '{new_sub_model}': "
+                                 f"initialization did not create '{output_name}'")
+            sector.all_data[output_name] = getattr(new_sub_model, output_name)
 
         # Add the new submodel to the list of submodels.
-        new_sub_model.linked_input_data = linked_input_data
+        new_sub_model.compute_args = compute_args
         self.models.append(new_sub_model)
         return self
 
@@ -167,21 +226,29 @@ class ModelFactory():
 
             def _compute_one_timestep(self, time: prism.Time):
                 for model in self.submodels:
-                    model.compute_values(time, **{var_name: getattr(self, namespace)[var_name]
-                                                  for namespace, var_name in model.linked_input_data})
+                    model.compute_values(time, **model.compute_args)
 
             def __getattribute__(self, attr):
+                """Get the attributes of the main module.
+
+                It also returns the data as attributes. So model.stocks will
+                give the stocks of all sectors.
+                """
                 try:
                     return super().__getattribute__(attr)
                 except AttributeError:
-                    if len(factory.all_data) == 1:
-                        return getattr(self, list(factory.all_data)[0])[attr]
-                    return {ns: getattr(self, ns)[attr] for ns in factory.all_data}
+                    if len(factory.sectors) == 1:
+                        return list(factory.sectors.values())[0].all_data[attr]
+                    return {sec_name: factory.sectors[sec_name].all_data[attr]
+                            for sec_name in factory.sectors
+                            if attr in factory.sectors[sec_name].all_data}
 
         main_model = MainModule(self.complete_timeline)
 
         # Link all input data in the main model, so that you can do model.stocks
         # instead of model.submodels[0].stocks.
-        for data_name, data in self.all_data.items():
-            setattr(main_model, data_name, data)
+        for sec_name, sec in self.sectors.items():
+            setattr(main_model, sec_name, sec.all_data)
         return main_model
+
+
