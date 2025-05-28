@@ -127,7 +127,7 @@ class ModelFactory():
         # Parse sectors argument
         if isinstance(sector_name, (list, tuple)):
             for sec in sector_name:
-                self.add(model_class, sectors=sec, input_sources=input_sources)
+                self.add(model_class, sector_name=sec, input_sources=input_sources)
             return self
         if sector_name is None:
             if len(self.sectors) != 1:
