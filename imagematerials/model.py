@@ -10,7 +10,7 @@ from imagematerials.stock import (
 )
 from imagematerials.survival import ScipySurvival, SurvivalMatrix
 from imagematerials.maintenance import Maintenance
-from imagematerials.battery import Battery
+from imagematerials.vehicles.battery import Battery
 
 REGION = prism.Dimension("Region")
 STOCK_TYPE = prism.Dimension("Type")

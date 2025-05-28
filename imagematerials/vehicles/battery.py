@@ -52,8 +52,8 @@ class Battery(prism.Model):
     # Data dependencies
     input_data: tuple[str] = ("battery_weights", "battery_materials", "battery_shares",
                               "stock_by_cohort", "inflow", "outflow_by_cohort")
-    output_data: tuple[str] = ("inflow_battery",)
-                               #"stock_battery")
+    output_data: tuple[str] = ("inflow_battery",
+                               "stock_battery","outflow_battery")
 
     # Output data
     #inflow_battery: prism.TimeVariable[REGION, BATTERY_TYPE, MATERIAL_TYPE, "count"] = prism.export()
@@ -76,8 +76,7 @@ class Battery(prism.Model):
             coords={"Time": self.Time,
                     "Region": self.Region,
                     "Type": self.Type,
-                    "material": self.material,
-                    "battery": self.battery})
+                    "material": self.material})
         
         self.stock_battery = xr.DataArray(
             0.0,
@@ -85,8 +84,15 @@ class Battery(prism.Model):
             coords={"Time": self.Time,
                     "Region": self.Region,
                     "Type": self.Type,
-                    "material": self.material,
-                    "battery": self.battery})
+                    "material": self.material})
+        
+        self.outflow_battery = xr.DataArray(
+            0.0,
+            dims=("Time", "Region", "Type","material","battery"),
+            coords={"Time": self.Time,
+                    "Region": self.Region,
+                    "Type": self.Type,
+                    "material": self.material})
         
 
     def compute_values(self, time: prism.Time, inflow, stock_by_cohort, outflow_by_cohort):
@@ -103,13 +109,11 @@ class Battery(prism.Model):
          
         t, dt = time.t, time.dt
 
-        self.inflow_battery.loc[t] = inflow[t] * self.battery_weights.sel(Cohort = t) * \
-                self.battery_shares.sel(Cohort = t) * self.battery_materials.sel(Cohort = t)
+        self.inflow_battery.loc[t] = (inflow[t] * self.battery_weights.sel(Cohort = t) * \
+                self.battery_shares.sel(Cohort = t) * self.battery_materials.sel(Cohort = t)).sum("battery")
         
         self.stock_battery.loc[t] = (stock_by_cohort.loc[t]*self.battery_weights * \
-                self.battery_shares * self.battery_materials).sum("Cohort")
-        #self.outflow_battery[t] = (outflow_by_cohort.loc[t]*battery_this_year).sum("Type")
+                self.battery_shares * self.battery_materials).sum(["Cohort","battery"])
+        self.outflow_battery.loc[t] = (outflow_by_cohort[t]*self.battery_weights * \
+                self.battery_shares * self.battery_materials).sum(["Cohort","battery"])
                                   
-        #                          self.maintenance_material_fractions*
-        #                              self.weights.sel(Cohort=t).drop_vars("Cohort")).sum("Cohort")
-        #self.stock_battery[t] = 
