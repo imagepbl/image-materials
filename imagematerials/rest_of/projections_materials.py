@@ -165,13 +165,10 @@ def estimate_models_per_region_group(regions_groups_dict: dict,
     rmse_r2_groups = {}
     
     for region_group in regions_groups_dict.keys():
-        print(region_group)
-        # print(region_group)
         model_groups[region_group] = estimate_models(cons_pc_groups.get(region_group), gdp_pc_groups.get(region_group))
         rmse_r2_groups[region_group] = rmse_r2_models(model_groups[region_group])
     
     merged_rmse_r2 = pd.concat(rmse_r2_groups.values(), axis=1, keys=rmse_r2_groups.keys())
-    # print(merged_rmse_r2)
     
     return model_groups, rmse_r2_groups, merged_rmse_r2
 
@@ -215,6 +212,9 @@ def match_regions_to_best_model(rmse_r2_groups: dict, model_groups: dict,
     for group_name, region_list in regions_groups_dict.items():
         if group_name == 'all_regions':
             continue
+        if isinstance(region_list, str):
+            # if only one region is given, make it a list
+            region_list = [region_list]
 
         for region in region_list:
             region_model_match[region] = model_groups[group_name][models_output_dict[best_rmse_models[group_name]]]

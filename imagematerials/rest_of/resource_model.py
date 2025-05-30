@@ -191,6 +191,7 @@ class ResourceModel():
         self.projection_per_region.columns = self.pop.columns
     
         self.projection_per_region.index = np.arange(self.end_year, 2101)
+        self.projection_per_region_total = self.projection_per_region*self.pop_100
 
     
     def project_on_total_IMAGE_regions(self, REGION_TO_CLASS_DICT, GROUPS_TO_IMAGE_DICT):
