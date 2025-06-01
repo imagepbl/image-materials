@@ -132,18 +132,6 @@ REGION_TO_CLASS_DICT_IMAGE_MAT = {
     'Rest S.Africa': 'class_ 26',
     'Global': 'class_ 27'}
 
-COPPER_REGIONS_TO_IMAGE = {
-    'Other North America countries' : ['class_ 1'],
-    'United States': ['class_ 2'], 
-    'South America': ['class_ 3', 'class_ 4', 'class_ 5', 'class_ 6', 'class_ 26'],
-    'Europe': ['class_ 11', 'class_ 12', 'class_ 13','class_ 14','class_ 15', 'class_ 16'],
-    'Other Asia countries' : ['class_ 17', 'class_ 18', 'class_ 19', 'class_ 21', 'class_ 22', 'class_ 23', 'class_ 25'],
-    'China' : ['class_ 20'],
-    'Africa' : ['class_ 7', 'class_ 8', 'class_ 9', 'class_ 10'],
-    'Oceania' : ['class_ 24'],
-    'Global': ['class_ 27']
-}
-
 COPPER_AVERAGE_REGIONS_TO_IMAGE = {
     'Other North America countries' : ['class_ 1', 'class_ 3', 'class_ 4'],
     'USA': ['class_ 2'], 
@@ -169,6 +157,7 @@ ALUMINIUM_TO_IMAGE = {
     'Other and None': ['class_ 16', 'class_ 7', 'class_ 8', 'class_ 9', 'class_ 10', 'class_ 26'],
     'South America' : ['class_ 4', 'class_ 5', 'class_ 6']
     }
+
 
 
 # get list of all IMAGE regions
