@@ -64,25 +64,26 @@ def estimate_models(cons_capita: pd.DataFrame, gdp_pc: pd.DataFrame):
     log_log_inverse_model = Log_Log_Inverse_Model(cons_capita, gdp_pc)
     log_log_square_model = Log_Log_Square_Model(cons_capita, gdp_pc)
     non_linerar_inv_model = NLI_Model(cons_capita, gdp_pc)
+    logistic_growth_model = LG_Model(cons_capita, gdp_pc)
     
     # try and except for these models, as they might have a runtime error and not produce results
     # if runtime errer: model is given None as output
     try:
         bw_model = BW_Model(cons_capita, gdp_pc)
     except RuntimeError as e:
-        print(e)
+        print('limited growth model', e)
         bw_model = None
         
     try:
         gompertz_model = GOMPERTZ_Model(cons_capita, gdp_pc)
     except RuntimeError as e:
-        print(e)
+        print('Gompertz model', e)
         gompertz_model = None   
         
     try:
         logistic_growth_model = LG_Model(cons_capita, gdp_pc)
     except RuntimeError as e:
-        print(e)
+        print('logistic growth model', e)
         logistic_growth_model = None
 
     
@@ -175,10 +176,10 @@ def estimate_models_per_region_group(regions_groups_dict: dict,
 
 
 def match_regions_to_best_model(rmse_r2_groups: dict, model_groups: dict,
-                                regions_groups_dict: dict[str, list[str]]):
+                                regions_groups_dict: dict[str, list[str]], 
+                                best_rmse_models: dict = None):
     """
-    
-
+    Match regions to best fitting model based on RMSE values.
     Parameters
     ----------
     rmse_r2_groups : dict
@@ -200,12 +201,12 @@ def match_regions_to_best_model(rmse_r2_groups: dict, model_groups: dict,
         DESCRIPTION.
 
     """
+    if best_rmse_models == None:
+        best_rmse_models = {}
     
-    best_rmse_models = {}
-    
-    for region_group in rmse_r2_groups.keys():
-        lowest_rmse_idx = rmse_r2_groups[region_group].loc[:, 'RMSE'].idxmin()
-        best_rmse_models[region_group] = lowest_rmse_idx
+        for region_group in rmse_r2_groups.keys():
+            lowest_rmse_idx = rmse_r2_groups[region_group].loc[:, 'RMSE'].idxmin()
+            best_rmse_models[region_group] = lowest_rmse_idx
     
     # match all regions to best fitting mathematical model model
     region_model_match = {}

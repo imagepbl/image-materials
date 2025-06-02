@@ -151,7 +151,7 @@ class ResourceModel():
                                                                                    self.cons_capita)
                
     
-    def fit_models(self):
+    def fit_models(self, best_rmse_models):
         # fit all groups of regions to mathematical models and do statistical analysis (RMSE and R2)
         (self.model_groups, 
          self.rmse_r2_groups, 
@@ -163,10 +163,11 @@ class ResourceModel():
         (self.best_rmse_models, 
          self.region_model_match) = match_regions_to_best_model(self.rmse_r2_groups, 
                                                                 self.model_groups, 
-                                                                self.region_groups)           
+                                                                self.region_groups, 
+                                                                best_rmse_models)           
             
               
-    def project_on_total(self, regions_list, REGION_TO_CLASS_DICT, gdp_pc):
+    def project_on_total(self, regions_list):
         self.projection_per_region = []
 
         # loop over every region
