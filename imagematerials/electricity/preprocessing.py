@@ -23,23 +23,6 @@ from imagematerials.factory import ModelFactory
 from imagematerials.concepts import create_electricity_graph
 from imagematerials.electricity.utils import MNLogit, stock_tail
 
-# ensure consistent spelling of the time index
-# def standardize_index_spelling(df: pd.DataFrame) -> pd.DataFrame:
-#     """Standardize the index name of a DataFrame related to time/year information."""
-#     index_name = df.index.name
-#     if index_name is None:
-#         return df  # Nothing to standardize
-#     standard_map = {
-#         "Time": "time",
-#         "Year": "year",
-#         "yr": "year",
-#         "years": "year",
-#     }
-#     # Convert exact matches
-#     if index_name in standard_map:
-#         df.index.name = standard_map[index_name]
-#     return df
-#-----------------------------------
 
 from imagematerials.electricity.constants import ( # TODO: import not working at the moment
     YEAR_START,
@@ -49,9 +32,11 @@ from imagematerials.electricity.constants import ( # TODO: import not working at
     YEAR_OUT,
     YEAR_SWITCH,
     YEAR_LAST,
+    # COHORTS, # necessary?
     SCEN,
     VARIANT,
     REGIONS,
+    TECH_GEN,
     MEGA_TO_TERA,
     PKMS_TO_VKMS,
     TONNES_TO_KGS,
@@ -59,14 +44,7 @@ from imagematerials.electricity.constants import ( # TODO: import not working at
     BEV_CAPACITY_CURRENT,
     PHEV_CAPACITY_CURRENT
 )
-YEAR_LAST = 2060   # last year available in the IMAGE data-files (which are input to ELMA)
-# SCEN = 'SSP2' 
-# VARIANT = '2D_RE'
-# import inspect
-# path_current = Path(inspect.getfile(inspect.currentframe())).resolve()#.parent
 
-# base_dir = "../data/raw"
-# test = Path(base_dir)
 
 # Define paths ----------------------------------------------------------------------
 #YOUR_DIR = "C:\\Users\\Admin\\surfdrive\\Projects\\IRP\\GRO23\\Modelling\\2060\\ELMA"   # Change the running directory here
@@ -83,30 +61,26 @@ assert path_image_output.is_dir()
 assert path_external_data_standard.is_dir()
 assert path_external_data_scenario.is_dir()
 
+# create the folder out_test if it does not exist
+if not (path_base / 'imagematerials' / 'electricity' / 'out_test').is_dir():
+    (path_base / 'imagematerials' / 'electricity' / 'out_test').mkdir(parents=True)
+
 sa_settings = "default"  # settings for the sensitivity analysis (default, high_stor, high_grid)
 
-# Define constants ---------------------------------------------------------------
-cohorts = 50
-startyear = 1971
-endyear = 2060 # YEAR_END
-outyear = 2060                  # latest year of output data
-first_year_grid = 1926          # UK Electricity supply act - https://www.bbc.com/news/uk-politics-11619751   
-years = YEAR_END - YEAR_START  + 1
-switchtime = 1990
-vehicles = 25
-regions = 26
-epg_techs = 34          # number of electricity generation technologies -> 33 technologies + 1 empty row
-# epg_techs = 33
 
-weibull_shape = 1.89
-weibull_scale = 10.3
-stdev_mult = 0.214      # multiplier that defines the standard deviation (standard deviation = mean * multiplier)
+
+
+years = YEAR_END - YEAR_START  + 1
+
 
 # from past.builtins import execfile
 # execfile('read_mym.py')
 idx = pd.IndexSlice             # needed for slicing multi-index
 
 
+# TODO: decide on variable naming convention
+# V1: sector_variableinquestion_additionalinformation (gcap_lifetime_interpolated)
+# V2: variableinquestion_sector_additionalinformation (lifetime_gcap_interpolated)
 
 ###########################################################################################################
 ###########################################################################################################
@@ -151,7 +125,7 @@ gcap_tech_list = list(composition_generation.loc[:,idx[2020,:]].droplevel(axis=1
 gcap_material_list = list(composition_generation.index.values)  #list of materials the generation technologies
 
 gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
-gcap = pd.pivot_table(gcap_data[gcap_data['time'].isin(list(range(YEAR_START,YEAR_END+1)))], index=['time','DIM_1'], values=list(range(1,epg_techs+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (34));  the last column in gcap_data (= totals) is now removed
+gcap = pd.pivot_table(gcap_data[gcap_data['time'].isin(list(range(YEAR_START,YEAR_END+1)))], index=['time','DIM_1'], values=list(range(1,TECH_GEN+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (34));  the last column in gcap_data (= totals) is now removed
 
 # renaming multi-index dataframe: generation capacity, based on the regions in grid_length_Hv & technologies as given
 gcap.index = pd.MultiIndex.from_product([list(range(YEAR_START,YEAR_END+1)), region_list], names=['years', 'regions'])
@@ -191,7 +165,7 @@ gcap_stock = gcap_new.unstack(level='regions')
 
 # lifetimes
 df_mean = gcap_lifetime.copy()
-df_stdev = df_mean * stdev_mult
+df_stdev = df_mean * STD_LIFETIMES_ELECTR
 df_mean.columns = [(col, 'mean') for col in df_mean.columns] # Rename columns to multi-level tuples
 df_stdev.columns = [(col, 'stdev') for col in df_stdev.columns]
 gcap_lifetime_distr = pd.concat([df_mean, df_stdev], axis=1) # Concatenate along columns
@@ -341,7 +315,7 @@ types = [str(t) for t in dim_coords["Type"]]
 ###########################################################################################################
 #%%% 1.6) Visualize Stocks
 
-
+path_test_plots = Path(path_base, "imagematerials", "electricity", "out_test", "Figures")
 
 da_stocks = main_model_factory.stocks.copy()
 
@@ -368,16 +342,16 @@ for i, region in enumerate(regions):
 # Label only left side with y-axis label
 axes[0, 0].set_ylabel("Value")
 axes[1, 0].set_ylabel("Value")
+plt.suptitle("Generation - Stocks", fontsize=16)
 
 plt.tight_layout()
+fig.savefig(path_test_plots / "Gen_stocks_Brazil-CEurope.png", dpi=300)
 plt.show()
 
 
 
 ###########################################################################################################
 #%% Visualize Inflow Materials
-
-
 
 # da_x = main_model_factory.inflow.to_array()
 da_x = main_model_factory.inflow_materials.to_array()
@@ -423,10 +397,64 @@ axes[0, 0].set_ylabel("Value")
 axes[1, 0].set_ylabel("Value")
 axes[2, 0].set_ylabel("Value")
 
-plt.suptitle("Inflow Materials for electricity generation", fontsize=16)
+plt.suptitle("Generation - Inflow Materials", fontsize=16)
 plt.tight_layout()
+fig.savefig(path_test_plots / "Gen_inflow-materials_Brazil-CEurope.png", dpi=300)
 plt.show()
 
+
+
+
+#%% Visualize Inflow Materials
+
+# da_x = main_model_factory.inflow.to_array()
+da_x = main_model_factory.inflow_materials.to_array()
+da_x = main_model_factory.inflow_materials.to_array().sum('Type')
+
+regions = da_x.Region.values[:2]  # First 2 regions
+# types_top = da_x.material.values[1:6]   # Types 1–10
+# types_bottom = da_x.material.values[6:12]  # Types 11–20
+types_level1 = [m for m in da_x.material.values if m in ["Steel", "Concrete"]]
+types_level2 = [m for m in da_x.material.values if m in ["Aluminium", "Cu"]]
+types_level3 = [m for m in da_x.material.values if m not in (types_level1 + types_level2)]
+
+fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(14, 12), sharex=True)
+
+axes[0, 1].sharey(axes[0, 0])
+axes[1, 1].sharey(axes[1, 0])
+axes[2, 1].sharey(axes[2, 0])
+
+for i, region in enumerate(regions):
+    # Top row: 
+    for t in types_level1:
+        da_x.sel(material=t, Region=region).plot(ax=axes[0, i], label=t)
+    axes[0, i].set_title(f"{region}")
+    axes[0, i].set_xlabel("Time")
+    axes[0, i].legend()
+
+    # Middle row: 
+    for t in types_level2:
+        da_x.sel(material=t, Region=region).plot(ax=axes[1, i], label=t)
+    axes[1, i].set_title(f"{region}")
+    axes[1, i].set_xlabel("Time")
+    axes[1, i].legend(loc ='upper left')
+
+    # Bottom row: 
+    for t in types_level3:
+        da_x.sel(material=t, Region=region).plot(ax=axes[2, i], label=t)
+    axes[2, i].set_title(f"{region}")
+    axes[2, i].set_xlabel("Time")
+    axes[2, i].legend(loc ='upper left')
+
+# Label only left side with y-axis label
+axes[0, 0].set_ylabel("Value")
+axes[1, 0].set_ylabel("Value")
+axes[2, 0].set_ylabel("Value")
+
+plt.suptitle("Generation - Inflow Materials", fontsize=16)
+plt.tight_layout()
+fig.savefig(path_test_plots / "Gen_inflow-materials_Brazil-CEurope.png", dpi=300)
+plt.show()
 
 
 
@@ -947,7 +975,8 @@ gdp_pc = pd.read_csv(path_external_data_scenario / 'gdp_pc.csv', index_col=0)  #
 
 # Generation capacity (stock & inflow/new) in MW peak capacity, FILES from TIMER
 gcap_data = read_mym_df(path_image_output / 'Gcap.out')
-# cap_BL_data = read_mym_df('SSP2\\SSP2_BL\\Gcap.out')
+# gcap_BL_data = read_mym_df('SSP2\\SSP2_BL\\Gcap.out') # baseline scenario? TODO: what is the purpose of reading in the scneario + the baseline?
+gcap_BL_data = read_mym_df(path_image_output / 'Gcap.out')
 
 
 #----------------------------------------------------------------------------------------------------------
@@ -957,10 +986,10 @@ gcap_data = read_mym_df(path_image_output / 'Gcap.out')
 #----------------------------------------------------------------------------------------------------------
 
 gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
-gcap = pd.pivot_table(gcap_data[gcap_data['time'].isin(list(range(YEAR_START,YEAR_END+1)))], index=['time','DIM_1'], values=list(range(1,epg_techs+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (28));  the last column in gcap_data (= totals) is now removed
+gcap = pd.pivot_table(gcap_data[gcap_data['time'].isin(list(range(YEAR_START,YEAR_END+1)))], index=['time','DIM_1'], values=list(range(1,TECH_GEN+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (28));  the last column in gcap_data (= totals) is now removed
 
-# gcap_BL_data = gcap_BL_data.loc[~gcap_BL_data['DIM_1'].isin([27,28])]    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
-# gcap_BL = pd.pivot_table(gcap_BL_data[gcap_BL_data['time'].isin(list(range(YEAR_START,YEAR_END+1)))], index=['time','DIM_1'], values=list(range(1,epg_techs+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (28));  the last column in gcap_data (= totals) is now removed
+gcap_BL_data = gcap_BL_data.loc[~gcap_BL_data['DIM_1'].isin([27,28])]    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
+gcap_BL = pd.pivot_table(gcap_BL_data[gcap_BL_data['time'].isin(list(range(YEAR_START,YEAR_END+1)))], index=['time','DIM_1'], values=list(range(1,TECH_GEN+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (28));  the last column in gcap_data (= totals) is now removed
 
 region_list = list(grid_length_Hv.columns.values)
 material_list = list(materials_grid.columns.values)
@@ -968,20 +997,20 @@ material_list = list(materials_grid.columns.values)
 # renaming multi-index dataframe: generation capacity, based on the regions in grid_length_Hv & technologies as given
 gcap_techlist = ['Solar PV', 'Solar Decentral', 'CSP', 'Wind onshore', 'Wind offshore', 'Wave', 'Hydro', 'Other Renewables', 'Geothermal', 'Hydrogen', 'Nuclear', '<EMPTY>', 'Conv. Coal', 'Conv. Oil', 'Conv. Natural Gas', 'Waste', 'IGCC', 'OGCC', 'NG CC', 'Biomass CC', 'Coal + CCS', 'Oil/Coal + CCS', 'Natural Gas + CCS', 'Biomass + CCS', 'CHP Coal', 'CHP Oil', 'CHP Natural Gas', 'CHP Biomass', 'CHP Coal + CCS', 'CHP Oil + CCS', 'CHP Natural Gas + CCS', 'CHP Biomass + CCS', 'CHP Geothermal', 'CHP Hydrogen']
 gcap.index = pd.MultiIndex.from_product([list(range(YEAR_START,YEAR_END+1)), region_list], names=['years', 'regions'])
-# gcap_BL.index = pd.MultiIndex.from_product([list(range(YEAR_START,YEAR_END+1)), region_list], names=['years', 'regions'])
+gcap_BL.index = pd.MultiIndex.from_product([list(range(YEAR_START,YEAR_END+1)), region_list], names=['years', 'regions'])
 gcap.columns = gcap_techlist
-# gcap_BL.columns = gcap_techlist
+gcap_BL.columns = gcap_techlist
 
 gdp_pc.columns = region_list
-gdp_pc = gdp_pc.drop([1970]).drop(list(range(YEAR_END+1,YEAR_LAST+1)))
+# gdp_pc = gdp_pc.drop([1970]).drop(list(range(YEAR_END+1,YEAR_LAST+1)))
 
 
 # length calculations ----------------------------------------------------------------------------
 
 # only the regional total (peak) generation capacity is used as a proxy for the grid growth (BL to 2016, then BL or 450)
-# gcap_BL_total = gcap_BL.sum(axis=1).unstack()
-# gcap_BL_total = gcap_BL_total[region_list]               # re-order columns to the original TIMER order
-# gcap_growth = gcap_BL_total / gcap_BL_total.loc[2016]    # define growth according to 2016 as base year
+gcap_BL_total = gcap_BL.sum(axis=1).unstack()
+gcap_BL_total = gcap_BL_total[region_list]               # re-order columns to the original TIMER order
+gcap_growth = gcap_BL_total / gcap_BL_total.loc[2016]    # define growth according to 2016 as base year
 gcap_total = gcap.sum(axis=1).unstack()
 gcap_total = gcap_total[region_list]                     # re-order columns to the original TIMER order
 gcap_growth.loc[2016:YEAR_END] = gcap_total.loc[2016:YEAR_END] / gcap_total.loc[2016]        # define growth according to 2016 as base year
@@ -1067,7 +1096,6 @@ grid_trans_Mv = grid_length_Mv_total.mul(grid_additions.loc['Transformers','Mv']
 grid_trans_Lv = grid_length_Lv_total.mul(grid_additions.loc['Transformers','Lv'])       # # of transformers
 
 
-stdev_mult = 0.214              # standard deviation as a fraction of the mean lifetime applicable to energy equipment (Asset Management for Infrastructure Systems: Energy and Water, Balzer & Schorn 2015)
 
 
 ##################
@@ -1081,17 +1109,17 @@ materials_grid_additions_interpol = pd.DataFrame(index=pd.MultiIndex.from_produc
 
 for cat in list(materials_grid.index.levels[1]):
    materials_grid_1st   = materials_grid.loc[idx[materials_grid.index[0][0], cat],:]
-   materials_grid_interpol.loc[idx[first_year_grid ,cat],:] = materials_grid_1st                # set the first year (1926) values to the first available values in the dataset (for the year 2000) 
+   materials_grid_interpol.loc[idx[YEAR_FIRST_GRID ,cat],:] = materials_grid_1st                # set the first year (1926) values to the first available values in the dataset (for the year 2000) 
    materials_grid_interpol.loc[idx[materials_grid.index.levels[0].min(),cat],:] = materials_grid.loc[idx[materials_grid.index.levels[0].min(),cat],:]                # set the middle year (2000) values to the first available values in the dataset (for the year 2000) 
    materials_grid_interpol.loc[idx[materials_grid.index.levels[0].max(),cat],:] = materials_grid.loc[idx[materials_grid.index.levels[0].max(),cat],:]                # set the last year (2100) values to the last available values in the dataset (for the year 2050) 
-   materials_grid_interpol.loc[idx[:,cat],:] = materials_grid_interpol.loc[idx[:,cat],:].astype('float32').reindex(list(range(first_year_grid,YEAR_END+1)), level=0).interpolate()
+   materials_grid_interpol.loc[idx[:,cat],:] = materials_grid_interpol.loc[idx[:,cat],:].astype('float32').reindex(list(range(YEAR_FIRST_GRID,YEAR_END+1)), level=0).interpolate()
 
 for cat in list(materials_grid_additions.index.levels[1]):
    materials_grid_additions_1st   = materials_grid_additions.loc[idx[materials_grid_additions.index[0][0], cat],:]
-   materials_grid_additions_interpol.loc[idx[first_year_grid ,cat],:] = materials_grid_additions_1st          # set the first year (1926) values to the first available values in the dataset (for the year 2000) 
+   materials_grid_additions_interpol.loc[idx[YEAR_FIRST_GRID ,cat],:] = materials_grid_additions_1st          # set the first year (1926) values to the first available values in the dataset (for the year 2000) 
    materials_grid_additions_interpol.loc[idx[materials_grid_additions.index.levels[0].min(),cat],:] = materials_grid_additions.loc[idx[materials_grid_additions.index.levels[0].min(),cat],:]                # set the middle year (2000) values to the first available values in the dataset (for the year 2000) 
    materials_grid_additions_interpol.loc[idx[materials_grid_additions.index.levels[0].max(),cat],:] = materials_grid_additions.loc[idx[materials_grid_additions.index.levels[0].max(),cat],:]                # set the last year (2100) values to the last available values in the dataset (for the year 2050) 
-   materials_grid_additions_interpol.loc[idx[:,cat],:] = materials_grid_additions_interpol.loc[idx[:,cat],:].astype('float32').reindex(list(range(first_year_grid,YEAR_END+1)), level=0).interpolate()
+   materials_grid_additions_interpol.loc[idx[:,cat],:] = materials_grid_additions_interpol.loc[idx[:,cat],:].astype('float32').reindex(list(range(YEAR_FIRST_GRID,YEAR_END+1)), level=0).interpolate()
 
 
 # call the stock_tail function on all lines, substations & transformers, to add historic stock tail between 1926 & 1971
@@ -1113,10 +1141,30 @@ grid_trans_Lv_new = stock_tail(grid_trans_Lv)               # units
 # Lifetimes #
 #############
 
-lifetime_grid_elements.loc[first_year_grid,:] = lifetime_grid_elements.loc[lifetime_grid_elements.first_valid_index(),:]
-lifetime_grid_elements.loc[outyear,:]         = lifetime_grid_elements.loc[lifetime_grid_elements.last_valid_index(),:]
-lifetime_grid_elements                        = lifetime_grid_elements.reindex(list(range(first_year_grid, outyear+1))).interpolate()
- 
+# no differentiation between HV, MV & LV lines as well as between aboveground and belowground
+# Types: lines, transformers, substations
+lifetime_grid_elements.loc[YEAR_FIRST_GRID,:] = lifetime_grid_elements.loc[lifetime_grid_elements.first_valid_index(),:]
+lifetime_grid_elements.loc[YEAR_OUT,:]         = lifetime_grid_elements.loc[lifetime_grid_elements.last_valid_index(),:]
+lifetime_grid_elements                        = lifetime_grid_elements.reindex(list(range(YEAR_FIRST_GRID, YEAR_OUT+1))).interpolate()
+# TODO: check why lifetime for lines is interpoltaed from 2020 - 40yrs to 2050 - 48 yrs and then back to 2060 - 40 yrs -> should stay at 48 yrs?
+
+
+
+#%%%% NEW
+
+# lifetimes
+df_mean = lifetime_grid_elements.copy()
+df_stdev = df_mean * STD_LIFETIMES_ELECTR
+df_mean.columns = [(col, 'mean') for col in df_mean.columns] # Rename columns to multi-level tuples
+df_stdev.columns = [(col, 'stdev') for col in df_stdev.columns]
+lifetime_grid_distr = pd.concat([df_mean, df_stdev], axis=1) # Concatenate along columns
+
+
+# Materials
+
+
+
+# Stocks
 
 
 #----------------------------------------------------------------------------------------------------------
@@ -1164,7 +1212,7 @@ conversion_table = {
 results_dict = {
         'gcap_stock': gcap_stock,
         'gcap_types_materials': gcap_types_materials,
-        'gcap_lifetime_distr': gcap_lifetime_distr,
+        'lifetime_grid_distr': lifetime_grid_distr,
 }
 
 # df = gcap_materials_interpol.copy()

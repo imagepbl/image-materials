@@ -16,10 +16,13 @@ YEAR_START = 1971
 # TODO: set FIRST_YEAR based on minimum value in data-files
 YEAR_FIRST_GRID = 1926   # UK Electricity supply act - https://www.bbc.com/news/uk-politics-11619751   
 YEAR_FIRST = 1807  # first_year_vehicle.values.min()
-YEAR_END = 2060
-YEAR_OUT = 2060 # year of output generation
-YEAR_SWITCH = 1990  # year after which other batteries than lead-acid are allowed
+YEAR_END = 2060    # end year of the calculations
+YEAR_OUT = 2060    # year of output generation = last year of reporting (in the output files) 
+YEAR_LAST = 2060   # last year available in the IMAGE data-files (which are input to ELMA)
+YEAR_SWITCH = 1990 # year after which other batteries than lead-acid are allowed
 REGIONS = 26
+
+COHORTS = 50
 
 
 # Scenario settings ---------------------------------------------
@@ -38,7 +41,19 @@ PKMS_TO_VKMS = 1_000_000_000_000
 TONNES_TO_KGS = 1000
 
 
+# General constants ---------------------------------------------
+
+STD_LIFETIMES_ELECTR = 0.214              # standard deviation as a fraction of the mean lifetime applicable to energy equipment (Asset Management for Infrastructure Systems: Energy and Water, Balzer & Schorn 2015)
+
+
+
+# Electricity Generation related constants ---------------------------------------------
+
+TECH_GEN = 34   # number of electricity generation technologies -> 33 technologies + 1 empty row
+
 # Vehicle related constants ---------------------------------------------
+
+TECH_VEHICLES = 25    # number of vehicle types 
 
 # reference loadfactor of cars in TIMER (the trp_trvl_Load.out file is
 # relative to this BASE loadfcator (persons/car))
@@ -49,5 +64,12 @@ LIGHT_COMMERCIAL_VEHICLE_SHARE = 0.04
 BEV_CAPACITY_CURRENT  = 59.6    #kWh current battery capacity of full electric vehicles, see current_specs.xlsx
 PHEV_CAPACITY_CURRENT = 11.2    #kWh current battery capacity of plugin electric vehicles, see current_specs.xlsx
 # TODO: is this even used somewhere?
+
+
+# Storage related constants ---------------------------------------------
+
+# TECH_STORAGE = ?
+
+PHS_KG_PERKWH = 26.8   # kg per kWh storage capacity (as weight addition to existing hydro plants to make them pumped) 
 
 
