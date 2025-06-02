@@ -32,12 +32,25 @@ idx = pd.IndexSlice
 def stock_tail(stock):
     zero_value = [0 for i in range(0,REGIONS)]
     stock_used = pd.DataFrame(stock).reindex_like(stock)
-    stock_used.loc[FIRST_YEAR_GRID] = zero_value  # set all regions to 0 in the year of initial operation
-    stock_new  = stock_used.reindex(list(range(FIRST_YEAR_GRID,OUT_YEAR+1))).interpolate()
+    stock_used.loc[YEAR_FIRST_GRID] = zero_value  # set all regions to 0 in the year of initial operation
+    stock_new  = stock_used.reindex(list(range(YEAR_FIRST_GRID,YEAR_OUT+1))).interpolate()
     return stock_new
 
-# Multinomial Logit function, assumes input of an ordered dataframe with rows as years and columns as technologies, values as prices. Logitpar is the calibrated Logit parameter (usually a nagetive number between 0 and 1)
+
 def MNLogit(df, logitpar):
+    '''
+    Multinomial Logit function, assumes input of an ordered dataframe with rows as years and columns as technologies, values as prices. 
+    
+    logitpar: calibrated Logit parameter (usually a nagetive number between 0 and 1)
+    - represents the price sensitivity or substitution elasticity between different technologies.
+    -> how responsive consumers/markets are to price differences between technologies.
+    - More negative values (e.g., -2, -5) = higher price sensitivity -> Small price differences lead to large changes in market share = Technologies are highly substitutable
+    - Less negative values (e.g., -0.1, -0.5) = lower price sensitivity -> Price differences have less impact on market share = Technologies are less substitutable (perhaps due to quality differences, switching costs, etc.)
+
+    - mathematically: exp(logitpar * price) means: When logitpar is negative and prices are positive, higher prices get exponentially smaller weights
+    
+    TODO: check: is this true?
+    '''
     new_dataframe = pd.DataFrame(index=df.index, columns=df.columns)
     for year in range(df.index[0],df.index[-1]+1): #from first to last year
         yearsum = 0
@@ -49,6 +62,11 @@ def MNLogit(df, logitpar):
 
 
 # STOCK MODELLING OLD -----------------------------------------------------------------------------------------------------
+
+# weibull_shape = 1.89  # for what was this used??
+# weibull_scale = 10.3
+# stdev_mult = 0.214      # multiplier that defines the standard deviation (standard deviation = mean * multiplier)
+
 # calculate inflow & outflow with market shares in inflow (generation, storage other)
 def stock_share_calc(stock, market_share, init_tech, techlist):
     

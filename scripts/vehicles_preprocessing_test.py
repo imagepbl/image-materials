@@ -602,6 +602,70 @@ weight_boats = weight_frac_boats_yrs * cap_of_boats_yrs * TONNES_TO_KGS
 # %% Interpolate to complete data for the entire model period (including a historic tail to set up the dynamic
 # stock calculations)
 
+def convert_life_time_vehicles(life_time_vehicles: xr.Dataset) -> dict[str, xr.DataArray]:
+    """Convert lifetime vehicles dataset to a more appropriate data format.
+
+    This conversion should probably move to the preprocessing stage after we figure out
+    the exact details of what the output should look like.
+
+    Parameters
+    ----------
+    life_time_vehicles
+        The input life_time_vehicles xarray dataset. It is supposed to be in a very particular format:
+        it contains the parameters for each of the modes. However, the distribution types are not
+        the same for each of the modes. Thus, the distribution types need to be inferred from the
+        names of the parameters that are given. If multiple parameter sets for multiple distributions
+        are given, the Weibull distribution is given preference over the FoldedNormal distribution.
+
+    Returns
+    -------
+        A dictionary that contains a data array for each of the distributions. Given the setup there is
+        an implicit assumption that only one distribution is used for each of the modes. If distribution
+        types change over time, this data structure needs to be adjusted.
+
+    """
+    # Create a dictionary to find which parameters are available for which mode.
+    mode_param = defaultdict(list)
+    for mode, par in life_time_vehicles.data_vars:
+        mode_param[mode].append(par)
+
+    # Create a dictionary that says which modes are tied to which distribution.
+    dist_mode = defaultdict(list)
+    modes_done = set()  # temporary
+    for dist in ALL_DISTRIBUTIONS:
+        for mode, param in mode_param.items():
+            if mode not in modes_done and dist.has_param(param):
+                dist_mode[dist.name].append(mode)
+                modes_done.add(mode)
+
+    # Iterate over all distributions to create a data array for each of them.
+    ret_scipy_params = {}
+    for dist_name, mode_list in dist_mode.items():
+        if len(mode_list) == 0:
+            continue
+        dist = NAME_TO_DIST[dist_name]
+
+        # param_arrays = {}
+        array = xr.DataArray(
+            0.0, dims=("Time", "Type", "ScipyParam"),
+            coords={
+                "Time": life_time_vehicles.coords["year"].to_numpy(),
+                "Type": mode_list,
+                "ScipyParam": dist.variable_scipy_param})
+        for mode in mode_list:
+            orig_param_dict = {}
+            for param in dist.params:
+                orig_param_dict[param] = life_time_vehicles.data_vars[str(mode), param].to_numpy()
+            scipy_params = dist.get_param(orig_param_dict)
+            for cur_scipy_key, cur_scipy_par in scipy_params.items():
+                if cur_scipy_key in dist.variable_scipy_param:
+                    array.loc[:, str(mode), cur_scipy_key] = cur_scipy_par
+                else:
+                    array.attrs[cur_scipy_key] = cur_scipy_par
+        ret_scipy_params[dist_name] = array
+    return ret_scipy_params
+
+
 # reformatting lifetime data (because input is not yet region-specific)
 first_year_vehicle_regionalized = pd.DataFrame(
     0, index=first_year_vehicle.index, columns=total_nr_vehicles_simple.columns)
@@ -681,6 +745,17 @@ for df_name in df_name_list:
 preprocessing_results_xarray["lifetimes"] = convert_life_time_vehicles(preprocessing_results_xarray["lifetimes"])
 preprocessing_results_xarray["stocks"] = preprocessing_results_xarray.pop("total_nr_vehicles")
 preprocessing_results_xarray["shares"] = preprocessing_results_xarray.pop("vehicle_shares")
+# a = preprocessing_results_xarray["lifetimes"] ----- test
+# import openpyxl
+# with pd.ExcelWriter("veh_preprocessing_results_xarray_lifetimes.xlsx") as writer:
+#     for dist_name, data_array in a.items():
+#         named_array = data_array if data_array.name is not None else data_array.rename("value")
+#         df = named_array.to_dataframe().reset_index()
+
+#         # Excel sheet names can't be longer than 31 characters
+#         sheet_name = dist_name[:31]
+#         df.to_excel(writer, sheet_name=sheet_name, index=False)
+#----
 
 #xr_maintenance_material = xr.DataArray(maintenance_material["total_material_per_km"],
 #                                       dims=("material",), #"Type"),
@@ -708,68 +783,6 @@ preprocessing_results_xarray["maintenance_material_fractions"] = xr_maintenance_
 
 
 
-def convert_life_time_vehicles(life_time_vehicles: xr.Dataset) -> dict[str, xr.DataArray]:
-    """Convert lifetime vehicles dataset to a more appropriate data format.
-
-    This conversion should probably move to the preprocessing stage after we figure out
-    the exact details of what the output should look like.
-
-    Parameters
-    ----------
-    life_time_vehicles
-        The input life_time_vehicles xarray dataset. It is supposed to be in a very particular format:
-        it contains the parameters for each of the modes. However, the distribution types are not
-        the same for each of the modes. Thus, the distribution types need to be inferred from the
-        names of the parameters that are given. If multiple parameter sets for multiple distributions
-        are given, the Weibull distribution is given preference over the FoldedNormal distribution.
-
-    Returns
-    -------
-        A dictionary that contains a data array for each of the distributions. Given the setup there is
-        an implicit assumption that only one distribution is used for each of the modes. If distribution
-        types change over time, this data structure needs to be adjusted.
-
-    """
-    # Create a dictionary to find which parameters are available for which mode.
-    mode_param = defaultdict(list)
-    for mode, par in life_time_vehicles.data_vars:
-        mode_param[mode].append(par)
-
-    # Create a dictionary that says which modes are tied to which distribution.
-    dist_mode = defaultdict(list)
-    modes_done = set()  # temporary
-    for dist in ALL_DISTRIBUTIONS:
-        for mode, param in mode_param.items():
-            if mode not in modes_done and dist.has_param(param):
-                dist_mode[dist.name].append(mode)
-                modes_done.add(mode)
-
-    # Iterate over all distributions to create a data array for each of them.
-    ret_scipy_params = {}
-    for dist_name, mode_list in dist_mode.items():
-        if len(mode_list) == 0:
-            continue
-        dist = NAME_TO_DIST[dist_name]
-
-        # param_arrays = {}
-        array = xr.DataArray(
-            0.0, dims=("Time", "Type", "ScipyParam"),
-            coords={
-                "Time": life_time_vehicles.coords["year"].to_numpy(),
-                "Type": mode_list,
-                "ScipyParam": dist.variable_scipy_param})
-        for mode in mode_list:
-            orig_param_dict = {}
-            for param in dist.params:
-                orig_param_dict[param] = life_time_vehicles.data_vars[str(mode), param].to_numpy()
-            scipy_params = dist.get_param(orig_param_dict)
-            for cur_scipy_key, cur_scipy_par in scipy_params.items():
-                if cur_scipy_key in dist.variable_scipy_param:
-                    array.loc[:, str(mode), cur_scipy_key] = cur_scipy_par
-                else:
-                    array.attrs[cur_scipy_key] = cur_scipy_par
-        ret_scipy_params[dist_name] = array
-    return ret_scipy_params
 
 
 # %%
