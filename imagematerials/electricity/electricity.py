@@ -59,34 +59,6 @@ complete_timeline = prism.Timeline(time_start, 2060, 1)
 simulation_timeline = prism.Timeline(1970, 2060, 1)
 
 
-####################################################################################################################
-#%% Preprocessing
-####################################################################################################################
-
-
-
-
-
-
-
-
-####################################################################################################################
-#%% Run Model
-####################################################################################################################
-
-# Define the coordinates of all dimensions.
-Region = list(prep_data["stocks"].coords["Region"].values)
-Time = [t for t in complete_timeline]
-Cohort = Time
-Type = list(prep_data["stocks"].coords["Type"].values)
-material = list(prep_data["material_fractions"].coords["material"].values)
-
-# Create
-main_model_normal = GenericMainModel(
-    complete_timeline, Region=Region, Time=Time, Cohort=Cohort, Type=Type, prep_data=prep_data,
-    compute_materials=True, compute_battery_materials=False, compute_maintenance_materials=False, 
-    material=material)
-
 
 
    
@@ -94,6 +66,8 @@ main_model_normal = GenericMainModel(
 ###########################################################################################################
 #%% 0) Before we start the calculations we define the general functions used in multiple parts of the code
 ###########################################################################################################
+# TODO: delete this section
+
 
 # 1st stock modelling version: -----------------------------------------------------------------------------------------------
 
