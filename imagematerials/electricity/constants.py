@@ -44,7 +44,7 @@ TONNES_TO_KGS = 1000
 # General constants ---------------------------------------------
 
 STD_LIFETIMES_ELECTR = 0.214              # standard deviation as a fraction of the mean lifetime applicable to energy equipment (Asset Management for Infrastructure Systems: Energy and Water, Balzer & Schorn 2015)
-
+# TODO: different std for lines, transformers, generation, storage, etc.? scenario dependent?
 
 
 # Electricity Generation related constants ---------------------------------------------
