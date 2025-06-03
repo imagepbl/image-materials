@@ -2,7 +2,7 @@ import xarray as xr
 import numpy as np
 
 # Set general constants
-REGIONS = 26        # 26 IMAGE regions
+REGIONS = 26         # 26 IMAGE regions
 #building_types = 4  # 4 building types: detached, semi-detached, appartments & high-rise 
 #area = 2            # 2 areas: rural & urban
 #materials = 7       # 6 materials: Steel, Cement, Concrete, Wood, Copper, Aluminium, Glass
@@ -15,16 +15,7 @@ YEARS = range(START_YEAR-1, END_YEAR + 1)
 ALL_YEARS = list(range(HIST_YEAR, END_YEAR+1))
 REGIONS_RANGE = range(1, REGIONS+1)
 
-far_start_year = 1721
-start_year = 1820
-end_year = 1970
-
-# Given global populations
-global_pop_1700 = 679 # [million] https://www.johnstonsarchive.net/other/worldpop.html
-global_pop_1820 = 1_033.538 # [million] https://www.rug.nl/ggdc/historicaldevelopment/maddison/releases/maddison-project-database-2020
-known_years = [1700, 1820, 1971]
-# Create a full range of years
-full_years_pop = np.arange(1700, 1972)
+urban_share_1820 = 0.072 #https://www2.census.gov/programs-surveys/decennial/1990/tables/cph-2/table-4.pdf
 
 # Set Flags for sensitivity analysis
 FLAG_ALPHA  = 0     # switch for the sensitivity analysis on alpha, if 1 the maximum alpha is 10% above the maximum found in the data
