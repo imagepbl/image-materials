@@ -113,8 +113,6 @@ class OLS_Model:
 
 #%% NLS class
 
-# TODO: bounds Q Lars? to limit models that grow to infinity???????????????
-
 class NLS_Model:
     def __init__(self, y: pd.DataFrame, *X: tuple[pd.DataFrame]):
         # Prepare regression data
@@ -126,11 +124,7 @@ class NLS_Model:
         # Fit parameters for NonLinearRegression
         self._y = self._y.reshape(-1)
         self._X = self._X.reshape(-1)  # TODO: Implement for multiple regressors
-        # self._X = self._X.transpose()
-        # print(self._X)
-        # print(self._y)
         self._coefs, _ = curve_fit(self._model_func, self._X, self._y) #bounds=(-100, 100.000), p0=[1, 1000, 1000], method='lm'
-        # print(self._coefs)
         # Estimate R^2
         # self._r2 = self._lin_reg.score(self._X, self._y)
         self._r2 = np.nan

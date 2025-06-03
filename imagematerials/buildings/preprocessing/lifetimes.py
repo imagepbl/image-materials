@@ -8,13 +8,13 @@ from imagematerials.util import dataset_to_array, merge_dims
 
 def compute_lifetimes(base_directory, commercial_types, distribution_type="weibull"):
 
-    lifetimes_commercial = pd.read_csv(base_directory / 'files_lifetimes' / SCENARIO_SELECT / 'lifetimes_comm.csv', index_col = [0,1])  # Weibull parameter database for commercial buildings (shape & scale parameters given by region, area & building-type)
+    lifetimes_commercial = pd.read_csv(base_directory / 'buildings'  / 'files_lifetimes' / SCENARIO_SELECT / 'lifetimes_comm.csv', index_col = [0,1])  # Weibull parameter database for commercial buildings (shape & scale parameters given by region, area & building-type)
     # TODO originally lifetimes_commercial was only read in with flag_normal == 0
 
     if distribution_type == "weibull":
-        lifetimes_residential = pd.read_csv(base_directory / 'files_lifetimes' / SCENARIO_SELECT / 'lifetimes.csv', index_col = [0,1,2,3])   # Weibull parameter database for residential buildings (shape & scale parameters given by region, area & building-type)
+        lifetimes_residential = pd.read_csv(base_directory / 'buildings' / 'files_lifetimes' / SCENARIO_SELECT / 'lifetimes.csv', index_col = [0,1,2,3])   # Weibull parameter database for residential buildings (shape & scale parameters given by region, area & building-type)
     elif distribution_type == "folded_norm":
-        lifetimes_residential = pd.read_csv(base_directory / 'files_lifetimes' / 'lifetimes_normal.csv')  # Normal distribution database (Mean & StDev parameters given by region, area & building-type, though only defined by region for now)
+        lifetimes_residential = pd.read_csv(base_directory / 'buildings' / 'files_lifetimes' / 'lifetimes_normal.csv')  # Normal distribution database (Mean & StDev parameters given by region, area & building-type, though only defined by region for now)
     else:
         raise ValueError(f"Unknown distribution type {distribution_type}, "
                          "available: [weibull, folded_norm]")

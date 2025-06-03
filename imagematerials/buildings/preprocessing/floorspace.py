@@ -15,8 +15,8 @@ from imagematerials.buildings.constants import (
     REGIONS,
     REGIONS_RANGE,
     START_YEAR,
-    YEAR_LIST_SVA,
     YEARS,
+    SCENARIO_SELECT
 )
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, merge_dims
@@ -34,17 +34,22 @@ years_1820_1970 = xr.DataArray(np.arange(start_year, end_year), dims=["Time"], c
 def get_gompertz(base_directory):
     # Load fitted regression parameters
     if FLAG_ALPHA == 0:
-        gompertz = pd.read_csv(base_directory / 'files_commercial/Gompertz_parameters.csv', index_col = [0])
+        gompertz = pd.read_csv(base_directory / 'buildings/files_commercial/Gompertz_parameters.csv', index_col = [0])
     else:
-        gompertz = pd.read_csv(base_directory / 'files_commercial/Gompertz_parameters_alpha.csv', index_col = [0])
+        gompertz = pd.read_csv(base_directory / 'buildings/files_commercial/Gompertz_parameters_alpha.csv', index_col = [0])
     return gompertz
 
 def get_service_value_added(image_directory):
     # we use the inflation corrected SVA to adjust for the fact that IMAGE provides gdp/cap in 2005 US$
-    service_value_added_2005: pd.DataFrame = pd.read_csv(image_directory.joinpath('sva_pc.csv'), index_col = [0])
+    # TODO: check with IMAGE team if SVA is still given in 2005 values --> if not correct inflation factor
+    service_value_added_2005: pd.DataFrame = read_mym_df(image_directory.joinpath("Socioeconomic", "sva_pc.scn"))
     service_value_added = service_value_added_2005 * INFLATION
-    # added cubic interpolation to the sva_pc (presumed linear interpolation between 5-year original data caused sawtooth demand/inflow throughout the scenario projection after 2025)
-    service_value_added = service_value_added.loc[YEAR_LIST_SVA,:].reindex(list(range(1970, END_YEAR + 1,1))).interpolate(method='cubic') 
+    
+    # extrapolate to 1970, therefore first add empty 1970 value with nans
+    service_value_added.loc[1970] = np.nan
+    # TODO cubic does not work, replaced with linear for now, Sebastiaans code had cubic, seems like now just value from 1971 is copied
+    service_value_added = service_value_added.sort_index().interpolate(method='linear', limit_direction="both") 
+
     return service_value_added
 
 def get_image_floorspace(image_directory, base_directory):
@@ -99,7 +104,7 @@ def extrapolate_floorspace(floorspace_image, minimum_comm):
 
 def get_floorspace_urban_rural(image_directory):
     # load IMAGE data-files (MyM file format)
-    floorspace: pd.DataFrame = read_mym_df(image_directory.joinpath("res_Floorspace.out"))
+    floorspace: pd.DataFrame = read_mym_df(image_directory.joinpath("EnergyServices", "res_FloorSpace.out"))
     floorspace = floorspace[['time','DIM_1',2,3]].rename(columns={"DIM_1": "Region", 'time':'t', 2:'Urban', 3:'Rural'})
     # the other columns are average per capita floorspace per quintile (we also exclude the average per capita floorspace of the total population in column 1, 
     # because we use the urban & rural specific totals)
@@ -128,12 +133,13 @@ def compute_commercial_floor_m2_cap_sum(gompertz, service_value_added):
     # Compute commercial floorspace using Gompertz curves
     for year in YEARS:
         for region in REGIONS_RANGE:
-            exp_factor = math.exp((-gamma/1000) * service_value_added[str(region)][year])
+            exp_factor = math.exp((-gamma/1000) * service_value_added[region][year])
             if FLAG_EXPDEC == 0:
                 commercial_m2_cap[region][year] = alpha * math.exp(-beta * exp_factor)
                 commercial_m2_cap_low[region][year] = alpha_low * math.exp(-beta * exp_factor)
             else:
                 commercial_m2_cap[region][year] = max(0.542, alpha - beta * exp_factor)
+            
 
     # commercial floorspace is scaled here (in case lowComm is not 1)
     scale_comm = pd.Series([1.0, 0.0], index=[2020, 2060], name='time').reindex(YEARS).interpolate(
@@ -154,7 +160,7 @@ def compute_commercial_floor_m2_cap(gompertz, commercial_m2_cap_sum, service_val
             for type_ in types:
                 #value = gompertz_value(type_, region, year, service_value_added)
                 params = gompertz[type_]
-                value = params['a'] * math.exp(-params['b'] * math.exp((-params['c'] / 1000) * service_value_added[str(region)][year]))
+                value = params['a'] * math.exp(-params['b'] * math.exp((-params['c'] / 1000) * service_value_added[region][year]))
                 floorspace_commercial_list[type_] = value
                 minimum_comm.loc[type_] = min(minimum_comm.loc[type_], value)
 
@@ -193,7 +199,7 @@ def compute_housing_type(database_directory):
     return housing_type_xr
 
 def compute_average_m2_capita(base_directory):
-    average_m2_capita_df: pd.DataFrame = pd.read_csv(base_directory.joinpath('files_DB','Average_m2_per_cap.csv'), index_col = [0,1]) 
+    average_m2_capita_df: pd.DataFrame = pd.read_csv(base_directory.joinpath('buildings', 'files_DB','Average_m2_per_cap.csv'), index_col = [0,1]) 
     column_mapping = {'1': 'Detached', '2': 'Semi-detached', '3': 'Appartment', '4': 'High-rise'}
     average_m2_capita_df.rename(columns=column_mapping, inplace=True)
     average_m2_capita = dataset_to_array(average_m2_capita_df.to_xarray(), ["Region", "Area"], ["Type"])
