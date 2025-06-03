@@ -147,8 +147,9 @@ def wood_buildings(buildings_mat, filters: dict[str, str]):
 
 #%% WOOD demand split up
 
-
-def split_up_wood(wood_demand, wooddensity = wooddensity, wood_dm = wood_dm, unit_conversion = kt_to_bt, drop_dim = 'DIM_1'):
+def split_up_wood(wood_demand, buildings_mat: pd.DataFrame,
+                  wooddensity = wooddensity, 
+                  wood_dm = wood_dm, drop_dim = 'DIM_1'):
     
     # create list of all modelled years to interpolate missing years, as IMAGE output is in 5 year steps
     all_years = list(range(1970, 2101))
@@ -254,7 +255,14 @@ def sum_by_region(splitted_up_biomass: dict[str, pd.DataFrame], columns: [int] =
 #%%
 
 
-def sankey_total_biomass(year, region):
+def sankey_total_biomass(splitted_up_crops_food, 
+                        splitted_up_crops_feed, 
+                        splitted_up_biofuel_crops, 
+                        splitted_up_animal_products, 
+                        splitted_up_wood, 
+                        splitted_up_feed, 
+                        path_figures,  # path to save the figures
+                        year, region):
     
     crops_food = splitted_up_crops_food.get('total').loc[year, region]
     crops_feed_fodder_grass = splitted_up_crops_feed.get('total').loc[year, region] + splitted_up_feed.get('grass & fodder').loc[year, region]
@@ -343,128 +351,3 @@ def sankey_total_biomass(year, region):
     
     return fig, link_source, link_target, link_value 
     
-    
-#%% Import IMAGE data
-
-if __name__ == "__main__":
-
-    # Crop consumption in Gg dm/yr, per type of use and crop type including other crops. Dimensions:  [5,17,27] (t) , [NUFPT, NFCT, NRT](time)
-    crops_cons = read_mym_df(path_input_data + f'/IMAGE_out/{scenario}/AGRCONSCTF_DM.OUT').set_index(["time", "DIM_1", "DIM_2"])  
-    
-    # Wood demand per woodtype in 1000m3/yr. Dimensions: [4,27](t), [NWCT,NRT] (time)
-    wood_demand = read_mym_df(path_input_data + f'/IMAGE_out/{scenario}/WDEMAND.OUT').set_index(["time", "DIM_1"])
-    
-    # Feed consumption per grazing system type, feed product type and animal type in Gg dm/yr Dimensions:  [3,6,6,27] (t), [NGST,NFPT,NAT,NRT] (t)
-    feed_cons = read_mym_df(path_input_data + f'/IMAGE_out/{scenario}/TFEED.OUT').set_index(["time", "DIM_1", "DIM_2", "DIM_3"])
-    
-    # Animal products  Unit=Gg dm/yr; Label=Consumption of animal products in dry matter, per type of use and animal type [5,6,27] (t) [NUFPT,NAPT,NRT] 
-    animal_products_cons = read_mym_df(path_input_data + f'/IMAGE_out/{scenario}/AGRCONSA_DM.OUT').set_index(["time", "DIM_1", "DIM_2"])
-    
-    # Biofuel crops production (same as consumption) difference is only made in energy trade, not for actual crops calculation
-    # Unit= Gg dm/yr; Label= Production of biofuels (dry matter) [5,27] [NBCT,NRT] (t)
-    biofuel_crops = read_mym_df(path_input_data + f'/IMAGE_out/{scenario}/AGRPRODBF_dm.OUT').set_index(["time", "DIM_1"])
-    
-    # Materials buildings (BUMA output) in kt
-    buildings_mat = pd.read_csv(path_input_data + f'/IMAGE_MAT_out/{scenario}/material_output_buma_RASMI_update.csv', header = 0).set_index(['Unnamed: 0', 'flow', 'type', 'area', 'material'])
-    
-    # Split up different biomass types 
-    # Crops: Split up crops
-    
-    splitted_up_crops_total = split_up_crops(crops_cons, gg_to_bt, drop_dim = ['DIM_1', 'DIM_2'], 
-                                             selected_DIM1= 'total', biomass_type = 'crops')
-    splitted_up_crops_food = split_up_crops(crops_cons, gg_to_bt, drop_dim = ['DIM_1', 'DIM_2'], 
-                                            selected_DIM1= 'food', biomass_type = 'crops')
-    splitted_up_crops_feed = split_up_crops(crops_cons, gg_to_bt, drop_dim = ['DIM_1', 'DIM_2'], 
-                                            selected_DIM1= 'feed', biomass_type = 'crops')
-    splitted_up_crops_other_use = split_up_crops(crops_cons, gg_to_bt, drop_dim = ['DIM_1', 'DIM_2'], 
-                                            selected_DIM1= 'other use', biomass_type = 'crops')
-    # Feed
-    splitted_up_feed = split_up_feed(feed_cons)
-    
-    # Wood & wood from buildings
-    splitted_up_wood = split_up_wood(wood_demand)
-    
-    # Animal Products
-    splitted_up_animal_products = split_up_animal_products(animal_products_cons)
-    
-    # Biofuel crops 
-    splitted_up_biofuel_crops = split_up_biofuelcrops(biofuel_crops)
-    
-    #%% get global values
-    
-    crops_total_consumption_global = sum_by_region(splitted_up_crops_total)
-    feed_total_consumption_global = sum_by_region(splitted_up_feed)
-    
-    # make sankey
-    sankey_total, link_source_bio, link_target_bio, link_value_bio  = sankey_total_biomass(2060, 27)
-
-#%%  TEST INTERACTIVE SANKEY 
-# KEEP AS EXAMPLE
-
-# # Sample data for the Sankey diagram
-# data_by_year = {
-#     'Year_1': {
-#         'Start': [100, 80, 120, 50]},
-#     'Year_2': {
-#         'Start': [90, 70, 110, 40]},
-#     'Year_3': {
-#         'Start': [80, 60, 100, 30]
-#     }
-# }
-
-# # Extract years and categories from the dictionary
-# years = list(data_by_year.keys())
-# categories = list(data_by_year[years[0]].keys())
-
-# # Create traces for the Sankey diagram
-# fig = go.Figure()
-
-# for year in years:
-#     links = []
-#     for i, category in enumerate(categories):
-#         for j in range(len(data_by_year[year][category])):
-#             if i == 0:  # Connect the start node to end nodes
-#                 links.append({'source': i, 'target': j + 1, 'value': data_by_year[year][category][j]})
-#             else:
-#                 links.append({'source': i, 'target': j + 1, 'value': 0})  # Other connections are set to 0
-
-#     fig.add_trace(go.Sankey(
-#         node=dict(
-#             pad=15,
-#             thickness=20,
-#             line=dict(color='black', width=0.5),
-#             label=categories
-#         ),
-#         link=dict(
-#             source=[link['source'] for link in links],
-#             target=[link['target'] for link in links],
-#             value=[link['value'] for link in links],
-#         ),
-#         name=year,
-#         visible=(year == years[0])
-#     ))
-
-# # Create steps for slider
-# steps = []
-# for i, year in enumerate(years):
-#     step = dict(
-#         method="restyle",
-#         args=["visible", [year == y for y in years]],
-#         label=year
-#     )
-#     steps.append(step)
-
-# # Update layout settings for the Sankey diagram with the slider
-# fig.update_layout(
-#     title_text=f"Sankey Diagram ({years[0]})",
-#     font=dict(size=12, color='black'),
-#     sliders=[{
-#         "active": 0,
-#         "currentvalue": {"prefix": "Year: "},
-#         "pad": {"t": 50},
-#         "steps": steps
-#     }]
-# )
-
-# # Display the Sankey diagram with the slider
-# fig.show()
