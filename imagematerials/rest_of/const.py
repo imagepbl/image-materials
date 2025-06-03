@@ -19,8 +19,11 @@ switch_year = 2100
 # PATHS - set here your own data paths 
 
 # INPUT
+SCENARIO =
+
 path_input_data = "../../data/raw/rest-of"
 
+path_scenario_data = "../../data/raw/rest-of"
 
 # Output
 path_figures = "../figures"
