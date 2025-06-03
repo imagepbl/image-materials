@@ -60,7 +60,10 @@ def compute_dynamic_stock_driven(stock, stock_by_cohort, inflow, outflow_by_coho
     # for t_future in stock_by_cohort[t].coords["Cohort"].loc[t_str:]:
         # t_future = int(t_future)
         # stock_by_cohort[t_future].loc[{"Cohort": t_str}] = inflow[t]*survival[t_future, t]
-    outflow_by_cohort[t] = stock_by_cohort.loc[t-1] - stock_by_cohort.loc[t]
+    if t-1 < stock_by_cohort.coords["Time"].min():
+        outflow_by_cohort[t] = 0.0
+    else:
+        outflow_by_cohort[t] = stock_by_cohort.loc[t-1] - stock_by_cohort.loc[t]
 
 # TODO: function below is broken, use the same fix as compute_dynamic_stock_driven.
 def compute_dynamic_inflow_driven(stock, stock_by_cohort, inflow, outflow_by_cohort, survival, t):
