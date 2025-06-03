@@ -19,8 +19,11 @@ switch_year = 2100
 # PATHS - set here your own data paths 
 
 # INPUT
+SCENARIO =
+
 path_input_data = "../../data/raw/rest-of"
 
+path_scenario_data = "../../data/raw/rest-of"
 
 # Output
 path_figures = "../figures"
@@ -132,18 +135,6 @@ REGION_TO_CLASS_DICT_IMAGE_MAT = {
     'Rest S.Africa': 'class_ 26',
     'Global': 'class_ 27'}
 
-COPPER_REGIONS_TO_IMAGE = {
-    'Other North America countries' : ['class_ 1'],
-    'United States': ['class_ 2'], 
-    'South America': ['class_ 3', 'class_ 4', 'class_ 5', 'class_ 6', 'class_ 26'],
-    'Europe': ['class_ 11', 'class_ 12', 'class_ 13','class_ 14','class_ 15', 'class_ 16'],
-    'Other Asia countries' : ['class_ 17', 'class_ 18', 'class_ 19', 'class_ 21', 'class_ 22', 'class_ 23', 'class_ 25'],
-    'China' : ['class_ 20'],
-    'Africa' : ['class_ 7', 'class_ 8', 'class_ 9', 'class_ 10'],
-    'Oceania' : ['class_ 24'],
-    'Global': ['class_ 27']
-}
-
 COPPER_AVERAGE_REGIONS_TO_IMAGE = {
     'Other North America countries' : ['class_ 1', 'class_ 3', 'class_ 4'],
     'USA': ['class_ 2'], 
@@ -159,17 +150,62 @@ COPPER_AVERAGE_REGIONS_TO_IMAGE = {
 }
 
 # Matching Regions to IMAGE Regions 
-ALUMINIUM_TO_IMAGE = {
-    'China' : ['class_ 20'], 
-    'Europe': ['class_ 11', 'class_ 12', 'class_ 13', 'class_ 14'], 
-    'Japan' : ['class_ 23'], 
-    'North America': ['class_ 1', 'class_ 2', 'class_ 3'], 
-    'Oceania': ['class_ 24'], 
-    'Middle East and Other Asia': ['class_ 17', 'class_ 18', 'class_ 19', 'class_ 21', 'class_ 22', 'class_ 25'], 
-    'Other and None': ['class_ 16', 'class_ 7', 'class_ 8', 'class_ 9', 'class_ 10', 'class_ 26'],
-    'South America' : ['class_ 4', 'class_ 5', 'class_ 6']
-    }
 
+IAI_TO_IMAGE_CLASSES = {
+    'Africa': [
+        'class_ 7',  # N.Africa
+        'class_ 8',  # W.Africa
+        'class_ 9',  # E.Africa
+        'class_ 10', # South Africa
+        'class_ 26'  # Rest S.Africa
+    ],
+    'Asia (ex China)': [
+        'class_ 17',  # M.East
+        'class_ 18',  # India
+        'class_ 19',  # Korea
+        'class_ 21',  # SE.Asia
+        'class_ 22',  # Indonesia
+        'class_ 23',  # Japan
+        'class_ 25'   # Rest S.Asia
+    ],
+    'China (Estimated)': [
+        'class_ 20'  # China
+    ],
+    'Estimated Unreported to IAI': [
+        'class_ 6',   # Rest S.Am.
+        'class_ 8',   # W.Africa (e.g. Cape Verde)
+        'class_ 10',  # South Africa (e.g. ZA1)
+        'class_ 24',  # Oceania (e.g. Tuvalu, Tokelau)
+        'class_ 26',  # Rest S.Africa (e.g. Réunion, Mayotte)
+    ],
+    'Gulf Cooperation Council': [
+        'class_ 17'  # M.East
+    ],
+    'North America': [
+        'class_ 1',  # Canada
+        'class_ 2',  # US
+        'class_ 3'   # Mexico
+    ],
+    'Oceania': [
+        'class_ 24'  # Oceania
+    ],
+    'Russia & Eastern Europe': [
+        'class_ 12',  # C.Europe
+        'class_ 14',  # Ukraine
+        'class_ 15',  # Stan
+        'class_ 16'   # Russia
+    ],
+    'South America': [
+        'class_ 4',  # Rest C.Am.
+        'class_ 5',  # Brazil
+        'class_ 6'   # Rest S.Am.
+    ],
+    'Western & Central Europe': [
+        'class_ 11',  # W.Europe
+        'class_ 12',  # C.Europe
+        'class_ 13'   # Turkey
+    ]
+}
 
 # get list of all IMAGE regions
 all_regions_list = list(CLASS_TO_REGION_DICT.copy().values())
