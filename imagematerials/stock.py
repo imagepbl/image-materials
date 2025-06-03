@@ -60,6 +60,7 @@ def compute_dynamic_stock_driven(stock, stock_by_cohort, inflow, outflow_by_coho
     # for t_future in stock_by_cohort[t].coords["Cohort"].loc[t_str:]:
         # t_future = int(t_future)
         # stock_by_cohort[t_future].loc[{"Cohort": t_str}] = inflow[t]*survival[t_future, t]
+    # print("Hello", t, inflow[t], survival[t:, t], "<<END>>")
     if t-1 < stock_by_cohort.coords["Time"].min():
         outflow_by_cohort[t] = 0.0
     else:

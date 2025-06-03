@@ -87,6 +87,7 @@ class GenericStocks(prism.Model):
                     "Cohort": self.Cohort,
                     "Region": self.Region,
                     "Type": self.Type})
+        # self.stock_by_cohort.loc[time.start]
 
     def compute_values(self, time: prism.Time):
         """
@@ -101,7 +102,6 @@ class GenericStocks(prism.Model):
         t, dt = time.t, time.dt
         self.inflow[t].loc[:] = 0.0
         self.outflow_by_cohort[t].loc[:] = 0.0
-        print(f"t = {t}")
         compute_dynamic_stock_driven(
             self.stocks, self.stock_by_cohort,  self.inflow, self.outflow_by_cohort,
             self.survival_matrix, t, self.shares)

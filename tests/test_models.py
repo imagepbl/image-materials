@@ -62,12 +62,11 @@ def test_generic_stocks(coordinates, timelines):
     lt.attrs["loc"] = 0
     lifetimes = {"weibull": lt}
     complete_timeline, simulation_timeline = timelines
-    print(stocks.coords)
     model = GenericStocks(
         complete_timeline, stocks=stocks, shares=shares, lifetimes=lifetimes,
         knowledge_graph=knowledge_graph, Region=coordinates["Region"], Type=coordinates["Type"],
         Cohort=coordinates["Cohort"], Time=coordinates["Time"])
-    model.simulate(simulation_timeline)
+    model.simulate(complete_timeline)
     for var_name in model.output_data:
         assert hasattr(model, var_name)
 
