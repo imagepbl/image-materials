@@ -71,5 +71,4 @@ def test_generic_stocks(coordinates, timelines):
         assert hasattr(model, var_name)
 
     for t in coordinates["Time"]:
-        print(model.stock_by_cohort.loc[t].sum(), stocks.loc[t].sum())
         assert (model.stock_by_cohort.loc[t].sum("Cohort") == stocks.loc[t]).all()
