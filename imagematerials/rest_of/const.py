@@ -19,11 +19,11 @@ switch_year = 2100
 # PATHS - set here your own data paths 
 
 # INPUT
-SCENARIO = "SSP2"
+SCENARIO = "SSP2_CP"
 
-path_input_data = "../../data/raw/rest-of/"
+path_input_data = "../../../data/raw/rest-of"
 
-path_scenario_data = f"../../data/raw/image/{SCENARIO}/Biomass/"
+path_scenario_data = f"../../../data/raw/image/{SCENARIO}/Biomass/"
 
 # Output
 path_figures = "../figures"

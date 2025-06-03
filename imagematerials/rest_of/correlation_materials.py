@@ -8,7 +8,7 @@ Created on Sat Feb 10 21:25:57 2024
 
 import pandas as pd
 
-from const import path_input_data
+from imagematerials.rest_of.const import path_input_data
 
 #%% Calculate consumption, GDP, and population data both real data points and projections
 

@@ -16,7 +16,7 @@ import plotly.graph_objects as go
 
 from imagematerials.read_mym import read_mym_df
 
-from const import (DIM1_crops_dict, DIM2_crops_dict, DIM1_tfeed_dict, DIM2_tfeed_dict, DIM3_tfeed_dict, 
+from imagematerials.rest_of.const import (DIM1_crops_dict, DIM2_crops_dict, DIM1_tfeed_dict, DIM2_tfeed_dict, DIM3_tfeed_dict, 
                    DIM1_wood_dict, DIM2_animalproducts_dict, DIM1_biofuelcrops_dict, parse_dim, path_input_data, path_figures, scenario)
 
 #%% Conversion

@@ -8,13 +8,13 @@ Created on Tue Aug 27 13:31:40 2024
 import pandas as pd
 import numpy as np
 
-from const import (COPPER_AVERAGE_REGIONS_TO_IMAGE, CLASS_TO_REGION_DICT, 
+from imagematerials.rest_of.const import (COPPER_AVERAGE_REGIONS_TO_IMAGE, CLASS_TO_REGION_DICT, 
                    REGION_TO_CLASS_DICT, SAND_GROUPING_REGIONS, path_input_data)
 
-from correlation_materials import (calculate_gdp, summarize_IMAGE_regions, 
+from imagematerials.rest_of.correlation_materials import (calculate_gdp, summarize_IMAGE_regions, 
                                    calculate_material_consumption_pc_and_gdp_pc_groups, 
                                    sum_total_over_grouped_regions)
-from projections_materials import estimate_models_per_region_group, match_regions_to_best_model
+from imagematerials.rest_of.projections_materials import estimate_models_per_region_group, match_regions_to_best_model
 
 class ResourceModel():
     '''
