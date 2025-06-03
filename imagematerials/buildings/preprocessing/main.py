@@ -41,7 +41,9 @@ def buildings_preprocessing(base_directory, climate_policy_config: dict, circula
     floorspace_commercial = floorspace_commercial_rururb.sel(
         {"Type": [x.values for x in floorspace_commercial_rururb.coords["Type"] if x.values not in ["Urban", "Rural"]]})
 
+    # Calculate population ("Total", "Rural", "Urban")
     population = compute_population(image_directory, base_directory)
+    
     average_m2_capita = compute_average_m2_capita(base_directory)
 
     housing_type = compute_housing_type(database_directory)

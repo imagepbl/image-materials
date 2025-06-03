@@ -20,7 +20,8 @@ class ResourceModel():
     '''
     initialize basic resource model with resource data and gdp, pop data
     '''
-    def __init__(self, resource_group: str, resource: str, start_year: int, image_mat_available: bool, end_year = 2017):
+    def __init__(self, resource_group: str, resource: str, start_year: int, image_mat_available: bool, 
+                 end_year = 2017, convert_image = False, convert_to_tons = None, trade_data = False):
         
         # Name resource group
         self.resource_group = resource_group
@@ -28,8 +29,19 @@ class ResourceModel():
         self.resource = resource
         
         # historic conumpstion data
-        self.historic_consumption_data = pd.read_csv(f'{path_input_data}/{resource_group}/{self.resource}.csv', 
-                                                     index_col=0).loc[:end_year]
+        if trade_data == False: 
+            self.historic_consumption_data = pd.read_csv(f'{path_input_data}/{resource_group}/{self.resource}.csv', 
+                                                        index_col=0).loc[:end_year]
+            
+        else: 
+            production = pd.read_csv(f'{path_input_data}/{resource_group}/{self.resource}_production.csv', 
+                                                        index_col=0).loc[:end_year]
+            net_trade = pd.read_csv(f'{path_input_data}/{resource_group}/{self.resource}_net_trade.csv', 
+                                                        index_col=0).loc[:end_year]
+            self.historic_consumption_data = production - net_trade
+        
+        if convert_image == True:
+            self.historic_consumption_data = self.historic_consumption_data/convert_to_tons # convert IMAGE output to tons
         
         # data if IMAGE Mat calculations available
         if image_mat_available == True:
@@ -57,14 +69,24 @@ class ResourceModel():
     
     def sum_IMAGE_drivers_regions(self, regions_dict):
         # dict from total external data on consumption to IMAGE regions
-        self.regions_dict = regions_dict 
-        # gdp etc per region is overwritten if IMAGE regions are summarized
-        (self.gdp, self.pop, 
-         self.pop_100, self.gdp_pc_100) = summarize_IMAGE_regions(regions_dict, 
-                                                                  self.gdp_original, 
+
+        if regions_dict != None:
+            self.regions_dict = regions_dict 
+            # gdp etc per region is overwritten if IMAGE regions are summarized
+            (self.gdp, self.pop, 
+            self.pop_100, self.gdp_pc_100) = summarize_IMAGE_regions(regions_dict, 
+                                                                    self.gdp_original, 
+                                                                    self.pop_original, 
+                                                                    self.pop_100_original, 
+                                                                    self.gdp_pc_100_original)
+        
+        # in case regions dict is not needed because drivers dont need to be summed, value is just copied
+        if regions_dict == None:
+            (self.gdp, self.pop, self.pop_100, self.gdp_pc_100) = (self.gdp_original, 
                                                                   self.pop_original, 
                                                                   self.pop_100_original, 
                                                                   self.gdp_pc_100_original)
+
         
         
     def match_MAT_data_to_regions_year(self, match_external_regions: bool):  
@@ -92,11 +114,13 @@ class ResourceModel():
         # OR THIS
         if match_external_regions == False:
             
-            self.image_mat_data = self.image_mat_data.T
-            self.image_mat_data = self.image_mat_data.loc[self.start_year:str(self.end_year)]
+            self.image_mat_data = self.image_mat_data
+            self.image_mat_data_cut = self.image_mat_data.loc[self.start_year:str(self.end_year)]
             self.historic_consumption_data = self.historic_consumption_data.loc[self.start_year:self.end_year]
             
-            self.image_mat_data.index = self.historic_consumption_data.index
+            self.image_mat_data_cut.index = self.historic_consumption_data.index
+            
+            self.image_mat_material_regions = self.image_mat_data_cut
             
 
     def calculate_historic_other_fraction(self):
@@ -116,12 +140,9 @@ class ResourceModel():
         # from total consumption per region and population derive consumption per cap
         self.cons_capita = historic_consumption/self.pop
         self.cons_capita = self.cons_capita.loc[self.start_year:self.end_year]
-        
-        # # get per capita copper consumption of difference
-        # self.cons_diff_pc = self.diff/self.pop.loc[self.start_year:self.end_year]
-        
+
         # make cons_data to same length as diff_data
-        self.historic_consumption_data_adapted_years = self.historic_consumption_data.loc[self.start_year:self.end_year]
+        # self.historic_consumption_data_adapted_years = self.historic_consumption_data.loc[self.start_year:self.end_year]
         
         # get dict of regions that are fitted together (list of names, gdp per cap and cons per cap)
         (self.cons_pc_groups, 
@@ -130,7 +151,7 @@ class ResourceModel():
                                                                                    self.cons_capita)
                
     
-    def fit_models(self):
+    def fit_models(self, best_rmse_models):
         # fit all groups of regions to mathematical models and do statistical analysis (RMSE and R2)
         (self.model_groups, 
          self.rmse_r2_groups, 
@@ -142,10 +163,11 @@ class ResourceModel():
         (self.best_rmse_models, 
          self.region_model_match) = match_regions_to_best_model(self.rmse_r2_groups, 
                                                                 self.model_groups, 
-                                                                self.region_groups)           
+                                                                self.region_groups, 
+                                                                best_rmse_models)           
             
               
-    def project_on_total(self, regions_list, REGION_TO_CLASS_DICT, gdp_pc):
+    def project_on_total(self, regions_list):
         self.projection_per_region = []
 
         # loop over every region
@@ -169,7 +191,8 @@ class ResourceModel():
         self.projection_per_region = pd.DataFrame(self.projection_per_region).transpose()
         self.projection_per_region.columns = self.pop.columns
     
-        self.projection_per_region.index = np.arange(2017, 2101)
+        self.projection_per_region.index = np.arange(self.end_year, 2101)
+        self.projection_per_region_total = self.projection_per_region*self.pop_100
 
     
     def project_on_total_IMAGE_regions(self, REGION_TO_CLASS_DICT, GROUPS_TO_IMAGE_DICT):
@@ -203,39 +226,3 @@ class ResourceModel():
         self.projection_per_region_IMAGE.index = np.arange(2017, 2101)
      
         
-
-
-
-
-
-# sand.calculate_regressors(sand.diff_historic)
-# sand.fit_models()
-# sand.replace_sand_best_rmse_models()
-# sand.project_on_total(list(CLASS_TO_REGION_DICT.keys())[:-1], REGION_TO_CLASS_DICT)
-
-
-# LIMESTONE
-# limestone = ResourceModel(resource_group = 'non_metallic', resource = 'limestone', image_mat_data = None, start_year = 1971)
-# limestone.data_grouped_regions(regions_grouping = SAND_GROUPING_REGIONS)
-# limestone.calculate_regressors()
-# limestone.fit_models()
-# limestone.project_on_total(list(CLASS_TO_REGION_DICT.keys())[:-1], REGION_TO_CLASS_DICT)
-
-
-# %% CONTINUE HERE
-# copper.projection_per_region.plot()
-
-# TODO:
-# why are projections all the same, should be based on diff gdp_pc_groups, therefore different?? eventhough they were grouped and same regression, they should be different
-# which projection makes actually sense? 
-# china out of grouping, all analyzed together?
-# go back to how you defined this for sand with the scatter plot! similar gdp_pc consumption is fitted together
-
-
-# # SAND
-# sand = ResourceModel(resource_group = 'non_metallic', resource = 'sand_gravel_crushed_rock', image_mat_available = True, start_year = str(1971))
-# sand.data_grouped_regions(regions_grouping = SAND_GROUPING_REGIONS)
-# sand.match_MAT_data_to_IMAGE()
-# sand.calculate_regressors(sand.historic_other_fraction_consumption)
-# sand.fit_models()
-# sand.project_on_total(list(REGION_TO_CLASS_DICT.values())[:-1], REGION_TO_CLASS_DICT)

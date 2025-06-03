@@ -16,6 +16,7 @@ from imagematerials.buildings.constants import (
     REGIONS_RANGE,
     START_YEAR,
     YEARS,
+    SCENARIO_SELECT
 )
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, merge_dims
@@ -103,7 +104,7 @@ def extrapolate_floorspace(floorspace_image, minimum_comm):
 
 def get_floorspace_urban_rural(image_directory):
     # load IMAGE data-files (MyM file format)
-    floorspace: pd.DataFrame = read_mym_df(image_directory.joinpath("EnergyServices", "res_Floorspace.out"))
+    floorspace: pd.DataFrame = read_mym_df(image_directory.joinpath("EnergyServices", "res_FloorSpace.out"))
     floorspace = floorspace[['time','DIM_1',2,3]].rename(columns={"DIM_1": "Region", 'time':'t', 2:'Urban', 3:'Rural'})
     # the other columns are average per capita floorspace per quintile (we also exclude the average per capita floorspace of the total population in column 1, 
     # because we use the urban & rural specific totals)
@@ -198,7 +199,7 @@ def compute_housing_type(database_directory):
     return housing_type_xr
 
 def compute_average_m2_capita(base_directory):
-    average_m2_capita_df: pd.DataFrame = pd.read_csv(base_directory.joinpath('files_DB','Average_m2_per_cap.csv'), index_col = [0,1]) 
+    average_m2_capita_df: pd.DataFrame = pd.read_csv(base_directory.joinpath('buildings', 'files_DB','Average_m2_per_cap.csv'), index_col = [0,1]) 
     column_mapping = {'1': 'Detached', '2': 'Semi-detached', '3': 'Appartment', '4': 'High-rise'}
     average_m2_capita_df.rename(columns=column_mapping, inplace=True)
     average_m2_capita = dataset_to_array(average_m2_capita_df.to_xarray(), ["Region", "Area"], ["Type"])
