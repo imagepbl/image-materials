@@ -175,10 +175,11 @@ cython_debug/
 # mym data files
 # *.out
 *.dat
-*.scn
+# *.scn
 *.his
 
 IMAGE-Mat/output/
 
 prism/
 pym/
+scripts/

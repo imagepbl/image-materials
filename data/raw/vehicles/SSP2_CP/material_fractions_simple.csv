@@ -1,4 +1,4 @@
-,,air_pas,air_freight,rail_reg,rail_hst,rail_freight,sea_shipping_small,sea_shipping_med,sea_shipping_large,sea_shipping_vl,inland_shipping,bicycle
+,,Passenger Planes,Freight Planes,Trains,High Speed Trains,Freight Trains,Small Ships,Medium Ships,Large Ships,Very Large Ships,Inland Ships,Bikes
 2020,Steel,0.09,0.09,0.605,0.5964,0.9445,0.886,0.886,0.886,0.886,0.886,0.34
 2020,Aluminium,0.68,0.68,0.3146,0.2517,0.0541,0.0125,0.0125,0.0125,0.0125,0.0125,0.46
 2020,Cu,0.0046,0,0.0014,0.0131,0.0015,0.0032,0.0032,0.0032,0.0032,0.0032,0
