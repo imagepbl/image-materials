@@ -19,7 +19,7 @@ from imagematerials.distribution import ALL_DISTRIBUTIONS, NAME_TO_DIST
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_life_time_vehicles
 from imagematerials.model import GenericMainModel, GenericMaterials, GenericStocks, Maintenance, MaterialIntensities
-from imagematerials.factory import ModelFactory
+from imagematerials.factory import ModelFactory, Sector
 from imagematerials.concepts import create_electricity_graph
 from imagematerials.electricity.utils import MNLogit, stock_tail
 
@@ -37,6 +37,7 @@ from imagematerials.electricity.constants import ( # TODO: import not working at
     VARIANT,
     REGIONS,
     TECH_GEN,
+    STD_LIFETIMES_ELECTR,
     MEGA_TO_TERA,
     PKMS_TO_VKMS,
     TONNES_TO_KGS,
@@ -104,12 +105,13 @@ gcap_lifetime = pd.read_csv(path_external_data_scenario / 'LTTechnical_dynamic.c
 # material compositions (generation capacity)
 composition_generation = pd.read_csv(path_external_data_scenario / 'composition_generation.csv',index_col=[0,1]).transpose()  # in gram/MW
 # composition_generation = composition_generation.drop(columns=[col for col in composition_generation.columns if col[1] == '<EMPTY>'])
+kilometrage = pd.read_csv(path_external_data_scenario / 'kilometrage.csv', index_col='t')  # to get region list without running storage - TODO: get regions from different source
 
 
 # 2. IMAGE/TIMER files ====================================================================================
 
 # Generation capacity (stock & inflow/new) in MW peak capacity, FILES from TIMER
-gcap_data = read_mym_df(path_image_output / 'Gcap.out')
+gcap_data = read_mym_df(path_image_output / 'EnergyServices' / 'Gcap.out')
 
 
 #----------------------------------------------------------------------------------------------------------
@@ -118,7 +120,6 @@ gcap_data = read_mym_df(path_image_output / 'Gcap.out')
 ###########################################################################################################
 #----------------------------------------------------------------------------------------------------------
 
-kilometrage = pd.read_csv(path_external_data_scenario / 'kilometrage.csv', index_col='t')  # to get region list without running storage - TODO: get regions from different source
 region_list = list(kilometrage.columns.values)   
 
 gcap_tech_list = list(composition_generation.loc[:,idx[2020,:]].droplevel(axis=1, level=0).columns)    #list of names of the generation technologies (workaround to retain original order)
@@ -263,11 +264,11 @@ complete_timeline = prism.Timeline(time_start, 2060, 1)
 simulation_timeline = prism.Timeline(1970, 2060, 1)
 
 # Define the coordinates of all dimensions.
-Region = list(prep_data["stocks"].coords["Region"].values)
-Time = [t for t in complete_timeline]
-Cohort = Time
-Type = list(prep_data["stocks"].coords["Type"].values)
-material = list(prep_data["material_intensities"].coords["material"].values)
+# Region = list(prep_data["stocks"].coords["Region"].values)
+# Time = [t for t in complete_timeline]
+# Cohort = Time
+# Type = list(prep_data["stocks"].coords["Type"].values)
+# material = list(prep_data["material_intensities"].coords["material"].values)
 
 # Create
 # main_model_normal = GenericMainModel(
@@ -277,10 +278,14 @@ material = list(prep_data["material_intensities"].coords["material"].values)
 
 new_prep_data = prep_data.copy()
 new_prep_data["knowledge_graph"] = create_electricity_graph()
+new_prep_data["shares"] = None
+
+sec_elctr_gen = Sector("elctr_gen", new_prep_data)
+
 
 
 main_model_factory = ModelFactory(
-    new_prep_data, complete_timeline
+    sec_elctr_gen, complete_timeline
     ).add(GenericStocks
     ).add(MaterialIntensities
     ).finish()
@@ -292,7 +297,7 @@ main_model_factory.simulate(simulation_timeline)
 ###########################################################################################################
 #%%% 1.5) Tests: Check results
 
-list(main_model_factory.default)
+# list(main_model_factory.default)
 
 main_model_factory.inflow
 
@@ -974,9 +979,9 @@ gdp_pc = pd.read_csv(path_external_data_scenario / 'gdp_pc.csv', index_col=0)  #
 # 2. IMAGE/TIMER files ====================================================================================
 
 # Generation capacity (stock & inflow/new) in MW peak capacity, FILES from TIMER
-gcap_data = read_mym_df(path_image_output / 'Gcap.out')
+gcap_data = read_mym_df(path_image_output / 'EnergyServices' / 'Gcap.out')
 # gcap_BL_data = read_mym_df('SSP2\\SSP2_BL\\Gcap.out') # baseline scenario? TODO: what is the purpose of reading in the scneario + the baseline?
-gcap_BL_data = read_mym_df(path_image_output / 'Gcap.out')
+gcap_BL_data = read_mym_df(path_image_output / 'EnergyServices' / 'Gcap.out')
 
 
 #----------------------------------------------------------------------------------------------------------
@@ -1164,7 +1169,29 @@ lifetime_grid_distr = pd.concat([df_mean, df_stdev], axis=1) # Concatenate along
 
 
 
+
+
 # Stocks
+
+grid_dict = dict({
+        'HV - Lines - Overhead': grid_length_Hv_above_new,
+        'HV - Lines - Underground': grid_length_Hv_under_new,
+        'HV - Substations': grid_subst_Hv_new,
+        'HV - Transformers': grid_trans_Hv_new,
+        'MV - Lines - Overhead': grid_length_Mv_above_new,
+        'MV - Lines - Underground': grid_length_Mv_under_new,
+        'MV - Substations': grid_subst_Mv_new,
+        'MV - Transformers': grid_trans_Mv_new,
+        'LV - Lines - Overhead': grid_length_Lv_above_new,
+        'LV - Lines - Underground': grid_length_Lv_under_new,
+        'LV - Substations': grid_subst_Lv_new,
+        'LV - Transformers': grid_trans_Lv_new
+    })
+    
+grid_stock = pd.concat(grid_dict, axis=1) # Concatenate with keys to create MultiIndex ('Name', 'Region')
+# grid_stock.columns = grid_stock.columns.swaplevel(0, 1) # Swap levels so Region comes first
+grid_stock = grid_stock.sort_index(axis=1)
+
 
 
 #----------------------------------------------------------------------------------------------------------
