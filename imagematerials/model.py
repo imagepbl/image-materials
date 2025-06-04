@@ -452,8 +452,9 @@ class GenericEndOfLife(prism.Model):
             Recycling rate data by material and type.
         """
         t, dt = time.t, time.dt
-
-        self.end_of_life_materials.sel(eoltype = "collected").loc[t] = outflow_by_cohort_materials[t] * self.collection.sel[t]
+        if t not in [2020, 2050]:
+            return
+        self.end_of_life_materials.sel(eoltype = "collected").loc[t] = outflow_by_cohort_materials[t] * collection.loc[t]
 
         #self.collected[t].loc[:] = 0.0
         #self.reusable[t].loc[:] = 0.0
