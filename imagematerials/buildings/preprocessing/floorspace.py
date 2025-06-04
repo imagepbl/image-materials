@@ -210,6 +210,31 @@ def compute_housing_residential(population, average_m2_capita, housing_type, flo
     m2_housing_per_capita = average_m2_capita * housing_type
     m2_housing_share = m2_housing_per_capita / m2_housing_per_capita.sum(["Type"])
     total_m2_housing_per_cap = m2_housing_share*floorspace_rururb
+
+    if 'base' in circular_economy_config.keys():
+        base_year = circular_economy_config["base"]["buildings"]["base_year"]
+        target_year = circular_economy_config["base"]["buildings"]["target_year"]
+        floor_pc_2020 = circular_economy_config["base"]["buildings"]["residential"]["2020"]["useful_floor_pc"]
+        region_knowledge_graph = create_region_graph()
+        regions = total_m2_housing_per_cap.coords["Region"].values
+        floor_pc_2020_xr = xr.DataArray(
+            list(floor_pc_2020.values()),
+            coords={"Region": list(floor_pc_2020.keys())},
+            dims=["Region"],
+            name="floor_pc_2020"
+        )
+
+        #regions_mapped = region_knowledge_graph.find_relations_inverse(regions, floor_pc_2020.keys())
+        floor_pc_2020_mapped = region_knowledge_graph.rebroadcast_xarray(floor_pc_2020_xr, output_coords=regions, dim="Region")
+        target_vals = floor_pc_2020_mapped
+        current_vals = total_m2_housing_per_cap.sel(Time=2020)\
+                                            .sum(dim="Type")\
+                                            .mean(dim="Area")
+
+        scaling_factors = target_vals / current_vals
+
+        total_m2_housing_per_cap = total_m2_housing_per_cap * scaling_factors
+
     total_m2_housing = total_m2_housing_per_cap * population.sel({"Area": ["Rural", "Urban"]})
     floorspace_residential = merge_dims(total_m2_housing, "Type", "Area")
     return floorspace_residential.transpose("Time", "Region", "Type")
