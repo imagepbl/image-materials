@@ -241,12 +241,31 @@ def compute_housing_residential(population, average_m2_capita, housing_type, flo
     # Calculate the share of housing types on a m2 basis
     m2_housing_share = m2_housing_per_capita / m2_housing_per_capita.sum(["Type"])
     total_m2_housing_per_cap = m2_housing_share*floorspace_rururb
-    total_m2_housing_per_cap = prism.Q_(total_m2_housing_per_cap, "m^2/person")
 
-    # Implement circular economy measures if configuration is provided
     if 'base' in circular_economy_config.keys():
-        total_m2_housing_per_cap = ce_measures_residential_housing(total_m2_housing_per_cap, circular_economy_config)
-    
+        base_year = circular_economy_config["base"]["buildings"]["base_year"]
+        target_year = circular_economy_config["base"]["buildings"]["target_year"]
+        floor_pc_2020 = circular_economy_config["base"]["buildings"]["residential"]["2020"]["useful_floor_pc"]
+        region_knowledge_graph = create_region_graph()
+        regions = total_m2_housing_per_cap.coords["Region"].values
+        floor_pc_2020_xr = xr.DataArray(
+            list(floor_pc_2020.values()),
+            coords={"Region": list(floor_pc_2020.keys())},
+            dims=["Region"],
+            name="floor_pc_2020"
+        )
+
+        #regions_mapped = region_knowledge_graph.find_relations_inverse(regions, floor_pc_2020.keys())
+        floor_pc_2020_mapped = region_knowledge_graph.rebroadcast_xarray(floor_pc_2020_xr, output_coords=regions, dim="Region")
+        target_vals = floor_pc_2020_mapped
+        current_vals = total_m2_housing_per_cap.sel(Time=2020)\
+                                            .sum(dim="Type")\
+                                            .mean(dim="Area")
+
+        scaling_factors = target_vals / current_vals
+
+        total_m2_housing_per_cap = total_m2_housing_per_cap * scaling_factors
+
     total_m2_housing = total_m2_housing_per_cap * population.sel({"Area": ["Rural", "Urban"]})
     floorspace_residential = merge_dims(total_m2_housing, "Type", "Area")
     return floorspace_residential.transpose("Time", "Region", "Type")
