@@ -10,7 +10,7 @@ from pytest import mark
 
 from imagematerials.concepts import knowledge_graph
 from imagematerials.model import GenericMaterials, GenericStocks, MaterialIntensities, RestModel
-
+from imagematerials.vehicles.battery import Battery
 
 @pytest.fixture(scope="module")
 def coordinates():
@@ -29,7 +29,8 @@ def timelines():
     return prism.Timeline(2000, 2002, 1), prism.Timeline(2001, 2002, 1)
 
 @mark.parametrize(
-    "model_class", [GenericStocks, GenericMaterials, MaterialIntensities, RestModel]
+    "model_class", [GenericStocks, GenericMaterials, MaterialIntensities, RestModel,
+                    Battery]
 )
 def test_basic_model(model_class):
     """Test to check any model without specific tests and without running it."""
