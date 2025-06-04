@@ -255,8 +255,8 @@ def compute_housing_residential(population, average_m2_capita, housing_type, flo
             name="floor_pc_2020"
         )
 
-        #regions_mapped = region_knowledge_graph.find_relations_inverse(regions, floor_pc_2020.keys())
-        floor_pc_2020_mapped = region_knowledge_graph.rebroadcast_xarray(floor_pc_2020_xr, output_coords=regions, dim="Region")
+        regions_mapped = list(region_knowledge_graph.find_relations_inverse(regions, floor_pc_2020.keys()))
+        floor_pc_2020_mapped = region_knowledge_graph.rebroadcast_xarray(floor_pc_2020_xr, output_coords=regions_mapped, dim="Region")
         target_vals = floor_pc_2020_mapped
         current_vals = total_m2_housing_per_cap.sel(Time=2020)\
                                             .sum(dim="Type")\
@@ -264,7 +264,7 @@ def compute_housing_residential(population, average_m2_capita, housing_type, flo
 
         scaling_factors = target_vals / current_vals
 
-        total_m2_housing_per_cap = total_m2_housing_per_cap * scaling_factors
+        total_m2_housing_per_cap.loc[{"Region": regions_mapped}] = total_m2_housing_per_cap.sel(Region = regions_mapped) * scaling_factors
 
     total_m2_housing = total_m2_housing_per_cap * population.sel({"Area": ["Rural", "Urban"]})
     floorspace_residential = merge_dims(total_m2_housing, "Type", "Area")
