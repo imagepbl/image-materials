@@ -453,8 +453,6 @@ class GenericEndOfLife(prism.Model):
         """
         t, dt = time.t, time.dt
 
-    
-
         self.end_of_life_materials.sel(eoltype = "collected").loc[t] = outflow_by_cohort_materials[t] * self.collection.sel[t]
 
         #self.collected[t].loc[:] = 0.0
