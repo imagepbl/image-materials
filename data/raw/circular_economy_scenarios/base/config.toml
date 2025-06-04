@@ -7,12 +7,9 @@ target_year = 2060
 China = 39
 Japan = 39.7
 "Western Europe" = 39.7
-"Northern Africa" = 30.9
-"Middle East" = 30.9
-"Turkey" = 37
-"Oceania" = 37
-"Mexico" = 37
+"Middle East and Northern Africa" = 30.9
 
+"Other OECD" = 37
 #Canada = 60.6
 #"Other Asia" = 15.9
 #USA = 60.2
