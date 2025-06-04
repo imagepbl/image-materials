@@ -87,7 +87,6 @@ class GenericStocks(prism.Model):
                     "Cohort": self.Cohort,
                     "Region": self.Region,
                     "Type": self.Type})
-        # self.stock_by_cohort.loc[time.start]
 
     def compute_values(self, time: prism.Time):
         """

@@ -6,8 +6,9 @@ import pytest
 import xarray as xr
 from pytest import mark
 
-from imagematerials.model import GenericMaterials, GenericStocks, MaterialIntensities, RestModel
 from imagematerials.concepts import knowledge_graph
+from imagematerials.model import GenericMaterials, GenericStocks, MaterialIntensities, RestModel
+
 
 @pytest.fixture(scope="module")
 def coordinates():
