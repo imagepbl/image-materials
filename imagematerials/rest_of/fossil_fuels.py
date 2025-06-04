@@ -12,10 +12,8 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from imagematerials.read_mym import read_mym_df
-from imagematerials.rest_of.const import (parse_dim, get_key, DIM1_primsec_reversed_dict, DIM2_primary_dict, 
-                   DIM1_primsec_dict, DIM2_primsec_dict, DIM3_seconden_dict, 
-                   DIM3_seconden_reversed_dict, DIM2_sectors_dict, path_input_data, path_figures, scenario, 
-                   path_scenario_data_fossil)
+from imagematerials.rest_of.const import (parse_dim, get_key, DIM2_primary_dict, 
+                                          path_figures, path_scenario_data_fossil)
 
 from imagematerials.rest_of.sankey_function import create_node_dict, index_mapper, convert_index_to_node_id, prepare_Sankey_lists
 
