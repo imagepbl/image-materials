@@ -31,7 +31,7 @@ if __name__ == "__main__":
     new_prep_data["knowledge_graph"] = knowledge_graph
     new_prep_data["weights"] = new_prep_data.pop("vehicle_weights")
 
-    summary_vhc = summarize_prep_data(new_prep_data)
+    summary_vhc = summarize_prep_data(new_prep_data, climate_policy_config, circular_economy_config)
     with open(Path("tests", "data", "vehicles_summary.json"), "w", encoding="utf8") as handle:
         json.dump(summary_vhc, handle)
 
