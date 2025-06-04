@@ -48,7 +48,7 @@ def buildings_preprocessing(base_directory, climate_policy_config: dict, circula
 
     housing_type = compute_housing_type(database_directory)
 
-    floorspace_residential = compute_housing_residential(population, average_m2_capita, housing_type, floorspace_rururb)
+    floorspace_residential = compute_housing_residential(population, average_m2_capita, housing_type, floorspace_rururb, circular_economy_config)
 
     floorspace_residential
 
