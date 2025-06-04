@@ -25,6 +25,7 @@ path_input_data = "../../../data/raw/rest-of"
 
 path_scenario_data = f"../../../data/raw/image/{SCENARIO}/Biomass/"
 path_scenario_data_fossil = f"../../../data/raw/image/{SCENARIO}/EnergyFlows/"
+path_scenario_data_water = f"../../../data/raw/SSP2/EnergyFlows/"
 
 # Output
 path_figures = "../figures_test"
@@ -206,6 +207,28 @@ IAI_TO_IMAGE_CLASSES = {
         'class_ 12',  # C.Europe
         'class_ 13'   # Turkey
     ]
+}
+
+copper_regions = {
+    'copper_regions': ['Other North America countries',
+                    'USA',
+                    'South America',
+                    'Europe',
+                    'Rest of Asia',
+                    'Africa',
+                    'Oceania',
+                    'India',
+                    'Japan',
+                    'Korea'],
+    'china': ['China']}
+
+aluminium_regions = {
+    'all_together' : ['Africa', 'Asia (ex China)', 
+                    'Estimated Unreported to IAI', 'Gulf Cooperation Council',
+                    'North America', 'Russia & Eastern Europe',
+                    'South America', 'Western & Central Europe'],
+    'china' : ['China (Estimated)'],
+    'oceania' : ['Oceania'],
 }
 
 # get list of all IMAGE regions

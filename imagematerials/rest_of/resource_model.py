@@ -14,6 +14,7 @@ from imagematerials.rest_of.const import (COPPER_AVERAGE_REGIONS_TO_IMAGE, CLASS
 from imagematerials.rest_of.correlation_materials import (calculate_gdp, summarize_IMAGE_regions, 
                                    calculate_material_consumption_pc_and_gdp_pc_groups, 
                                    sum_total_over_grouped_regions)
+
 from imagematerials.rest_of.projections_materials import estimate_models_per_region_group, match_regions_to_best_model
 
 class ResourceModel():
@@ -21,7 +22,8 @@ class ResourceModel():
     initialize basic resource model with resource data and gdp, pop data
     '''
     def __init__(self, resource_group: str, resource: str, start_year: int, image_mat_available: bool, 
-                 end_year = 2017, convert_image = False, convert_to_tons = None, trade_data = False):
+                 end_year = 2017, convert_image = False, convert_to_tons = None, trade_data = False, 
+                 path_input_data = path_input_data):
         
         # Name resource group
         self.resource_group = resource_group
