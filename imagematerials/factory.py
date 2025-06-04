@@ -216,8 +216,6 @@ class ModelFactory():
                         prism_time = prism.Time(factory.complete_timeline.start,
                                                 factory.complete_timeline.end,
                                                 dt, historic_time)
-                        if historic_time == factory.complete_timeline.start:
-                            continue
                         if historic_time >= t:
                             break
                         self._compute_one_timestep(prism_time)

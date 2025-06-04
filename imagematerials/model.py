@@ -101,7 +101,6 @@ class GenericStocks(prism.Model):
         t, dt = time.t, time.dt
         self.inflow[t].loc[:] = 0.0
         self.outflow_by_cohort[t].loc[:] = 0.0
-
         compute_dynamic_stock_driven(
             self.stocks, self.stock_by_cohort,  self.inflow, self.outflow_by_cohort,
             self.survival_matrix, t, self.shares)
@@ -145,7 +144,7 @@ class GenericMaterials(prism.Model):
 
     # Data dependencies
     input_data: tuple[str] = ("weights", "material_fractions", "inflow",
-                              "stock_by_cohort", "outflow_by_cohort") 
+                              "stock_by_cohort", "outflow_by_cohort")
     output_data: tuple[str] = ("stock_by_cohort_materials", "inflow_materials",
                                "outflow_by_cohort_materials")
 
@@ -195,7 +194,6 @@ class GenericMaterials(prism.Model):
 @prism.interface
 class RestModel(prism.Model):
     # Input data
-    total_inflow_materials_class: int  # Fix
     gdp_per_capita: xr.DataArray  # Will be a prism time variable probably
     population: xr.DataArray
 
@@ -205,7 +203,7 @@ class RestModel(prism.Model):
     input_data: tuple[str] = ("total_inflow_materials_class", "gdp_per_capita", "population")
     output_data: tuple[str] = ("inflow_materials_rest")
 
-    def compute_values(self, time: prism.Time, total_inflow_materials_class, gdp_per_capita, population):
+    def compute_values(self, time: prism.Time, total_inflow_materials_class):
         t = time.t
         self.total_inflow_materials_rest[t] = self.total_inflow_materials_class.predict(self.gdp_per_capita)*self.population
 
