@@ -56,7 +56,7 @@ class Sector():
                         raise ValueError(
                             f"Mismatch in coordinates with dimension '{coord.name}'"
                             f" with data array '{input_name}' having different coordinates"
-                            f" than previously assumed in '{self.coordinate_sources[coord.name]}'."
+                            f" than previously assumed in '{coordinate_sources[coord.name]}'."
                             f"New: {coord_list}\n\nOld:{self.coordinates[coord.name]}")
                     coordinate_sources[coord.name].append(input_name)
         return coordinates, coordinate_sources
@@ -216,8 +216,6 @@ class ModelFactory():
                         prism_time = prism.Time(factory.complete_timeline.start,
                                                 factory.complete_timeline.end,
                                                 dt, historic_time)
-                        if historic_time == factory.complete_timeline.start:
-                            continue
                         if historic_time >= t:
                             break
                         self._compute_one_timestep(prism_time)
