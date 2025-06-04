@@ -16,10 +16,11 @@ scenario_variant = "2D_RE"    # CP = Current Policies, 2D = 2-Degree Climate Pol
 SCENARIO_SELECT = base_scenario + "_" + scenario_variant
 
 # End-of-Life types
-EolTypes = prism.Dimension("eol", [
+EOL_TYPE = prism.Dimension("eoltype", [
+    "collected",
     "reusable",
     "recyclable",
     "losses",
-    "surplus losses"  # Currently unused.
+    "surpluslosses"
 ]
 )

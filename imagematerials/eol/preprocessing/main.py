@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 
-from imagematerials.end_of_life.constants import SCENARIO_SELECT, start_year, end_year
-from imagematerials.end_of_life.preprocessing.preprocessing import compute_eol
+from imagematerials.eol.constants import SCENARIO_SELECT, start_year, end_year
+from imagematerials.eol.preprocessing.interpolate import interpolate_eol_rates
 
 def eol_preprocessing(base_dir):
     collection_in = pd.read_csv(Path(base_dir, "end_of_life","SSP2_2D_RE", "collection.csv"))
@@ -13,12 +13,12 @@ def eol_preprocessing(base_dir):
     recycling_in = pd.read_csv(Path(base_dir, "end_of_life","SSP2_2D_RE","recycling.csv"))
 
     # renaming columns for consistency
-    collection_in = collection_in.rename(columns={'regions': 'region'})
-    reuse_in = reuse_in.rename(columns={'Time': 'time', 'Region':'region', 'Sector': 'sector', 'Element': 'category'} )
-    recycling_in = recycling_in.rename(columns={'Time': 'time', 'Region':'region', 'Sector': 'sector', 'Element': 'category'} )
+    collection_in = collection_in.rename(columns={'time':'Time', 'sector': 'Sector', 'regions': 'Region', 'category':'Type'})
+    reuse_in = reuse_in.rename(columns={ 'Element': 'Type'} )
+    recycling_in = recycling_in.rename(columns={'Element': 'Type'} )
 
     # melting material columns
-    id_vars = ['region', 'time', 'sector', 'category'] 
+    id_vars = ['Region', 'Time', 'Sector', 'Type'] 
     value_vars = ['Steel',	'Concrete',	'Wood',	'Cu','Aluminium', 'Glass']
 
     collection_df = pd.melt(
@@ -45,19 +45,20 @@ def eol_preprocessing(base_dir):
         value_name = 'value'
     )
 
-    xr_collection = collection_df.set_index(['time', 'region', 'sector', 'category', 'material']) \
+    xr_collection = collection_df.set_index(['Time', 'Region', 'Sector', 'Type', 'material']) \
                     .to_xarray()['value']
 
-    xr_reuse = reuse_df.set_index(['time', 'region', 'sector', 'category', 'material']) \
+    xr_reuse = reuse_df.set_index(['Time', 'Region', 'Sector', 'Type', 'material']) \
                     .to_xarray()['value']
 
-    xr_recycling = recycling_df.set_index(['time', 'region', 'sector', 'category', 'material']) \
+    xr_recycling = recycling_df.set_index(['Time', 'Region', 'Sector', 'Type', 'material']) \
                     .to_xarray()['value']
     
         # inter and extrapolated collection, reuse and recycling xr 
-    collection = compute_eol(xr_collection, start_year= start_year, end_year=end_year,min_value = 0,max_value = 1)
-    reuse = compute_eol(xr_reuse, start_year= start_year, end_year=end_year,min_value = 0,max_value = 1)
-    recycling = compute_eol(xr_recycling, start_year= start_year, end_year=end_year,min_value = 0,max_value = 1)
+    collection = interpolate_eol_rates(xr_collection, start_year= start_year, end_year=end_year,min_value = 0,max_value = 1)
+    reuse = interpolate_eol_rates(xr_reuse, start_year= start_year, end_year=end_year,min_value = 0,max_value = 1)
+    recycling = interpolate_eol_rates(xr_recycling, start_year= start_year, end_year=end_year,min_value = 0,max_value = 1)
+
 
     return {
         "collection": collection,
