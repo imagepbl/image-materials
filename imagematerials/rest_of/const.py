@@ -24,9 +24,10 @@ SCENARIO = "SSP2_CP"
 path_input_data = "../../../data/raw/rest-of"
 
 path_scenario_data = f"../../../data/raw/image/{SCENARIO}/Biomass/"
+path_scenario_data_fossil = f"../../../data/raw/image/{SCENARIO}/EnergyFlows/"
 
 # Output
-path_figures = "../figures"
+path_figures = "../figures_test"
 
 
 
