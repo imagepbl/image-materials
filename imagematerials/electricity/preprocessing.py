@@ -21,7 +21,7 @@ from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_life
 from imagematerials.model import GenericMainModel, GenericMaterials, GenericStocks, Maintenance, MaterialIntensities
 from imagematerials.factory import ModelFactory, Sector
 from imagematerials.concepts import create_electricity_graph
-from imagematerials.electricity.utils import MNLogit, stock_tail
+from imagematerials.electricity.utils import MNLogit, stock_tail, materials_grid_additions_to_kgperkm, print_df_info
 
 
 from imagematerials.electricity.constants import ( # TODO: import not working at the moment
@@ -968,6 +968,8 @@ grid_additions = pd.read_csv(path_external_data_standard / 'grid_additions.csv',
 # dynamic or scenario-dependent data (lifetimes & material intensity)
 
 lifetime_grid_elements = pd.read_csv(path_external_data_scenario  / 'operational_lifetime_grid.csv', index_col=0)         # Average lifetime in years of grid elements
+lifetime_grid_elements.rename_axis('Year', inplace=True)
+
 # dynamic material intensity files (kg/km or kg/unit)
 materials_grid = pd.read_csv(path_external_data_scenario / 'Materials_grid_dynamic.csv', index_col=[0,1])                # Material intensity of grid lines specific material content for Hv, Mv & Lv lines, & specific for underground vs. aboveground lines. (kg/km)
 materials_grid_additions = pd.read_csv(path_external_data_scenario / 'Materials_grid_additions.csv', index_col=[0,1])    # (not part of the SA yet) Additional infrastructure required for grid connections, such as transformers & substations (material compositin in kg/unit)
@@ -1062,9 +1064,9 @@ for region in region_list:
     else:
         select_proxy = 'Other'
     #print(str(region) + ': ' + select_proxy)
-    function_Hv_under[region] = gdp_pc[region] * underground_ratio.loc[idx[select_proxy,'mult'],'Hv'] + underground_ratio.loc[idx[select_proxy,'add'],'Hv']
-    function_Mv_under[region] = gdp_pc[region] * underground_ratio.loc[idx[select_proxy,'mult'],'Mv'] + underground_ratio.loc[idx[select_proxy,'add'],'Mv']
-    function_Lv_under[region] = gdp_pc[region] * underground_ratio.loc[idx[select_proxy,'mult'],'Lv'] + underground_ratio.loc[idx[select_proxy,'add'],'Lv']
+    function_Hv_under[region] = gdp_pc[region] * underground_ratio.loc[idx[select_proxy,'mult'],'HV'] + underground_ratio.loc[idx[select_proxy,'add'],'HV']
+    function_Mv_under[region] = gdp_pc[region] * underground_ratio.loc[idx[select_proxy,'mult'],'MV'] + underground_ratio.loc[idx[select_proxy,'add'],'MV']
+    function_Lv_under[region] = gdp_pc[region] * underground_ratio.loc[idx[select_proxy,'mult'],'LV'] + underground_ratio.loc[idx[select_proxy,'add'],'LV']
 
 # maximize linear function at 100 & minimize at 0 (%)
 function_Hv_under = function_Hv_under.apply(lambda x: [y if y >= 0 else 0 for y in x])                     
@@ -1093,12 +1095,12 @@ grid_length_Lv_above = grid_length_Lv_time * (1 - function_Lv_under/100)
 grid_length_Lv_under = grid_length_Lv_time * function_Lv_under/100
 grid_length_Lv_total = grid_length_Lv_above + grid_length_Lv_under
 
-grid_subst_Hv = grid_length_Hv_total.mul(grid_additions.loc['Substations','Hv'])        # number of substations on Hv network
-grid_subst_Mv = grid_length_Mv_total.mul(grid_additions.loc['Substations','Mv'])        # # of substations
-grid_subst_Lv = grid_length_Lv_total.mul(grid_additions.loc['Substations','Lv'])        # # of substations
-grid_trans_Hv = grid_length_Hv_total.mul(grid_additions.loc['Transformers','Hv'])       # number of transformers on the Hv network
-grid_trans_Mv = grid_length_Mv_total.mul(grid_additions.loc['Transformers','Mv'])       # # of transformers
-grid_trans_Lv = grid_length_Lv_total.mul(grid_additions.loc['Transformers','Lv'])       # # of transformers
+grid_subst_Hv = grid_length_Hv_total.mul(grid_additions.loc['Substations','HV'])        # number of substations on HV network
+grid_subst_Mv = grid_length_Mv_total.mul(grid_additions.loc['Substations','MV'])        # # of substations
+grid_subst_Lv = grid_length_Lv_total.mul(grid_additions.loc['Substations','LV'])        # # of substations
+grid_trans_Hv = grid_length_Hv_total.mul(grid_additions.loc['Transformers','HV'])       # number of transformers on the HV network
+grid_trans_Mv = grid_length_Mv_total.mul(grid_additions.loc['Transformers','MV'])       # # of transformers
+grid_trans_Lv = grid_length_Lv_total.mul(grid_additions.loc['Transformers','LV'])       # # of transformers
 
 
 
@@ -1154,7 +1156,7 @@ lifetime_grid_elements                        = lifetime_grid_elements.reindex(l
 # TODO: check why lifetime for lines is interpoltaed from 2020 - 40yrs to 2050 - 48 yrs and then back to 2060 - 40 yrs -> should stay at 48 yrs?
 
 
-
+#######################################################################################################
 #%%%% NEW
 
 # lifetimes
@@ -1167,8 +1169,42 @@ lifetime_grid_distr = pd.concat([df_mean, df_stdev], axis=1) # Concatenate along
 
 # Materials
 
+# harmonize units of MI -> then materials_grid and materials_grid_additions can be merged in one dataframe
 
+# Grid Additions MIs ---
+# for substations and transformer we multiply the MI (kg/unit of substation or transformer) with the number of substations or transformers per kilometer of grid length
+materials_grid_additions_kgperkm = materials_grid_additions_to_kgperkm(materials_grid_additions_interpol, grid_additions)
+# material intensities: (years, tech. type) index and materials as columns -> years as index and (tech. type, materials) as columns
+materials_grid_additions_kgperkm.index.names = ["Year", "Type"]
+materials_grid_additions_kgperkm = materials_grid_additions_kgperkm.unstack(level='Type') # bring tech. type from row index to column header
+materials_grid_additions_kgperkm.columns = materials_grid_additions_kgperkm.columns.swaplevel(0, 1) # Swap the levels of the MultiIndex columns
+materials_grid_additions_kgperkm = materials_grid_additions_kgperkm.sort_index(axis=1)
+# rename columns to match knowledge graph
+new_level_0 = [col.replace(' ', ' - ', 1) for col in materials_grid_additions_kgperkm.columns.get_level_values(0)]
+new_columns = pd.MultiIndex.from_arrays([
+    new_level_0,
+    materials_grid_additions_kgperkm.columns.get_level_values(1)
+], names=materials_grid_additions_kgperkm.columns.names)
+materials_grid_additions_kgperkm.columns = new_columns
 
+# Grid MIs ---
+materials_grid_kgperkm = materials_grid_interpol.copy() # copy the interpolated material intensities
+materials_grid_kgperkm.index.names = ["Year", "Type"]
+materials_grid_kgperkm = materials_grid_kgperkm.unstack(level='Type') # bring tech. type from row index to column header
+materials_grid_kgperkm.columns = materials_grid_kgperkm.columns.swaplevel(0, 1) # Swap the levels of the MultiIndex columns
+materials_grid_kgperkm = materials_grid_kgperkm.sort_index(axis=1)
+# rename columns to match knowledge graph
+new_level_0 = [col.replace(' ', ' - Lines - ', 1) for col in materials_grid_kgperkm.columns.get_level_values(0)]
+new_columns = pd.MultiIndex.from_arrays([
+    new_level_0,
+    materials_grid_kgperkm.columns.get_level_values(1)
+], names=materials_grid_kgperkm.columns.names)
+materials_grid_kgperkm.columns = new_columns
+
+# print_df_info(materials_grid_kgperkm, "Materials Grid kg/km")
+# print_df_info(materials_grid_additions_kgperkm, "Materials Grid Additions kg/km")
+
+materials_grid_combined_kgperkm = pd.concat([materials_grid_kgperkm, materials_grid_additions_kgperkm], axis=1) # 
 
 
 # Stocks
@@ -1192,7 +1228,7 @@ grid_stock = pd.concat(grid_dict, axis=1) # Concatenate with keys to create Mult
 # grid_stock.columns = grid_stock.columns.swaplevel(0, 1) # Swap levels so Region comes first
 grid_stock = grid_stock.sort_index(axis=1)
 
-
+print_df_info(grid_stock, "grid_stock")
 
 #----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
@@ -1217,8 +1253,8 @@ unit_mapping = {
 
 # Conversion table for all coordinates, to be removed/adapted after input tables are fixed.
 conversion_table = {
-    "gcap_stock": (["Time"], ["Type", "Region"],),
-    "gcap_types_materials": (["Cohort"], ["Type", "material"],)
+    "grid_stock": (["Time"], ["Type", "Region"],),
+    "materials_grid_combined_kgperkm": (["Cohort"], ["Type", "material"],)
     # "gcap_materials_interpol": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]})
 }
 
@@ -1237,8 +1273,8 @@ conversion_table = {
 #         'vehicle_shares_typical': vehicle_shares_typical
 #     }
 results_dict = {
-        'gcap_stock': gcap_stock,
-        'gcap_types_materials': gcap_types_materials,
+        'grid_stock': grid_stock,
+        'materials_grid_combined_kgperkm': materials_grid_combined_kgperkm,
         'lifetime_grid_distr': lifetime_grid_distr,
 }
 
@@ -1260,9 +1296,9 @@ for df_name, df in results_dict.items():
 
 
 
-preprocessing_results_xarray["lifetimes"] = convert_life_time_vehicles(preprocessing_results_xarray["gcap_lifetime_distr"])
-preprocessing_results_xarray["stocks"] = preprocessing_results_xarray.pop("gcap_stock")
-preprocessing_results_xarray["material_intensities"] = preprocessing_results_xarray.pop("gcap_types_materials")
+preprocessing_results_xarray["lifetimes"] = convert_life_time_vehicles(preprocessing_results_xarray["lifetime_grid_distr"])
+preprocessing_results_xarray["stocks"] = preprocessing_results_xarray.pop("grid_stock")
+preprocessing_results_xarray["material_intensities"] = preprocessing_results_xarray.pop("materials_grid_combined_kgperkm")
 # preprocessing_results_xarray["shares"] = preprocessing_results_xarray.pop("vehicle_shares")
 
 #----------------------------------------------------------------------------------------------------------
@@ -1297,16 +1333,19 @@ material = list(prep_data["material_intensities"].coords["material"].values)
 
 new_prep_data = prep_data.copy()
 new_prep_data["knowledge_graph"] = create_electricity_graph()
+new_prep_data["shares"] = None
+
+sec_elctr_trans = Sector("elctr_trans", new_prep_data)
 
 
 main_model_factory = ModelFactory(
-    new_prep_data, complete_timeline
+    sec_elctr_trans, complete_timeline
     ).add(GenericStocks
     ).add(MaterialIntensities
     ).finish()
 
-main_model_factory.simulate(simulation_timeline)
 
+main_model_factory.simulate(simulation_timeline)
 
 
 
@@ -1336,3 +1375,5 @@ main_model_factory.simulate(simulation_timeline)
 
 
 
+
+# %%
