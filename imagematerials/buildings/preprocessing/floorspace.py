@@ -24,6 +24,7 @@ from imagematerials.buildings.preprocessing.circular_economy_measures import ce_
 
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, merge_dims
+from imagematerials.concepts import create_region_graph
 
 
 prism.unit_registry.load_definitions(files("imagematerials") / "units.txt")
@@ -234,9 +235,7 @@ def compute_average_m2_capita(base_directory):
 
     return average_m2_capita
 
-
-def compute_housing_residential(population, average_m2_capita, housing_type, floorspace_rururb, circular_economy_config:dict):
-    # Calculate the m2 per capita for each housing type
+def compute_housing_residential(population, average_m2_capita, housing_type, floorspace_rururb, circular_economy_config):
     m2_housing_per_capita = average_m2_capita * housing_type
     # Calculate the share of housing types on a m2 basis
     m2_housing_share = m2_housing_per_capita / m2_housing_per_capita.sum(["Type"])
