@@ -20,6 +20,7 @@ from imagematerials.buildings.constants import (
 )
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, merge_dims
+from imagematerials.concepts import create_region_graph
 
 far_start_year = 1721
 start_year = 1820
@@ -206,7 +207,7 @@ def compute_average_m2_capita(base_directory):
     average_m2_capita.coords["Region"] = [str(x.values) for x in average_m2_capita.coords["Region"]]
     return average_m2_capita
 
-def compute_housing_residential(population, average_m2_capita, housing_type, floorspace_rururb):
+def compute_housing_residential(population, average_m2_capita, housing_type, floorspace_rururb, circular_economy_config):
     m2_housing_per_capita = average_m2_capita * housing_type
     m2_housing_share = m2_housing_per_capita / m2_housing_per_capita.sum(["Type"])
     total_m2_housing_per_cap = m2_housing_share*floorspace_rururb
