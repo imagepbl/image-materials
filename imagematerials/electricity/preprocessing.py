@@ -1357,10 +1357,12 @@ main_model_factory.simulate(simulation_timeline)
 list(main_model_factory.elctr_trans)
 
 
+
+path_test_plots = Path(path_base, "imagematerials", "electricity", "out_test", "Figures")
+
 ###########################################################################################################
 #%%% 3.5) Visualize Stocks 
 
-path_test_plots = Path(path_base, "imagematerials", "electricity", "out_test", "Figures")
 
 da_stocks = main_model_factory.stocks.copy()
 
@@ -1451,15 +1453,16 @@ for i, mat in enumerate(materials):
     
     axes[i].set_title(f"{mat}")
     axes[i].set_xlabel(" ")
-    axes[i].set_ylabel("Value")
+    axes[i].set_ylabel("Inflow [kg]")
     axes[i].legend()
     axes[i].grid(alpha=0.3, linestyle='--')
 
 axes[-1].set_xlabel("Time")
 
-plt.suptitle("Material Usage by Component Type", fontsize=16)
+plt.suptitle("Electricity Grid Inflow Materials", fontsize=16)
 plt.tight_layout()
-# fig.savefig(path_test_plots / "Grid_inflow-materials_world.pdf", dpi=300)
+fig.savefig(path_test_plots / "Grid_inflow-materials_world.pdf")
+fig.savefig(path_test_plots / "Grid_inflow-materials_world.png")
 plt.show()
 
 
@@ -1479,7 +1482,7 @@ transformers_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Transformers' 
 substations_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Substations' in t]).sum(dim='Type')
 
 
-fig, axes = plt.subplots(nrows=4, ncols=1, figsize=(12, 10), sharex=True)
+fig, axes = plt.subplots(nrows=len(materials), ncols=1, figsize=(12, 10), sharex=True)
 
 for i, mat in enumerate(materials):
     lines_sum.sel(material=mat).plot(ax=axes[i], label="Lines")
@@ -1489,21 +1492,78 @@ for i, mat in enumerate(materials):
     
     axes[i].set_title(f"{mat}")
     axes[i].set_xlabel(" ")
-    axes[i].set_ylabel("Value")
+    axes[i].set_ylabel("Stock [kg]")
     axes[i].legend()
     axes[i].grid(alpha=0.3, linestyle='--')
 
 axes[-1].set_xlabel("Time")
 
-plt.suptitle("Material Usage by Component Type", fontsize=16)
+plt.suptitle("Electricity Grid Stocks", fontsize=16)
 plt.tight_layout()
-# fig.savefig(path_test_plots / "Grid_inflow-materials_world.pdf", dpi=300)
+fig.savefig(path_test_plots / "Grid_stocks-bulkmaterials_per-type_world.pdf", dpi=300)
+plt.show()
+
+#-------------
+
+materials = ["Aluminium"]
+
+da_x = main_model_factory.stock_by_cohort_materials.sum('Region')
+da_x_sum = main_model_factory.stock_by_cohort_materials.sum('Region').sum(dim='Type')
+
+lines_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Lines' in t]).sum(dim='Type') # Get group sums by keyword and sum over types (sum over HV, MV and LV (and overground/underground for lines))
+transformers_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Transformers' in t]).sum(dim='Type')
+substations_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Substations' in t]).sum(dim='Type')
+
+
+fig, axes = plt.subplots(nrows=len(materials), ncols=1, figsize=(8, 6), sharex=True)
+
+for i, mat in enumerate(materials):
+    lines_sum.sel(material=mat).plot(ax=axes, label="Lines")
+    transformers_sum.sel(material=mat).plot(ax=axes, label="Transformers")
+    substations_sum.sel(material=mat).plot(ax=axes, label="Substations")
+    da_x_sum.sel(material=mat).plot(ax=axes, label="Total", color='red', alpha=0.8, linestyle='--')
+    
+    axes.set_title(f"{mat}")
+    axes.set_xlabel(" ")
+    axes.set_ylabel("Stock [kg]")
+    axes.legend()
+    axes.grid(alpha=0.3, linestyle='--')
+
+axes.set_xlabel("Time")
+axes.axvline(x=2050, color='grey', linestyle='--', alpha=0.5)
+
+plt.suptitle("Electricity Grid Stocks", fontsize=16)
+plt.tight_layout()
+fig.savefig(path_test_plots / "Grid_stocks-Alu_per-type_world.pdf", dpi=300)
+fig.savefig(path_test_plots / "Grid_stocks-Alu_per-type_world.png", dpi=300)
 plt.show()
 
 
+#------------
 
+materials = ["Aluminium"]
 
+fig, axes = plt.subplots(nrows=len(materials), ncols=1, figsize=(8, 4), sharex=True)
 
+for i, mat in enumerate(materials):
+    lines_sum.sel(material=mat).plot(ax=axes, label="Lines")
+    transformers_sum.sel(material=mat).plot(ax=axes, label="Transformers")
+    substations_sum.sel(material=mat).plot(ax=axes, label="Substations")
+    da_x_sum.sel(material=mat).plot(ax=axes, label="Total", color='red', alpha=0.8, linestyle='--')
+    
+    axes.set_title(f"{mat}")
+    axes.set_xlabel(" ")
+    axes.set_ylabel("Stock [kg]")
+    axes.legend()
+    axes.grid(alpha=0.3, linestyle='--')
+
+axes.set_xlabel("Time")
+axes.set_xlim(1990, 2050)
+
+plt.suptitle("Electricity Grid Stocks", fontsize=16)
+plt.tight_layout()
+fig.savefig(path_test_plots / "Grid_stocks-Alu_per-type_world_1990-2050.png",dpi=300)
+plt.show()
 
 ###########################################################################################################
 #%%%%
