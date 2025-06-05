@@ -236,6 +236,18 @@ def compute_housing_residential(population, average_m2_capita, housing_type, flo
 
         total_m2_housing_per_cap.loc[{"Region": regions_mapped}] = total_m2_housing_per_cap.sel(Region = regions_mapped) * scaling_factors
 
+    if 'narrow' in circular_economy_config.keys():
+        base_year = circular_economy_config["narrow"]["buildings"]["base_year"]
+        target_year = circular_economy_config["narrow"]["buildings"]["target_year"]
+        
+        mileage_increase = circular_economy_config['narrow']['vehicles']['mileage']
+        region_mileage = circular_economy_config['narrow']['vehicles']['region_mileage']
+        implementation_rate = circular_economy_config['narrow']['vehicles']['implementation_rate']
+
+        mileages = change_value(
+            mileages, base_year, target_year, 
+            mileage_increase, implementation_rate)
+
     total_m2_housing = total_m2_housing_per_cap * population.sel({"Area": ["Rural", "Urban"]})
     floorspace_residential = merge_dims(total_m2_housing, "Type", "Area")
     return floorspace_residential.transpose("Time", "Region", "Type")
