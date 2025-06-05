@@ -166,6 +166,7 @@ def estimate_models_per_region_group(regions_groups_dict: dict,
     rmse_r2_groups = {}
     
     for region_group in regions_groups_dict.keys():
+        print(region_group)
         model_groups[region_group] = estimate_models(cons_pc_groups.get(region_group), gdp_pc_groups.get(region_group))
         rmse_r2_groups[region_group] = rmse_r2_models(model_groups[region_group])
     
