@@ -1,0 +1,10 @@
+[data_files]
+GCap = 'GCap.out'
+residential_floorspace = 'T2MAT/EnergyServices/res_FloorSpace.out'
+transport.freight.Tkm = 'T2MAT/EnergyServices/trp_frgt_Tkm.out'
+transport.freight.Vshare_HvyTruck = 'T2MAT/EnergyServices/trp_frgt_Vshare_HvyTruck.out'
+transport.freight.Vshare_MedTruck = 'T2MAT/EnergyServices/trp_frgt_Vshare_MedTruck.out'
+transport.passenger.load = 'T2MAT/EnergyServices/trp_trvl_Load.out'
+transport.passenger.kilometers = 'T2MAT/EnergyServices/trp_trvl_pkm.out'
+transport.passenger.Vshare_bus = 'T2MAT/EnergyServices/trp_trvl_Vshare_bus.out'
+transport.passenger.Vshare_car = 'T2MAT/EnergyServices/trp_trvl_Vshare_car.out'
