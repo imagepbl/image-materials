@@ -20,6 +20,7 @@ from imagematerials.buildings.constants import (
 )
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, merge_dims
+from imagematerials.concepts import create_region_graph
 
 far_start_year = 1721
 start_year = 1820
@@ -206,10 +207,35 @@ def compute_average_m2_capita(base_directory):
     average_m2_capita.coords["Region"] = [str(x.values) for x in average_m2_capita.coords["Region"]]
     return average_m2_capita
 
-def compute_housing_residential(population, average_m2_capita, housing_type, floorspace_rururb):
+def compute_housing_residential(population, average_m2_capita, housing_type, floorspace_rururb, circular_economy_config):
     m2_housing_per_capita = average_m2_capita * housing_type
     m2_housing_share = m2_housing_per_capita / m2_housing_per_capita.sum(["Type"])
     total_m2_housing_per_cap = m2_housing_share*floorspace_rururb
+
+    if 'base' in circular_economy_config.keys():
+        base_year = circular_economy_config["base"]["buildings"]["base_year"]
+        target_year = circular_economy_config["base"]["buildings"]["target_year"]
+        floor_pc_2020 = circular_economy_config["base"]["buildings"]["residential"]["2020"]["useful_floor_pc"]
+        region_knowledge_graph = create_region_graph()
+        regions = total_m2_housing_per_cap.coords["Region"].values
+        floor_pc_2020_xr = xr.DataArray(
+            list(floor_pc_2020.values()),
+            coords={"Region": list(floor_pc_2020.keys())},
+            dims=["Region"],
+            name="floor_pc_2020"
+        )
+
+        regions_mapped = list(region_knowledge_graph.find_relations_inverse(regions, floor_pc_2020.keys()))
+        floor_pc_2020_mapped = region_knowledge_graph.rebroadcast_xarray(floor_pc_2020_xr, output_coords=regions_mapped, dim="Region")
+        target_vals = floor_pc_2020_mapped
+        current_vals = total_m2_housing_per_cap.sel(Time=2020)\
+                                            .sum(dim="Type")\
+                                            .mean(dim="Area")
+
+        scaling_factors = target_vals / current_vals
+
+        total_m2_housing_per_cap.loc[{"Region": regions_mapped}] = total_m2_housing_per_cap.sel(Region = regions_mapped) * scaling_factors
+
     total_m2_housing = total_m2_housing_per_cap * population.sel({"Area": ["Rural", "Urban"]})
     floorspace_residential = merge_dims(total_m2_housing, "Type", "Area")
     return floorspace_residential.transpose("Time", "Region", "Type")
