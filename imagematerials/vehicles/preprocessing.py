@@ -56,7 +56,7 @@ from imagematerials.vehicles.constants import (
     maintenance_lifetime_per_mode,
 )
 from imagematerials.vehicles.modelling_functions import (interpolate, tkms_to_nr_of_vehicles_fixed,  
-    increase_value, apply_increase_per_region)
+    change_value, apply_change_per_region)
 #from imagematerials.concepts import vehicle_knowledge_graph
 
 
@@ -417,7 +417,7 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
         implementation_rate = circular_economy_config['slow']['vehicles']['implementation_rate']
         # possibilities for implementation rate are: linear, immediate, s-curve
 
-        lifetimes_vehicles = increase_value(
+        lifetimes_vehicles = change_value(
             lifetimes_vehicles, base_year, target_year, 
             lifetime_increase, implementation_rate, "lifetime")
 
@@ -430,22 +430,22 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
         region_mileage = circular_economy_config['narrow']['vehicles']['region_mileage']
         implementation_rate = circular_economy_config['narrow']['vehicles']['implementation_rate']
 
-        mileages = increase_value(
+        mileages = change_value(
             mileages, base_year, target_year, 
-            mileage_increase, implementation_rate, "mileages")
+            mileage_increase, implementation_rate)
 
         # Cars are saved seperatly since they are not defined in the general kilometrage dataframe
-        kilometrage = apply_increase_per_region(
+        kilometrage = apply_change_per_region(
             kilometrage, base_year, target_year, 
-            region_mileage['Cars'], implementation_rate, 'mileages'
+            region_mileage['Cars'], implementation_rate
         )
-        kilometrage_bus = apply_increase_per_region(
+        kilometrage_bus = apply_change_per_region(
             kilometrage_bus, base_year, target_year, 
-            mileage_increase['Midi Buses'], implementation_rate,'mileages'
+            mileage_increase['Midi Buses'], implementation_rate
         )
-        kilometrage_midi_bus = apply_increase_per_region(
+        kilometrage_midi_bus = apply_change_per_region(
             kilometrage_midi_bus, base_year, target_year, 
-            mileage_increase['Regular Buses'], implementation_rate, 'mileages'
+            mileage_increase['Regular Buses'], implementation_rate
         )
     
 
@@ -470,11 +470,8 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
         name="vehicle_lifetime"
     )
 
-    #all_modes = list(material_fractions_typical.coords['Type'].values)
-
     maintenance_material_per_year_broadcasted = (maintenance_material / expected_lifetimes)
-    #maintenance_material_per_year_broadcasted = vehicle_knowledge_graph.rebroadcast_xarray_impute(
-    #    maintenance_material_per_year, all_types)
+
 
     # Calculate maintenace material need in kg material per year per kg vehicle
 
