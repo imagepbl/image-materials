@@ -17,7 +17,7 @@ START_YEAR = 1971
 # runtime)
 # TODO: set FIRST_YEAR based on minimum value in data-files
 FIRST_YEAR = 1807  # first_year_vehicle.values.min()
-END_YEAR = 2060
+END_YEAR = 2100
 # year of output generation
 OUT_YEAR = 2060
 REGIONS = 26

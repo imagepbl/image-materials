@@ -19,18 +19,18 @@ Japan = 39.7
 #"Subsaharan Africa" = 15.8
 
 [buildings.residential.2060.useful_floor_pc]
-Canada = 60.6
-"Central Europe" = 41.2
-China = 39
-India = 25.3
-Japan = 39.7
-USA = 62.8
-"Western Europe" = 39.7
+#Canada = 60.6
+#"Central Europe" = 41.2
+#China = 39
+#India = 25.3
+#Japan = 39.7
+#USA = 62.8
+#"Western Europe" = 39.7
 
 [buildings.non_residential.2020.useful_floor_pc]
 "Central Europe" = 8.7
 "Western Europe" = 14.1
 
 [buildings.non_residential.2060.useful_floor_pc]
-"Central Europe" = 41.2
-"Western Europe" = 14.1
+#"Central Europe" = 41.2
+#"Western Europe" = 14.1
