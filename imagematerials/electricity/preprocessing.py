@@ -945,14 +945,14 @@ storage_lifetime_PHS = storage_lifetime['PHS'].reindex(list(range(YEAR_FIRST_GRI
 
 ###########################################################################################################
 ###########################################################################################################
-#%% 1) TRANSMISSION GRID 
+#%% 3) TRANSMISSION GRID 
 ###########################################################################################################
 ###########################################################################################################
 
 
 #----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
-#%%% 1.1) Read in files
+#%%% 3.1) Read in files
 ###########################################################################################################
 #----------------------------------------------------------------------------------------------------------
 
@@ -968,7 +968,6 @@ grid_additions = pd.read_csv(path_external_data_standard / 'grid_additions.csv',
 # dynamic or scenario-dependent data (lifetimes & material intensity)
 
 lifetime_grid_elements = pd.read_csv(path_external_data_scenario  / 'operational_lifetime_grid.csv', index_col=0)         # Average lifetime in years of grid elements
-lifetime_grid_elements.rename_axis('Year', inplace=True)
 
 # dynamic material intensity files (kg/km or kg/unit)
 materials_grid = pd.read_csv(path_external_data_scenario / 'Materials_grid_dynamic.csv', index_col=[0,1])                # Material intensity of grid lines specific material content for Hv, Mv & Lv lines, & specific for underground vs. aboveground lines. (kg/km)
@@ -988,7 +987,7 @@ gcap_BL_data = read_mym_df(path_image_output / 'EnergyServices' / 'Gcap.out')
 
 #----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
-#%%% 1.2) Prepare model specific variables
+#%%% 3.2) Prepare model specific variables
 ###########################################################################################################
 #----------------------------------------------------------------------------------------------------------
 
@@ -1148,6 +1147,15 @@ grid_trans_Lv_new = stock_tail(grid_trans_Lv)               # units
 # Lifetimes #
 #############
 
+# data only for lines, substations and transformer -> bring in knowledge_graph format: HV - Lines, MV - Lines, LV - Lines, HV - Transformers, etc.
+expanded_data = {}
+for typ in ["Lines", "Transformers", "Substations"]:
+    for level in ["HV", "MV", "LV"]:
+        new_col = f"{level} - {typ}"
+        expanded_data[new_col] = lifetime_grid_elements[typ]
+lifetime_grid_elements = pd.DataFrame(expanded_data, index=lifetime_grid_elements.index)
+lifetime_grid_elements.rename_axis('Year', inplace=True)
+
 # no differentiation between HV, MV & LV lines as well as between aboveground and belowground
 # Types: lines, transformers, substations
 lifetime_grid_elements.loc[YEAR_FIRST_GRID,:] = lifetime_grid_elements.loc[lifetime_grid_elements.first_valid_index(),:]
@@ -1232,7 +1240,7 @@ print_df_info(grid_stock, "grid_stock")
 
 #----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
-#%%% 1.3) Prep_data File
+#%%% 3.3) Prep_data File
 ###########################################################################################################
 #----------------------------------------------------------------------------------------------------------
 
@@ -1303,7 +1311,7 @@ preprocessing_results_xarray["material_intensities"] = preprocessing_results_xar
 
 #----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
-#%%% 1.4) Run Stock Model New
+#%%% 3.4) Run Stock Model New
 ###########################################################################################################
 # TODO: move this to electricity.py
 #----------------------------------------------------------------------------------------------------------
@@ -1346,6 +1354,209 @@ main_model_factory = ModelFactory(
 
 
 main_model_factory.simulate(simulation_timeline)
+list(main_model_factory.elctr_trans)
+
+
+###########################################################################################################
+#%%% 3.5) Visualize Stocks 
+
+path_test_plots = Path(path_base, "imagematerials", "electricity", "out_test", "Figures")
+
+da_stocks = main_model_factory.stocks.copy()
+
+
+# TOTAL STOCKS
+
+da_stocks = da_stocks.sum(dim="Region")
+types_top = da_stocks.Type.values[[0, 1, 4, 5, 8, 9]]   # Types 1–10
+types_bottom = da_stocks.Type.values[[2,3,6,7,10,11]]  # Types 11–20
+
+fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(14, 8), sharex=True, sharey=True)
+i=0
+for t in types_top:
+    axes[0].plot(da_stocks.sel(Type=t), label=t)
+# axes.set_title(f"{region} (Types 1–10)")
+axes[0].legend()
+
+# Bottom row: Types 11–20
+for t in types_bottom:
+    axes[1].plot(da_stocks.sel(Type=t), label=t)
+# axes.set_title(f"{region} (Types 11–20)")
+axes[1].set_xlabel("Time")
+axes[1].legend(loc ='upper left')
+
+# Label only left side with y-axis label
+axes[1].set_ylabel("Value")
+axes[1].set_ylabel("Value")
+plt.suptitle("Electricity Grid - Stocks", fontsize=16)
+
+plt.tight_layout()
+# fig.savefig(path_test_plots / "Grid_stocks_world.png", dpi=300)
+plt.show()
+
+
+# # Two regions
+# regions = da_stocks.Region.values[:2]  # First 2 regions
+# types_top = da_stocks.Type.values[[0, 1, 4, 5, 8, 9]]   # Types 1–10
+# types_bottom = da_stocks.Type.values[[2,3,6,7,10,11]]  # Types 11–20
+
+# fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(14, 8), sharex=True, sharey=True)
+
+# for i, region in enumerate(regions):
+#     # Top row: Types 1–10
+#     for t in types_top:
+#         da_stocks.sel(Type=t, Region=region).plot(ax=axes[0, i], label=t)
+#     axes[0, i].set_title(f"{region} (Types 1–10)")
+#     axes[0, i].legend()
+
+#     # Bottom row: Types 11–20
+#     for t in types_bottom:
+#         da_stocks.sel(Type=t, Region=region).plot(ax=axes[1, i], label=t)
+#     axes[1, i].set_title(f"{region} (Types 11–20)")
+#     axes[1, i].set_xlabel("Time")
+#     axes[1, i].legend(loc ='upper left')
+
+# # Label only left side with y-axis label
+# axes[0, 0].set_ylabel("Value")
+# axes[1, 0].set_ylabel("Value")
+# plt.suptitle("Electricity Grid - Stocks", fontsize=16)
+
+# plt.tight_layout()
+# # fig.savefig(path_test_plots / "Grid_stocks_Brazil-CEurope.png", dpi=300)
+# plt.show()
+
+
+
+###########################################################################################################
+#%% Visualize INFLOW Materials - World per type Lines, Trans., Subst.
+
+
+materials = ["Steel", "Concrete", "Aluminium", "Cu"]
+
+da_x = main_model_factory.inflow_materials.to_array().sum('Region')
+da_x_sum = main_model_factory.inflow_materials.to_array().sum('Region').sum(dim='Type')
+
+lines_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Lines' in t]).sum(dim='Type') # Get group sums by keyword and sum over types (sum over HV, MV and LV (and overground/underground for lines))
+transformers_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Transformers' in t]).sum(dim='Type')
+substations_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Substations' in t]).sum(dim='Type')
+
+
+fig, axes = plt.subplots(nrows=4, ncols=1, figsize=(12, 10), sharex=True)
+
+for i, mat in enumerate(materials):
+    lines_sum.sel(material=mat).plot(ax=axes[i], label="Lines")
+    transformers_sum.sel(material=mat).plot(ax=axes[i], label="Transformers")
+    substations_sum.sel(material=mat).plot(ax=axes[i], label="Substations")
+    da_x_sum.sel(material=mat).plot(ax=axes[i], label="Total", color='red', alpha=0.8, linestyle='--')
+    
+    axes[i].set_title(f"{mat}")
+    axes[i].set_xlabel(" ")
+    axes[i].set_ylabel("Value")
+    axes[i].legend()
+    axes[i].grid(alpha=0.3, linestyle='--')
+
+axes[-1].set_xlabel("Time")
+
+plt.suptitle("Material Usage by Component Type", fontsize=16)
+plt.tight_layout()
+# fig.savefig(path_test_plots / "Grid_inflow-materials_world.pdf", dpi=300)
+plt.show()
+
+
+
+###########################################################################################################
+#%% Visualize STOCK Materials - World per type Lines, Trans., Subst.
+
+
+
+materials = ["Steel", "Concrete", "Aluminium", "Cu"]
+
+da_x = main_model_factory.stock_by_cohort_materials.sum('Region')
+da_x_sum = main_model_factory.stock_by_cohort_materials.sum('Region').sum(dim='Type')
+
+lines_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Lines' in t]).sum(dim='Type') # Get group sums by keyword and sum over types (sum over HV, MV and LV (and overground/underground for lines))
+transformers_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Transformers' in t]).sum(dim='Type')
+substations_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Substations' in t]).sum(dim='Type')
+
+
+fig, axes = plt.subplots(nrows=4, ncols=1, figsize=(12, 10), sharex=True)
+
+for i, mat in enumerate(materials):
+    lines_sum.sel(material=mat).plot(ax=axes[i], label="Lines")
+    transformers_sum.sel(material=mat).plot(ax=axes[i], label="Transformers")
+    substations_sum.sel(material=mat).plot(ax=axes[i], label="Substations")
+    da_x_sum.sel(material=mat).plot(ax=axes[i], label="Total", color='red', alpha=0.8, linestyle='--')
+    
+    axes[i].set_title(f"{mat}")
+    axes[i].set_xlabel(" ")
+    axes[i].set_ylabel("Value")
+    axes[i].legend()
+    axes[i].grid(alpha=0.3, linestyle='--')
+
+axes[-1].set_xlabel("Time")
+
+plt.suptitle("Material Usage by Component Type", fontsize=16)
+plt.tight_layout()
+# fig.savefig(path_test_plots / "Grid_inflow-materials_world.pdf", dpi=300)
+plt.show()
+
+
+
+
+
+
+###########################################################################################################
+#%%%%
+
+# da_x = main_model_factory.inflow.to_array()
+da_x = main_model_factory.inflow_materials.to_array()
+da_x = main_model_factory.inflow_materials.to_array().sum('Type')
+
+regions = da_x.Region.values[:2]  # First 2 regions
+# types_top = da_x.material.values[1:6]   # Types 1–10
+# types_bottom = da_x.material.values[6:12]  # Types 11–20
+types_level1 = [m for m in da_x.material.values if m in ["Steel", "Concrete"]]
+types_level2 = [m for m in da_x.material.values if m in ["Aluminium", "Cu"]]
+types_level3 = [m for m in da_x.material.values if m not in (types_level1 + types_level2)]
+
+fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(14, 12), sharex=True)
+
+axes[0, 1].sharey(axes[0, 0])
+axes[1, 1].sharey(axes[1, 0])
+axes[2, 1].sharey(axes[2, 0])
+
+for i, region in enumerate(regions):
+    # Top row: 
+    for t in types_level1:
+        da_x.sel(material=t, Region=region).plot(ax=axes[0, i], label=t)
+    axes[0, i].set_title(f"{region}")
+    axes[0, i].set_xlabel("Time")
+    axes[0, i].legend()
+
+    # Middle row: 
+    for t in types_level2:
+        da_x.sel(material=t, Region=region).plot(ax=axes[1, i], label=t)
+    axes[1, i].set_title(f"{region}")
+    axes[1, i].set_xlabel("Time")
+    axes[1, i].legend(loc ='upper left')
+
+    # Bottom row: 
+    for t in types_level3:
+        da_x.sel(material=t, Region=region).plot(ax=axes[2, i], label=t)
+    axes[2, i].set_title(f"{region}")
+    axes[2, i].set_xlabel("Time")
+    axes[2, i].legend(loc ='upper left')
+
+# Label only left side with y-axis label
+axes[0, 0].set_ylabel("Value")
+axes[1, 0].set_ylabel("Value")
+axes[2, 0].set_ylabel("Value")
+
+plt.suptitle("Generation - Inflow Materials", fontsize=16)
+plt.tight_layout()
+fig.savefig(path_test_plots / "Gen_inflow-materials_Brazil-CEurope.png", dpi=300)
+plt.show()
+
 
 
 
