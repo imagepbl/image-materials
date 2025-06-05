@@ -248,9 +248,9 @@ SAND_GROUPING_REGIONS = {
     'Average': ['class_ 5', 'class_ 12', 'class_ 13', 'class_ 14','class_ 15', 
                 'class_ 16', 'class_ 17', 'class_ 18', 'class_ 19', 
                 'class_ 22', 'class_ 7', 'class_ 21'],
-    'Lower':    ['class_ 3', 'class_ 4', 'class_ 6', 'class_ 9', 'class_ 10'],
+    'Lower':    ['class_ 3', 'class_ 4', 'class_ 6', 'class_ 9', 'class_ 10', 
+                 'class_ 8', 'class_ 25', 'class_ 26'],
     'Japan':    ['class_ 23'],
-    'Other': ['class_ 8', 'class_ 25', 'class_ 26'],
     'High' : ['class_ 2', 'class_ 24', 'class_ 11']
     }
 
