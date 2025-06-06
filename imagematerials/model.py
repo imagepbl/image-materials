@@ -5,11 +5,7 @@ import xarray as xr
 
 from imagematerials.concepts import KnowledgeGraph
 from imagematerials.maintenance import Maintenance
-from imagematerials.stock import (
-    compute_dynamic_stock_driven,
-)
 from imagematerials.survival import ScipySurvival, SurvivalMatrix
-from imagematerials.maintenance import Maintenance
 from imagematerials.vehicles.battery import Battery
 
 REGION = prism.Dimension("Region")
