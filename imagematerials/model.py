@@ -100,9 +100,23 @@ class GenericStocks(prism.Model):
         t, dt = time.t, time.dt
         self.inflow[t].loc[:] = 0.0
         self.outflow_by_cohort[t].loc[:] = 0.0
-        compute_dynamic_stock_driven(
-            self.stocks, self.stock_by_cohort,  self.inflow, self.outflow_by_cohort,
-            self.survival_matrix, t, shares=None)
+
+        input_stock = self.stocks
+        stock_diff = input_stock.loc[t] - self.stock_by_cohort.loc[t].sum("Cohort")
+        # Drop dimension cohort
+        stock_diff = xr.where(stock_diff>0, stock_diff/self.survival_matrix[t, t].drop("Cohort"), 0)
+        self.inflow[t] = stock_diff
+        self.stock_by_cohort.loc[t:, t] = self.inflow[t] * self.survival_matrix[t:, t]
+        # for t_future in stock_by_cohort[t].coords["Cohort"].loc[t_str:]:
+            # t_future = int(t_future)
+            # stock_by_cohort[t_future].loc[{"Cohort": t_str}] = inflow[t]*survival[t_future, t]
+
+        # Prevent out of bounds error, assume first outflow to be 0.
+        if t-1 < self.stock_by_cohort.coords["Time"].min():
+            self.outflow_by_cohort[t] = 0.0
+        else:
+            self.outflow_by_cohort[t] = self.stock_by_cohort.loc[t-1] - self.stock_by_cohort.loc[t]
+
 
 @prism.interface
 class GenericMaterials(prism.Model):

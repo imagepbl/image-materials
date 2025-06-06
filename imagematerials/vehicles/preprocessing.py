@@ -765,6 +765,7 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
         share_coords.add(cur_type.split(" - ")[0])
     output_coords_type = [x for x in prep_data["stocks"].Type.values if x not in share_coords] + list(prep_data["shares"].coords["Type"].values)
 
+    # Use the shares to get the stocks for each of the subtypes.
     knowledge_graph = create_vehicle_graph()
     prep_data["shares"] = knowledge_graph.rebroadcast_xarray(prep_data["shares"], output_coords=region_coords, dim="Region")
     prep_data["stocks"] = knowledge_graph.rebroadcast_xarray(prep_data["stocks"], output_coords=region_coords, dim="Region")
@@ -774,6 +775,9 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
                                                                                 shares=prep_data["shares"])
     prep_data["knowledge_graph"] = knowledge_graph
     prep_data.pop("shares")
+    
+    prep_data["weights"] = prep_data.pop("vehicle_weights")
+    
     return preprocessing_results_xarray
 
 

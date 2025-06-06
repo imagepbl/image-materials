@@ -223,6 +223,7 @@ class ModelFactory():
                 self._compute_one_timestep(time)
 
             def _compute_one_timestep(self, time: prism.Time):
+                print(f"{time.t}", end="\r")
                 for model in self.submodels:
                     model.compute_values(time, **model.compute_args)
 
