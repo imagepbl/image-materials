@@ -57,11 +57,10 @@ class GenericStocks(prism.Model):
     lifetimes: xr.DataArray
     stocks: xr.DataArray #TODO check how to have property that can be both input and output within prism
     # stock_function: Callable    # defines the stock function to use e.g. stock or inflow driven
-    shares: Optional[xr.DataArray]
     knowledge_graph: KnowledgeGraph
 
     # For module dependency, ignored by prism
-    input_data: tuple[str] = ("stocks", "lifetimes", "knowledge_graph", "shares")
+    input_data: tuple[str] = ("stocks", "lifetimes", "knowledge_graph")
     output_data: tuple[str] = ("outflow_by_cohort", "inflow", "stock_by_cohort")
 
     # stock_by_cohort: prism.TimeVariable[Region, Mode, Cohort, "count"] = prism.export(initial_value = prism.Array[Region, Mode, Cohort, 'count'](0.0))
@@ -103,7 +102,7 @@ class GenericStocks(prism.Model):
         self.outflow_by_cohort[t].loc[:] = 0.0
         compute_dynamic_stock_driven(
             self.stocks, self.stock_by_cohort,  self.inflow, self.outflow_by_cohort,
-            self.survival_matrix, t, self.shares)
+            self.survival_matrix, t, shares=None)
 
 @prism.interface
 class GenericMaterials(prism.Model):

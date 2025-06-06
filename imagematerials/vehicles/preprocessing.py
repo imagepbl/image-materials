@@ -55,6 +55,7 @@ from imagematerials.vehicles.constants import (
     years_range,
     maintenance_lifetime_per_mode,
 )
+from imagematerials.concepts import create_vehicle_graph
 from imagematerials.vehicles.modelling_functions import (interpolate, tkms_to_nr_of_vehicles_fixed,  
     scenario_change, apply_change_per_region)
 #from imagematerials.concepts import vehicle_knowledge_graph
@@ -697,7 +698,7 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
         "battery_materials": (["Cohort"], ["material", "battery"],),
         "battery_shares": (["Cohort"], ["battery"],),
         "weight_boats": (["Cohort"], ["Type"],),
-        "vehicle_shares_typical": (["Cohort"], ["Type", "SubType", "Region"], {"Type": ["Type", "SubType"]})
+        "vehicle_shares_typical": (["Time"], ["Type", "SubType", "Region"], {"Type": ["Type", "SubType"]})
     }
     for df_name, df in results_dict.items():
         if df_name in conversion_table:
@@ -753,6 +754,26 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
                                         "material": preprocessing_results_xarray["maintenance_material_fractions"].coords["material"]})
     preprocessing_results_xarray["maintenance_material_fractions"] = xr.concat((preprocessing_results_xarray["maintenance_material_fractions"], xr_default_maintenace), dim="Type")
 
+    # output_coords_type = [x for x in prep_data["stocks"].Type.values if x not in share_coords] + list(prep_data["shares"].coords["Type"].values)
+
+    prep_data = preprocessing_results_xarray
+    region_coords = np.sort(prep_data["stocks"].coords["Region"].values.astype(int)).astype(str)[:-2]
+
+
+    share_coords = set()
+    for cur_type in prep_data["shares"].Type.values:
+        share_coords.add(cur_type.split(" - ")[0])
+    output_coords_type = [x for x in prep_data["stocks"].Type.values if x not in share_coords] + list(prep_data["shares"].coords["Type"].values)
+
+    knowledge_graph = create_vehicle_graph()
+    prep_data["shares"] = knowledge_graph.rebroadcast_xarray(prep_data["shares"], output_coords=region_coords, dim="Region")
+    prep_data["stocks"] = knowledge_graph.rebroadcast_xarray(prep_data["stocks"], output_coords=region_coords, dim="Region")
+    preprocessing_results_xarray["stocks"] = knowledge_graph.rebroadcast_xarray(preprocessing_results_xarray["stocks"],
+                                                                                output_coords_type,
+                                                                                dim="Type",
+                                                                                shares=prep_data["shares"])
+    prep_data["knowledge_graph"] = knowledge_graph
+    prep_data.pop("shares")
     return preprocessing_results_xarray
 
 
