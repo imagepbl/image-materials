@@ -69,7 +69,6 @@ def _get_xarray(coordinates, *dims):
 def test_generic_stocks(coordinates, timelines):
     """Test the GenericStocks model."""
     stocks = _get_xarray(coordinates, "Time", "Region", "Type")
-    shares = None
     lt =  _get_xarray(coordinates, "Time", "Region", "Type", "ScipyParam")
     lt.attrs["loc"] = 0
     lifetimes = {"weibull": lt}
