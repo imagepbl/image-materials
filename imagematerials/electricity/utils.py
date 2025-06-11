@@ -61,6 +61,51 @@ def MNLogit(df, logitpar):
     return new_dataframe    # the retuned dataframe contains the market shares
 
 
+def materials_grid_additions_to_kgperkm(materials_df, additions_df):
+    """
+    Vectorized approach to transform the materials DataFrame by multiplying each row with the corresponding values from the additions DataFrame.
+    materials_df: DataFrame with MultiIndex (year, technology) and columns for materials. - units in kg/unit (unit = 1 substation or transformer)
+    additions_df: DataFrame with index for components (Substations, Transformers) and columns for voltage levels (HV, MV, LV), values are the number of units per km of grid length.
+    """
+    
+    # Create mapping series
+    mapping_dict = {}
+    
+    for voltage in ['HV', 'MV', 'LV']:
+        for component in ['Substations', 'Transformers']:
+            tech_key = f"{voltage} {component}"
+            
+            if voltage in additions_df.columns and component in additions_df.index:
+                mapping_dict[tech_key] = additions_df.loc[component, voltage]
+    
+    # Create a series to map each row to its multiplier
+    multipliers = materials_df.index.get_level_values(1).map(mapping_dict)
+    
+    # Convert to DataFrame for broadcasting
+    multipliers_df = pd.DataFrame(
+        np.outer(multipliers, np.ones(len(materials_df.columns))),
+        index=materials_df.index,
+        columns=materials_df.columns
+    )
+    
+    # Multiply
+    result_df = materials_df * multipliers_df
+    
+    return result_df
+
+
+def print_df_info(df, name):
+    """
+    Prints basic information about a DataFrame, including its shape, columns, and first few index values.
+    Just for testing and debugging purposes.   
+    """
+    print(f"""{name}
+          Shape: {df.shape}, 
+          Columns: {df.columns.tolist()},
+          Index name(s): {df.index.names},
+          Index: {df.index.tolist()[:5]}...""")
+
+
 # STOCK MODELLING OLD -----------------------------------------------------------------------------------------------------
 
 # weibull_shape = 1.89  # for what was this used??
@@ -87,12 +132,12 @@ def stock_share_calc(stock, market_share, init_tech, techlist):
     for region in stock.columns:
         
         # pre-calculate the stock by cohort of the initial stock of Lead-acid
-        multiplier_pre = stock.loc[switchtime,region]/survival_init.sum()                                    # the stock is subdivided by the previous cohorts according to the survival function (only allowed when assuming steady stock inflow) 
+        multiplier_pre = stock.loc[switchtime,region]/survival_init.sum()   # the stock is subdivided by the previous cohorts according to the survival function (only allowed when assuming steady stock inflow) 
         
         #pre-calculate the stock as lists (for efficiency)
         initial_stock_years = [np.flip(survival_init[0:pre_time+1]) * multiplier_pre]
             
-        for year in range(1, (outyear-switchtime)+1):                                                                   # then fill the columns with the remaining fractions
+        for year in range(1, (outyear-switchtime)+1):      # then fill the columns with the remaining fractions
             initial_stock_years.append(initial_stock_years[0] * survival_init[year])
     
         stock_cohorts.loc[idx[region,:],idx[init_tech, list(range(switchtime-pre_time,switchtime+1))]] = initial_stock_years       # fill the stock dataframe according to the pre-calculated stock 

@@ -179,6 +179,7 @@ cython_debug/
 *.his
 
 IMAGE-Mat/output/
+imagematerials/electricity/out_test
 IMAGE-Mat_old_version/
 
 prism/
