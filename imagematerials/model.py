@@ -14,8 +14,12 @@ STOCK_TYPE = prism.Dimension("Type")
 COHORT = prism.Dimension("Cohort")
 TIME = prism.Dimension("Time")
 MATERIAL_TYPE = prism.Dimension("material")
+<<<<<<< HEAD
 BATTERY_TYPE = prism.Dimension("battery")
 EOL_TYPE = prism.Dimension("eoltype")
+=======
+
+>>>>>>> a1458e5 (add changes to EoL module in model.py)
 
 
 @prism.interface
@@ -413,25 +417,17 @@ class GenericEndOfLife(prism.Model):
     Type: prism.Coords[STOCK_TYPE]
     Time: prism.Coords[TIME]
     material: prism.Coords[MATERIAL_TYPE]
-    eoltype: prism.Coords[EOL_TYPE]
 
     # Data dependencies
     input_data: tuple[str] = ("collection", "reuse", "recycling", "outflow_by_cohort_materials")
-    output_data: tuple[str] = ("end_of_life_materials", )
+    output_data: tuple[str] = ("collected_materials","reusable_materials", "recyclable_materials","losses_materials")
 
     # Output data
-    eol_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, EOL_TYPE, "count"] = prism.export()
-
-    def compute_initial_values(self, time: prism.Timeline):
-        self.end_of_life_materials = xr.DataArray(
-            0.0, dims=("Time", "Region", "Type", "material","eoltype"),
-            coords={"Time": self.Time,
-                    "Region": self.Region,
-                    "Type": self.Type,
-                    "material": self.material,
-                    "eoltype": [ "collected", "reusable", "recyclable", "losses", "surplus losses" ]
-                    }
-                    )
+    collected_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE,  "count"] = prism.export()
+    reusable_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE,  "count"] = prism.export()
+    remaining_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE,  "count"] = prism.export()
+    recyclable_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE,  "count"] = prism.export()
+    losses_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE,  "count"] = prism.export()
 
     def compute_values(self, time: prism.Time, outflow_by_cohort_materials, collection, reuse, recycling):
         """
@@ -452,20 +448,32 @@ class GenericEndOfLife(prism.Model):
             Recycling rate data by material and type.
         """
         t, dt = time.t, time.dt
-        if t not in [2020, 2050]:
-            return
-        self.end_of_life_materials.sel(eoltype = "collected").loc[t] = outflow_by_cohort_materials[t] * collection.loc[t]
+        type_dict = {
+            'passenger': ['Bikes', 
+                          'Cars - BEV', 'Cars - FCV', 'Cars - HEV','Cars - ICE', 'Cars - PHEV', 'Cars - Trolley', 
+                          'Light Commercial Vehicles - BEV','Light Commercial Vehicles - FCV','Light Commercial Vehicles - HEV','Light Commercial Vehicles - ICE','Light Commercial Vehicles - PHEV','Light Commercial Vehicles - Trolley',
+                          'Regular Buses - PHEV', 'Regular Buses - Trolley','Regular Buses - BEV', 'Regular Buses - FCV','Regular Buses - HEV', 'Regular Buses - ICE',
+                          'Midi Buses - BEV','Midi Buses - FCV', 'Midi Buses - HEV', 'Midi Buses - ICE','Midi Buses - PHEV', 'Midi Buses - Trolley',                        
+                          'Trains','High Speed Trains',
+                          'Passenger Planes',       
+       ],
+            'freight': ['Freight Planes',
+                        'Medium Freight Trucks - BEV', 'Medium Freight Trucks - FCV','Medium Freight Trucks - HEV', 'Medium Freight Trucks - ICE','Medium Freight Trucks - PHEV', 'Medium Freight Trucks - Trolley',
+                        'Freight Trains',
+                        'Small Ships','Inland Ships','Medium Ships','Large Ships', 'Very Large Ships'
+                        'Heavy Freight Trucks - BEV', 'Heavy Freight Trucks - FCV','Heavy Freight Trucks - HEV', 'Heavy Freight Trucks - ICE','Heavy Freight Trucks - PHEV', 'Heavy Freight Trucks - Trolley'
+       ]
+        }
+        for outflow in outflow_by_cohort_materials:
+            for supertype, subtypes in type_dict.items():
+                if subtypes[0] not in outflow[t].coords:
+                    continue
+                sum_outflow = outflow[t].sel(Type=subtypes).sum("Type")
 
-        #self.collected[t].loc[:] = 0.0
-        #self.reusable[t].loc[:] = 0.0
-        #self.recyclable[t].loc[:] = 0.0
-        #self.losses[t].loc[:] = 0.0
-        #self.surpluslosses[t].loc[:] = 0.0
-        
-        #self.collected[t] =  self.outflow_by_cohort_materials[t] * self.collection.sel[t]
-    #   self.losses[t] =  self.outflow_by_cohort_materials[t] - self.collected[t]     # non-collected waste
-    #   self.reusable[t] = self.collected[t] *  self.reuse.sel[Time=t]
-    #   self.remaining[t] = self.collected[t] - self.reusable[t]              # non-reused but collected waste
-    #   self.recyclable [t] = self.remaining[t] * self.recycling.sel[Time=t]
-    #   self.losses[t] += (self.remaining[t] -  self.recyclable[t])        # non-reused/recycled but collected waste
-
+                coords = {"Type": supertype, "material": sum_outflow.coords["material"]}
+                self.collected_materials[t].loc[coords] = collection.loc[t]*sum_outflow
+                self.reusable_materials[t].loc[coords] = self.collected_materials[t].loc[coords] * reuse.loc[t]
+                self.remaining_materials[t].loc[coords] = self.collected_materials.loc[coords] - self.reusable_materials.loc[coords]                                            # non-reused but collected waste
+                self.recyclable_materials[t].loc[coords] = self.remaining_materials.loc[coords] * recycling.loc[t]
+                self.losses_materials[t].loc[coords] = sum_outflow -  self.collected_materials.loc[coords]                                                                      # non-collected waste
+                self.losses_materials[t].loc[coords] = self.losses_materials.loc[coords] + self.remaining_materials.loc[coords] - self.recyclable_materials.loc[coords]         # non-reused/recycled but collected waste
