@@ -8,20 +8,22 @@ Created on Tue Aug 27 13:31:40 2024
 import pandas as pd
 import numpy as np
 
-from const import (COPPER_AVERAGE_REGIONS_TO_IMAGE, CLASS_TO_REGION_DICT, 
-                   REGION_TO_CLASS_DICT, SAND_GROUPING_REGIONS, path_input_data)
+from imagematerials.rest_of.const import (path_input_data)
 
-from correlation_materials import (calculate_gdp, summarize_IMAGE_regions, 
+from imagematerials.rest_of.correlation_materials import (calculate_gdp, summarize_IMAGE_regions, 
                                    calculate_material_consumption_pc_and_gdp_pc_groups, 
                                    sum_total_over_grouped_regions)
-from projections_materials import estimate_models_per_region_group, match_regions_to_best_model
+
+from imagematerials.rest_of.projections_materials import estimate_models_per_region_group, match_regions_to_best_model
+from imagematerials.read_mym import read_mym_df
 
 class ResourceModel():
     '''
     initialize basic resource model with resource data and gdp, pop data
     '''
     def __init__(self, resource_group: str, resource: str, start_year: int, image_mat_available: bool, 
-                 end_year = 2017, convert_image = False, convert_to_tons = None, trade_data = False):
+                 end_year = 2017, convert_image = False, convert_to_tons = None, trade_data = False, 
+                 path_input_data = path_input_data):
         
         # Name resource group
         self.resource_group = resource_group
@@ -34,11 +36,11 @@ class ResourceModel():
                                                         index_col=0).loc[:end_year]
             
         else: 
-            production = pd.read_csv(f'{path_input_data}/{resource_group}/{self.resource}_production.csv', 
+            self.production = pd.read_csv(f'{path_input_data}/{resource_group}/{self.resource}_production.csv', 
                                                         index_col=0).loc[:end_year]
-            net_trade = pd.read_csv(f'{path_input_data}/{resource_group}/{self.resource}_net_trade.csv', 
+            self.net_trade = pd.read_csv(f'{path_input_data}/{resource_group}/{self.resource}_net_trade.csv', 
                                                         index_col=0).loc[:end_year]
-            self.historic_consumption_data = production - net_trade
+            self.historic_consumption_data = self.production - self.net_trade
         
         if convert_image == True:
             self.historic_consumption_data = self.historic_consumption_data/convert_to_tons # convert IMAGE output to tons
@@ -94,7 +96,7 @@ class ResourceModel():
         Use TRUE this if IMAGE Mat data needs to be matched to grouped regions other than IMAGE 26.
         jump if no IMAGE Mat data available
 
-        Use FASE if IMAGE Mat data does not need to be matched to grouped regions other than IMAGE 26.
+        Use FALSE if IMAGE Mat data does not need to be matched to grouped regions other than IMAGE 26.
         jump if no IMAGE Mat data available
 
         """
