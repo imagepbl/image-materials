@@ -13,12 +13,17 @@ def eol_preprocessing(base_dir):
     recycling_in = pd.read_csv(Path(base_dir, "end_of_life","SSP2_2D_RE","recycling.csv"))
 
     # renaming columns for consistency
-    collection_in = collection_in.rename(columns={'time':'Time', 'sector': 'Sector', 'regions': 'Region', 'category':'Type'})
+    collection_in = collection_in.rename(columns={'time':'Time','sector': 'Sector', 'regions': 'Region', 'category':'Type'})
     reuse_in = reuse_in.rename(columns={ 'Element': 'Type'} )
     recycling_in = recycling_in.rename(columns={'Element': 'Type'} )
 
+    # dropping redundant 'Sector' level
+    collection_in = collection_in.drop(columns='Sector')
+    reuse_in = reuse_in.drop(columns='Sector')
+    recycling_in = recycling_in.drop(columns='Sector')
+
     # melting material columns
-    id_vars = ['Region', 'Time', 'Sector', 'Type'] 
+    id_vars = ['Region', 'Time', 'Type'] 
     value_vars = ['Steel',	'Concrete',	'Wood',	'Cu','Aluminium', 'Glass']
 
     collection_df = pd.melt(
@@ -45,13 +50,13 @@ def eol_preprocessing(base_dir):
         value_name = 'value'
     )
 
-    xr_collection = collection_df.set_index(['Time', 'Region', 'Sector', 'Type', 'material']) \
+    xr_collection = collection_df.set_index(['Time', 'Region', 'Type', 'material']) \
                     .to_xarray()['value']
 
-    xr_reuse = reuse_df.set_index(['Time', 'Region', 'Sector', 'Type', 'material']) \
+    xr_reuse = reuse_df.set_index(['Time', 'Region','Type', 'material']) \
                     .to_xarray()['value']
 
-    xr_recycling = recycling_df.set_index(['Time', 'Region', 'Sector', 'Type', 'material']) \
+    xr_recycling = recycling_df.set_index(['Time', 'Region','Type', 'material']) \
                     .to_xarray()['value']
     
         # inter and extrapolated collection, reuse and recycling xr 
