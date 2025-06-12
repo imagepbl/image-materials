@@ -420,6 +420,8 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
         lifetimes_vehicles = scenario_change(
             lifetimes_vehicles, base_year, target_year, 
             lifetime_increase, implementation_rate, "lifetime")
+        
+        print("implemented 'slow' for Vehicles")
 
     
     # increase mileages\kilometrages
@@ -447,6 +449,8 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
             kilometrage_midi_bus, base_year, target_year, 
             mileage_increase['Regular Buses'], implementation_rate
         )
+
+        print("implemented 'narrow' for Vehicles")
     
 
     # Calculate maintenace material need in kg material per kg vehicle

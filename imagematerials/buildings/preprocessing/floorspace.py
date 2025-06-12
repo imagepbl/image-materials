@@ -251,7 +251,7 @@ def compute_housing_residential(population, average_m2_capita, housing_type, flo
             coords={"Region": list(residential_scenario_settings.keys())},
             dims=["Region"],
             name="residential_scenario_settings"
-    )
+        )
 
         regions_mapped = list(region_knowledge_graph.find_relations_inverse(regions, residential_scenario_settings.keys()))
         residential_scenario_settings_xr_mapped = region_knowledge_graph.rebroadcast_xarray(residential_scenario_settings_xr, output_coords=regions_mapped, dim="Region")

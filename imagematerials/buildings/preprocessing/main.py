@@ -58,7 +58,7 @@ def buildings_preprocessing(base_directory, climate_policy_config: dict, circula
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        lifetimes = compute_lifetimes(base_directory, floorspace_commercial.coords["Type"].values)
+        lifetimes = compute_lifetimes(base_directory, floorspace_commercial.coords["Type"].values, circular_economy_config)
 
     mat_intensities_comm = compute_mat_intensities_commercial(database_directory)
     mat_intensities_res = compute_mat_intensities_residential(database_directory)
