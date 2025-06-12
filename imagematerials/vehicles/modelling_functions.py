@@ -112,7 +112,7 @@ def tkms_to_nr_of_vehicles_fixed(tera_tkms, mileage, load, loadfactor):
     nr_of_vehicles = vkms.div(mileage, axis=0)
     return nr_of_vehicles
 
-def change_value(df, base_year, target_year, change, implementation_rate, data_type = None, steepness=0.5):
+def scenario_change(df, base_year, target_year, change, implementation_rate, data_type = None, steepness=0.5):
     """
     Applies a time-based change to values in a DataFrame between a base and target year using a specified implementation method.
 

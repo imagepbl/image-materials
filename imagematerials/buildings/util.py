@@ -23,6 +23,6 @@ def scale_to_target(dataarray, target_values, year=2020):
         scale_factor = target / original_mean
 
         # Scale all years for this region
-        scaled.loc[dict(Region=region_str)] *= scale_factor
+        scaled.loc[{"Region": region_str}] *= scale_factor
 
     return scaled
