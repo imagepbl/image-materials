@@ -259,7 +259,7 @@ def create_region_graph():
         "15": ["Asian-Stan", "STAN", "Stan"],
         "16": ["Russia +", "RUS", "Russia"],
         "17": ["Middle East", "ME", "M.East"],
-        "18": ["India", "INDIA"],
+        "18": ["India +", "INDIA"],
         "19": ["Korea", "KOR"],
         "20": ["China +", "CHN", "China"],
         "21": ["Southeastern Asia", "SEAS", "SE.Asia"],
