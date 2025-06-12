@@ -237,7 +237,7 @@ def compute_housing_residential(population, average_m2_capita, housing_type, flo
         scaling_factors = target_vals / current_vals
 
         total_m2_housing_per_cap.loc[{"Region": regions_mapped}] = total_m2_housing_per_cap.sel(Region = regions_mapped) * scaling_factors
-        print("implemented 'base' for Buildings")
+        print("implemented 'base' for Residential Buildings")
 
     if 'narrow' in circular_economy_config.keys():
         base_year = circular_economy_config["narrow"]["buildings"]["base_year"]
@@ -259,7 +259,7 @@ def compute_housing_residential(population, average_m2_capita, housing_type, flo
         total_m2_housing_per_cap = apply_change_per_region(
             total_m2_housing_per_cap, base_year, target_year, 
             residential_scenario_settings_xr_mapped, implementation_rate)
-        print("implemented 'narrow' for Buildings")
+        print("implemented 'narrow' for Residential Buildings")
 
     total_m2_housing = total_m2_housing_per_cap * population.sel({"Area": ["Rural", "Urban"]})
     floorspace_residential = merge_dims(total_m2_housing, "Type", "Area")

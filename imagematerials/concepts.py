@@ -238,6 +238,8 @@ def create_building_graph():
 
 
 def create_region_graph():
+    #TODO move to seperate file
+    
     region_knowledge_graph = KnowledgeGraph()
 
     # Add numeric region nodes first with full synonyms
