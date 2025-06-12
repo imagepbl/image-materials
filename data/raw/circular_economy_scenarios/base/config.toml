@@ -3,13 +3,20 @@ base_year = 2020
 target_year = 2060
 
 [buildings.residential.2020.useful_floor_pc]
-Canada = 60.6
 "Central Europe" = 27.7
 China = 39
-India = 13.2
 Japan = 39.7
-USA = 60.2
 "Western Europe" = 39.7
+"Middle East and Northern Africa" = 30.9
+
+"Other OECD" = 37
+#Canada = 60.6
+#"Other Asia" = 15.9
+#USA = 60.2
+#India = 13.2
+#"Latin America" = 23
+#"Reforming Economies" = 25.5
+#"Subsaharan Africa" = 15.8
 
 [buildings.residential.2060.useful_floor_pc]
 Canada = 60.6

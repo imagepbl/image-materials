@@ -112,20 +112,36 @@ def tkms_to_nr_of_vehicles_fixed(tera_tkms, mileage, load, loadfactor):
     nr_of_vehicles = vkms.div(mileage, axis=0)
     return nr_of_vehicles
 
+def scenario_change(df, base_year, target_year, change, implementation_rate, data_type = None, steepness=0.5):
+    """
+    Applies a time-based change to values in a DataFrame between a base and target year using a specified implementation method.
 
-def increase_value(df, base_year, target_year, lifetime_increase, implementation_rate, data_type, steepness=0.5):
+    Parameters:
+        df (pd.DataFrame): A time-indexed DataFrame containing mode-specific values, such as lifetime or mileage.
+        base_year (int): The starting year for the change.
+        target_year (int): The year by which the full change should be achieved.
+        change (dict): A dictionary mapping modes to percentage increases (e.g., {'Cars': 20} for +20%).
+        implementation_rate (str): The implementation method; one of 'linear', 'immediate', or 's-curve'.
+        data_type (str): Indicates what kind of data is being modified; one of 'lifetime' or 'mileages'.
+        steepness (float, optional): Steepness parameter for the 's-curve' implementation; default is 0.5.
+
+    Returns:
+        pd.DataFrame: A new DataFrame with updated values for each year between base_year and target_year, 
+                      and interpolated values where necessary.
+
+    Raises:
+        ValueError: If the implementation method is unsupported or if the specified column is not found in the DataFrame.
+    """
     result = df[df.index <= base_year].copy()
     result.loc[target_year] = result.loc[base_year]
 
-    for mode, increase in lifetime_increase.items():
+    for mode, increase in change.items():
         if data_type == "lifetime":
             if mode == 'Cars':
                 col = (mode, 'scale')
             else:
                 col = (mode, 'mean')
-        elif data_type == "mileages":
-            #print(result)
-            #break
+        else: 
             col = mode
 
         base_val = result.loc[base_year, col]
@@ -149,16 +165,30 @@ def increase_value(df, base_year, target_year, lifetime_increase, implementation
     result = interpolate(result)
     return result
 
+def apply_change_per_region(df, base_year, target_year, increase, implementation_rate, data_type = None, steepness=0.5):
+    """
+    Applies a uniform percentage increase across all regions (columns) in the DataFrame using a specified implementation method.
 
-def apply_increase_per_region(df, base_year, target_year, increase, implementation_rate, data_type, steepness=0.5):
+    Parameters:
+        df (pd.DataFrame): A time-indexed DataFrame with regions as columns and a common structure across all regions.
+        base_year (int): The starting year for the change.
+        target_year (int): The year by which the full change should be achieved.
+        increase (float): The percentage increase to apply to all regions (e.g., 10 for +10%).
+        implementation_rate (str): The implementation method; one of 'linear', 'immediate', or 's-curve'.
+        data_type (str): Indicates what kind of data is being modified; one of 'lifetime' or 'mileages'.
+        steepness (float, optional): Steepness parameter for the 's-curve' implementation; default is 0.5.
+
+    Returns:
+        pd.DataFrame: A DataFrame with updated values for each region, aligned by year (index).
+    """
     results = []
     for region in df.columns:
         regional_df = df[[region]].copy()  # Keep as DataFrame for compatibility
-        result = increase_value(
+        result = change_value(
             regional_df, 
             base_year=base_year, 
             target_year=target_year, 
-            lifetime_increase={region: increase}, 
+            change={region: increase}, 
             implementation_rate=implementation_rate, 
             data_type=data_type, 
             steepness=steepness
