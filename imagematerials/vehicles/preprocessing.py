@@ -56,7 +56,7 @@ from imagematerials.vehicles.constants import (
     maintenance_lifetime_per_mode,
 )
 from imagematerials.vehicles.modelling_functions import (interpolate, tkms_to_nr_of_vehicles_fixed,  
-    change_value, apply_change_per_region)
+    scenario_change, apply_change_per_region)
 #from imagematerials.concepts import vehicle_knowledge_graph
 
 
@@ -417,7 +417,7 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
         implementation_rate = circular_economy_config['slow']['vehicles']['implementation_rate']
         # possibilities for implementation rate are: linear, immediate, s-curve
 
-        lifetimes_vehicles = change_value(
+        lifetimes_vehicles = scenario_change(
             lifetimes_vehicles, base_year, target_year, 
             lifetime_increase, implementation_rate, "lifetime")
 
@@ -430,7 +430,7 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
         region_mileage = circular_economy_config['narrow']['vehicles']['region_mileage']
         implementation_rate = circular_economy_config['narrow']['vehicles']['implementation_rate']
 
-        mileages = change_value(
+        mileages = scenario_change(
             mileages, base_year, target_year, 
             mileage_increase, implementation_rate)
 
