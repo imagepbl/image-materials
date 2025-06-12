@@ -236,6 +236,61 @@ def create_building_graph():
     # )
     return building_knowledge_graph
 
+
+def create_region_graph():
+    target_regions= ["Canada","Central Europe","China","India","Japan",
+                     "USA","Western Europe","Latin America","Middle East and Northern Africa",
+                    "Other Asia","Other OECD","Reforming Economies","Subsaharan Africa"]
+    region_knowledge_graph = KnowledgeGraph()
+        # Add target regions as main nodes
+    for region in target_regions:
+        region_knowledge_graph.add(Node(region))
+    
+    # Assign image regions stepwise to their respective target regions
+
+    for region in ["RCAM", "BRA", "RSAM"]:
+        region_knowledge_graph.add(Node(region, inherits_from="Latin America"))
+    for region in ["NAF", "ME"]:
+        region_knowledge_graph.add(Node(region, inherits_from="Middle East and Northern Africa"))
+    for region in ["WAF", "EAF", "SAF", "RSAF"]:
+        region_knowledge_graph.add(Node(region, inherits_from="Subsaharan Africa"))
+    for region in [ "UKR", "STAN", "RUS"]:
+        region_knowledge_graph.add(Node(region, inherits_from="Reforming Economies"))
+    for region in ["KOR", "SEAS", "INDO", "RSAS"]:
+        region_knowledge_graph.add(Node(region, inherits_from="Other Asia"))
+    for region in ["TUR", "OCE", "MEX"]:
+        region_knowledge_graph.add(Node(region, inherits_from="Other OECD"))
+    region_knowledge_graph["Canada"].synonyms = ["CAN","1"]
+    region_knowledge_graph["USA"].synonyms = ["USA","US","2"]
+    region_knowledge_graph["Western Europe"].synonyms = ["WEU","W.Europe","11"]
+    region_knowledge_graph["Central Europe"].synonyms = ["CEU","C.Europe","12"]
+    region_knowledge_graph["India"].synonyms = ["INDIA","18"]
+    region_knowledge_graph["China"].synonyms = ["CHN","20"]
+    region_knowledge_graph["Japan"].synonyms = ["JAP","23"]
+    region_knowledge_graph["BRA"].synonyms = ["Brazil","5"]
+    region_knowledge_graph["EAF"].synonyms = ["E.Africa","9"]
+    region_knowledge_graph["INDO"].synonyms = ["Indonesia","22"]
+    region_knowledge_graph["KOR"].synonyms = ["Korea","19"]
+    region_knowledge_graph["ME"].synonyms = ["M.East","17"]
+    region_knowledge_graph["MEX"].synonyms = ["Mexico","3"]
+    region_knowledge_graph["NAF"].synonyms = ["N.Africa","7"]
+    region_knowledge_graph["OCE"].synonyms = ["Oceania","24"]
+    region_knowledge_graph["RCAM"].synonyms = ["Rest C.Am.","4"]
+    region_knowledge_graph["RSAM"].synonyms = ["Rest S.Am.","6"]
+    region_knowledge_graph["RSAF"].synonyms = ["Rest S.Africa","26"]
+    region_knowledge_graph["RSAS"].synonyms = ["Rest S.Asia","25"]
+    region_knowledge_graph["RUS"].synonyms = ["Russia","16"]
+    region_knowledge_graph["SEAS"].synonyms = ["SE.Asia","21"]
+    region_knowledge_graph["SAF"].synonyms = ["South Africa","10"]
+    region_knowledge_graph["STAN"].synonyms = ["Stan","15"]
+    region_knowledge_graph["TUR"].synonyms = ["Turkey","13"]
+    region_knowledge_graph["UKR"].synonyms = ["Ukraine","14"]
+    region_knowledge_graph["WAF"].synonyms = ["W.Africa","8"]
+
+    return region_knowledge_graph
+
+knowledge_graph = KnowledgeGraph(*create_building_graph()._items, *create_vehicle_graph()._items)
+
 def create_electricity_graph():
 
     # Generation -----------
@@ -280,3 +335,4 @@ def create_electricity_graph():
 
 
 knowledge_graph = KnowledgeGraph(*create_building_graph()._items, *create_vehicle_graph()._items, *create_electricity_graph()._items)
+
