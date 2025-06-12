@@ -184,7 +184,7 @@ def apply_change_per_region(df, base_year, target_year, increase, implementation
     results = []
     for region in df.columns:
         regional_df = df[[region]].copy()  # Keep as DataFrame for compatibility
-        result = change_value(
+        result = scenario_change(
             regional_df, 
             base_year=base_year, 
             target_year=target_year, 

@@ -21,6 +21,7 @@ from imagematerials.buildings.constants import (
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, merge_dims
 from imagematerials.concepts import create_region_graph
+from imagematerials.vehicles.modelling_functions import scenario_change
 
 far_start_year = 1721
 start_year = 1820
@@ -235,6 +236,17 @@ def compute_housing_residential(population, average_m2_capita, housing_type, flo
         scaling_factors = target_vals / current_vals
 
         total_m2_housing_per_cap.loc[{"Region": regions_mapped}] = total_m2_housing_per_cap.sel(Region = regions_mapped) * scaling_factors
+
+    if 'narrow' in circular_economy_config.keys():
+        base_year = circular_economy_config["narrow"]["buildings"]["base_year"]
+        target_year = circular_economy_config["narrow"]["buildings"]["target_year"]
+        
+        residential_scenario_settings = circular_economy_config['narrow']["buildings"]['residential']['m2_change_pc']
+        implementation_rate = circular_economy_config['narrow']['buildings']['implementation_rate']
+
+        total_m2_housing_per_cap = scenario_change(
+            total_m2_housing_per_cap, base_year, target_year, 
+            residential_scenario_settings, implementation_rate)
 
     total_m2_housing = total_m2_housing_per_cap * population.sel({"Area": ["Rural", "Urban"]})
     floorspace_residential = merge_dims(total_m2_housing, "Type", "Area")
