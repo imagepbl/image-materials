@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 import xarray as xr
 from pytest import mark
@@ -45,7 +46,8 @@ def test_vehicles_prep(vhc_summary, key_list, expected):
         assert data["dims"] == expected["dims"]
         assert data["attrs"] == expected["attrs"]
         assert data["coords"] == expected["coords"]
-        assert data["data"] == expected["data"], f"New: {data['data'].sum()}, Old: {expected['data'].sum()}"
+        assert np.allclose(data["data"], expected["data"]), (
+            f"New: {np.sum(data['data'])}, Old: {np.sum(expected['data'])}")
 
 
 @mark.parametrize("key_list,expected",
@@ -60,7 +62,8 @@ def test_buildings_prep(bld_summary, key_list, expected):
         assert data["dims"] == expected["dims"]
         assert data["attrs"] == expected["attrs"]
         assert data["coords"] == expected["coords"]
-        assert data["data"] == expected["data"], f"New: {data['data'].sum()}, Old: {expected['data'].sum()}"
+        assert data["data"] == expected["data"], (
+            f"New: {np.sum(data['data'])}, Old: {np.sum(expected['data'])}")
 
 def _check_data_same(orig_data, new_data, name=""):
     assert type(orig_data) is type(new_data)
