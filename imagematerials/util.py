@@ -359,12 +359,12 @@ def convert_life_time_vehicles(life_time_vehicles: xr.Dataset) -> dict[str, xr.D
 def scenario_change(arr: xr.DataArray, base_year: int, target_year: int, change: dict,
                     implementation_rate: str, data_type: Optional[str]=None, steepness: float=0.5) -> xr.DataArray:
     """
-    Applies a time-based change to values in a DataFrame between a base and target year using a specified implementation method.
+    Applies a time-based change to values in a Xarray between a base and target year using a specified implementation method.
 
     Parameters
     ----------
     arr
-        A time-indexed DataFrame containing mode-specific values, such as lifetime or mileage.
+        A time-indexed Xarray containing mode-specific values, such as lifetime or mileage.
     base_year
         The starting year for the change.
     target_year
@@ -380,7 +380,7 @@ def scenario_change(arr: xr.DataArray, base_year: int, target_year: int, change:
 
     Returns
     -------
-        A new DataFrame with updated values for each year between base_year and target_year, and interpolated values where necessary.
+        A new Xarray with updated values for each year between base_year and target_year, and interpolated values where necessary.
 
     Raises
     ------
@@ -426,7 +426,7 @@ def apply_change_per_region(arr: xr.DataArray, base_year: int, target_year: int,
     Applies a uniform percentage increase across all regions (columns) in the DataFrame using a specified implementation method.
 
     Parameters:
-        df (pd.DataFrame): A time-indexed DataFrame with regions as columns and a common structure across all regions.
+        arr (xarray): A time-indexed Xarray with regions as columns and a common structure across all regions.
         base_year (int): The starting year for the change.
         target_year (int): The year by which the full change should be achieved.
     increase
@@ -436,7 +436,7 @@ def apply_change_per_region(arr: xr.DataArray, base_year: int, target_year: int,
         steepness (float, optional): Steepness parameter for the 's-curve' implementation; default is 0.5.
 
     Returns:
-        pd.DataFrame: A DataFrame with updated values for each region, aligned by year (index).
+        array: An xarray with updated values for each region, aligned by year (index).
     """
     results = []
     for region, subarr in arr.groupby('Region'):
