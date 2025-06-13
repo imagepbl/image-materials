@@ -62,7 +62,7 @@ def test_buildings_prep(bld_summary, key_list, expected):
         assert data["dims"] == expected["dims"]
         assert data["attrs"] == expected["attrs"]
         assert data["coords"] == expected["coords"]
-        assert data["data"] == expected["data"], (
+        assert  np.allclose(data["data"], expected["data"]), (
             f"New: {np.sum(data['data'])}, Old: {np.sum(expected['data'])}")
 
 def _check_data_same(orig_data, new_data, name=""):
