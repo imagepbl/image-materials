@@ -754,8 +754,6 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
                                         "material": preprocessing_results_xarray["maintenance_material_fractions"].coords["material"]})
     preprocessing_results_xarray["maintenance_material_fractions"] = xr.concat((preprocessing_results_xarray["maintenance_material_fractions"], xr_default_maintenace), dim="Type")
 
-    # output_coords_type = [x for x in prep_data["stocks"].Type.values if x not in share_coords] + list(prep_data["shares"].coords["Type"].values)
-
     prep_data = preprocessing_results_xarray
     region_coords = np.sort(prep_data["stocks"].coords["Region"].values.astype(int)).astype(str)[:-2]
 
