@@ -159,11 +159,25 @@ class KnowledgeGraph():
         new_array.loc[{dim: keep_coords}] = input_array.loc[{dim: keep_coords}]
         return new_array
 
-    def sum(self, input_array, output_coords, dim="Type"):
+    def aggregate_sum(self, input_array, output_coords, dim="Type"):
+        """Aggregate the data over subtypes and sums them.
+
+        Parameters
+        ----------
+        input_array
+            The xr.DataArray to be aggregated/summed.
+        output_coords
+            The output coordinates over which to aggregate/sum.
+        dim, optional
+            Dimension to aggregate/sum over, by default "Type"
+
+        Returns
+        -------
+            Aggregated xr.DataArray.
+        """
         output_to_input = self.find_relations(input_array.coords[dim].values, output_coords)
         output_arrays = []
         for output, input_list in output_to_input.items():
-            print(input_list)
             output_arrays.append(input_array.sel(**{dim: input_list}).sum(dim))
         output_xr = xr.concat(output_arrays, dim=dim)
         output_xr.coords[dim] = output_coords
