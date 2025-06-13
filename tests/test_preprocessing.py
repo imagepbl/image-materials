@@ -45,7 +45,7 @@ def test_vehicles_prep(vhc_summary, key_list, expected):
         assert data["dims"] == expected["dims"]
         assert data["attrs"] == expected["attrs"]
         assert data["coords"] == expected["coords"]
-        assert data["data"] == expected["data"]
+        assert data["data"] == expected["data"], f"New: {data['data'].sum()}, Old: {expected['data'].sum()}"
 
 
 @mark.parametrize("key_list,expected",
@@ -60,7 +60,7 @@ def test_buildings_prep(bld_summary, key_list, expected):
         assert data["dims"] == expected["dims"]
         assert data["attrs"] == expected["attrs"]
         assert data["coords"] == expected["coords"]
-        assert data["data"] == expected["data"]
+        assert data["data"] == expected["data"], f"New: {data['data'].sum()}, Old: {expected['data'].sum()}"
 
 def _check_data_same(orig_data, new_data, name=""):
     assert type(orig_data) is type(new_data)
