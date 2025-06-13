@@ -174,6 +174,7 @@ class KnowledgeGraph():
         Returns
         -------
             Aggregated xr.DataArray.
+
         """
         output_to_input = self.find_relations(input_array.coords[dim].values, output_coords)
         output_arrays = []
