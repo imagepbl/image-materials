@@ -19,9 +19,9 @@ from imagematerials.buildings.constants import (
     SCENARIO_SELECT
 )
 from imagematerials.read_mym import read_mym_df
-from imagematerials.util import dataset_to_array, merge_dims
+from imagematerials.util import dataset_to_array, merge_dims, \
+    scenario_change, apply_change_per_region
 from imagematerials.concepts import create_region_graph
-from imagematerials.vehicles.modelling_functions import scenario_change, apply_change_per_region
 
 far_start_year = 1721
 start_year = 1820
@@ -213,13 +213,13 @@ def compute_housing_residential(population, average_m2_capita, housing_type, flo
     m2_housing_share = m2_housing_per_capita / m2_housing_per_capita.sum(["Type"])
     total_m2_housing_per_cap = m2_housing_share*floorspace_rururb
     region_knowledge_graph = create_region_graph()
+    regions = total_m2_housing_per_cap.coords["Region"].values
 
     if 'base' in circular_economy_config.keys():
         base_year = circular_economy_config["base"]["buildings"]["base_year"]
         target_year = circular_economy_config["base"]["buildings"]["target_year"]
         floor_pc_2020 = circular_economy_config["base"]["buildings"]["residential"]["2020"]["useful_floor_pc"]
-        
-        regions = total_m2_housing_per_cap.coords["Region"].values
+
         floor_pc_2020_xr = xr.DataArray(
             list(floor_pc_2020.values()),
             coords={"Region": list(floor_pc_2020.keys())},
