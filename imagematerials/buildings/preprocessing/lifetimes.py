@@ -10,14 +10,17 @@ def compute_lifetimes(base_directory, commercial_types, circular_economy_config,
 
     if 'slow' in circular_economy_config.keys():
         # TODO make this dynamic in the long run, for now simple solution chosen
-        SCENARIO_SELECT = "SSP2_2D_RE"
+        SCENARIO = "SSP2_2D_RE"
         print("implemented 'slow' for Buildings")
+    else:
+        SCENARIO = SCENARIO_SELECT
+
     
-    lifetimes_commercial = pd.read_csv(base_directory / 'buildings'  / 'files_lifetimes' / SCENARIO_SELECT / 'lifetimes_comm.csv', index_col = [0,1])  # Weibull parameter database for commercial buildings (shape & scale parameters given by region, area & building-type)
+    lifetimes_commercial = pd.read_csv(base_directory / 'buildings'  / 'files_lifetimes' / SCENARIO / 'lifetimes_comm.csv', index_col = [0,1])  # Weibull parameter database for commercial buildings (shape & scale parameters given by region, area & building-type)
     # TODO originally lifetimes_commercial was only read in with flag_normal == 0
 
     if distribution_type == "weibull":
-        lifetimes_residential = pd.read_csv(base_directory / 'buildings' / 'files_lifetimes' / SCENARIO_SELECT / 'lifetimes.csv', index_col = [0,1,2,3])   # Weibull parameter database for residential buildings (shape & scale parameters given by region, area & building-type)
+        lifetimes_residential = pd.read_csv(base_directory / 'buildings' / 'files_lifetimes' / SCENARIO / 'lifetimes.csv', index_col = [0,1,2,3])   # Weibull parameter database for residential buildings (shape & scale parameters given by region, area & building-type)
     elif distribution_type == "folded_norm":
         lifetimes_residential = pd.read_csv(base_directory / 'buildings' / 'files_lifetimes' / 'lifetimes_normal.csv')  # Normal distribution database (Mean & StDev parameters given by region, area & building-type, though only defined by region for now)
     else:
