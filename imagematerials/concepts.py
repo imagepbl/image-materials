@@ -159,6 +159,16 @@ class KnowledgeGraph():
         new_array.loc[{dim: keep_coords}] = input_array.loc[{dim: keep_coords}]
         return new_array
 
+    def sum(self, input_array, output_coords, dim="Type"):
+        output_to_input = self.find_relations(input_array.coords[dim].values, output_coords)
+        output_arrays = []
+        for output, input_list in output_to_input.items():
+            print(input_list)
+            output_arrays.append(input_array.sel(**{dim: input_list}).sum(dim))
+        output_xr = xr.concat(output_arrays, dim=dim)
+        output_xr.coords[dim] = output_coords
+        return output_xr
+
     def to_netcdf(self, out_fp, **kwargs):
         json_items = [x.to_dict() for x in self._items]
         data = xr.DataArray()
