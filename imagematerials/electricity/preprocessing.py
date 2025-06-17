@@ -9,6 +9,7 @@ import pint
 import xarray as xr
 from collections import defaultdict
 import matplotlib.pyplot as plt
+from matplotlib.ticker import StrMethodFormatter
 
 # path_current = Path(__file__).resolve().parent # absolute path of file
 # path_base = path_current.parent.parent # base path of the project -> image-materials
@@ -320,40 +321,157 @@ types = [str(t) for t in dim_coords["Type"]]
 ###########################################################################################################
 #%%% 1.6) Visualize Stocks
 
+# Generation technologies
+technologies = [
+    'Solar PV', 'Solar PV residential', 'CSP', 'Wind onshore', 'Wind offshore', 'Wave', 'Hydro', 
+    'Other Renewables', 'Geothermal', 'Hydrogen power', 'Nuclear', '<EMPTY>', 'Conv. Coal', 
+    'Conv. Oil', 'Conv. Natural Gas', 'Waste', 'IGCC', 'OGCC', 'NG CC', 'Biomass CC', 
+    'Coal + CCS', 'Oil/Coal + CCS', 'Natural Gas + CCS', 'Biomass + CCS', 'CHP Coal', 
+    'CHP Oil', 'CHP Natural Gas', 'CHP Biomass', 'CHP Coal + CCS', 'CHP Oil + CCS', 
+    'CHP Natural Gas + CCS', 'CHP Biomass + CCS', 'CHP Geothermal', 'CHP Hydrogen'
+]
+# Define color and linestyle pools
+colors = list(plt.get_cmap('tab10').colors)  # 20 distinct colors
+# Add two new distinct colors (example: magenta and teal)
+colors += [(1.0, 0.0, 1.0),  # magenta
+           (0.0, 0.5, 0.5)]  # teal
+linestyles = ['-', '--', ':'] #'-.'
+# Create a cycle of (color, linestyle) combinations
+style_combinations = list(itertools.product(colors, linestyles))
+assert len(technologies) <= len(style_combinations), "Not enough unique combinations for all technologies."
+# Map technologies to (color, linestyle)
+dict_gentech_styles = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
+
 path_test_plots = Path(path_base, "imagematerials", "electricity", "out_test", "Figures")
 
+
+
+# stocks in main_model_factory.stocks -------------------------------------------------
 da_stocks = main_model_factory.stocks.copy()
 
 regions = da_stocks.Region.values[:2]  # First 2 regions
-types_top = da_stocks.Type.values[1:15]   # Types 1–10
-types_bottom = da_stocks.Type.values[15:30]  # Types 11–20
+# types_top = da_stocks.Type.values[1:15]   # Types 1–10
+# types_bottom = da_stocks.Type.values[15:30]  # Types 11–20
+techs_upper = [col for col in da_stocks.columns if da_stocks[col].max() > threshold] #gcap.columns[15:30]
+techs_lower = [col for col in da_stocks.columns if da_stocks[col].max() <= threshold] #gcap.columns[:15]
 
-fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(14, 8), sharex=True, sharey=True)
+
+
+fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(14, 8), sharex=True)
+axes[0, 1].sharey(axes[0, 0])
+axes[1, 1].sharey(axes[1, 0])
 
 for i, region in enumerate(regions):
-    # Top row: Types 1–10
-    for t in types_top:
-        da_stocks.sel(Type=t, Region=region).plot(ax=axes[0, i], label=t)
-    axes[0, i].set_title(f"{region} (Types 1–10)")
-    axes[0, i].legend()
+    # Top row: Types 1–15
+    for t in techs_upper:
+        data = da_stocks.sel(Type=t, Region=region)
+        color, ls = dict_gentech_styles.get(t, ('black', '-'))  # default style fallback
+        axes[0, i].plot(data.Time, data.values, label=t, color=color, linestyle=ls)
+    # axes[0, i].set_title(f"{region} (Types 1–15)")
+    axes[0, i].grid(alpha=0.3, linestyle='--')
 
-    # Bottom row: Types 11–20
-    for t in types_bottom:
-        da_stocks.sel(Type=t, Region=region).plot(ax=axes[1, i], label=t)
-    axes[1, i].set_title(f"{region} (Types 11–20)")
+    # Bottom row: Types 16–30
+    for t in techs_lower:
+        data = da_stocks.sel(Type=t, Region=region)
+        color, ls = dict_gentech_styles.get(t, ('black', '-'))
+        axes[1, i].plot(data.Time, data.values, label=t, color=color, linestyle=ls)
+    # axes[1, i].set_title(f"{region} (Types 16–30)")
     axes[1, i].set_xlabel("Time")
-    axes[1, i].legend(loc ='upper left')
+    axes[1, i].grid(alpha=0.3, linestyle='--')
+    # axes[1, i].legend(fontsize="small", loc='upper left')
 
-# Label only left side with y-axis label
+# Y-axis labels only on left
 axes[0, 0].set_ylabel("Value")
 axes[1, 0].set_ylabel("Value")
-plt.suptitle("Generation - Stocks", fontsize=16)
+for ax in axes.flat: # change y axis ticks from 100000 to 100,000
+    ax.yaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}'))
+axes[0, 0].legend(fontsize='small', ncol=2, loc='upper left')
+axes[1, 0].legend(fontsize='small', ncol=2, loc='upper left')
 
+plt.suptitle("Generation - Stocks in Brazil and C.Europe", fontsize=16)
 plt.tight_layout()
 fig.savefig(path_test_plots / "Gen_stocks_Brazil-CEurope.png", dpi=300)
 plt.show()
 
 
+
+# stocks from TIMER --------------------------------------------------
+
+# 2 COUNTRIES
+countries = ['Brazil','C.Europe']
+threshold = 100_000
+techs_upper = [col for col in gcap.columns if gcap[col].max() > threshold] #gcap.columns[15:30]
+techs_lower = [col for col in gcap.columns if gcap[col].max() <= threshold] #gcap.columns[:15]
+
+fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(14, 8), sharex=True)
+axes[0, 1].sharey(axes[0, 0])
+axes[1, 1].sharey(axes[1, 0])
+
+for i, country in enumerate(countries):
+    df = gcap[gcap.index.get_level_values(1) == country].copy()
+    df.index = df.index.droplevel(1)
+
+    # Top row: techs 15–30
+    for tech in techs_upper:
+        color, ls = dict_gentech_styles[tech]
+        axes[0, i].plot(df.index, df[tech], label=tech, color=color, linestyle=ls)
+    # axes[0, i].set_title(f"{country} (Technologies 16–30)")
+    axes[0, i].grid(alpha=0.3, linestyle='--')
+
+    # Bottom row: techs 0–14
+    for tech in techs_lower:
+        color, ls = dict_gentech_styles[tech]
+        axes[1, i].plot(df.index, df[tech], label=tech, color=color, linestyle=ls)
+    axes[1, i].set_xlabel('Year')
+    axes[1, i].grid(alpha=0.3, linestyle='--')
+    
+
+# Add Y-axis labels only on left side
+axes[0, 0].set_ylabel('Value')
+axes[1, 0].set_ylabel('Value')
+for ax in axes.flat: # change y axis ticks from 100000 to 100,000
+    ax.yaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}'))
+axes[0, 0].legend(fontsize='small', ncol=2, loc='upper left')
+axes[1, 0].legend(fontsize='small', ncol=2, loc='upper left')
+
+plt.suptitle(f"Generation - Stocks in {countries[0]}_{countries[1]} (TIMER)", fontsize=16)
+plt.tight_layout()
+fig.savefig(path_test_plots / f"TIMER_Gen_stocks_{countries[0]}-{countries[1]}.png", dpi=300)
+plt.show()
+
+
+
+
+# 1 COUNTRY
+country = 'C.Europe'
+df = gcap[gcap.index.get_level_values(1) == country]
+df.index = df.index.droplevel(1)
+
+# Split columns into two groups
+techs_upper = df.columns[15:30]
+techs_lower = df.columns[:15]
+
+# Create subplots
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
+
+for tech in techs_upper:
+    color, ls = dict_gentech_styles[tech]
+    df[tech].plot(ax=ax1, label=tech, color=color, linestyle=ls)
+ax1.set_ylabel('Value')
+ax1.legend(ncol=2, fontsize='small', loc='upper left')
+
+# Lower panel: tech 16–30
+for tech in techs_lower:
+    color, ls = dict_gentech_styles[tech]
+    df[tech].plot(ax=ax2, label=tech, color=color, linestyle=ls)
+ax2.set_xlabel('Year')
+ax2.set_ylabel('Value')
+ax2.legend(ncol=2, fontsize='small', loc='upper left')
+
+plt.tight_layout()
+plt.suptitle(f"Generation - Stocks in {country} (TIMER)", fontsize=16)
+fig.savefig(path_test_plots / f"TIMER_Gen_stocks_{country}.png", dpi=300)
+plt.show()
 
 ###########################################################################################################
 #%% Visualize Inflow Materials
