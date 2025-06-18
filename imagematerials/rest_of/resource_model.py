@@ -153,7 +153,7 @@ class ResourceModel():
                                                                                    self.cons_capita)
                
     
-    def fit_models(self, best_rmse_models):
+    def fit_models(self, best_rmse_models: dict):
         # fit all groups of regions to mathematical models and do statistical analysis (RMSE and R2)
         (self.model_groups, 
          self.rmse_r2_groups, 
