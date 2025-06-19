@@ -36,6 +36,7 @@ from imagematerials.electricity.constants import ( # TODO: import not working at
     # COHORTS, # necessary?
     SCEN,
     VARIANT,
+    SENS_ANALYSIS,
     REGIONS,
     TECH_GEN,
     STD_LIFETIMES_ELECTR,
@@ -55,7 +56,7 @@ scen_folder = SCEN + "_" + VARIANT
 # path_base = Path().resolve() # TODO absolute path of file "preprocessing.py" ? current solution can differ depending on IDE used (?) 
 path_current = Path().resolve()
 path_base = path_current.parent.parent # base path of the project -> image-materials
-path_image_output = Path(path_base, "data", "raw", SCEN)
+path_image_output = Path(path_base, "data", "raw", SCEN, "EnergyServices")
 path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
 path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scen_folder)
 
@@ -67,7 +68,7 @@ assert path_external_data_scenario.is_dir()
 if not (path_base / 'imagematerials' / 'electricity' / 'out_test').is_dir():
     (path_base / 'imagematerials' / 'electricity' / 'out_test').mkdir(parents=True)
 
-sa_settings = "default"  # settings for the sensitivity analysis (default, high_stor, high_grid)
+
 
 
 
@@ -680,7 +681,7 @@ gcap_data = gcap_data.iloc[:, :26]
 
 storage = storage.iloc[:, :26]    # drop global total column and empty (27) column
 
-if sa_settings == 'high_stor':
+if SENS_ANALYSIS == 'high_stor':
    storage_multiplier = storage
    for year in range(2021,2051):
         storage_multiplier.loc[year] = storage.loc[year] * (1 + (1/30*(year-2020)))
@@ -837,7 +838,7 @@ storage.columns = region_list
 
 # BEV & PHEV vehicle stats
 
-if sa_settings == 'high_stor':
+if SENS_ANALYSIS == 'high_stor':
    capacity_usable_PHEV = 0.025   # 2.5% of capacity of PHEV is usable as storage (in the pessimistic sensitivity variant)
    capacity_usable_BEV  = 0.05    # 5  % of capacity of BEVs is usable as storage (in the pessimistic sensitivity variant)
 else: 
@@ -983,7 +984,7 @@ for column in range(0,len(phs_regions)):
             phs_projections_IMAGE.iloc[:,region] = phs_projections.iloc[:,column] * (Gcap_hydro.iloc[:,region]/sum_data)
 
 # Then fill the years after 2030 (end of IHS projections) according to the Gcap annual growth rate (assuming a fixed percentage of Hydro dams will be built with Pumped hydro capabilities after )
-if sa_settings == 'high_stor':
+if SENS_ANALYSIS == 'high_stor':
    phs_projections_IMAGE.loc[2030:YEAR_OUT] =  phs_projections_IMAGE.loc[2030] * (Gcap_hydro.loc[2030:YEAR_OUT]/Gcap_hydro.loc[2030:YEAR_OUT])  # no growth after 2030 in the high_stor sensitivity variant
 else:
    phs_projections_IMAGE.loc[2030:YEAR_OUT] =  phs_projections_IMAGE.loc[2030] * (Gcap_hydro.loc[2030:YEAR_OUT]/Gcap_hydro.loc[2030])
@@ -992,7 +993,7 @@ else:
 phs_storage_fraction = phs_projections_IMAGE.divide(storage_power.loc[:YEAR_OUT]).clip(upper=1)      # the phs storage fraction deployed to fulfill storage demand, both phs & storage_power here are expressed in MW
 storage_remaining = storage.loc[:YEAR_OUT] * (1 - phs_storage_fraction)
 
-if sa_settings == 'high_stor':
+if SENS_ANALYSIS == 'high_stor':
    oth_storage_fraction = 0.5 * storage_remaining 
    oth_storage_fraction += ((storage_remaining * 0.5) - storage_vehicles).clip(lower=0)    
    oth_storage_fraction = oth_storage_fraction.divide(storage).where(oth_storage_fraction > 0, 0).clip(lower=0) 
@@ -1159,7 +1160,7 @@ grid_length_Mv_time = pd.DataFrame().reindex_like(gcap_total)
 grid_length_Lv_time = pd.DataFrame().reindex_like(gcap_total)
 
 #implement growth correction (sensitivity variant)
-if sa_settings == 'high_grid':
+if SENS_ANALYSIS == 'high_grid':
    gcap_growth_HV = gcap_growth.add(add_growth.reindex_like(gcap_growth)).subtract(red_growth.reindex_like(gcap_growth))
 else: 
    gcap_growth_HV = gcap_growth

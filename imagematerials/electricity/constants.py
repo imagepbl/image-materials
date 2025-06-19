@@ -34,6 +34,9 @@ VARIANT = "2D_RE"
 # FOLDER = SCEN + "_" + VARIANT
 # OUTPUT_FOLDER = base_dir.joinpath("..", "..", "output", PROJECT, FOLDER)
 
+# Sensitivity Analysis - default, high_stor, high_grid
+SENS_ANALYSIS = "default" 
+
 
 # Conversion factors ---------------------------------------------
 
