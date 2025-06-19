@@ -74,7 +74,7 @@ def test_generic_stocks(coordinates, timelines):
     lifetimes = {"weibull": lt}
     complete_timeline, simulation_timeline = timelines
     model = GenericStocks(
-        complete_timeline, stocks=stocks,lifetimes=lifetimes,
+        complete_timeline, stocks=stocks, lifetimes=lifetimes,
         knowledge_graph=knowledge_graph, Region=coordinates["Region"], Type=coordinates["Type"],
         Cohort=coordinates["Cohort"], Time=coordinates["Time"])
     model.simulate(complete_timeline)
