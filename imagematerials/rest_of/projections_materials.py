@@ -15,9 +15,9 @@ and then projects data into the future based out of this regression
 import pandas as pd
 import numpy as np
 
-from const import REGION_TO_CLASS_DICT, models_output_dict
+from imagematerials.rest_of.const import REGION_TO_CLASS_DICT, models_output_dict
 
-from regression_models_classes import (Log_Log_Model, Semi_Log_Model, 
+from imagematerials.rest_of.regression_models_classes import (Log_Log_Model, Semi_Log_Model, 
                                        Log_Inverse_Model, Log_Log_Inverse_Model, 
                                        Log_Log_Square_Model, NLI_Model, 
                                        GOMPERTZ_Model, LG_Model, BW_Model)
@@ -166,6 +166,7 @@ def estimate_models_per_region_group(regions_groups_dict: dict,
     rmse_r2_groups = {}
     
     for region_group in regions_groups_dict.keys():
+        print(region_group)
         model_groups[region_group] = estimate_models(cons_pc_groups.get(region_group), gdp_pc_groups.get(region_group))
         rmse_r2_groups[region_group] = rmse_r2_models(model_groups[region_group])
     

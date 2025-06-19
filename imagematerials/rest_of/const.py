@@ -19,14 +19,16 @@ switch_year = 2100
 # PATHS - set here your own data paths 
 
 # INPUT
-SCENARIO = "SSP2"
+SCENARIO = "SSP2_CP"
 
-path_input_data = "../../data/raw/rest-of/"
+path_input_data = "../../../data/raw/rest-of"
 
-path_scenario_data = f"../../data/raw/image/{SCENARIO}/Biomass/"
+path_scenario_data = f"../../../data/raw/image/{SCENARIO}/Biomass/"
+path_scenario_data_fossil = f"../../../data/raw/image/{SCENARIO}/EnergyFlows/"
+path_scenario_data_water = f"../../../data/raw/SSP2/EnergyFlows/"
 
 # Output
-path_figures = "../figures"
+path_figures = "../figures_test"
 
 
 
@@ -207,6 +209,28 @@ IAI_TO_IMAGE_CLASSES = {
     ]
 }
 
+copper_regions = {
+    'copper_regions': ['Other North America countries',
+                    'USA',
+                    'South America',
+                    'Europe',
+                    'Rest of Asia',
+                    'Africa',
+                    'Oceania',
+                    'India',
+                    'Japan',
+                    'Korea'],
+    'china': ['China']}
+
+aluminium_regions = {
+    'all_together' : ['Africa', 'Asia (ex China)', 
+                    'Estimated Unreported to IAI', 'Gulf Cooperation Council',
+                    'North America', 'Russia & Eastern Europe',
+                    'South America', 'Western & Central Europe'],
+    'china' : ['China (Estimated)'],
+    'oceania' : ['Oceania'],
+}
+
 # get list of all IMAGE regions
 all_regions_list = list(CLASS_TO_REGION_DICT.copy().values())
 
@@ -224,9 +248,9 @@ SAND_GROUPING_REGIONS = {
     'Average': ['class_ 5', 'class_ 12', 'class_ 13', 'class_ 14','class_ 15', 
                 'class_ 16', 'class_ 17', 'class_ 18', 'class_ 19', 
                 'class_ 22', 'class_ 7', 'class_ 21'],
-    'Lower':    ['class_ 3', 'class_ 4', 'class_ 6', 'class_ 9', 'class_ 10'],
+    'Lower':    ['class_ 3', 'class_ 4', 'class_ 6', 'class_ 9', 'class_ 10', 
+                 'class_ 8', 'class_ 25', 'class_ 26'],
     'Japan':    ['class_ 23'],
-    'Other': ['class_ 8', 'class_ 25', 'class_ 26'],
     'High' : ['class_ 2', 'class_ 24', 'class_ 11']
     }
 

@@ -180,7 +180,9 @@ cython_debug/
 *.his
 
 IMAGE-Mat/output/
+IMAGE-Mat_old_version/
 
 prism/
 pym/
 scripts/
+figures_test/

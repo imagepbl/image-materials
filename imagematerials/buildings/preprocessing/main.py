@@ -20,10 +20,10 @@ from imagematerials.buildings.preprocessing.population import compute_population
 from imagematerials.concepts import knowledge_graph
 
 
-def buildings_preprocessing(base_directory):
+def buildings_preprocessing(base_directory, climate_policy_config: dict, circular_economy_config: dict):
     base_directory = Path(base_directory)
     database_directory = base_directory / "buildings" / SCENARIO_SELECT
-    image_directory = base_directory / "image" / SCENARIO_SELECT
+    image_directory = base_directory / "IMAGE_CircoMod" / "SSP2"
     assert database_directory.is_dir(), database_directory
     assert image_directory.is_dir(), image_directory
 
@@ -48,7 +48,9 @@ def buildings_preprocessing(base_directory):
 
     housing_type = compute_housing_type(database_directory)
 
-    floorspace_residential = compute_housing_residential(population, average_m2_capita, housing_type, floorspace_rururb)
+    floorspace_residential = compute_housing_residential(population, average_m2_capita, housing_type, floorspace_rururb, circular_economy_config)
+
+    floorspace_residential
 
     floorspace = xr.concat((floorspace_residential, floorspace_commercial), dim="Type")
 

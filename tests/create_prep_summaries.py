@@ -36,7 +36,7 @@ if __name__ == "__main__":
         json.dump(summary_vhc, handle)
 
     # Buildings summary
-    prep_data_bld = bld.preprocess(Path("data", "raw"))
+    prep_data_bld = bld.preprocess(Path("data", "raw"), climate_policy_config, circular_economy_config)
     new_prep_data = {k: v for k, v in prep_data_bld.items()}
     new_prep_data["knowledge_graph"] = create_building_graph()
 
