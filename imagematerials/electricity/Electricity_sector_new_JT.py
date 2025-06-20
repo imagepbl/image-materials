@@ -28,6 +28,7 @@ import scipy
 import warnings
 from pathlib import Path
 import sys 
+import matplotlib.pyplot as plt
 
 from imagematerials.read_mym import read_mym_df
 
@@ -481,6 +482,96 @@ gcap_materials_all = gcap_materials_all.reorder_levels([3, 2, 1, 0, 5, 4]) / 100
 
 # gcap_materials_all.to_csv(path_elma / 'output' / scen_folder / sa_settings / 'gcap_materials_output_kt.csv') # in kt
 gcap_materials_all.to_csv(path_elma_out / 'gcap_materials_output_kt.csv') # in kt
+
+
+###########################################################################################################
+#%%% TEST TEST Visualize Inflow Materials TEST TEST
+###########################################################################################################
+
+# Generation technologies
+technologies = [
+    'Solar PV', 'Solar PV residential', 'CSP', 'Wind onshore', 'Wind offshore', 'Wave', 'Hydro', 
+    'Other Renewables', 'Geothermal', 'Hydrogen power', 'Nuclear', '<EMPTY>', 'Conv. Coal', 
+    'Conv. Oil', 'Conv. Natural Gas', 'Waste', 'IGCC', 'OGCC', 'NG CC', 'Biomass CC', 
+    'Coal + CCS', 'Oil/Coal + CCS', 'Natural Gas + CCS', 'Biomass + CCS', 'CHP Coal', 
+    'CHP Oil', 'CHP Natural Gas', 'CHP Biomass', 'CHP Coal + CCS', 'CHP Oil + CCS', 
+    'CHP Natural Gas + CCS', 'CHP Biomass + CCS', 'CHP Geothermal', 'CHP Hydrogen'
+]
+# Define color and linestyle pools
+# colors = list(plt.get_cmap('tab10').colors)  # 20 distinct colors
+# # Add two new distinct colors (example: magenta and teal)
+# colors += [(1.0, 0.0, 1.0),  # magenta
+#            (0.0, 0.5, 0.5)]  # teal
+# linestyles = ['-', '--', ':'] #'-.'
+# # Create a cycle of (color, linestyle) combinations
+# style_combinations = list(itertools.product(colors, linestyles))
+# assert len(technologies) <= len(style_combinations), "Not enough unique combinations for all technologies."
+# # Map technologies to (color, linestyle)
+# dict_gentech_styles = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
+
+# Sum over technologies dimension
+gcap_inflow_reg_mat = gcap_inflow.groupby(['flow', 'regions', 'materials']).sum()
+gcap_inflow_reg_mat = gcap_inflow_reg_mat.droplevel('flow').T
+
+regions = gcap_inflow_reg_mat.columns.get_level_values(0).unique()[:2]  # First 2 regions
+
+types_level1 = [m for m in gcap_inflow_reg_mat.columns.get_level_values(1).unique() if m in ["Steel", "Concrete"]]
+types_level2 = [m for m in gcap_inflow_reg_mat.columns.get_level_values(1).unique() if m in ["Aluminium", "Cu"]]
+types_level3 = [m for m in gcap_inflow_reg_mat.columns.get_level_values(1).unique() if m not in (types_level1 + types_level2)]
+
+fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(14, 12), sharex=True)
+
+axes[0, 1].sharey(axes[0, 0])
+axes[1, 1].sharey(axes[1, 0])
+axes[2, 1].sharey(axes[2, 0])
+
+data_all = gcap_inflow_reg_mat.copy()
+
+for i, region in enumerate(regions):
+    # Top row: 
+    for t in types_level1:
+        # Select the column using (region, material) tuple
+        if (region, t) in data_all.columns:
+            data_plot = data_all[(region, t)]  # This gives you a Series with years as index
+            axes[0, i].plot(data_plot.index, data_plot.values, label=t)
+    
+    axes[0, i].set_title(f"{region}")
+    axes[0, i].set_xlabel("Time")
+    axes[0, i].legend()
+
+    # Middle row: 
+    for t in types_level2:
+        if (region, t) in data_all.columns:
+            data_plot = data_all[(region, t)]
+            axes[1, i].plot(data_plot.index, data_plot.values, label=t)
+    
+    axes[1, i].set_title(f"{region}")
+    axes[1, i].set_xlabel("Time")
+    axes[1, i].legend(loc='upper left')
+
+    # Bottom row: 
+    for t in types_level3:
+        if (region, t) in data_all.columns:
+            data_plot = data_all[(region, t)]
+            axes[2, i].plot(data_plot.index, data_plot.values, label=t)
+    
+    axes[2, i].set_title(f"{region}")
+    axes[2, i].set_xlabel("Time")
+    axes[2, i].legend(loc='upper left')
+
+# Label only left side with y-axis label
+axes[0, 0].set_ylabel("Value")
+axes[1, 0].set_ylabel("Value")
+axes[2, 0].set_ylabel("Value")
+
+plt.suptitle("Generation - Inflow Materials", fontsize=16)
+plt.tight_layout()
+fig.savefig(path_elma_out / "ELMA_Gen_inflow-materials_1971_Brazil-CEurope.png", dpi=300)
+plt.show()
+
+
+
+
 
 
 ###########################################################################################################

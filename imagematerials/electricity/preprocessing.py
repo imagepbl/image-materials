@@ -529,7 +529,7 @@ axes[2, 0].set_ylabel("Value")
 
 plt.suptitle("Generation - Inflow Materials", fontsize=16)
 plt.tight_layout()
-fig.savefig(path_test_plots / "Gen_inflow-materials_Brazil-CEurope.png", dpi=300)
+# fig.savefig(path_test_plots / "Gen_inflow-materials_Brazil-CEurope.png", dpi=300)
 plt.show()
 
 
