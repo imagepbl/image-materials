@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 import xarray as xr
 from pytest import mark
@@ -37,30 +38,40 @@ def bld_summary(bld_prep_data):
                   find_data_items(Path("tests", "data", "vehicles_summary.json")))
 def test_vehicles_prep(vhc_summary, key_list, expected):
     data = vhc_summary
-    while len(key_list) > 0:
-        data = data[key_list[0]]
-        key_list.pop(0)
+    # Key list contains the name of the dataset, i.e. ["stocks", "Region"] is
+    # concerns the stocks summed over all dimensions except Region.
+    key_list_copy = [k for k in key_list]
+    while len(key_list_copy) > 0:
+        data = data[key_list_copy[0]]
+        key_list_copy.pop(0)
+
     if data != expected:
         assert data["name"] == expected["name"]
         assert data["dims"] == expected["dims"]
         assert data["attrs"] == expected["attrs"]
         assert data["coords"] == expected["coords"]
-        assert data["data"] == expected["data"]
+        assert np.allclose(data["data"], expected["data"]), (
+            f"Name: {data['name']}, New: {np.sum(data['data'])}, Old: {np.sum(expected['data'])}")
 
 
 @mark.parametrize("key_list,expected",
                   find_data_items(Path("tests", "data", "buildings_summary.json")))
 def test_buildings_prep(bld_summary, key_list, expected):
     data = bld_summary
-    while len(key_list) > 0:
-        data = data[key_list[0]]
-        key_list.pop(0)
+    # Key list contains the name of the dataset, i.e. ["stocks", "Region"] is
+    # concerns the stocks summed over all dimensions except Region.
+    key_list_copy = [k for k in key_list]
+    while len(key_list_copy) > 0:
+        data = data[key_list_copy[0]]
+        key_list_copy.pop(0)
+
     if data != expected:
         assert data["name"] == expected["name"]
         assert data["dims"] == expected["dims"]
         assert data["attrs"] == expected["attrs"]
         assert data["coords"] == expected["coords"]
-        assert data["data"] == expected["data"]
+        assert  np.allclose(data["data"], expected["data"]), (
+            f"Name: {data['name']}, New: {np.sum(data['data'])}, Old: {np.sum(expected['data'])}")
 
 def _check_data_same(orig_data, new_data, name=""):
     assert type(orig_data) is type(new_data)
