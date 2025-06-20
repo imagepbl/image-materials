@@ -14,13 +14,6 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
-<<<<<<< HEAD
-from imagematerials.read_mym import read_mym_df
-
-from const import (DIM1_crops_dict, DIM2_crops_dict, DIM1_tfeed_dict, DIM2_tfeed_dict, DIM3_tfeed_dict, 
-                   DIM1_wood_dict, DIM2_animalproducts_dict, DIM1_biofuelcrops_dict, parse_dim, path_input_data, path_figures, scenario)
-
-=======
 from imagematerials.rest_of.const import (DIM1_crops_dict, DIM2_crops_dict, 
                                           DIM1_tfeed_dict, DIM2_tfeed_dict, 
                                           DIM3_tfeed_dict, DIM1_wood_dict, 
@@ -31,7 +24,6 @@ from imagematerials.rest_of.const import (DIM1_crops_dict, DIM2_crops_dict,
                                           SCENARIO)
 
 from imagematerials.read_mym import read_mym_df
->>>>>>> origin/development
 #%% Conversion
 
 # cleared: we will calculate everything with dry matter to keep it comparable
@@ -364,8 +356,6 @@ def sankey_total_biomass(splitted_up_crops_food,
     
     return fig, link_source, link_target, link_value 
     
-<<<<<<< HEAD
-=======
 
 def biomass_data():
     # Crop consumption in Gg dm/yr, per type of use and crop type including other crops. Dimensions:  [5,17,27] (t) , [NUFPT, NFCT, NRT](time)
@@ -418,4 +408,3 @@ def biomass_data():
     return (splitted_up_crops_total, splitted_up_crops_food, splitted_up_crops_feed,
             splitted_up_crops_other_use, splitted_up_feed, splitted_up_wood, splitted_up_animal_products,
             splitted_up_biofuel_crops)
->>>>>>> origin/development
