@@ -405,7 +405,7 @@ class GenericMainModel(prism.Model):
 
 
 @prism.interface
-class GenericEndOfLife(prism.Model):
+class EndOfLife(prism.Model):
 
     # Input data
     #collection: xr.DataArray
@@ -420,14 +420,18 @@ class GenericEndOfLife(prism.Model):
 
     # Data dependencies
     input_data: tuple[str] = ("collection", "reuse", "recycling", "outflow_by_cohort_materials")
-    output_data: tuple[str] = ("collected_materials","reusable_materials", "recyclable_materials","losses_materials")
+    output_data: tuple[str] = ("sum_outflow","collected_materials","reusable_materials", "recyclable_materials","losses_materials")
 
     # Output data
+    sum_outflow: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE,  "count"] = prism.export()
     collected_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE,  "count"] = prism.export()
     reusable_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE,  "count"] = prism.export()
     remaining_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE,  "count"] = prism.export()
     recyclable_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE,  "count"] = prism.export()
     losses_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE,  "count"] = prism.export()
+    
+    def compute_initial_values(self, timeline: prism.Timeline):
+        pass
 
     def compute_values(self, time: prism.Time, outflow_by_cohort_materials, collection, reuse, recycling):
         """
@@ -456,14 +460,23 @@ class GenericEndOfLife(prism.Model):
                           'Midi Buses - BEV','Midi Buses - FCV', 'Midi Buses - HEV', 'Midi Buses - ICE','Midi Buses - PHEV', 'Midi Buses - Trolley',                        
                           'Trains','High Speed Trains',
                           'Passenger Planes',       
-       ],
+        ],
             'freight': ['Freight Planes',
                         'Medium Freight Trucks - BEV', 'Medium Freight Trucks - FCV','Medium Freight Trucks - HEV', 'Medium Freight Trucks - ICE','Medium Freight Trucks - PHEV', 'Medium Freight Trucks - Trolley',
                         'Freight Trains',
-                        'Small Ships','Inland Ships','Medium Ships','Large Ships', 'Very Large Ships'
+                        'Small Ships','Inland Ships','Medium Ships','Large Ships', 'Very Large Ships',
                         'Heavy Freight Trucks - BEV', 'Heavy Freight Trucks - FCV','Heavy Freight Trucks - HEV', 'Heavy Freight Trucks - ICE','Heavy Freight Trucks - PHEV', 'Heavy Freight Trucks - Trolley'
-       ]
+        ],
+            'urban': ["Appartment - Urban","Detached - Urban","High-rise - Urban", "Semi-detached - Urban",
+                        "Office","Retail+","Hotels+","Govt+"
+        ],
+
+            'rural': ["Appartment - Rural","Detached - Rural","High-rise - Rural", "Semi-detached - Rural",
+        ],
+
         }
+
+        
         for outflow in outflow_by_cohort_materials:
             for supertype, subtypes in type_dict.items():
                 if subtypes[0] not in outflow[t].coords:
@@ -471,9 +484,16 @@ class GenericEndOfLife(prism.Model):
                 sum_outflow = outflow[t].sel(Type=subtypes).sum("Type")
 
                 coords = {"Type": supertype, "material": sum_outflow.coords["material"]}
-                self.collected_materials[t].loc[coords] = collection.loc[t]*sum_outflow
-                self.reusable_materials[t].loc[coords] = self.collected_materials[t].loc[coords] * reuse.loc[t]
-                self.remaining_materials[t].loc[coords] = self.collected_materials.loc[coords] - self.reusable_materials.loc[coords]                                            # non-reused but collected waste
-                self.recyclable_materials[t].loc[coords] = self.remaining_materials.loc[coords] * recycling.loc[t]
-                self.losses_materials[t].loc[coords] = sum_outflow -  self.collected_materials.loc[coords]                                                                      # non-collected waste
-                self.losses_materials[t].loc[coords] = self.losses_materials.loc[coords] + self.remaining_materials.loc[coords] - self.recyclable_materials.loc[coords]         # non-reused/recycled but collected waste
+
+                collected_materials = collection[t]*sum_outflow
+                reusable_materials = collected_materials*reuse[t]
+                remaining_materials = collected_materials-reusable_materials                        # non-reused but collected waste
+                recyclable_materials = remaining_materials*recycling[t]
+                losses_materials = sum_outflow-collected_materials                                  # non-collected waste
+                losses_materials = losses_materials+remaining_materials-recyclable_materials        # non-reused/recycled but collected waste
+
+                self.collected_materials[t].loc[coords] = collected_materials
+                self.reusable_materials[t].loc[coords] = reusable_materials
+                self.remaining_materials[t].loc[coords] = remaining_materials
+                self.recyclable_materials[t].loc[coords] = recyclable_materials
+                self.losses_materials[t].loc[coords] = losses_materials
