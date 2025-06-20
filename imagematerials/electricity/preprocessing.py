@@ -45,7 +45,8 @@ from imagematerials.electricity.constants import ( # TODO: import not working at
     TONNES_TO_KGS,
     LOAD_FACTOR,
     BEV_CAPACITY_CURRENT,
-    PHEV_CAPACITY_CURRENT
+    PHEV_CAPACITY_CURRENT,
+    dict_gentech_styles
 )
 
 
@@ -113,7 +114,7 @@ kilometrage = pd.read_csv(path_external_data_scenario / 'kilometrage.csv', index
 # 2. IMAGE/TIMER files ====================================================================================
 
 # Generation capacity (stock & inflow/new) in MW peak capacity, FILES from TIMER
-gcap_data = read_mym_df(path_image_output / 'EnergyServices' / 'Gcap.out')
+gcap_data = read_mym_df(path_image_output / 'Gcap.out')
 
 
 #----------------------------------------------------------------------------------------------------------
@@ -332,16 +333,16 @@ technologies = [
     'CHP Natural Gas + CCS', 'CHP Biomass + CCS', 'CHP Geothermal', 'CHP Hydrogen'
 ]
 # Define color and linestyle pools
-colors = list(plt.get_cmap('tab10').colors)  # 20 distinct colors
-# Add two new distinct colors (example: magenta and teal)
-colors += [(1.0, 0.0, 1.0),  # magenta
-           (0.0, 0.5, 0.5)]  # teal
-linestyles = ['-', '--', ':'] #'-.'
-# Create a cycle of (color, linestyle) combinations
-style_combinations = list(itertools.product(colors, linestyles))
-assert len(technologies) <= len(style_combinations), "Not enough unique combinations for all technologies."
-# Map technologies to (color, linestyle)
-dict_gentech_styles = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
+# colors = list(plt.get_cmap('tab10').colors)  # 20 distinct colors
+# # Add two new distinct colors (example: magenta and teal)
+# colors += [(1.0, 0.0, 1.0),  # magenta
+#            (0.0, 0.5, 0.5)]  # teal
+# linestyles = ['-', '--', ':'] #'-.'
+# # Create a cycle of (color, linestyle) combinations
+# style_combinations = list(itertools.product(colors, linestyles))
+# assert len(technologies) <= len(style_combinations), "Not enough unique combinations for all technologies."
+# # Map technologies to (color, linestyle)
+# dict_gentech_styles = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
 
 path_test_plots = Path(path_base, "imagematerials", "electricity", "out_test", "Figures")
 
@@ -351,10 +352,15 @@ path_test_plots = Path(path_base, "imagematerials", "electricity", "out_test", "
 da_stocks = main_model_factory.stocks.copy()
 
 regions = da_stocks.Region.values[:2]  # First 2 regions
+threshold = 100_000
 # types_top = da_stocks.Type.values[1:15]   # Types 1–10
 # types_bottom = da_stocks.Type.values[15:30]  # Types 11–20
-techs_upper = [col for col in da_stocks.columns if da_stocks[col].max() > threshold] #gcap.columns[15:30]
-techs_lower = [col for col in da_stocks.columns if da_stocks[col].max() <= threshold] #gcap.columns[:15]
+# techs_upper = [col for col in da_stocks.columns if da_stocks[col].max() > threshold] #gcap.columns[15:30]
+# techs_lower = [col for col in da_stocks.columns if da_stocks[col].max() <= threshold] #gcap.columns[:15]
+techs_upper = [coord_name.item() for coord_name in da_stocks.coords['Type']  
+               if da_stocks.sel(Type = coord_name).values.max() > threshold]
+techs_lower = [coord_name.item() for coord_name in da_stocks.coords['Type']  
+               if da_stocks.sel(Type = coord_name).values.max() <= threshold]
 
 
 
@@ -391,7 +397,7 @@ axes[1, 0].legend(fontsize='small', ncol=2, loc='upper left')
 
 plt.suptitle("Generation - Stocks in Brazil and C.Europe", fontsize=16)
 plt.tight_layout()
-fig.savefig(path_test_plots / "Gen_stocks_Brazil-CEurope.png", dpi=300)
+# fig.savefig(path_test_plots / "Gen_stocks_Brazil-CEurope.png", dpi=300)
 plt.show()
 
 
@@ -437,7 +443,7 @@ axes[1, 0].legend(fontsize='small', ncol=2, loc='upper left')
 
 plt.suptitle(f"Generation - Stocks in {countries[0]}_{countries[1]} (TIMER)", fontsize=16)
 plt.tight_layout()
-fig.savefig(path_test_plots / f"TIMER_Gen_stocks_{countries[0]}-{countries[1]}.png", dpi=300)
+# fig.savefig(path_test_plots / f"TIMER_Gen_stocks_{countries[0]}-{countries[1]}.png", dpi=300)
 plt.show()
 
 
@@ -471,7 +477,7 @@ ax2.legend(ncol=2, fontsize='small', loc='upper left')
 
 plt.tight_layout()
 plt.suptitle(f"Generation - Stocks in {country} (TIMER)", fontsize=16)
-fig.savefig(path_test_plots / f"TIMER_Gen_stocks_{country}.png", dpi=300)
+# fig.savefig(path_test_plots / f"TIMER_Gen_stocks_{country}.png", dpi=300)
 plt.show()
 
 ###########################################################################################################
@@ -1099,9 +1105,9 @@ gdp_pc = pd.read_csv(path_external_data_scenario / 'gdp_pc.csv', index_col=0)  #
 # 2. IMAGE/TIMER files ====================================================================================
 
 # Generation capacity (stock & inflow/new) in MW peak capacity, FILES from TIMER
-gcap_data = read_mym_df(path_image_output / 'EnergyServices' / 'Gcap.out')
+gcap_data = read_mym_df(path_image_output / 'Gcap.out')
 # gcap_BL_data = read_mym_df('SSP2\\SSP2_BL\\Gcap.out') # baseline scenario? TODO: what is the purpose of reading in the scneario + the baseline?
-gcap_BL_data = read_mym_df(path_image_output / 'EnergyServices' / 'Gcap.out')
+gcap_BL_data = read_mym_df(path_image_output / 'Gcap.out')
 
 
 #----------------------------------------------------------------------------------------------------------
@@ -1580,8 +1586,8 @@ axes[-1].set_xlabel("Time")
 
 plt.suptitle("Electricity Grid Inflow Materials", fontsize=16)
 plt.tight_layout()
-fig.savefig(path_test_plots / "Grid_inflow-materials_world.pdf")
-fig.savefig(path_test_plots / "Grid_inflow-materials_world.png")
+# fig.savefig(path_test_plots / "Grid_inflow-materials_world.pdf")
+# fig.savefig(path_test_plots / "Grid_inflow-materials_world.png")
 plt.show()
 
 

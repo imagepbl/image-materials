@@ -3,6 +3,7 @@ from pathlib import Path
 import os
 import pint
 import itertools
+import matplotlib.pyplot as plt
 
 ureg = pint.UnitRegistry(force_ndarray_like=True)
 
