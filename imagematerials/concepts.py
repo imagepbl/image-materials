@@ -300,10 +300,14 @@ def create_electricity_graph():
                         "Coal + CCS", "Oil/Coal + CCS", "Natural Gas + CCS", "Biomass + CCS",
                         "CHP Coal", "CHP Oil", "CHP Natural Gas", "CHP Biomass","CHP Geothermal", "CHP Hydrogen",
                         "CHP Coal + CCS", "CHP Oil + CCS", "CHP Natural Gas + CCS", "CHP Biomass + CCS"]
+    # generation_types_renew = ["Solar PV", "Solar PV residential", "CSP", "Wind onshore", "Wind offshore", 
+    #                     "Wave", "Other Renewables", "Geothermal", "Biomass CC","Biomass + CCS",
+    #                     "CHP Biomass","CHP Geothermal", "CHP Biomass + CCS"] # "Hydro", "CHP Hydrogen",
     # generation_subtypes = ["c-Si", "a-Si", "CIGS", "CdTe", "Perovskite", 
     #                        "Fresnel Reflector", "Central Receiver", "Parabolic Trough", "Parabolic Dish",
     #                        "Geared - High Speed", "Geared - Medium speed", "Direct Drive"]
-    # generation_supertypes = ["Renewables", "Non-Renewables"]
+    # generation_supertypes = ["Renewables", "Fossil", "Other"]
+    # generation_supertypes = ["Renewables", "Fossil", "Fossil + CCS"]
 
     electricity_knowledge_graph = KnowledgeGraph(Node("Electricity"))
     electricity_knowledge_graph.add(Node("Generation", inherits_from="Electricity"))
@@ -314,7 +318,7 @@ def create_electricity_graph():
 
     # Transmission -----------
     transmission_types = ["HV", "MV", "LV"]
-    transmission_subtypes = ["Line", "Substation", "Transformer"]
+    transmission_subtypes = ["Lines", "Substations", "Transformers"]
     line_subtypes = ["Overhead", "Underground"]
   
     electricity_knowledge_graph.add(Node("Transmission", inherits_from="Electricity"))
@@ -322,7 +326,7 @@ def create_electricity_graph():
         electricity_knowledge_graph.add(Node(type, inherits_from="Transmission"))
         for sub_type in transmission_subtypes:
             electricity_knowledge_graph.add(Node(f"{type} - {sub_type}", inherits_from=type))
-            if sub_type == "Line":
+            if sub_type == "Lines":
                 for line_subtype in line_subtypes:
                     electricity_knowledge_graph.add(Node(f"{type} - {sub_type} - {line_subtype}", inherits_from=f"{type} - {sub_type}"))
 
