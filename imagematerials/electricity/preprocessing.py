@@ -9,6 +9,7 @@ import pint
 import xarray as xr
 from collections import defaultdict
 import matplotlib.pyplot as plt
+from matplotlib.ticker import StrMethodFormatter
 
 # path_current = Path(__file__).resolve().parent # absolute path of file
 # path_base = path_current.parent.parent # base path of the project -> image-materials
@@ -19,9 +20,9 @@ from imagematerials.distribution import ALL_DISTRIBUTIONS, NAME_TO_DIST
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_life_time_vehicles
 from imagematerials.model import GenericMainModel, GenericMaterials, GenericStocks, Maintenance, MaterialIntensities
-from imagematerials.factory import ModelFactory
+from imagematerials.factory import ModelFactory, Sector
 from imagematerials.concepts import create_electricity_graph
-from imagematerials.electricity.utils import MNLogit, stock_tail
+from imagematerials.electricity.utils import MNLogit, stock_tail, materials_grid_additions_to_kgperkm, print_df_info
 
 
 from imagematerials.electricity.constants import ( # TODO: import not working at the moment
@@ -35,8 +36,10 @@ from imagematerials.electricity.constants import ( # TODO: import not working at
     # COHORTS, # necessary?
     SCEN,
     VARIANT,
+    SENS_ANALYSIS,
     REGIONS,
     TECH_GEN,
+    STD_LIFETIMES_ELECTR,
     MEGA_TO_TERA,
     PKMS_TO_VKMS,
     TONNES_TO_KGS,
@@ -53,7 +56,7 @@ scen_folder = SCEN + "_" + VARIANT
 # path_base = Path().resolve() # TODO absolute path of file "preprocessing.py" ? current solution can differ depending on IDE used (?) 
 path_current = Path().resolve()
 path_base = path_current.parent.parent # base path of the project -> image-materials
-path_image_output = Path(path_base, "data", "raw", SCEN)
+path_image_output = Path(path_base, "data", "raw", SCEN, "EnergyServices")
 path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
 path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scen_folder)
 
@@ -65,7 +68,7 @@ assert path_external_data_scenario.is_dir()
 if not (path_base / 'imagematerials' / 'electricity' / 'out_test').is_dir():
     (path_base / 'imagematerials' / 'electricity' / 'out_test').mkdir(parents=True)
 
-sa_settings = "default"  # settings for the sensitivity analysis (default, high_stor, high_grid)
+
 
 
 
@@ -104,12 +107,13 @@ gcap_lifetime = pd.read_csv(path_external_data_scenario / 'LTTechnical_dynamic.c
 # material compositions (generation capacity)
 composition_generation = pd.read_csv(path_external_data_scenario / 'composition_generation.csv',index_col=[0,1]).transpose()  # in gram/MW
 # composition_generation = composition_generation.drop(columns=[col for col in composition_generation.columns if col[1] == '<EMPTY>'])
+kilometrage = pd.read_csv(path_external_data_scenario / 'kilometrage.csv', index_col='t')  # to get region list without running storage - TODO: get regions from different source
 
 
 # 2. IMAGE/TIMER files ====================================================================================
 
 # Generation capacity (stock & inflow/new) in MW peak capacity, FILES from TIMER
-gcap_data = read_mym_df(path_image_output / 'Gcap.out')
+gcap_data = read_mym_df(path_image_output / 'EnergyServices' / 'Gcap.out')
 
 
 #----------------------------------------------------------------------------------------------------------
@@ -118,7 +122,6 @@ gcap_data = read_mym_df(path_image_output / 'Gcap.out')
 ###########################################################################################################
 #----------------------------------------------------------------------------------------------------------
 
-kilometrage = pd.read_csv(path_external_data_scenario / 'kilometrage.csv', index_col='t')  # to get region list without running storage - TODO: get regions from different source
 region_list = list(kilometrage.columns.values)   
 
 gcap_tech_list = list(composition_generation.loc[:,idx[2020,:]].droplevel(axis=1, level=0).columns)    #list of names of the generation technologies (workaround to retain original order)
@@ -263,11 +266,11 @@ complete_timeline = prism.Timeline(time_start, 2060, 1)
 simulation_timeline = prism.Timeline(1970, 2060, 1)
 
 # Define the coordinates of all dimensions.
-Region = list(prep_data["stocks"].coords["Region"].values)
-Time = [t for t in complete_timeline]
-Cohort = Time
-Type = list(prep_data["stocks"].coords["Type"].values)
-material = list(prep_data["material_intensities"].coords["material"].values)
+# Region = list(prep_data["stocks"].coords["Region"].values)
+# Time = [t for t in complete_timeline]
+# Cohort = Time
+# Type = list(prep_data["stocks"].coords["Type"].values)
+# material = list(prep_data["material_intensities"].coords["material"].values)
 
 # Create
 # main_model_normal = GenericMainModel(
@@ -277,10 +280,14 @@ material = list(prep_data["material_intensities"].coords["material"].values)
 
 new_prep_data = prep_data.copy()
 new_prep_data["knowledge_graph"] = create_electricity_graph()
+new_prep_data["shares"] = None
+
+sec_elctr_gen = Sector("elctr_gen", new_prep_data)
+
 
 
 main_model_factory = ModelFactory(
-    new_prep_data, complete_timeline
+    sec_elctr_gen, complete_timeline
     ).add(GenericStocks
     ).add(MaterialIntensities
     ).finish()
@@ -292,7 +299,7 @@ main_model_factory.simulate(simulation_timeline)
 ###########################################################################################################
 #%%% 1.5) Tests: Check results
 
-list(main_model_factory.default)
+# list(main_model_factory.default)
 
 main_model_factory.inflow
 
@@ -315,40 +322,157 @@ types = [str(t) for t in dim_coords["Type"]]
 ###########################################################################################################
 #%%% 1.6) Visualize Stocks
 
+# Generation technologies
+technologies = [
+    'Solar PV', 'Solar PV residential', 'CSP', 'Wind onshore', 'Wind offshore', 'Wave', 'Hydro', 
+    'Other Renewables', 'Geothermal', 'Hydrogen power', 'Nuclear', '<EMPTY>', 'Conv. Coal', 
+    'Conv. Oil', 'Conv. Natural Gas', 'Waste', 'IGCC', 'OGCC', 'NG CC', 'Biomass CC', 
+    'Coal + CCS', 'Oil/Coal + CCS', 'Natural Gas + CCS', 'Biomass + CCS', 'CHP Coal', 
+    'CHP Oil', 'CHP Natural Gas', 'CHP Biomass', 'CHP Coal + CCS', 'CHP Oil + CCS', 
+    'CHP Natural Gas + CCS', 'CHP Biomass + CCS', 'CHP Geothermal', 'CHP Hydrogen'
+]
+# Define color and linestyle pools
+colors = list(plt.get_cmap('tab10').colors)  # 20 distinct colors
+# Add two new distinct colors (example: magenta and teal)
+colors += [(1.0, 0.0, 1.0),  # magenta
+           (0.0, 0.5, 0.5)]  # teal
+linestyles = ['-', '--', ':'] #'-.'
+# Create a cycle of (color, linestyle) combinations
+style_combinations = list(itertools.product(colors, linestyles))
+assert len(technologies) <= len(style_combinations), "Not enough unique combinations for all technologies."
+# Map technologies to (color, linestyle)
+dict_gentech_styles = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
+
 path_test_plots = Path(path_base, "imagematerials", "electricity", "out_test", "Figures")
 
+
+
+# stocks in main_model_factory.stocks -------------------------------------------------
 da_stocks = main_model_factory.stocks.copy()
 
 regions = da_stocks.Region.values[:2]  # First 2 regions
-types_top = da_stocks.Type.values[1:15]   # Types 1–10
-types_bottom = da_stocks.Type.values[15:30]  # Types 11–20
+# types_top = da_stocks.Type.values[1:15]   # Types 1–10
+# types_bottom = da_stocks.Type.values[15:30]  # Types 11–20
+techs_upper = [col for col in da_stocks.columns if da_stocks[col].max() > threshold] #gcap.columns[15:30]
+techs_lower = [col for col in da_stocks.columns if da_stocks[col].max() <= threshold] #gcap.columns[:15]
 
-fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(14, 8), sharex=True, sharey=True)
+
+
+fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(14, 8), sharex=True)
+axes[0, 1].sharey(axes[0, 0])
+axes[1, 1].sharey(axes[1, 0])
 
 for i, region in enumerate(regions):
-    # Top row: Types 1–10
-    for t in types_top:
-        da_stocks.sel(Type=t, Region=region).plot(ax=axes[0, i], label=t)
-    axes[0, i].set_title(f"{region} (Types 1–10)")
-    axes[0, i].legend()
+    # Top row: Types 1–15
+    for t in techs_upper:
+        data = da_stocks.sel(Type=t, Region=region)
+        color, ls = dict_gentech_styles.get(t, ('black', '-'))  # default style fallback
+        axes[0, i].plot(data.Time, data.values, label=t, color=color, linestyle=ls)
+    # axes[0, i].set_title(f"{region} (Types 1–15)")
+    axes[0, i].grid(alpha=0.3, linestyle='--')
 
-    # Bottom row: Types 11–20
-    for t in types_bottom:
-        da_stocks.sel(Type=t, Region=region).plot(ax=axes[1, i], label=t)
-    axes[1, i].set_title(f"{region} (Types 11–20)")
+    # Bottom row: Types 16–30
+    for t in techs_lower:
+        data = da_stocks.sel(Type=t, Region=region)
+        color, ls = dict_gentech_styles.get(t, ('black', '-'))
+        axes[1, i].plot(data.Time, data.values, label=t, color=color, linestyle=ls)
+    # axes[1, i].set_title(f"{region} (Types 16–30)")
     axes[1, i].set_xlabel("Time")
-    axes[1, i].legend(loc ='upper left')
+    axes[1, i].grid(alpha=0.3, linestyle='--')
+    # axes[1, i].legend(fontsize="small", loc='upper left')
 
-# Label only left side with y-axis label
+# Y-axis labels only on left
 axes[0, 0].set_ylabel("Value")
 axes[1, 0].set_ylabel("Value")
-plt.suptitle("Generation - Stocks", fontsize=16)
+for ax in axes.flat: # change y axis ticks from 100000 to 100,000
+    ax.yaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}'))
+axes[0, 0].legend(fontsize='small', ncol=2, loc='upper left')
+axes[1, 0].legend(fontsize='small', ncol=2, loc='upper left')
 
+plt.suptitle("Generation - Stocks in Brazil and C.Europe", fontsize=16)
 plt.tight_layout()
 fig.savefig(path_test_plots / "Gen_stocks_Brazil-CEurope.png", dpi=300)
 plt.show()
 
 
+
+# stocks from TIMER --------------------------------------------------
+
+# 2 COUNTRIES
+countries = ['Brazil','C.Europe']
+threshold = 100_000
+techs_upper = [col for col in gcap.columns if gcap[col].max() > threshold] #gcap.columns[15:30]
+techs_lower = [col for col in gcap.columns if gcap[col].max() <= threshold] #gcap.columns[:15]
+
+fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(14, 8), sharex=True)
+axes[0, 1].sharey(axes[0, 0])
+axes[1, 1].sharey(axes[1, 0])
+
+for i, country in enumerate(countries):
+    df = gcap[gcap.index.get_level_values(1) == country].copy()
+    df.index = df.index.droplevel(1)
+
+    # Top row: techs 15–30
+    for tech in techs_upper:
+        color, ls = dict_gentech_styles[tech]
+        axes[0, i].plot(df.index, df[tech], label=tech, color=color, linestyle=ls)
+    # axes[0, i].set_title(f"{country} (Technologies 16–30)")
+    axes[0, i].grid(alpha=0.3, linestyle='--')
+
+    # Bottom row: techs 0–14
+    for tech in techs_lower:
+        color, ls = dict_gentech_styles[tech]
+        axes[1, i].plot(df.index, df[tech], label=tech, color=color, linestyle=ls)
+    axes[1, i].set_xlabel('Year')
+    axes[1, i].grid(alpha=0.3, linestyle='--')
+    
+
+# Add Y-axis labels only on left side
+axes[0, 0].set_ylabel('Value')
+axes[1, 0].set_ylabel('Value')
+for ax in axes.flat: # change y axis ticks from 100000 to 100,000
+    ax.yaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}'))
+axes[0, 0].legend(fontsize='small', ncol=2, loc='upper left')
+axes[1, 0].legend(fontsize='small', ncol=2, loc='upper left')
+
+plt.suptitle(f"Generation - Stocks in {countries[0]}_{countries[1]} (TIMER)", fontsize=16)
+plt.tight_layout()
+fig.savefig(path_test_plots / f"TIMER_Gen_stocks_{countries[0]}-{countries[1]}.png", dpi=300)
+plt.show()
+
+
+
+
+# 1 COUNTRY
+country = 'C.Europe'
+df = gcap[gcap.index.get_level_values(1) == country]
+df.index = df.index.droplevel(1)
+
+# Split columns into two groups
+techs_upper = df.columns[15:30]
+techs_lower = df.columns[:15]
+
+# Create subplots
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
+
+for tech in techs_upper:
+    color, ls = dict_gentech_styles[tech]
+    df[tech].plot(ax=ax1, label=tech, color=color, linestyle=ls)
+ax1.set_ylabel('Value')
+ax1.legend(ncol=2, fontsize='small', loc='upper left')
+
+# Lower panel: tech 16–30
+for tech in techs_lower:
+    color, ls = dict_gentech_styles[tech]
+    df[tech].plot(ax=ax2, label=tech, color=color, linestyle=ls)
+ax2.set_xlabel('Year')
+ax2.set_ylabel('Value')
+ax2.legend(ncol=2, fontsize='small', loc='upper left')
+
+plt.tight_layout()
+plt.suptitle(f"Generation - Stocks in {country} (TIMER)", fontsize=16)
+fig.savefig(path_test_plots / f"TIMER_Gen_stocks_{country}.png", dpi=300)
+plt.show()
 
 ###########################################################################################################
 #%% Visualize Inflow Materials
@@ -557,7 +681,7 @@ gcap_data = gcap_data.iloc[:, :26]
 
 storage = storage.iloc[:, :26]    # drop global total column and empty (27) column
 
-if sa_settings == 'high_stor':
+if SENS_ANALYSIS == 'high_stor':
    storage_multiplier = storage
    for year in range(2021,2051):
         storage_multiplier.loc[year] = storage.loc[year] * (1 + (1/30*(year-2020)))
@@ -714,7 +838,7 @@ storage.columns = region_list
 
 # BEV & PHEV vehicle stats
 
-if sa_settings == 'high_stor':
+if SENS_ANALYSIS == 'high_stor':
    capacity_usable_PHEV = 0.025   # 2.5% of capacity of PHEV is usable as storage (in the pessimistic sensitivity variant)
    capacity_usable_BEV  = 0.05    # 5  % of capacity of BEVs is usable as storage (in the pessimistic sensitivity variant)
 else: 
@@ -860,7 +984,7 @@ for column in range(0,len(phs_regions)):
             phs_projections_IMAGE.iloc[:,region] = phs_projections.iloc[:,column] * (Gcap_hydro.iloc[:,region]/sum_data)
 
 # Then fill the years after 2030 (end of IHS projections) according to the Gcap annual growth rate (assuming a fixed percentage of Hydro dams will be built with Pumped hydro capabilities after )
-if sa_settings == 'high_stor':
+if SENS_ANALYSIS == 'high_stor':
    phs_projections_IMAGE.loc[2030:YEAR_OUT] =  phs_projections_IMAGE.loc[2030] * (Gcap_hydro.loc[2030:YEAR_OUT]/Gcap_hydro.loc[2030:YEAR_OUT])  # no growth after 2030 in the high_stor sensitivity variant
 else:
    phs_projections_IMAGE.loc[2030:YEAR_OUT] =  phs_projections_IMAGE.loc[2030] * (Gcap_hydro.loc[2030:YEAR_OUT]/Gcap_hydro.loc[2030])
@@ -869,7 +993,7 @@ else:
 phs_storage_fraction = phs_projections_IMAGE.divide(storage_power.loc[:YEAR_OUT]).clip(upper=1)      # the phs storage fraction deployed to fulfill storage demand, both phs & storage_power here are expressed in MW
 storage_remaining = storage.loc[:YEAR_OUT] * (1 - phs_storage_fraction)
 
-if sa_settings == 'high_stor':
+if SENS_ANALYSIS == 'high_stor':
    oth_storage_fraction = 0.5 * storage_remaining 
    oth_storage_fraction += ((storage_remaining * 0.5) - storage_vehicles).clip(lower=0)    
    oth_storage_fraction = oth_storage_fraction.divide(storage).where(oth_storage_fraction > 0, 0).clip(lower=0) 
@@ -940,14 +1064,14 @@ storage_lifetime_PHS = storage_lifetime['PHS'].reindex(list(range(YEAR_FIRST_GRI
 
 ###########################################################################################################
 ###########################################################################################################
-#%% 1) TRANSMISSION GRID 
+#%% 3) TRANSMISSION GRID 
 ###########################################################################################################
 ###########################################################################################################
 
 
 #----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
-#%%% 1.1) Read in files
+#%%% 3.1) Read in files
 ###########################################################################################################
 #----------------------------------------------------------------------------------------------------------
 
@@ -963,6 +1087,7 @@ grid_additions = pd.read_csv(path_external_data_standard / 'grid_additions.csv',
 # dynamic or scenario-dependent data (lifetimes & material intensity)
 
 lifetime_grid_elements = pd.read_csv(path_external_data_scenario  / 'operational_lifetime_grid.csv', index_col=0)         # Average lifetime in years of grid elements
+
 # dynamic material intensity files (kg/km or kg/unit)
 materials_grid = pd.read_csv(path_external_data_scenario / 'Materials_grid_dynamic.csv', index_col=[0,1])                # Material intensity of grid lines specific material content for Hv, Mv & Lv lines, & specific for underground vs. aboveground lines. (kg/km)
 materials_grid_additions = pd.read_csv(path_external_data_scenario / 'Materials_grid_additions.csv', index_col=[0,1])    # (not part of the SA yet) Additional infrastructure required for grid connections, such as transformers & substations (material compositin in kg/unit)
@@ -974,14 +1099,14 @@ gdp_pc = pd.read_csv(path_external_data_scenario / 'gdp_pc.csv', index_col=0)  #
 # 2. IMAGE/TIMER files ====================================================================================
 
 # Generation capacity (stock & inflow/new) in MW peak capacity, FILES from TIMER
-gcap_data = read_mym_df(path_image_output / 'Gcap.out')
+gcap_data = read_mym_df(path_image_output / 'EnergyServices' / 'Gcap.out')
 # gcap_BL_data = read_mym_df('SSP2\\SSP2_BL\\Gcap.out') # baseline scenario? TODO: what is the purpose of reading in the scneario + the baseline?
-gcap_BL_data = read_mym_df(path_image_output / 'Gcap.out')
+gcap_BL_data = read_mym_df(path_image_output / 'EnergyServices' / 'Gcap.out')
 
 
 #----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
-#%%% 1.2) Prepare model specific variables
+#%%% 3.2) Prepare model specific variables
 ###########################################################################################################
 #----------------------------------------------------------------------------------------------------------
 
@@ -1035,7 +1160,7 @@ grid_length_Mv_time = pd.DataFrame().reindex_like(gcap_total)
 grid_length_Lv_time = pd.DataFrame().reindex_like(gcap_total)
 
 #implement growth correction (sensitivity variant)
-if sa_settings == 'high_grid':
+if SENS_ANALYSIS == 'high_grid':
    gcap_growth_HV = gcap_growth.add(add_growth.reindex_like(gcap_growth)).subtract(red_growth.reindex_like(gcap_growth))
 else: 
    gcap_growth_HV = gcap_growth
@@ -1057,9 +1182,9 @@ for region in region_list:
     else:
         select_proxy = 'Other'
     #print(str(region) + ': ' + select_proxy)
-    function_Hv_under[region] = gdp_pc[region] * underground_ratio.loc[idx[select_proxy,'mult'],'Hv'] + underground_ratio.loc[idx[select_proxy,'add'],'Hv']
-    function_Mv_under[region] = gdp_pc[region] * underground_ratio.loc[idx[select_proxy,'mult'],'Mv'] + underground_ratio.loc[idx[select_proxy,'add'],'Mv']
-    function_Lv_under[region] = gdp_pc[region] * underground_ratio.loc[idx[select_proxy,'mult'],'Lv'] + underground_ratio.loc[idx[select_proxy,'add'],'Lv']
+    function_Hv_under[region] = gdp_pc[region] * underground_ratio.loc[idx[select_proxy,'mult'],'HV'] + underground_ratio.loc[idx[select_proxy,'add'],'HV']
+    function_Mv_under[region] = gdp_pc[region] * underground_ratio.loc[idx[select_proxy,'mult'],'MV'] + underground_ratio.loc[idx[select_proxy,'add'],'MV']
+    function_Lv_under[region] = gdp_pc[region] * underground_ratio.loc[idx[select_proxy,'mult'],'LV'] + underground_ratio.loc[idx[select_proxy,'add'],'LV']
 
 # maximize linear function at 100 & minimize at 0 (%)
 function_Hv_under = function_Hv_under.apply(lambda x: [y if y >= 0 else 0 for y in x])                     
@@ -1088,12 +1213,12 @@ grid_length_Lv_above = grid_length_Lv_time * (1 - function_Lv_under/100)
 grid_length_Lv_under = grid_length_Lv_time * function_Lv_under/100
 grid_length_Lv_total = grid_length_Lv_above + grid_length_Lv_under
 
-grid_subst_Hv = grid_length_Hv_total.mul(grid_additions.loc['Substations','Hv'])        # number of substations on Hv network
-grid_subst_Mv = grid_length_Mv_total.mul(grid_additions.loc['Substations','Mv'])        # # of substations
-grid_subst_Lv = grid_length_Lv_total.mul(grid_additions.loc['Substations','Lv'])        # # of substations
-grid_trans_Hv = grid_length_Hv_total.mul(grid_additions.loc['Transformers','Hv'])       # number of transformers on the Hv network
-grid_trans_Mv = grid_length_Mv_total.mul(grid_additions.loc['Transformers','Mv'])       # # of transformers
-grid_trans_Lv = grid_length_Lv_total.mul(grid_additions.loc['Transformers','Lv'])       # # of transformers
+grid_subst_Hv = grid_length_Hv_total.mul(grid_additions.loc['Substations','HV'])        # number of substations on HV network
+grid_subst_Mv = grid_length_Mv_total.mul(grid_additions.loc['Substations','MV'])        # # of substations
+grid_subst_Lv = grid_length_Lv_total.mul(grid_additions.loc['Substations','LV'])        # # of substations
+grid_trans_Hv = grid_length_Hv_total.mul(grid_additions.loc['Transformers','HV'])       # number of transformers on the HV network
+grid_trans_Mv = grid_length_Mv_total.mul(grid_additions.loc['Transformers','MV'])       # # of transformers
+grid_trans_Lv = grid_length_Lv_total.mul(grid_additions.loc['Transformers','LV'])       # # of transformers
 
 
 
@@ -1141,6 +1266,15 @@ grid_trans_Lv_new = stock_tail(grid_trans_Lv)               # units
 # Lifetimes #
 #############
 
+# data only for lines, substations and transformer -> bring in knowledge_graph format: HV - Lines, MV - Lines, LV - Lines, HV - Transformers, etc.
+expanded_data = {}
+for typ in ["Lines", "Transformers", "Substations"]:
+    for level in ["HV", "MV", "LV"]:
+        new_col = f"{level} - {typ}"
+        expanded_data[new_col] = lifetime_grid_elements[typ]
+lifetime_grid_elements = pd.DataFrame(expanded_data, index=lifetime_grid_elements.index)
+lifetime_grid_elements.rename_axis('Year', inplace=True)
+
 # no differentiation between HV, MV & LV lines as well as between aboveground and belowground
 # Types: lines, transformers, substations
 lifetime_grid_elements.loc[YEAR_FIRST_GRID,:] = lifetime_grid_elements.loc[lifetime_grid_elements.first_valid_index(),:]
@@ -1149,7 +1283,7 @@ lifetime_grid_elements                        = lifetime_grid_elements.reindex(l
 # TODO: check why lifetime for lines is interpoltaed from 2020 - 40yrs to 2050 - 48 yrs and then back to 2060 - 40 yrs -> should stay at 48 yrs?
 
 
-
+#######################################################################################################
 #%%%% NEW
 
 # lifetimes
@@ -1162,14 +1296,70 @@ lifetime_grid_distr = pd.concat([df_mean, df_stdev], axis=1) # Concatenate along
 
 # Materials
 
+# harmonize units of MI -> then materials_grid and materials_grid_additions can be merged in one dataframe
+
+# Grid Additions MIs ---
+# for substations and transformer we multiply the MI (kg/unit of substation or transformer) with the number of substations or transformers per kilometer of grid length
+materials_grid_additions_kgperkm = materials_grid_additions_to_kgperkm(materials_grid_additions_interpol, grid_additions)
+# material intensities: (years, tech. type) index and materials as columns -> years as index and (tech. type, materials) as columns
+materials_grid_additions_kgperkm.index.names = ["Year", "Type"]
+materials_grid_additions_kgperkm = materials_grid_additions_kgperkm.unstack(level='Type') # bring tech. type from row index to column header
+materials_grid_additions_kgperkm.columns = materials_grid_additions_kgperkm.columns.swaplevel(0, 1) # Swap the levels of the MultiIndex columns
+materials_grid_additions_kgperkm = materials_grid_additions_kgperkm.sort_index(axis=1)
+# rename columns to match knowledge graph
+new_level_0 = [col.replace(' ', ' - ', 1) for col in materials_grid_additions_kgperkm.columns.get_level_values(0)]
+new_columns = pd.MultiIndex.from_arrays([
+    new_level_0,
+    materials_grid_additions_kgperkm.columns.get_level_values(1)
+], names=materials_grid_additions_kgperkm.columns.names)
+materials_grid_additions_kgperkm.columns = new_columns
+
+# Grid MIs ---
+materials_grid_kgperkm = materials_grid_interpol.copy() # copy the interpolated material intensities
+materials_grid_kgperkm.index.names = ["Year", "Type"]
+materials_grid_kgperkm = materials_grid_kgperkm.unstack(level='Type') # bring tech. type from row index to column header
+materials_grid_kgperkm.columns = materials_grid_kgperkm.columns.swaplevel(0, 1) # Swap the levels of the MultiIndex columns
+materials_grid_kgperkm = materials_grid_kgperkm.sort_index(axis=1)
+# rename columns to match knowledge graph
+new_level_0 = [col.replace(' ', ' - Lines - ', 1) for col in materials_grid_kgperkm.columns.get_level_values(0)]
+new_columns = pd.MultiIndex.from_arrays([
+    new_level_0,
+    materials_grid_kgperkm.columns.get_level_values(1)
+], names=materials_grid_kgperkm.columns.names)
+materials_grid_kgperkm.columns = new_columns
+
+# print_df_info(materials_grid_kgperkm, "Materials Grid kg/km")
+# print_df_info(materials_grid_additions_kgperkm, "Materials Grid Additions kg/km")
+
+materials_grid_combined_kgperkm = pd.concat([materials_grid_kgperkm, materials_grid_additions_kgperkm], axis=1) # 
 
 
 # Stocks
 
+grid_dict = dict({
+        'HV - Lines - Overhead': grid_length_Hv_above_new,
+        'HV - Lines - Underground': grid_length_Hv_under_new,
+        'HV - Substations': grid_subst_Hv_new,
+        'HV - Transformers': grid_trans_Hv_new,
+        'MV - Lines - Overhead': grid_length_Mv_above_new,
+        'MV - Lines - Underground': grid_length_Mv_under_new,
+        'MV - Substations': grid_subst_Mv_new,
+        'MV - Transformers': grid_trans_Mv_new,
+        'LV - Lines - Overhead': grid_length_Lv_above_new,
+        'LV - Lines - Underground': grid_length_Lv_under_new,
+        'LV - Substations': grid_subst_Lv_new,
+        'LV - Transformers': grid_trans_Lv_new
+    })
+    
+grid_stock = pd.concat(grid_dict, axis=1) # Concatenate with keys to create MultiIndex ('Name', 'Region')
+# grid_stock.columns = grid_stock.columns.swaplevel(0, 1) # Swap levels so Region comes first
+grid_stock = grid_stock.sort_index(axis=1)
+
+print_df_info(grid_stock, "grid_stock")
 
 #----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
-#%%% 1.3) Prep_data File
+#%%% 3.3) Prep_data File
 ###########################################################################################################
 #----------------------------------------------------------------------------------------------------------
 
@@ -1190,8 +1380,8 @@ unit_mapping = {
 
 # Conversion table for all coordinates, to be removed/adapted after input tables are fixed.
 conversion_table = {
-    "gcap_stock": (["Time"], ["Type", "Region"],),
-    "gcap_types_materials": (["Cohort"], ["Type", "material"],)
+    "grid_stock": (["Time"], ["Type", "Region"],),
+    "materials_grid_combined_kgperkm": (["Cohort"], ["Type", "material"],)
     # "gcap_materials_interpol": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]})
 }
 
@@ -1210,8 +1400,8 @@ conversion_table = {
 #         'vehicle_shares_typical': vehicle_shares_typical
 #     }
 results_dict = {
-        'gcap_stock': gcap_stock,
-        'gcap_types_materials': gcap_types_materials,
+        'grid_stock': grid_stock,
+        'materials_grid_combined_kgperkm': materials_grid_combined_kgperkm,
         'lifetime_grid_distr': lifetime_grid_distr,
 }
 
@@ -1233,14 +1423,14 @@ for df_name, df in results_dict.items():
 
 
 
-preprocessing_results_xarray["lifetimes"] = convert_life_time_vehicles(preprocessing_results_xarray["gcap_lifetime_distr"])
-preprocessing_results_xarray["stocks"] = preprocessing_results_xarray.pop("gcap_stock")
-preprocessing_results_xarray["material_intensities"] = preprocessing_results_xarray.pop("gcap_types_materials")
+preprocessing_results_xarray["lifetimes"] = convert_life_time_vehicles(preprocessing_results_xarray["lifetime_grid_distr"])
+preprocessing_results_xarray["stocks"] = preprocessing_results_xarray.pop("grid_stock")
+preprocessing_results_xarray["material_intensities"] = preprocessing_results_xarray.pop("materials_grid_combined_kgperkm")
 # preprocessing_results_xarray["shares"] = preprocessing_results_xarray.pop("vehicle_shares")
 
 #----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
-#%%% 1.4) Run Stock Model New
+#%%% 3.4) Run Stock Model New
 ###########################################################################################################
 # TODO: move this to electricity.py
 #----------------------------------------------------------------------------------------------------------
@@ -1270,15 +1460,281 @@ material = list(prep_data["material_intensities"].coords["material"].values)
 
 new_prep_data = prep_data.copy()
 new_prep_data["knowledge_graph"] = create_electricity_graph()
+new_prep_data["shares"] = None
+
+sec_elctr_trans = Sector("elctr_trans", new_prep_data)
 
 
 main_model_factory = ModelFactory(
-    new_prep_data, complete_timeline
+    sec_elctr_trans, complete_timeline
     ).add(GenericStocks
     ).add(MaterialIntensities
     ).finish()
 
+
 main_model_factory.simulate(simulation_timeline)
+list(main_model_factory.elctr_trans)
+
+
+
+path_test_plots = Path(path_base, "imagematerials", "electricity", "out_test", "Figures")
+
+###########################################################################################################
+#%%% 3.5) Visualize Stocks 
+
+
+da_stocks = main_model_factory.stocks.copy()
+
+
+# TOTAL STOCKS
+
+da_stocks = da_stocks.sum(dim="Region")
+types_top = da_stocks.Type.values[[0, 1, 4, 5, 8, 9]]   # Types 1–10
+types_bottom = da_stocks.Type.values[[2,3,6,7,10,11]]  # Types 11–20
+
+fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(14, 8), sharex=True, sharey=True)
+i=0
+for t in types_top:
+    axes[0].plot(da_stocks.sel(Type=t), label=t)
+# axes.set_title(f"{region} (Types 1–10)")
+axes[0].legend()
+
+# Bottom row: Types 11–20
+for t in types_bottom:
+    axes[1].plot(da_stocks.sel(Type=t), label=t)
+# axes.set_title(f"{region} (Types 11–20)")
+axes[1].set_xlabel("Time")
+axes[1].legend(loc ='upper left')
+
+# Label only left side with y-axis label
+axes[1].set_ylabel("Value")
+axes[1].set_ylabel("Value")
+plt.suptitle("Electricity Grid - Stocks", fontsize=16)
+
+plt.tight_layout()
+# fig.savefig(path_test_plots / "Grid_stocks_world.png", dpi=300)
+plt.show()
+
+
+# # Two regions
+# regions = da_stocks.Region.values[:2]  # First 2 regions
+# types_top = da_stocks.Type.values[[0, 1, 4, 5, 8, 9]]   # Types 1–10
+# types_bottom = da_stocks.Type.values[[2,3,6,7,10,11]]  # Types 11–20
+
+# fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(14, 8), sharex=True, sharey=True)
+
+# for i, region in enumerate(regions):
+#     # Top row: Types 1–10
+#     for t in types_top:
+#         da_stocks.sel(Type=t, Region=region).plot(ax=axes[0, i], label=t)
+#     axes[0, i].set_title(f"{region} (Types 1–10)")
+#     axes[0, i].legend()
+
+#     # Bottom row: Types 11–20
+#     for t in types_bottom:
+#         da_stocks.sel(Type=t, Region=region).plot(ax=axes[1, i], label=t)
+#     axes[1, i].set_title(f"{region} (Types 11–20)")
+#     axes[1, i].set_xlabel("Time")
+#     axes[1, i].legend(loc ='upper left')
+
+# # Label only left side with y-axis label
+# axes[0, 0].set_ylabel("Value")
+# axes[1, 0].set_ylabel("Value")
+# plt.suptitle("Electricity Grid - Stocks", fontsize=16)
+
+# plt.tight_layout()
+# # fig.savefig(path_test_plots / "Grid_stocks_Brazil-CEurope.png", dpi=300)
+# plt.show()
+
+
+
+###########################################################################################################
+#%% Visualize INFLOW Materials - World per type Lines, Trans., Subst.
+
+
+materials = ["Steel", "Concrete", "Aluminium", "Cu"]
+
+da_x = main_model_factory.inflow_materials.to_array().sum('Region')
+da_x_sum = main_model_factory.inflow_materials.to_array().sum('Region').sum(dim='Type')
+
+lines_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Lines' in t]).sum(dim='Type') # Get group sums by keyword and sum over types (sum over HV, MV and LV (and overground/underground for lines))
+transformers_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Transformers' in t]).sum(dim='Type')
+substations_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Substations' in t]).sum(dim='Type')
+
+
+fig, axes = plt.subplots(nrows=4, ncols=1, figsize=(12, 10), sharex=True)
+
+for i, mat in enumerate(materials):
+    lines_sum.sel(material=mat).plot(ax=axes[i], label="Lines")
+    transformers_sum.sel(material=mat).plot(ax=axes[i], label="Transformers")
+    substations_sum.sel(material=mat).plot(ax=axes[i], label="Substations")
+    da_x_sum.sel(material=mat).plot(ax=axes[i], label="Total", color='red', alpha=0.8, linestyle='--')
+    
+    axes[i].set_title(f"{mat}")
+    axes[i].set_xlabel(" ")
+    axes[i].set_ylabel("Inflow [kg]")
+    axes[i].legend()
+    axes[i].grid(alpha=0.3, linestyle='--')
+
+axes[-1].set_xlabel("Time")
+
+plt.suptitle("Electricity Grid Inflow Materials", fontsize=16)
+plt.tight_layout()
+fig.savefig(path_test_plots / "Grid_inflow-materials_world.pdf")
+fig.savefig(path_test_plots / "Grid_inflow-materials_world.png")
+plt.show()
+
+
+
+###########################################################################################################
+#%% Visualize STOCK Materials - World per type Lines, Trans., Subst.
+
+
+
+materials = ["Steel", "Concrete", "Aluminium", "Cu"]
+
+da_x = main_model_factory.stock_by_cohort_materials.sum('Region')
+da_x_sum = main_model_factory.stock_by_cohort_materials.sum('Region').sum(dim='Type')
+
+lines_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Lines' in t]).sum(dim='Type') # Get group sums by keyword and sum over types (sum over HV, MV and LV (and overground/underground for lines))
+transformers_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Transformers' in t]).sum(dim='Type')
+substations_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Substations' in t]).sum(dim='Type')
+
+
+fig, axes = plt.subplots(nrows=len(materials), ncols=1, figsize=(12, 10), sharex=True)
+
+for i, mat in enumerate(materials):
+    lines_sum.sel(material=mat).plot(ax=axes[i], label="Lines")
+    transformers_sum.sel(material=mat).plot(ax=axes[i], label="Transformers")
+    substations_sum.sel(material=mat).plot(ax=axes[i], label="Substations")
+    da_x_sum.sel(material=mat).plot(ax=axes[i], label="Total", color='red', alpha=0.8, linestyle='--')
+    
+    axes[i].set_title(f"{mat}")
+    axes[i].set_xlabel(" ")
+    axes[i].set_ylabel("Stock [kg]")
+    axes[i].legend()
+    axes[i].grid(alpha=0.3, linestyle='--')
+
+axes[-1].set_xlabel("Time")
+
+plt.suptitle("Electricity Grid Stocks", fontsize=16)
+plt.tight_layout()
+fig.savefig(path_test_plots / "Grid_stocks-bulkmaterials_per-type_world.pdf", dpi=300)
+plt.show()
+
+#-------------
+
+materials = ["Aluminium"]
+
+da_x = main_model_factory.stock_by_cohort_materials.sum('Region')
+da_x_sum = main_model_factory.stock_by_cohort_materials.sum('Region').sum(dim='Type')
+
+lines_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Lines' in t]).sum(dim='Type') # Get group sums by keyword and sum over types (sum over HV, MV and LV (and overground/underground for lines))
+transformers_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Transformers' in t]).sum(dim='Type')
+substations_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Substations' in t]).sum(dim='Type')
+
+
+fig, axes = plt.subplots(nrows=len(materials), ncols=1, figsize=(8, 6), sharex=True)
+
+for i, mat in enumerate(materials):
+    lines_sum.sel(material=mat).plot(ax=axes, label="Lines")
+    transformers_sum.sel(material=mat).plot(ax=axes, label="Transformers")
+    substations_sum.sel(material=mat).plot(ax=axes, label="Substations")
+    da_x_sum.sel(material=mat).plot(ax=axes, label="Total", color='red', alpha=0.8, linestyle='--')
+    
+    axes.set_title(f"{mat}")
+    axes.set_xlabel(" ")
+    axes.set_ylabel("Stock [kg]")
+    axes.legend()
+    axes.grid(alpha=0.3, linestyle='--')
+
+axes.set_xlabel("Time")
+axes.axvline(x=2050, color='grey', linestyle='--', alpha=0.5)
+
+plt.suptitle("Electricity Grid Stocks", fontsize=16)
+plt.tight_layout()
+fig.savefig(path_test_plots / "Grid_stocks-Alu_per-type_world.pdf", dpi=300)
+fig.savefig(path_test_plots / "Grid_stocks-Alu_per-type_world.png", dpi=300)
+plt.show()
+
+
+#------------
+
+materials = ["Aluminium"]
+
+fig, axes = plt.subplots(nrows=len(materials), ncols=1, figsize=(8, 4), sharex=True)
+
+for i, mat in enumerate(materials):
+    lines_sum.sel(material=mat).plot(ax=axes, label="Lines")
+    transformers_sum.sel(material=mat).plot(ax=axes, label="Transformers")
+    substations_sum.sel(material=mat).plot(ax=axes, label="Substations")
+    da_x_sum.sel(material=mat).plot(ax=axes, label="Total", color='red', alpha=0.8, linestyle='--')
+    
+    axes.set_title(f"{mat}")
+    axes.set_xlabel(" ")
+    axes.set_ylabel("Stock [kg]")
+    axes.legend()
+    axes.grid(alpha=0.3, linestyle='--')
+
+axes.set_xlabel("Time")
+axes.set_xlim(1990, 2050)
+
+plt.suptitle("Electricity Grid Stocks", fontsize=16)
+plt.tight_layout()
+fig.savefig(path_test_plots / "Grid_stocks-Alu_per-type_world_1990-2050.png",dpi=300)
+plt.show()
+
+###########################################################################################################
+#%%%%
+
+# da_x = main_model_factory.inflow.to_array()
+da_x = main_model_factory.inflow_materials.to_array()
+da_x = main_model_factory.inflow_materials.to_array().sum('Type')
+
+regions = da_x.Region.values[:2]  # First 2 regions
+# types_top = da_x.material.values[1:6]   # Types 1–10
+# types_bottom = da_x.material.values[6:12]  # Types 11–20
+types_level1 = [m for m in da_x.material.values if m in ["Steel", "Concrete"]]
+types_level2 = [m for m in da_x.material.values if m in ["Aluminium", "Cu"]]
+types_level3 = [m for m in da_x.material.values if m not in (types_level1 + types_level2)]
+
+fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(14, 12), sharex=True)
+
+axes[0, 1].sharey(axes[0, 0])
+axes[1, 1].sharey(axes[1, 0])
+axes[2, 1].sharey(axes[2, 0])
+
+for i, region in enumerate(regions):
+    # Top row: 
+    for t in types_level1:
+        da_x.sel(material=t, Region=region).plot(ax=axes[0, i], label=t)
+    axes[0, i].set_title(f"{region}")
+    axes[0, i].set_xlabel("Time")
+    axes[0, i].legend()
+
+    # Middle row: 
+    for t in types_level2:
+        da_x.sel(material=t, Region=region).plot(ax=axes[1, i], label=t)
+    axes[1, i].set_title(f"{region}")
+    axes[1, i].set_xlabel("Time")
+    axes[1, i].legend(loc ='upper left')
+
+    # Bottom row: 
+    for t in types_level3:
+        da_x.sel(material=t, Region=region).plot(ax=axes[2, i], label=t)
+    axes[2, i].set_title(f"{region}")
+    axes[2, i].set_xlabel("Time")
+    axes[2, i].legend(loc ='upper left')
+
+# Label only left side with y-axis label
+axes[0, 0].set_ylabel("Value")
+axes[1, 0].set_ylabel("Value")
+axes[2, 0].set_ylabel("Value")
+
+plt.suptitle("Generation - Inflow Materials", fontsize=16)
+plt.tight_layout()
+fig.savefig(path_test_plots / "Gen_inflow-materials_Brazil-CEurope.png", dpi=300)
+plt.show()
 
 
 
@@ -1309,3 +1765,5 @@ main_model_factory.simulate(simulation_timeline)
 
 
 
+
+# %%
