@@ -58,7 +58,6 @@ class KnowledgeGraph():
         if node.name in self._items:
             raise ValueError("Node already exists.")
         if node.inherits_from is not None and node.inherits_from not in self:
-            print(node.inherits_from is not None, node.inherits_from not in self)
             raise ValueError(f"Parent {node.inherits_from} of {node.name} does not exist.")
         self._items.append(node)
 
@@ -138,7 +137,7 @@ class KnowledgeGraph():
                 all_descendants.extend(self._find_descendants(input_coords, item))
         return all_descendants
 
-    def rebroadcast_xarray(self, input_array, output_coords, dim="Type"):
+    def rebroadcast_xarray(self, input_array, output_coords, dim="Type", shares=None):
         input_coords = input_array.coords[dim].values
         if list(input_coords) == list(output_coords):
             return input_array
@@ -152,9 +151,38 @@ class KnowledgeGraph():
                 keep_coords.append(cur_coord)
                 continue
             parent = self.find_relations(input_coords, [cur_coord])[cur_coord][0]
-            new_array.loc[{dim: cur_coord}] = input_array.loc[{dim: parent}]
+            if shares is not None and cur_coord in shares.coords["Type"]:
+                new_array.loc[{dim: cur_coord}] = (input_array.loc[{dim: parent}]
+                                                   * shares.loc[{dim: cur_coord}])
+            else:
+                new_array.loc[{dim: cur_coord}] = input_array.loc[{dim: parent}]
         new_array.loc[{dim: keep_coords}] = input_array.loc[{dim: keep_coords}]
         return new_array
+
+    def aggregate_sum(self, input_array, output_coords, dim="Type"):
+        """Aggregate the data over subtypes and sums them.
+
+        Parameters
+        ----------
+        input_array
+            The xr.DataArray to be aggregated/summed.
+        output_coords
+            The output coordinates over which to aggregate/sum.
+        dim, optional
+            Dimension to aggregate/sum over, by default "Type"
+
+        Returns
+        -------
+            Aggregated xr.DataArray.
+
+        """
+        output_to_input = self.find_relations(input_array.coords[dim].values, output_coords)
+        output_arrays = []
+        for output, input_list in output_to_input.items():
+            output_arrays.append(input_array.sel(**{dim: input_list}).sum(dim))
+        output_xr = xr.concat(output_arrays, dim=dim)
+        output_xr.coords[dim] = output_coords
+        return output_xr
 
     def to_netcdf(self, out_fp, **kwargs):
         json_items = [x.to_dict() for x in self._items]

@@ -1,12 +1,11 @@
-from pathlib import Path
 import sys
-from typing import Optional, Union
+from collections import defaultdict
+from pathlib import Path
+from typing import Optional
 
 import netCDF4
 import numpy as np
-import pandas as pd
 import xarray as xr
-from collections import defaultdict
 
 if sys.version_info < (3, 11):
     import tomli as tomllib
@@ -16,7 +15,6 @@ else:
 from imagematerials.concepts import KnowledgeGraph
 from imagematerials.constants import SUBTYPE_SEPARATOR
 from imagematerials.distribution import ALL_DISTRIBUTIONS, NAME_TO_DIST
-
 
 NONE_SENTINEL = "__NETCDF_NONE_SENTINEL__"
 
@@ -354,3 +352,5 @@ def convert_life_time_vehicles(life_time_vehicles: xr.Dataset) -> dict[str, xr.D
                     array.attrs[cur_scipy_key] = cur_scipy_par
         ret_scipy_params[dist_name] = array
     return ret_scipy_params
+
+
