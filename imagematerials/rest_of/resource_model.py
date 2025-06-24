@@ -104,7 +104,12 @@ class ResourceModel():
         # match IMAGE Mat data to regions of data source
         if match_external_regions == True:
             image_mat_material_regions = sum_total_over_grouped_regions(self.regions_dict, 
-                                                                        self.image_mat_data)
+                                                                      self.image_mat_data)
+            
+            # this will not be cut to start and end years for plotting later
+            self.image_mat_material_regions_total = image_mat_material_regions
+
+            self.image_mat_material_regions_total = image_mat_material_regions
             
             # select years used for analysis
             self.image_mat_material_regions = image_mat_material_regions.loc[str(self.start_year)
