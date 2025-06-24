@@ -24,7 +24,7 @@ def eol_preprocessing(base_dir):
 
     # melting material columns
     id_vars = ['Region', 'Time', 'Type'] 
-    value_vars = ['Steel',	'Concrete',	'Wood',	'Cu','Aluminium', 'Glass']
+    value_vars = ['Steel','Concrete','Wood','Cu','Aluminium', 'Glass']
 
     collection_df = pd.melt(
         collection_in,
@@ -50,6 +50,16 @@ def eol_preprocessing(base_dir):
         value_name = 'value'
     )
 
+    material_rename = {
+        'Cu': 'Copper'
+    } 
+
+    collection_df['material'] = collection_df['material'].replace(material_rename)
+    reuse_df['material'] = reuse_df['material'].replace(material_rename)
+    recycling_df['material'] = recycling_df['material'].replace(material_rename)
+    
+  
+
     xr_collection = collection_df.set_index(['Time', 'Region', 'Type', 'material']) \
                     .to_xarray()['value']
 
@@ -59,10 +69,20 @@ def eol_preprocessing(base_dir):
     xr_recycling = recycling_df.set_index(['Time', 'Region','Type', 'material']) \
                     .to_xarray()['value']
     
+    # add Brick and Cement to materials dim, fill w/0 and reorder
+    outflows_materials = ['Aluminium', 'Brick', 'Cement', 'Concrete', 'Copper', 'Glass', 'Steel', 'Wood']
+    xr_collection = xr_collection.reindex(material=outflows_materials, fill_value=0)
+    xr_reuse = xr_reuse.reindex(material=outflows_materials, fill_value=0)
+    xr_recycling = xr_recycling.reindex(material=outflows_materials, fill_value=0)
+    
         # inter and extrapolated collection, reuse and recycling xr 
     collection = interpolate_eol_rates(xr_collection, start_year= start_year, end_year=end_year,min_value = 0,max_value = 1)
     reuse = interpolate_eol_rates(xr_reuse, start_year= start_year, end_year=end_year,min_value = 0,max_value = 1)
     recycling = interpolate_eol_rates(xr_recycling, start_year= start_year, end_year=end_year,min_value = 0,max_value = 1)
+
+    collection.coords["Region"] = [str(x.values) for x in collection.coords["Region"]]
+    reuse.coords["Region"] = [str(x.values) for x in reuse.coords["Region"]]
+    recycling.coords["Region"] = [str(x.values) for x in recycling.coords["Region"]]
 
 
     return {
