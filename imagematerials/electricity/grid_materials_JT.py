@@ -371,30 +371,103 @@ df_reset.columns = pd.MultiIndex.from_tuples([  # Assign new MultiIndex columns:
 grid_materials_out = pd.concat([grid_materials], keys=['grid'], names=['category']).stack().stack() # add a descriptor column
 grid_materials_out = pd.concat([grid_materials_out], keys=['electricity'], names=['sector'])
 grid_materials_out = grid_materials_out.unstack(level=3).reorder_levels([5, 2, 0, 1, 4, 3]) / 1000000   # to kt
-grid_materials_out.to_csv(path_elma_out / 'grid_materials_output_kt.csv') # in kt
+# grid_materials_out.to_csv(path_elma_out / 'grid_materials_output_kt.csv') # in kt
 
 
 # %% Visualize INFLOW Materials - World per type Lines, Trans., Subst.
 
 
+
 materials = ["Steel", "Concrete", "Aluminium", "Cu"]
+dict_grid_colors = {
+    #'Lines Overhead': 'FF9B85',
+    #'Lines Underground': 'FFD97D',
+    'Lines': '#8cb369', #'#007f5f',
+    'Transformers': '#f4a259', #'#aacc00',
+    'Substations': '#bc4b51' #'#55a630'
+}
 
-da_x = main_model_factory.inflow_materials.to_array().sum('Region')
-da_x_sum = main_model_factory.inflow_materials.to_array().sum('Region').sum(dim='Type')
+# data IEA ---------------------------------------------------------------------
+# values for APS  scenario (NZE scenario)
 
-lines_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Lines' in t]).sum(dim='Type') # Get group sums by keyword and sum over types (sum over HV, MV and LV (and overground/underground for lines))
-transformers_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Transformers' in t]).sum(dim='Type')
-substations_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Substations' in t]).sum(dim='Type')
+# Cu -------------
+years = np.arange(2012, 2051)
+values = np.concatenate([
+    np.full(10, 5e9),       # 2012–2021 # 5 Mt = 5*10e9 kg
+    np.full(9, 5.5e9),       # 2022–2030
+    np.full(10, np.nan),    # 2031–2040 (gap)
+    np.full(10, 9e9),       # 2041–2050 (12)
+])
+df_iea_lt_cu = pd.DataFrame({ # lines & transformers, copper
+    'Year': years,
+    'Cu': values
+})
+df_iea_lt_cu.set_index('Year', inplace=True)
+
+# Alu -------------
+years = np.arange(2012, 2051)
+values = np.concatenate([
+    np.full(10, 12e9),       # 2012–2021 # 12 Mt = 12*10e9 kg
+    np.full(9, 13e9),        # 2022–2030
+    np.full(10, np.nan),    # 2031–2040 (gap)
+    np.full(10, 21e9),       # 2041–2050 (27)
+])
+df_iea_lt_alu = pd.DataFrame({ # lines & transformers, aluminium
+    'Year': years,
+    'Aluminium': values
+})
+df_iea_lt_alu.set_index('Year', inplace=True)
+
+# Steel -------------
+years = np.arange(2012, 2051)
+values = np.concatenate([
+    np.full(10, 5e9),       # 2012–2021
+    np.full(9, np.nan),     # 2022–2030
+    np.full(10, 9e9),       # 2031–2040 (13)
+    np.full(10, np.nan),    # 2041–2050
+])
+df_iea_t_steel = pd.DataFrame({ # transformers, steel
+    'Year': years,
+    'Steel': values
+})
+df_iea_t_steel.set_index('Year', inplace=True)
+# ----------------------------------------------------------------------------------
+
+
+df_x = grid_materials_inflow.unstack(level='materials')
+
+# df_x = df_x.groupby(level='regions', axis=1).sum()  # Sum over all regions to get a world total
+df_x = df_x.groupby(['elements','materials'], axis=1).sum()
+df_x_sum = df_x.groupby(['materials'], axis=1).sum()
+
+# lines_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Lines' in t]).sum(dim='Type') # Get group sums by keyword and sum over types (sum over HV, MV and LV (and overground/underground for lines))
+# transformers_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Transformers' in t]).sum(dim='Type')
+# substations_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Substations' in t]).sum(dim='Type')
+lines_sum = df_x.xs('Lines', level='elements', axis=1)
+transformers_sum = df_x.xs('Transformers', level='elements', axis=1)
+substations_sum = df_x.xs('Substations', level='elements', axis=1)
 
 
 fig, axes = plt.subplots(nrows=4, ncols=1, figsize=(12, 10), sharex=True)
 
 for i, mat in enumerate(materials):
-    lines_sum.sel(material=mat).plot(ax=axes[i], label="Lines")
-    transformers_sum.sel(material=mat).plot(ax=axes[i], label="Transformers")
-    substations_sum.sel(material=mat).plot(ax=axes[i], label="Substations")
-    da_x_sum.sel(material=mat).plot(ax=axes[i], label="Total", color='red', alpha=0.8, linestyle='--')
-    
+    lines_sum[mat].plot(ax=axes[i], color = dict_grid_colors['Lines'], label="Lines")
+    transformers_sum[mat].plot(ax=axes[i], color = dict_grid_colors['Transformers'], label="Transformers")
+    substations_sum[mat].plot(ax=axes[i], color = dict_grid_colors['Substations'], label="Substations")
+    df_x_sum[mat].plot(ax=axes[i], label="Total", color='red', alpha=0.8, linestyle='--', linewidth=3)
+
+    if mat == "Cu":
+        # Add IEA data for copper
+        axes[i].plot(df_iea_lt_cu.index, df_iea_lt_cu['Cu'], label="IEA L&T", color='#00a5cf', linestyle=':', linewidth=4)
+
+    if mat == "Aluminium":
+        # Add IEA data for aluminium
+        axes[i].plot(df_iea_lt_alu.index, df_iea_lt_alu['Aluminium'], label="IEA L&T", color='#00a5cf', linestyle=':', linewidth=4)
+
+    if mat == "Steel":
+        # Add IEA data for steel
+        axes[i].plot(df_iea_t_steel.index, df_iea_t_steel['Steel'], label="IEA T", color='#00a5cf', linestyle=':', linewidth=4)
+
     axes[i].set_title(f"{mat}")
     axes[i].set_xlabel(" ")
     axes[i].set_ylabel("Inflow [kg]")
@@ -403,10 +476,10 @@ for i, mat in enumerate(materials):
 
 axes[-1].set_xlabel("Time")
 
-plt.suptitle("Electricity Grid Inflow Materials", fontsize=16)
+plt.suptitle("ELMA: Electricity Grid Inflow Materials", fontsize=16)
 plt.tight_layout()
-# fig.savefig(path_test_plots / "Grid_inflow-materials_world.pdf")
-# fig.savefig(path_test_plots / "Grid_inflow-materials_world.png")
+fig.savefig(path_elma_out / "ELMA_Grid_inflow-materials_world.pdf")
+fig.savefig(path_elma_out / "ELMA_Grid_inflow-materials_world.png")
 plt.show()
 
 

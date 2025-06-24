@@ -481,7 +481,7 @@ gcap_materials_all = pd.concat([gcap_materials_all], keys=['generation'], names=
 gcap_materials_all = gcap_materials_all.reorder_levels([3, 2, 1, 0, 5, 4]) / 1000000000   # gram to kt
 
 # gcap_materials_all.to_csv(path_elma / 'output' / scen_folder / sa_settings / 'gcap_materials_output_kt.csv') # in kt
-gcap_materials_all.to_csv(path_elma_out / 'gcap_materials_output_kt.csv') # in kt
+# gcap_materials_all.to_csv(path_elma_out / 'gcap_materials_output_kt.csv') # in kt
 
 
 ###########################################################################################################
