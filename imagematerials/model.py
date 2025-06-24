@@ -108,7 +108,7 @@ class GenericStocks(prism.Model):
             # stock_by_cohort[t_future].loc[{"Cohort": t_str}] = inflow[t]*survival[t_future, t]
 
         # Prevent out of bounds error, assume first outflow to be 0.
-        if t-1 < self.stock_by_cohort.coords["Time"].min():
+        if t-1 < time.start:
             self.outflow_by_cohort[t] = 0.0
         else:
             self.outflow_by_cohort[t] = self.stock_by_cohort.loc[t-1] - self.stock_by_cohort.loc[t]
