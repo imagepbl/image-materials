@@ -473,24 +473,30 @@ class EndOfLife(prism.Model):
 
             'rural': ["Appartment - Rural","Detached - Rural","High-rise - Rural", "Semi-detached - Rural",
         ],
+        #   'generation':[], 
+        #   'grid':[],
+        #   'storage': []
 
         }
-
-        
+        self.sum_outflow[t].loc[:] = 0
         for outflow in outflow_by_cohort_materials:
             for supertype, subtypes in type_dict.items():
-                if subtypes[0] not in outflow[t].coords:
+                if subtypes[0] not in outflow[t].coords["Type"]:
                     continue
+
                 sum_outflow = outflow[t].sel(Type=subtypes).sum("Type")
+                coords = {"Type": supertype, "material": sum_outflow.coords["material"], "Region": sum_outflow.coords["Region"]}
+                input_coords = {"Time":t, "Type":supertype}
+                
+                self.sum_outflow[t].loc[coords] = sum_outflow
 
-                coords = {"Type": supertype, "material": sum_outflow.coords["material"]}
-
-                collected_materials = collection[t]*sum_outflow
-                reusable_materials = collected_materials*reuse[t]
+                collected_materials = collection.loc[input_coords]*sum_outflow
+                reusable_materials = collected_materials*reuse.loc[input_coords]
                 remaining_materials = collected_materials-reusable_materials                        # non-reused but collected waste
-                recyclable_materials = remaining_materials*recycling[t]
+                recyclable_materials = remaining_materials*recycling.loc[input_coords]
                 losses_materials = sum_outflow-collected_materials                                  # non-collected waste
                 losses_materials = losses_materials+remaining_materials-recyclable_materials        # non-reused/recycled but collected waste
+
 
                 self.collected_materials[t].loc[coords] = collected_materials
                 self.reusable_materials[t].loc[coords] = reusable_materials
