@@ -14,12 +14,8 @@ STOCK_TYPE = prism.Dimension("Type")
 COHORT = prism.Dimension("Cohort")
 TIME = prism.Dimension("Time")
 MATERIAL_TYPE = prism.Dimension("material")
-<<<<<<< HEAD
 BATTERY_TYPE = prism.Dimension("battery")
 EOL_TYPE = prism.Dimension("eoltype")
-=======
-
->>>>>>> a1458e5 (add changes to EoL module in model.py)
 
 
 @prism.interface
