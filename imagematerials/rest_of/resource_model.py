@@ -23,7 +23,7 @@ class ResourceModel():
     '''
     def __init__(self, resource_group: str, resource: str, start_year: int, image_mat_available: bool, 
                  end_year = 2017, convert_image = False, convert_to_tons = None, trade_data = False, 
-                 path_input_data = path_input_data):
+                 path_input_data = path_input_data, adapt_mat_factor = None):
         
         # Name resource group
         self.resource_group = resource_group
@@ -49,6 +49,10 @@ class ResourceModel():
         if image_mat_available == True:
             self.image_mat_data = pd.read_csv(f'{path_input_data}/{resource_group}/image_mat_{self.resource}.csv', 
                                               index_col=0)
+            
+            if adapt_mat_factor is not None:
+                # adapt IMAGE Mat factor to external data
+                self.image_mat_data = self.image_mat_data * adapt_mat_factor
         
         # start year & end year of data
         self.start_year = start_year
@@ -131,11 +135,10 @@ class ResourceModel():
             
 
     def calculate_historic_other_fraction(self):
-        
         self.historic_other_fraction_consumption = self.historic_consumption_data - self.image_mat_material_regions
         
         
-    def calculate_regressors(self, historic_consumption: pd.DataFrame):
+    def calculate_regressors(self, historic_consumption: pd.DataFrame, drop_regions: list = None):
         
         """
         historic_consumption: either total or other fraction (diff) depending what is available
@@ -156,6 +159,14 @@ class ResourceModel():
          self.gdp_pc_groups) = calculate_material_consumption_pc_and_gdp_pc_groups(self.region_groups, 
                                                                                    self.gdp_pc, 
                                                                                    self.cons_capita)
+        
+        # in case a region should not be fitted because of skewed data, use this
+        if drop_regions is not None:
+            # drop regions that are not available in the data
+            # It removes any regions listed in drop_regions from self.cons_pc_groups.
+            self.cons_pc_groups = {k: v for k, v in self.cons_pc_groups.items() if k not in drop_regions}
+            self.gdp_pc_groups = {k: v for k, v in self.gdp_pc_groups.items() if k not in drop_regions}
+            self.region_groups = {k: v for k, v in self.region_groups.items() if k not in drop_regions}
                
     
     def fit_models(self, best_rmse_models: dict):
@@ -176,6 +187,7 @@ class ResourceModel():
               
     def project_on_total(self, regions_list):
         self.projection_per_region = []
+        self.not_projected_regions = []
 
         # loop over every region
         for region in regions_list:
@@ -187,12 +199,17 @@ class ResourceModel():
            
             # use predict function and model for projection
             if self.region_model_match.get(region) is None:
-                # print(region, 'could not be projected')
-                continue
-            region_projected_data = self.region_model_match.get(region).predict(gdp_pc_region)
-            # numpy array from nd array to 1d array
-            region_projected_data = region_projected_data.ravel()
-            self.projection_per_region.append(region_projected_data)
+                print(region, 'could not be projected')
+                # fill region with NaN if no model is available
+                self.projection_per_region.append(np.full(len(gdp_pc_region), np.nan))
+                # save not projected region to list
+                self.not_projected_regions.append(region)
+
+            else:
+                region_projected_data = self.region_model_match.get(region).predict(gdp_pc_region)
+                # numpy array from nd array to 1d array
+                region_projected_data = region_projected_data.ravel()
+                self.projection_per_region.append(region_projected_data)
             
             # list of projections of all regions to DataFrame
         self.projection_per_region = pd.DataFrame(self.projection_per_region).transpose()
