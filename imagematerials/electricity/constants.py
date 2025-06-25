@@ -102,31 +102,31 @@ dict_gentech_styles = {tech: style_combinations[i] for i, tech in enumerate(tech
 
 dict_materials_colors = {
     'Steel':     '#FF9B85',
-    'Aluminium': '#FFD97D',
+    'Aluminium': '#B9FAF8',
     'Concrete':  '#AAF683',
     'Plastics':  '#60D394',
     'Glass':     '#EE6055',
-    'Cu':        '#B9FAF8',
+    'Cu':        '#FB6376',
     'Nd':        '#B8D0EB',
     'Ta':        '#B298DC',
     'Co':        '#A663CC',
     'Pb':        '#6F2DBD',
-    'Mn':        '#FFDCCC',
+    'Mn':        "#31E7E7",
     'Ni':        '#FCB1A6',
-    'Other':     '#FB6376'
+    'Other':     '#FFD97D'
 }
 
 dict_grid_colors = {
     #'Lines Overhead': '#FF9B85',
     #'Lines Underground': '#FFD97D',
-    'Lines': '#8cb369', #'#007f5f',
+    'Lines':        '#8cb369', #'#007f5f',
     'Transformers': '#f4a259', #'#aacc00',
-    'Substations': '#bc4b51' #'#55a630'
+    'Substations':  '#bc4b51' #'#55a630'
 }
 
 dict_electricity_colors = {
-    'Generation': '#277da1',
-    'Storage': '#f9844a',
+    'Generation':   '#277da1',
+    'Storage':      '#f9844a',
     'Transmission': '#90be6d'
 }
 

@@ -18,6 +18,7 @@ Output: Total global material use (stocks, inflow & outflow) in the electricity 
 4) 'dynamic_MI' uses dynamic Material Intensity assumptions with regard to solar and wind, batteries and underground HV transmission cables as described in the main text
 
 """
+#############################################################################################
 #%% define imports, counters & settings
 import pandas as pd
 import numpy as np
@@ -38,7 +39,8 @@ scen_folder = scenario + "_" + variant
 #YOUR_DIR = "C:\\Users\\Admin\\surfdrive\\Projects\\IRP\\GRO23\\Modelling\\2060\\ELMA"   # Change the running directory here
 # os.chdir(YOUR_DIR)
 # path_current = Path.cwd() # 
-path_current = Path(__file__).resolve().parent # absolute path of file
+# path_current = Path(__file__).resolve().parent # absolute path of file
+path_current = Path().resolve()
 path_base = path_current.parent.parent # base path of the project -> image-materials
 # NEW
 path_image_output = Path(path_base, "data", "raw", scenario, "EnergyServices")
@@ -81,6 +83,7 @@ regions   = 26
 epg_techs = 34
 material_select = 'Steel'
 
+#############################################################################################
 #%% Read in files --------------------------------------------------------------------------
 
 # IMAGE file: Generation capacity (stock) in MW peak capacity (Used as proxy for grid growth)
@@ -123,6 +126,7 @@ gdp_pc = pd.read_csv(path_external_data_scenario / 'gdp_pc.csv', index_col=0)  #
 gdp_pc.columns = region_list
 gdp_pc = gdp_pc.drop([1970]).drop(list(range(endyear+1,fileyear+1)))
 
+#############################################################################################
 #%% length calculations ----------------------------------------------------------------------------
 
 # only the regional total (peak) generation capacity is used as a proxy for the grid growth (BL to 2016, then BL or 450)
@@ -213,7 +217,7 @@ grid_trans_Hv = grid_length_Hv_total.mul(grid_additions.loc['Transformers','HV']
 grid_trans_Mv = grid_length_Mv_total.mul(grid_additions.loc['Transformers','MV'])       # # of transformers
 grid_trans_Lv = grid_length_Lv_total.mul(grid_additions.loc['Transformers','LV'])       # # of transformers
 
-
+#############################################################################################
 #%% Inflow Outflow calculations 
 from dynamic_stock_model import DynamicStockModel as DSM
 first_year_grid = 1926          # UK Electricity supply act - https://www.bbc.com/news/uk-politics-11619751
@@ -323,6 +327,8 @@ Lv_lines_under_in, Lv_lines_under_out, Lv_lines_under_stock = inflow_outflow(gri
 Lv_subst_in, Lv_subst_out, Lv_subst_stock                   = inflow_outflow(grid_subst_Lv_new,        lifetime_grid_elements['Substations'],  materials_grid_additions_interpol.loc[idx[:,'LV Substations'],:].droplevel(1))
 Lv_trans_in, Lv_trans_out, Lv_trans_stock                   = inflow_outflow(grid_trans_Lv_new,        lifetime_grid_elements['Transformers'], materials_grid_additions_interpol.loc[idx[:,'LV Transformers'],:].droplevel(1))
 
+
+#############################################################################################
 #%% prepare output variables
 
 # overall container of stock, inflow & outflow of materials (in kgs)
@@ -366,7 +372,7 @@ df_reset.columns = pd.MultiIndex.from_tuples([  # Assign new MultiIndex columns:
     for (region, element), material in zip(grid_materials_inflow.columns, materials)
 ])
 
-
+#############################################################################################
 #%% CSV output files (in kilo-tonnes, kt) - 3 flow types (stock, inflow, outlfow) - 26 Regions - 3 product categories (lines, substations, transformers) - 14 materials (but some are not releveant to the grid, so they are 0)
 grid_materials_out = pd.concat([grid_materials], keys=['grid'], names=['category']).stack().stack() # add a descriptor column
 grid_materials_out = pd.concat([grid_materials_out], keys=['electricity'], names=['sector'])
@@ -374,9 +380,164 @@ grid_materials_out = grid_materials_out.unstack(level=3).reorder_levels([5, 2, 0
 # grid_materials_out.to_csv(path_elma_out / 'grid_materials_output_kt.csv') # in kt
 
 
+#############################################################################################
+# %% Visualize STOCKS - World per type Lines, Trans., Subst.
+
+
+
+materials = ["Steel", "Concrete", "Aluminium", "Cu"]
+dict_grid_colors = {
+    #'Lines Overhead': 'FF9B85',
+    #'Lines Underground': 'FFD97D',
+    'Lines': '#8cb369', #'#007f5f',
+    'Transformers': '#f4a259', #'#aacc00',
+    'Substations': '#bc4b51' #'#55a630'
+}
+
+# data IEA ---------------------------------------------------------------------
+# values for APS  scenario (NZE scenario)
+
+# Cu -------------
+# years = np.arange(2012, 2051)
+# values = np.concatenate([
+#     np.full(10, 5e9),       # 2012–2021 # 5 Mt = 5*10e9 kg
+#     np.full(9, 5.5e9),       # 2022–2030
+#     np.full(10, np.nan),    # 2031–2040 (gap)
+#     np.full(10, 9e9),       # 2041–2050 (12)
+# ])
+# df_iea_lt_cu = pd.DataFrame({ # lines & transformers, copper
+#     'Year': years,
+#     'Cu': values
+# })
+# df_iea_lt_cu.set_index('Year', inplace=True)
+
+# ----------------------------------------------------------------------------------
+
+
+df_x = grid_materials_inflow.unstack(level='materials')
+
+# df_x = df_x.groupby(level='regions', axis=1).sum()  # Sum over all regions to get a world total
+df_x = df_x.groupby(['elements','materials'], axis=1).sum()
+df_x_sum = df_x.groupby(['materials'], axis=1).sum()
+
+# lines_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Lines' in t]).sum(dim='Type') # Get group sums by keyword and sum over types (sum over HV, MV and LV (and overground/underground for lines))
+# transformers_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Transformers' in t]).sum(dim='Type')
+# substations_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Substations' in t]).sum(dim='Type')
+lines_sum = df_x.xs('Lines', level='elements', axis=1)
+transformers_sum = df_x.xs('Transformers', level='elements', axis=1)
+substations_sum = df_x.xs('Substations', level='elements', axis=1)
+
+
+fig, axes = plt.subplots(nrows=4, ncols=1, figsize=(12, 10), sharex=True)
+
+for i, mat in enumerate(materials):
+    lines_sum[mat].plot(ax=axes[i], color = dict_grid_colors['Lines'], label="Lines")
+    transformers_sum[mat].plot(ax=axes[i], color = dict_grid_colors['Transformers'], label="Transformers")
+    substations_sum[mat].plot(ax=axes[i], color = dict_grid_colors['Substations'], label="Substations")
+    df_x_sum[mat].plot(ax=axes[i], label="Total", color='red', alpha=0.8, linestyle='--', linewidth=3)
+
+    axes[i].set_title(f"{mat}")
+    axes[i].set_xlabel(" ")
+    axes[i].set_ylabel("Inflow [kg]")
+    axes[i].legend()
+    axes[i].grid(alpha=0.3, linestyle='--')
+
+axes[-1].set_xlabel("Time")
+
+plt.suptitle("ELMA: Electricity Grid Inflow Materials", fontsize=16)
+plt.tight_layout()
+# fig.savefig(path_elma_out / "ELMA_Grid_inflow-materials_world_1971.pdf")
+# fig.savefig(path_elma_out / "ELMA_Grid_inflow-materials_world_1971.png")
+# fig.savefig(path_elma_out / "ELMA_Grid_inflow-materials_world_1971.svg")
+plt.show()
+
+
+#############################################################################################
+# %% Visualize STOCKS Materials - World per type Lines, Trans., Subst.
+
+materials = ["Steel", "Concrete", "Aluminium", "Cu"]
+
+dict_grid_colors = {
+    #'Lines Overhead': 'FF9B85',
+    #'Lines Underground': 'FFD97D',
+    'Lines': '#8cb369', #'#007f5f',
+    'Transformers': '#f4a259', #'#aacc00',
+    'Substations': '#bc4b51' #'#55a630'
+}
+
+# data IEA ---------------------------------------------------------------------
+# values for APS  scenario (NZE scenario)
+
+# Cu -------------
+# years = np.arange(2012, 2051)
+# values = np.concatenate([
+#     np.full(10, 5e9),       # 2012–2021 # 5 Mt = 5*10e9 kg
+#     np.full(9, 5.5e9),       # 2022–2030
+#     np.full(10, np.nan),    # 2031–2040 (gap)
+#     np.full(10, 9e9),       # 2041–2050 (12)
+# ])
+# df_iea_lt_cu = pd.DataFrame({ # lines & transformers, copper
+#     'Year': years,
+#     'Cu': values
+# })
+# df_iea_lt_cu.set_index('Year', inplace=True)
+
+
+# ----------------------------------------------------------------------------------
+
+
+df_x = grid_materials_inflow.unstack(level='materials')
+
+# df_x = df_x.groupby(level='regions', axis=1).sum()  # Sum over all regions to get a world total
+df_x = df_x.groupby(['elements','materials'], axis=1).sum()
+df_x_sum = df_x.groupby(['materials'], axis=1).sum()
+
+# lines_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Lines' in t]).sum(dim='Type') # Get group sums by keyword and sum over types (sum over HV, MV and LV (and overground/underground for lines))
+# transformers_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Transformers' in t]).sum(dim='Type')
+# substations_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Substations' in t]).sum(dim='Type')
+lines_sum = df_x.xs('Lines', level='elements', axis=1)
+transformers_sum = df_x.xs('Transformers', level='elements', axis=1)
+substations_sum = df_x.xs('Substations', level='elements', axis=1)
+
+
+fig, axes = plt.subplots(nrows=4, ncols=1, figsize=(12, 10), sharex=True)
+
+for i, mat in enumerate(materials):
+    lines_sum[mat].plot(ax=axes[i], color = dict_grid_colors['Lines'], label="Lines")
+    transformers_sum[mat].plot(ax=axes[i], color = dict_grid_colors['Transformers'], label="Transformers")
+    substations_sum[mat].plot(ax=axes[i], color = dict_grid_colors['Substations'], label="Substations")
+    df_x_sum[mat].plot(ax=axes[i], label="Total", color='red', alpha=0.8, linestyle='--', linewidth=3)
+
+    if mat == "Cu":
+        # Add IEA data for copper
+        axes[i].plot(df_iea_lt_cu.index, df_iea_lt_cu['Cu'], label="IEA L&T", color='#00a5cf', linestyle=':', linewidth=4)
+
+    if mat == "Aluminium":
+        # Add IEA data for aluminium
+        axes[i].plot(df_iea_lt_alu.index, df_iea_lt_alu['Aluminium'], label="IEA L&T", color='#00a5cf', linestyle=':', linewidth=4)
+
+    if mat == "Steel":
+        # Add IEA data for steel
+        axes[i].plot(df_iea_t_steel.index, df_iea_t_steel['Steel'], label="IEA T", color='#00a5cf', linestyle=':', linewidth=4)
+
+    axes[i].set_title(f"{mat}")
+    axes[i].set_xlabel(" ")
+    axes[i].set_ylabel("Inflow [kg]")
+    axes[i].legend()
+    axes[i].grid(alpha=0.3, linestyle='--')
+
+axes[-1].set_xlabel("Time")
+
+plt.suptitle("ELMA: Electricity Grid Inflow Materials", fontsize=16)
+plt.tight_layout()
+# fig.savefig(path_elma_out / "ELMA_Grid_inflow-materials_world_1971.pdf")
+# fig.savefig(path_elma_out / "ELMA_Grid_inflow-materials_world_1971.png")
+# fig.savefig(path_elma_out / "ELMA_Grid_inflow-materials_world_1971.svg")
+plt.show()
+
+
+#############################################################################################
 # %% Visualize INFLOW Materials - World per type Lines, Trans., Subst.
-
-
 
 materials = ["Steel", "Concrete", "Aluminium", "Cu"]
 dict_grid_colors = {
@@ -478,8 +639,9 @@ axes[-1].set_xlabel("Time")
 
 plt.suptitle("ELMA: Electricity Grid Inflow Materials", fontsize=16)
 plt.tight_layout()
-fig.savefig(path_elma_out / "ELMA_Grid_inflow-materials_world.pdf")
-fig.savefig(path_elma_out / "ELMA_Grid_inflow-materials_world.png")
+# fig.savefig(path_elma_out / "ELMA_Grid_inflow-materials_world_1971.pdf")
+# fig.savefig(path_elma_out / "ELMA_Grid_inflow-materials_world_1971.png")
+# fig.savefig(path_elma_out / "ELMA_Grid_inflow-materials_world_1971.svg")
 plt.show()
 
 
