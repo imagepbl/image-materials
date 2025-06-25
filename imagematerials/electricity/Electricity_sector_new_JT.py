@@ -488,30 +488,12 @@ gcap_materials_all = gcap_materials_all.reorder_levels([3, 2, 1, 0, 5, 4]) / 100
 #%%% TEST TEST Visualize Inflow Materials TEST TEST
 ###########################################################################################################
 
-# Generation technologies
-technologies = [
-    'Solar PV', 'Solar PV residential', 'CSP', 'Wind onshore', 'Wind offshore', 'Wave', 'Hydro', 
-    'Other Renewables', 'Geothermal', 'Hydrogen power', 'Nuclear', '<EMPTY>', 'Conv. Coal', 
-    'Conv. Oil', 'Conv. Natural Gas', 'Waste', 'IGCC', 'OGCC', 'NG CC', 'Biomass CC', 
-    'Coal + CCS', 'Oil/Coal + CCS', 'Natural Gas + CCS', 'Biomass + CCS', 'CHP Coal', 
-    'CHP Oil', 'CHP Natural Gas', 'CHP Biomass', 'CHP Coal + CCS', 'CHP Oil + CCS', 
-    'CHP Natural Gas + CCS', 'CHP Biomass + CCS', 'CHP Geothermal', 'CHP Hydrogen'
-]
-# Define color and linestyle pools
-# colors = list(plt.get_cmap('tab10').colors)  # 20 distinct colors
-# # Add two new distinct colors (example: magenta and teal)
-# colors += [(1.0, 0.0, 1.0),  # magenta
-#            (0.0, 0.5, 0.5)]  # teal
-# linestyles = ['-', '--', ':'] #'-.'
-# # Create a cycle of (color, linestyle) combinations
-# style_combinations = list(itertools.product(colors, linestyles))
-# assert len(technologies) <= len(style_combinations), "Not enough unique combinations for all technologies."
-# # Map technologies to (color, linestyle)
-# dict_gentech_styles = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
-
+#
 # Sum over technologies dimension
 gcap_inflow_reg_mat = gcap_inflow.groupby(['flow', 'regions', 'materials']).sum()
 gcap_inflow_reg_mat = gcap_inflow_reg_mat.droplevel('flow').T
+
+# Selected regions ------------------------------------------------------
 
 regions = gcap_inflow_reg_mat.columns.get_level_values(0).unique()[:2]  # First 2 regions
 
@@ -566,10 +548,178 @@ axes[2, 0].set_ylabel("Value")
 
 plt.suptitle("Generation - Inflow Materials", fontsize=16)
 plt.tight_layout()
-fig.savefig(path_elma_out / "ELMA_Gen_inflow-materials_1971_Brazil-CEurope.png", dpi=300)
+# fig.savefig(path_elma_out / "ELMA_Gen_inflow-materials_1971_Brazil-CEurope.png", dpi=300)
 plt.show()
 
 
+# World ------------------------------------------------------
+dict_materials_colors = {
+    'Steel':     '#FF9B85',
+    'Aluminium': '#B9FAF8',
+    'Concrete':  '#AAF683',
+    'Plastics':  '#60D394',
+    'Glass':     '#EE6055',
+    'Cu':        '#FB6376',
+    'Nd':        '#B8D0EB',
+    'Ta':        '#B298DC',
+    'Co':        '#A663CC',
+    'Pb':        '#6F2DBD',
+    'Mn':        "#31E7E7",
+    'Ni':        '#FCB1A6',
+    'Other':     '#FFD97D'
+}
+
+# data IEA ---------------------------------------------------------------------
+# values for APS  scenario (NZE scenario)
+
+# Cu -------------
+years = np.array([2024, 2030, 2035, 2040, 2045, 2050])
+values_solar = np.array([1657, 2803, 2726, 2626, 2448, 2758])*1000 # values in kt -> to kg
+values_wind = np.array([534, 1171, 1038, 919, 968, 1314])*1000 # values in kt -> to kg
+values = values_solar + values_wind
+df_iea_gen_cu = pd.DataFrame({ # lines & transformers, copper
+    'Year': years,
+    'Cu': values
+})
+df_iea_gen_cu.set_index('Year', inplace=True)
+
+#------- ---------------------------------------------------------------------
+
+gcap_inflow_mat = gcap_inflow_reg_mat.groupby(level='materials', axis=1).sum()
+
+
+types_level1 = ["Steel", "Concrete"]
+types_level2 = ["Aluminium", "Cu"]
+types_level3 = [m for m in gcap_inflow_mat.columns if m not in (types_level1 + types_level2)]
+
+
+
+fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(8, 10), sharex=True)
+
+data_all = gcap_inflow_mat.copy()
+# Top row: types_level1
+for t in types_level1:
+    if t in data_all.columns:
+        data_plot = data_all[t]
+        axes[0].plot(data_plot.index, data_plot.values, label=t, color=dict_materials_colors[t])
+
+axes[0].set_xlabel("Time")
+axes[0].set_ylabel("Value")
+axes[0].legend()
+
+# Middle row: types_level2
+for t in types_level2:
+    if t in data_all.columns:
+        data_plot = data_all[t]
+        axes[1].plot(data_plot.index, data_plot.values, label=t, color=dict_materials_colors[t])
+    if t == "Cu":
+        # Add IEA data for copper
+        axes[1].scatter(df_iea_gen_cu.index, df_iea_gen_cu['Cu'], label="IEA Cu solar+wind", color='#00a5cf', s=4)
+
+axes[1].set_xlabel("Time")
+axes[1].set_ylabel("Value")
+axes[1].legend(loc='upper left')
+
+# Bottom row: types_level3
+for t in types_level3:
+    if t in data_all.columns:
+        data_plot = data_all[t]
+        axes[2].plot(data_plot.index, data_plot.values, label=t, color=dict_materials_colors[t])
+
+axes[2].set_xlabel("Time")
+axes[2].set_ylabel("Value")
+axes[2].legend(loc='upper left')
+
+plt.suptitle("ELMA: Generation - Inflow Materials - World", fontsize=16)
+plt.tight_layout()
+# fig.savefig(path_elma_out / "ELMA_Gen_inflow-materials_world_1971.png", dpi=300)
+# fig.savefig(path_elma_out / "ELMA_Gen_inflow-materials_world_1971.pdf", dpi=300)
+# fig.savefig(path_elma_out / "ELMA_Gen_inflow-materials_world_1971.svg", dpi=300)
+plt.show()
+
+
+
+
+###########################################################################################################
+#%%% TEST TEST Visualize STOCKS Materials TEST TEST
+###########################################################################################################
+
+import itertools
+from matplotlib.ticker import StrMethodFormatter
+
+from imagematerials.electricity.constants import (
+    dict_gentech_styles,
+    dict_materials_colors,
+    dict_grid_colors
+)
+
+
+# Generation technologies
+technologies = [
+    'Solar PV', 'Solar PV residential', 'CSP', 'Wind onshore', 'Wind offshore', 'Wave', 'Hydro', 
+    'Other Renewables', 'Geothermal', 'Hydrogen power', 'Nuclear', '<EMPTY>', 'Conv. Coal', 
+    'Conv. Oil', 'Conv. Natural Gas', 'Waste', 'IGCC', 'OGCC', 'NG CC', 'Biomass CC', 
+    'Coal + CCS', 'Oil/Coal + CCS', 'Natural Gas + CCS', 'Biomass + CCS', 'CHP Coal', 
+    'CHP Oil', 'CHP Natural Gas', 'CHP Biomass', 'CHP Coal + CCS', 'CHP Oil + CCS', 
+    'CHP Natural Gas + CCS', 'CHP Biomass + CCS', 'CHP Geothermal', 'CHP Hydrogen'
+]
+
+# Define color and linestyle pools
+# colors = plt.get_cmap('tab20').colors  # 20 distinct colors
+# linestyles = ['-', '--', ':'] #'-.'
+# # Create a cycle of (color, linestyle) combinations
+# style_combinations = list(itertools.product(colors, linestyles))
+# assert len(technologies) <= len(style_combinations), "Not enough unique combinations for all technologies."
+# # Map technologies to (color, linestyle)
+# dict_gentech_styles = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
+
+
+
+# Output of DSM model is only stocks of materials, not generation technologies
+
+# stocks from TIMER --------------------------------------------------
+
+# 2 COUNTRIES
+countries = ['Brazil','C.Europe']
+threshold = 100_000
+techs_upper = [col for col in gcap.columns if gcap[col].max() > threshold] #gcap.columns[15:30]
+techs_lower = [col for col in gcap.columns if gcap[col].max() <= threshold] #gcap.columns[:15]
+
+fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(14, 8), sharex=True)
+axes[0, 1].sharey(axes[0, 0])
+axes[1, 1].sharey(axes[1, 0])
+
+for i, country in enumerate(countries):
+    df = gcap[gcap.index.get_level_values(1) == country].copy()
+    df.index = df.index.droplevel(1)
+
+    # Top row: techs 15–30
+    for tech in techs_upper:
+        color, ls = dict_gentech_styles[tech]
+        axes[0, i].plot(df.index, df[tech], label=tech, color=color, linestyle=ls)
+    # axes[0, i].set_title(f"{country} (Technologies 16–30)")
+    axes[0, i].grid(alpha=0.3, linestyle='--')
+
+    # Bottom row: techs 0–14
+    for tech in techs_lower:
+        color, ls = dict_gentech_styles[tech]
+        axes[1, i].plot(df.index, df[tech], label=tech, color=color, linestyle=ls)
+    axes[1, i].set_xlabel('Year')
+    axes[1, i].grid(alpha=0.3, linestyle='--')
+    
+
+# Add Y-axis labels only on left side
+axes[0, 0].set_ylabel('Value')
+axes[1, 0].set_ylabel('Value')
+for ax in axes.flat: # change y axis ticks from 100000 to 100,000
+    ax.yaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}'))
+axes[0, 0].legend(fontsize='small', ncol=2, loc='upper left')
+axes[1, 0].legend(fontsize='small', ncol=2, loc='upper left')
+
+plt.suptitle(f"Generation - Stocks in {countries[0]}_{countries[1]} (TIMER)", fontsize=16)
+plt.tight_layout()
+# fig.savefig(path_test_plots / f"TIMER_Gen_stocks_{countries[0]}-{countries[1]}.png", dpi=300)
+plt.show()
 
 
 
@@ -589,7 +739,7 @@ gcap_filtered = gcap_grouped.loc[:outyear]
 total_global_gcap = gcap_filtered.sum(axis=1) # Gcap in MW
 total_global_wght = gcap_stock.groupby(level=[2]).sum() / 1000000      # Weight in tons 
 intensity_gcap = total_global_wght.div(total_global_gcap, axis=1)
-intensity_gcap.to_csv(path_elma_out / 'material_intensity_gcap_ton_per_MW.csv') # ton/MW
+# intensity_gcap.to_csv(path_elma_out / 'material_intensity_gcap_ton_per_MW.csv') # ton/MW
 
 ###########################################################################################################
 #%% 2) Determine MARKET SHARE of the storage capacity using a multi-nomial logit function
@@ -707,15 +857,15 @@ for tech in EV_storage_stock_abs.columns:
     EV_storage_stock_share.loc[:,tech]  = EV_storage_stock_abs.loc[:,tech].div(EV_storage_stock_abs.sum(axis=1))
     EV_storage_inflow_share.loc[:,tech] = EV_storage_inflow_abs.loc[:,tech].div(EV_storage_inflow_abs.sum(axis=1))
 
-EV_storage_stock_share.to_csv(path_elma_out / 'battery_share_stock.csv') # Average global car battery share (in stock) is exported to be used in paper on vehicles
-EV_storage_inflow_share.to_csv(path_elma_out / 'battery_share_inflow.csv') # Average global car battery share (in inflow) is exported to be used in paper on vehicles
+# EV_storage_stock_share.to_csv(path_elma_out / 'battery_share_stock.csv') # Average global car battery share (in stock) is exported to be used in paper on vehicles
+# EV_storage_inflow_share.to_csv(path_elma_out / 'battery_share_inflow.csv') # Average global car battery share (in inflow) is exported to be used in paper on vehicles
   
 #The global share of the battery technologies in stock is then used to derive the (weihgted) average density (kg/kWh)
 weighted_average_density_stock  = EV_storage_stock_share.mul(storage_density_interpol[EV_battery_list]).sum(axis=1)
 weighted_average_density_inflow = EV_storage_inflow_share.mul(storage_density_interpol[EV_battery_list]).sum(axis=1)
 
-weighted_average_density_stock.loc[:outyear].to_csv(path_elma_out / 'ev_battery_density_stock.csv')        # Average car battery density (in stock) is exported to be used in paper on vehicles
-weighted_average_density_inflow.loc[:outyear].to_csv(path_elma_out / 'ev_battery_density_inflow.csv')      # Average car battery density (in inflow) is exported to be used in paper on vehicles
+# weighted_average_density_stock.loc[:outyear].to_csv(path_elma_out / 'ev_battery_density_stock.csv')        # Average car battery density (in stock) is exported to be used in paper on vehicles
+# weighted_average_density_inflow.loc[:outyear].to_csv(path_elma_out / 'ev_battery_density_inflow.csv')      # Average car battery density (in inflow) is exported to be used in paper on vehicles
 
 # assumed fixed energy densities before 1990 (=NiMH)
 add = pd.Series(weighted_average_density_stock[weighted_average_density_stock.first_valid_index()], index=list(range(startyear,1990)))
@@ -812,7 +962,7 @@ storage_out_phs = pd.concat([phs_storage], keys=['phs'], names=['type'])
 storage_out_evs = pd.concat([evs_storage], keys=['evs'], names=['type']) 
 storage_out_oth = pd.concat([oth_storage], keys=['oth'], names=['type']) 
 storage_out = pd.concat([storage_out_phs, storage_out_evs, storage_out_oth])
-storage_out.to_csv(path_elma_out / 'storage_by_type_MWh.csv')        # in MWh
+# storage_out.to_csv(path_elma_out / 'storage_by_type_MWh.csv')        # in MWh
 
 # derive inflow & outflow (in MWh) for PHS, for later use in the material calculations 
 PHS_kg_perkWh = 26.8    # kg per kWh storage capacity (as weight addition to existing hydro plants to make them pumped) 
@@ -827,12 +977,12 @@ phs_storage_inflow, phs_storage_outflow, phs_storage_stock  = inflow_outflow(phs
 
 import graphs_elec
 
-graphs_elec.graph_global_ev_capacity(BEV_dynamic_capacity, PHEV_dynamic_capacity,  max_capacity_BEV, max_capacity_PHEV, scen_folder, sa_settings) # make a graph on the average capacity of EVs and their availability to V2G
-graphs_elec.graph_regional_storage(region_list, storage_PHEV, storage_BEV, storage, scen_folder, scenario, sa_settings)                           # make a graph on regional storage demand vs V2G supply
-graphs_elec.graph_storage_demand_vs_availability(region_list, phs_storage_theoretical, storage_vehicles, storage, scen_folder, sa_settings)       # make a graph on storage demand vs the availability in 3 different storage types (phs, evs and dedicated) 
-graphs_elec.graph_regional_dedicated_storage(oth_storage, scen_folder, scenario, sa_settings)                                                     # make a graph on regional dedicated storage demand
-graphs_elec.graph_market_share(storage_market_share, scen_folder, sa_settings)                                                                    # make a graph on the market shares of storage technologies
-graphs_elec.graph_market_share_pie(storage_market_share, scen_folder, sa_settings)                                                                # make a pie chart on the market share of dedicated storage technologies
+# graphs_elec.graph_global_ev_capacity(BEV_dynamic_capacity, PHEV_dynamic_capacity,  max_capacity_BEV, max_capacity_PHEV, scen_folder, sa_settings) # make a graph on the average capacity of EVs and their availability to V2G
+# graphs_elec.graph_regional_storage(region_list, storage_PHEV, storage_BEV, storage, scen_folder, scenario, sa_settings)                           # make a graph on regional storage demand vs V2G supply
+# graphs_elec.graph_storage_demand_vs_availability(region_list, phs_storage_theoretical, storage_vehicles, storage, scen_folder, sa_settings)       # make a graph on storage demand vs the availability in 3 different storage types (phs, evs and dedicated) 
+# graphs_elec.graph_regional_dedicated_storage(oth_storage, scen_folder, scenario, sa_settings)                                                     # make a graph on regional dedicated storage demand
+# graphs_elec.graph_market_share(storage_market_share, scen_folder, sa_settings)                                                                    # make a graph on the market shares of storage technologies
+# graphs_elec.graph_market_share_pie(storage_market_share, scen_folder, sa_settings)                                                                # make a pie chart on the market share of dedicated storage technologies
 
 ###########################################################################################################
 ###########################################################################################################
@@ -936,12 +1086,12 @@ for material in storage_materials.index:
 #----------------------------------------------------------------------------------------------------------------------
 v2g_vs_dedicated = (evs_storage.loc[[2045,2046,2047,2048,2049,2050],:].sum(axis=1).sum()/6) / (oth_storage.loc[[2045,2046,2047,2048,2049,2050],:].sum(axis=1).sum()/6) # evs_storage & oth_storage are in MWh
 # v2g_vs_dedicated.tofile('output\\' + scen_folder + '\\' + sa_settings + '\\v2g_vs_dedicated.csv', sep=',')  # how much bigger is v2g than dedicated? 
-v2g_vs_dedicated.tofile(path_elma_out, 'v2g_vs_dedicated.csv', sep=',')  # how much bigger is v2g than dedicated? 
+# v2g_vs_dedicated.tofile(path_elma_out, 'v2g_vs_dedicated.csv', sep=',')  # how much bigger is v2g than dedicated? 
 
 average_storage_intensity = storage_stock_share.mul(storage_density_interpol).sum(axis=1)  # kg /kWh
 material_avoided = evs_storage.loc[[2045,2046,2047,2048,2049,2050],:].sum(axis=1).sum() * 1000 * (average_storage_intensity[[2045,2046,2047,2048,2049,2050]].sum()/6) / 1000000 # in kt
 # material_avoided.tofile('output\\' + scen_folder + '\\' + sa_settings + '\\v2g_material_avoided_kt.csv', sep=',')  # how much weight of dedicated storage is avoided when V2G is assumed?, in kt 
-material_avoided.tofile(path_elma_out, 'v2g_material_avoided_kt.csv', sep=',')  # how much weight of dedicated storage is avoided when V2G is assumed?, in kt 
+# material_avoided.tofile(path_elma_out, 'v2g_material_avoided_kt.csv', sep=',')  # how much weight of dedicated storage is avoided when V2G is assumed?, in kt 
 
 #----------------------------------------------------------------------------------------------------------------------
 #%% Export data to excel (in kt)
@@ -961,10 +1111,10 @@ output_by_tech.insert(2, 'category', 'storage')      # add a 'category' column
 output_by_tech.insert(2, 'sector', 'electricity')    # add a 'sector' column
 
 # output_by_tech.to_csv('output\\' + scen_folder + '\\' + sa_settings + '\\stor_materials_output_kt.csv', index=False) # in kt
-output_by_tech.to_csv(path_elma_out, 'stor_materials_output_kt.csv', index=False) # in kt
+# output_by_tech.to_csv(path_elma_out, 'stor_materials_output_kt.csv', index=False) # in kt
 
 # total materials in storage (summed over all technologies) 
 output_by_tech.set_index(['regions', 'flow', 'sector', 'category', 'technologies', 'materials'], inplace=True)
 output_sum = output_by_tech.unstack(level=4).sum(axis=1, level=0)
 # output_sum.to_csv('output\\' + scen_folder + '\\' + sa_settings + '\\export_storage_sum_kt.csv') 
-output_sum.to_csv(path_elma_out, 'export_storage_sum_kt.csv') 
+# output_sum.to_csv(path_elma_out, 'export_storage_sum_kt.csv') 

@@ -25,7 +25,7 @@ from imagematerials.concepts import create_electricity_graph
 from imagematerials.electricity.utils import MNLogit, stock_tail, materials_grid_additions_to_kgperkm, print_df_info
 
 
-from imagematerials.electricity.constants import ( # TODO: import not working at the moment
+from imagematerials.electricity.constants import (
     YEAR_START,
     YEAR_FIRST,
     YEAR_FIRST_GRID,
@@ -46,7 +46,9 @@ from imagematerials.electricity.constants import ( # TODO: import not working at
     LOAD_FACTOR,
     BEV_CAPACITY_CURRENT,
     PHEV_CAPACITY_CURRENT,
-    dict_gentech_styles
+    dict_gentech_styles,
+    dict_materials_colors,
+    dict_grid_colors
 )
 
 
@@ -487,12 +489,62 @@ plt.show()
 da_x = main_model_factory.inflow_materials.to_array()
 da_x = main_model_factory.inflow_materials.to_array().sum('Type')
 
-regions = da_x.Region.values[:2]  # First 2 regions
+regions = ['Brazil', 'C.Europe', 'China']  # Brazil and C.Europe
+# regions = da_x.Region.values[:2]  # First 2 regions
 # types_top = da_x.material.values[1:6]   # Types 1–10
 # types_bottom = da_x.material.values[6:12]  # Types 11–20
 types_level1 = [m for m in da_x.material.values if m in ["Steel", "Concrete"]]
 types_level2 = [m for m in da_x.material.values if m in ["Aluminium", "Cu"]]
 types_level3 = [m for m in da_x.material.values if m not in (types_level1 + types_level2)]
+
+fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(18, 12), sharex=True)
+
+# axes[0, 1].sharey(axes[0, 0])
+# axes[0, 2].sharey(axes[0, 0])
+# axes[1, 1].sharey(axes[1, 0])
+# axes[1, 2].sharey(axes[1, 0])
+# axes[2, 1].sharey(axes[2, 0])
+# axes[2, 2].sharey(axes[2, 0])
+
+data_plot = da_x.sel(time=slice(1971, None))
+
+for i, region in enumerate(regions):
+    # Top row: Level 1 materials
+    for t in types_level1:
+        if (region in data_plot.Region.values) and (t in data_plot.material.values):
+            data_plot.sel(material=t, Region=region).plot(ax=axes[0, i], label=t, color=dict_materials_colors[t])
+    axes[0, i].set_title(f"{region}")
+    axes[0, i].set_xlabel(" ")
+    axes[0, i].legend()
+
+    # Middle row: Level 2 materials
+    for t in types_level2:
+        if (region in data_plot.Region.values) and (t in data_plot.material.values):
+            data_plot.sel(material=t, Region=region).plot(ax=axes[1, i], label=t, color=dict_materials_colors[t])
+    axes[1, i].set_title(f" ")
+    axes[1, i].set_xlabel(" ")
+    axes[1, i].legend(loc='upper left')
+
+    # Bottom row: Level 3 materials
+    for t in types_level3:
+        if (region in data_plot.Region.values) and (t in data_plot.material.values):
+            data_plot.sel(material=t, Region=region).plot(ax=axes[2, i], label=t, color=dict_materials_colors[t])
+    axes[2, i].set_title(f" ")
+    axes[2, i].set_xlabel("Time")
+    axes[2, i].legend(loc='upper left')
+
+axes[0, 0].set_ylabel("Magnitude")
+axes[1, 0].set_ylabel("Magnitude")
+axes[2, 0].set_ylabel("Magnitude")
+
+plt.suptitle("Generation - Inflow Materials", fontsize=16)
+plt.tight_layout()
+# fig.savefig(path_test_plots / "Gen_inflow-materials_Brazil-CEurope-China_1971.png", dpi=300)
+# fig.savefig(path_test_plots / "Gen_inflow-materials_Brazil-CEurope-China_1971.svg", dpi=300)
+plt.show()
+
+
+#---------------
 
 fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(14, 12), sharex=True)
 
@@ -503,21 +555,21 @@ axes[2, 1].sharey(axes[2, 0])
 for i, region in enumerate(regions):
     # Top row: 
     for t in types_level1:
-        da_x.sel(material=t, Region=region).plot(ax=axes[0, i], label=t)
+        da_x.sel(material=t, Region=region).plot(ax=axes[0, i], label=t, color=dict_materials_colors[t])
     axes[0, i].set_title(f"{region}")
     axes[0, i].set_xlabel("Time")
     axes[0, i].legend()
 
     # Middle row: 
     for t in types_level2:
-        da_x.sel(material=t, Region=region).plot(ax=axes[1, i], label=t)
+        da_x.sel(material=t, Region=region).plot(ax=axes[1, i], label=t, color=dict_materials_colors[t])
     axes[1, i].set_title(f"{region}")
     axes[1, i].set_xlabel("Time")
     axes[1, i].legend(loc ='upper left')
 
     # Bottom row: 
     for t in types_level3:
-        da_x.sel(material=t, Region=region).plot(ax=axes[2, i], label=t)
+        da_x.sel(material=t, Region=region).plot(ax=axes[2, i], label=t, color=dict_materials_colors[t])
     axes[2, i].set_title(f"{region}")
     axes[2, i].set_xlabel("Time")
     axes[2, i].legend(loc ='upper left')
@@ -529,62 +581,102 @@ axes[2, 0].set_ylabel("Value")
 
 plt.suptitle("Generation - Inflow Materials", fontsize=16)
 plt.tight_layout()
-# fig.savefig(path_test_plots / "Gen_inflow-materials_Brazil-CEurope.png", dpi=300)
+# fig.savefig(path_test_plots / "Gen_inflow-materials_Brazil-CEurope_1971.png", dpi=300)
+# fig.savefig(path_test_plots / "Gen_inflow-materials_Brazil-CEurope_1971.svg", dpi=300)
 plt.show()
 
 
 
+###########################################################################################################
+#%% Visualize Inflow Materials World
 
-#%% Visualize Inflow Materials
+dict_materials_colors = {
+    'Steel':     '#FF9B85',
+    'Aluminium': '#B9FAF8',
+    'Concrete':  '#AAF683',
+    'Plastics':  '#60D394',
+    'Glass':     '#EE6055',
+    'Cu':        '#FB6376',
+    'Nd':        '#B8D0EB',
+    'Ta':        '#B298DC',
+    'Co':        '#A663CC',
+    'Pb':        '#6F2DBD',
+    'Mn':        "#31E7E7",
+    'Ni':        '#FCB1A6',
+    'Other':     '#FFD97D'
+}
+
+# data IEA ---------------------------------------------------------------------
+# values for APS  scenario (NZE scenario)
+
+# Cu -------------
+years = np.array([2024, 2030, 2035, 2040, 2045, 2050])
+values_solar = np.array([1657, 2803, 2726, 2626, 2448, 2758])*1000 # values in kt -> to kg
+values_wind = np.array([534, 1171, 1038, 919, 968, 1314])*1000 # values in kt -> to kg
+values = values_solar + values_wind
+df_iea_gen_cu = pd.DataFrame({ # lines & transformers, copper
+    'Year': years,
+    'Cu': values
+})
+df_iea_gen_cu.set_index('Year', inplace=True)
+
+#------- ---------------------------------------------------------------------
 
 # da_x = main_model_factory.inflow.to_array()
 da_x = main_model_factory.inflow_materials.to_array()
-da_x = main_model_factory.inflow_materials.to_array().sum('Type')
+da_x = main_model_factory.inflow_materials.to_array().sum('Type').sum('Region')
 
-regions = da_x.Region.values[:2]  # First 2 regions
-# types_top = da_x.material.values[1:6]   # Types 1–10
-# types_bottom = da_x.material.values[6:12]  # Types 11–20
 types_level1 = [m for m in da_x.material.values if m in ["Steel", "Concrete"]]
 types_level2 = [m for m in da_x.material.values if m in ["Aluminium", "Cu"]]
 types_level3 = [m for m in da_x.material.values if m not in (types_level1 + types_level2)]
 
-fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(14, 12), sharex=True)
 
-axes[0, 1].sharey(axes[0, 0])
-axes[1, 1].sharey(axes[1, 0])
-axes[2, 1].sharey(axes[2, 0])
 
-for i, region in enumerate(regions):
-    # Top row: 
-    for t in types_level1:
-        da_x.sel(material=t, Region=region).plot(ax=axes[0, i], label=t)
-    axes[0, i].set_title(f"{region}")
-    axes[0, i].set_xlabel("Time")
-    axes[0, i].legend()
 
-    # Middle row: 
-    for t in types_level2:
-        da_x.sel(material=t, Region=region).plot(ax=axes[1, i], label=t)
-    axes[1, i].set_title(f"{region}")
-    axes[1, i].set_xlabel("Time")
-    axes[1, i].legend(loc ='upper left')
+fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(8, 10), sharex=True)
 
-    # Bottom row: 
-    for t in types_level3:
-        da_x.sel(material=t, Region=region).plot(ax=axes[2, i], label=t)
-    axes[2, i].set_title(f"{region}")
-    axes[2, i].set_xlabel("Time")
-    axes[2, i].legend(loc ='upper left')
+# only from 1971 onwards
+# data_plot = da_x.sel(time=slice(1971, None))
 
-# Label only left side with y-axis label
-axes[0, 0].set_ylabel("Value")
-axes[1, 0].set_ylabel("Value")
-axes[2, 0].set_ylabel("Value")
+# Top row: Level 1 materials
+for t in types_level1:
+    if t in data_plot.material.values:
+        data_plot.sel(material=t).plot(ax=axes[0], label=t, color=dict_materials_colors[t])
+axes[0].set_title("Level 1 Materials")
+axes[0].set_xlabel("Time")
+axes[0].set_ylabel("Magnitude")
+axes[0].legend()
 
-plt.suptitle("Generation - Inflow Materials", fontsize=16)
+# Middle row: Level 2 materials
+for t in types_level2:
+    if t in data_plot.material.values:
+        data_plot.sel(material=t).plot(ax=axes[1], label=t, color=dict_materials_colors[t])
+    if t == "Cu":
+        # Add IEA data for copper
+        axes[1].scatter(df_iea_gen_cu.index, df_iea_gen_cu['Cu'], label="IEA Cu solar+wind", color='#00a5cf', s=4)
+
+axes[1].set_title("Level 2 Materials")
+axes[1].set_xlabel("Time")
+axes[1].set_ylabel("Magnitude")
+axes[1].legend(loc='upper left')
+
+# Bottom row: Level 3 materials
+for t in types_level3:
+    if t in data_plot.material.values:
+        data_plot.sel(material=t).plot(ax=axes[2], label=t, color=dict_materials_colors[t])
+axes[2].set_title("Level 3 Materials")
+axes[2].set_xlabel("Time")
+axes[2].set_ylabel("Magnitude")
+axes[2].legend(loc='upper left')
+
+plt.suptitle("Generation - Inflow Materials - World", fontsize=16)
 plt.tight_layout()
-fig.savefig(path_test_plots / "Gen_inflow-materials_Brazil-CEurope.png", dpi=300)
+# fig.savefig(path_test_plots / "Gen_inflow-materials_world.png", dpi=300)
+# fig.savefig(path_test_plots / "Gen_inflow-materials_world_1971.png", dpi=300)
+# fig.savefig(path_test_plots / "Gen_inflow-materials_world_1971.pdf", dpi=300)
+# fig.savefig(path_test_plots / "Gen_inflow-materials_world_1971.svg", dpi=300)
 plt.show()
+
 
 
 
@@ -1157,8 +1249,8 @@ for year in range(2020,2050+1):
    red_growth.loc[year] = red_growth.loc[year] * (1/30*(year-2020)) 
 
 # Hv length (in kms) is region-specific. However, we use a single ratio between the length of Hv and Mv networks, the same applies to Lv networks 
-grid_length_Mv = grid_length_Hv.mul(ratio_Hv['Hv to Mv'])
-grid_length_Lv = grid_length_Hv.mul(ratio_Hv['Hv to Lv'])
+grid_length_Mv = grid_length_Hv.mul(ratio_Hv['HV to MV'])
+grid_length_Lv = grid_length_Hv.mul(ratio_Hv['HV to LV'])
 
 # define grid length over time (fixed in 2016, growth according to gcap)
 grid_length_Hv_time = pd.DataFrame().reindex_like(gcap_total)
@@ -1559,9 +1651,63 @@ plt.show()
 
 
 materials = ["Steel", "Concrete", "Aluminium", "Cu"]
+dict_grid_colors = {
+    #'Lines Overhead': 'FF9B85',
+    #'Lines Underground': 'FFD97D',
+    'Lines': '#8cb369', #'#007f5f',
+    'Transformers': '#f4a259', #'#aacc00',
+    'Substations': '#bc4b51' #'#55a630'
+}
+
+# data IEA ---------------------------------------------------------------------
+# values for APS  scenario (NZE scenario)
+
+# Cu -------------
+years = np.arange(2012, 2051)
+values = np.concatenate([
+    np.full(10, 5e9),       # 2012–2021 # 5 Mt = 5*10e9 kg
+    np.full(9, 5.5e9),       # 2022–2030
+    np.full(10, np.nan),    # 2031–2040 (gap)
+    np.full(10, 9e9),       # 2041–2050 (12)
+])
+df_iea_lt_cu = pd.DataFrame({ # lines & transformers, copper
+    'Year': years,
+    'Cu': values
+})
+df_iea_lt_cu.set_index('Year', inplace=True)
+
+# Alu -------------
+years = np.arange(2012, 2051)
+values = np.concatenate([
+    np.full(10, 12e9),       # 2012–2021 # 12 Mt = 12*10e9 kg
+    np.full(9, 13e9),        # 2022–2030
+    np.full(10, np.nan),    # 2031–2040 (gap)
+    np.full(10, 21e9),       # 2041–2050 (27)
+])
+df_iea_lt_alu = pd.DataFrame({ # lines & transformers, aluminium
+    'Year': years,
+    'Aluminium': values
+})
+df_iea_lt_alu.set_index('Year', inplace=True)
+
+# Steel -------------
+years = np.arange(2012, 2051)
+values = np.concatenate([
+    np.full(10, 5e9),       # 2012–2021
+    np.full(9, np.nan),     # 2022–2030
+    np.full(10, 9e9),       # 2031–2040 (13)
+    np.full(10, np.nan),    # 2041–2050
+])
+df_iea_t_steel = pd.DataFrame({ # transformers, steel
+    'Year': years,
+    'Steel': values
+})
+df_iea_t_steel.set_index('Year', inplace=True)
+# ----------------------------------------------------------------------------------
 
 da_x = main_model_factory.inflow_materials.to_array().sum('Region')
-da_x_sum = main_model_factory.inflow_materials.to_array().sum('Region').sum(dim='Type')
+da_x = da_x.sel(time=slice(1971, None))
+da_x_sum = da_x.sum(dim='Type')
 
 lines_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Lines' in t]).sum(dim='Type') # Get group sums by keyword and sum over types (sum over HV, MV and LV (and overground/underground for lines))
 transformers_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Transformers' in t]).sum(dim='Type')
@@ -1571,10 +1717,22 @@ substations_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Substations' in
 fig, axes = plt.subplots(nrows=4, ncols=1, figsize=(12, 10), sharex=True)
 
 for i, mat in enumerate(materials):
-    lines_sum.sel(material=mat).plot(ax=axes[i], label="Lines")
-    transformers_sum.sel(material=mat).plot(ax=axes[i], label="Transformers")
-    substations_sum.sel(material=mat).plot(ax=axes[i], label="Substations")
-    da_x_sum.sel(material=mat).plot(ax=axes[i], label="Total", color='red', alpha=0.8, linestyle='--')
+    lines_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Lines'], label="Lines")
+    transformers_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Transformers'], label="Transformers")
+    substations_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Substations'], label="Substations")
+    da_x_sum.sel(material=mat).plot(ax=axes[i], label="Total", color='red', alpha=0.8, linestyle='--', linewidth=3)
+
+    if mat == "Cu":
+        # Add IEA data for copper
+        axes[i].plot(df_iea_lt_cu.index, df_iea_lt_cu['Cu'], label="IEA L&T", color='#00a5cf', linestyle=':', linewidth=4)
+
+    if mat == "Aluminium":
+        # Add IEA data for aluminium
+        axes[i].plot(df_iea_lt_alu.index, df_iea_lt_alu['Aluminium'], label="IEA L&T", color='#00a5cf', linestyle=':', linewidth=4)
+
+    if mat == "Steel":
+        # Add IEA data for steel
+        axes[i].plot(df_iea_t_steel.index, df_iea_t_steel['Steel'], label="IEA T", color='#00a5cf', linestyle=':', linewidth=4)
     
     axes[i].set_title(f"{mat}")
     axes[i].set_xlabel(" ")
@@ -1586,8 +1744,10 @@ axes[-1].set_xlabel("Time")
 
 plt.suptitle("Electricity Grid Inflow Materials", fontsize=16)
 plt.tight_layout()
-# fig.savefig(path_test_plots / "Grid_inflow-materials_world.pdf")
-# fig.savefig(path_test_plots / "Grid_inflow-materials_world.png")
+# fig.savefig(path_test_plots / "Grid_inflow-materials_world.svg")
+fig.savefig(path_test_plots / "Grid_inflow-materials_world_1971.pdf")
+fig.savefig(path_test_plots / "Grid_inflow-materials_world_1971.png")
+fig.savefig(path_test_plots / "Grid_inflow-materials_world_1971.svg")
 plt.show()
 
 
