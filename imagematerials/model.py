@@ -8,12 +8,14 @@ from imagematerials.maintenance import Maintenance
 from imagematerials.survival import ScipySurvival, SurvivalMatrix
 from imagematerials.vehicles.battery import Battery
 
+
 REGION = prism.Dimension("Region")
 STOCK_TYPE = prism.Dimension("Type")
 COHORT = prism.Dimension("Cohort")
 TIME = prism.Dimension("Time")
 MATERIAL_TYPE = prism.Dimension("material")
 BATTERY_TYPE = prism.Dimension("battery")
+EOL_TYPE = prism.Dimension("eoltype")
 
 
 @prism.interface
@@ -398,3 +400,102 @@ class GenericMainModel(prism.Model):
                                                   stock_by_cohort=self.stock_model.stock_by_cohort,)
 
 
+@prism.interface
+class EndOfLife(prism.Model):
+
+    # Input data
+    #collection: xr.DataArray
+    #reuse: xr.DataArray
+    #recycling: xr.DataArray
+
+    # Dimensions
+    Region: prism.Coords[REGION]
+    Type: prism.Coords[STOCK_TYPE]
+    Time: prism.Coords[TIME]
+    material: prism.Coords[MATERIAL_TYPE]
+
+    # Data dependencies
+    input_data: tuple[str] = ("collection", "reuse", "recycling", "outflow_by_cohort_materials")
+    output_data: tuple[str] = ("sum_outflow","collected_materials","reusable_materials", "recyclable_materials","losses_materials")
+
+    # Output data
+    sum_outflow: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE,  "count"] = prism.export()
+    collected_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE,  "count"] = prism.export()
+    reusable_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE,  "count"] = prism.export()
+    remaining_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE,  "count"] = prism.export()
+    recyclable_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE,  "count"] = prism.export()
+    losses_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE,  "count"] = prism.export()
+    
+    def compute_initial_values(self, timeline: prism.Timeline):
+        pass
+
+    def compute_values(self, time: prism.Time, outflow_by_cohort_materials, collection, reuse, recycling):
+        """
+        Computes reused material within sector and recyclable material from each sector/type, given collection, 
+        reuse and recycling rates at each time step 
+
+        Parameters
+        ----------
+        time : prism.Time
+            The current simulation time step.
+        outflow_by_cohort_materials : xr.DataArray
+            Outflow data after lifetime.
+        collection : xr.DataArray
+            Collection rate data by material and type. 
+        reuse: xr.DataArray
+            Reuse rate data by material and type.
+        recycling: xr.DataArray
+            Recycling rate data by material and type.
+        """
+        t, dt = time.t, time.dt
+        type_dict = {
+            'passenger': ['Bikes', 
+                          'Cars - BEV', 'Cars - FCV', 'Cars - HEV','Cars - ICE', 'Cars - PHEV', 'Cars - Trolley', 
+                          'Light Commercial Vehicles - BEV','Light Commercial Vehicles - FCV','Light Commercial Vehicles - HEV','Light Commercial Vehicles - ICE','Light Commercial Vehicles - PHEV','Light Commercial Vehicles - Trolley',
+                          'Regular Buses - PHEV', 'Regular Buses - Trolley','Regular Buses - BEV', 'Regular Buses - FCV','Regular Buses - HEV', 'Regular Buses - ICE',
+                          'Midi Buses - BEV','Midi Buses - FCV', 'Midi Buses - HEV', 'Midi Buses - ICE','Midi Buses - PHEV', 'Midi Buses - Trolley',                        
+                          'Trains','High Speed Trains',
+                          'Passenger Planes',       
+        ],
+            'freight': ['Freight Planes',
+                        'Medium Freight Trucks - BEV', 'Medium Freight Trucks - FCV','Medium Freight Trucks - HEV', 'Medium Freight Trucks - ICE','Medium Freight Trucks - PHEV', 'Medium Freight Trucks - Trolley',
+                        'Freight Trains',
+                        'Small Ships','Inland Ships','Medium Ships','Large Ships', 'Very Large Ships',
+                        'Heavy Freight Trucks - BEV', 'Heavy Freight Trucks - FCV','Heavy Freight Trucks - HEV', 'Heavy Freight Trucks - ICE','Heavy Freight Trucks - PHEV', 'Heavy Freight Trucks - Trolley'
+        ],
+            'urban': ["Appartment - Urban","Detached - Urban","High-rise - Urban", "Semi-detached - Urban",
+                        "Office","Retail+","Hotels+","Govt+"
+        ],
+
+            'rural': ["Appartment - Rural","Detached - Rural","High-rise - Rural", "Semi-detached - Rural",
+        ],
+        #   'generation':[], 
+        #   'grid':[],
+        #   'storage': []
+
+        }
+        self.sum_outflow[t].loc[:] = 0
+        for outflow in outflow_by_cohort_materials:
+            for supertype, subtypes in type_dict.items():
+                if subtypes[0] not in outflow[t].coords["Type"]:
+                    continue
+
+                sum_outflow = outflow[t].sel(Type=subtypes).sum("Type")
+                coords = {"Type": supertype, "material": sum_outflow.coords["material"], "Region": sum_outflow.coords["Region"]}
+                input_coords = {"Time":t, "Type":supertype}
+                
+                self.sum_outflow[t].loc[coords] = sum_outflow
+
+                collected_materials = collection.loc[input_coords]*sum_outflow
+                reusable_materials = collected_materials*reuse.loc[input_coords]
+                remaining_materials = collected_materials-reusable_materials                        # non-reused but collected waste
+                recyclable_materials = remaining_materials*recycling.loc[input_coords]
+                losses_materials = sum_outflow-collected_materials                                  # non-collected waste
+                losses_materials = losses_materials+remaining_materials-recyclable_materials        # non-reused/recycled but collected waste
+
+
+                self.collected_materials[t].loc[coords] = collected_materials
+                self.reusable_materials[t].loc[coords] = reusable_materials
+                self.remaining_materials[t].loc[coords] = remaining_materials
+                self.recyclable_materials[t].loc[coords] = recyclable_materials
+                self.losses_materials[t].loc[coords] = losses_materials
