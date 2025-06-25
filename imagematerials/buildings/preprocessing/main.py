@@ -17,7 +17,7 @@ from imagematerials.buildings.preprocessing.materials import (
     compute_mat_intensities_residential,
 )
 from imagematerials.buildings.preprocessing.population import compute_population
-from imagematerials.concepts import knowledge_graph
+from imagematerials.concepts import create_building_graph
 
 
 def buildings_preprocessing(base_directory, climate_policy_config: dict, circular_economy_config: dict):
@@ -63,7 +63,9 @@ def buildings_preprocessing(base_directory, climate_policy_config: dict, circula
     mat_intensities_comm = compute_mat_intensities_commercial(database_directory)
     mat_intensities_res = compute_mat_intensities_residential(database_directory)
     mat_intensities = xr.concat((mat_intensities_res, mat_intensities_comm), dim="Type")
+    knowledge_graph = create_building_graph()
     mat_intensities = knowledge_graph.rebroadcast_xarray(
                             mat_intensities, floorspace.coords["Type"].values)
 
-    return {"stocks": floorspace, "lifetimes": lifetimes, "material_intensities": mat_intensities}
+    return {"stocks": floorspace, "lifetimes": lifetimes, "material_intensities": mat_intensities,
+            "knowledge_graph": knowledge_graph}

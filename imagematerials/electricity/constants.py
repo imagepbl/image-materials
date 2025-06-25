@@ -2,6 +2,8 @@
 from pathlib import Path
 import os
 import pint
+import itertools
+import matplotlib.pyplot as plt
 
 ureg = pint.UnitRegistry(force_ndarray_like=True)
 
@@ -32,6 +34,9 @@ VARIANT = "2D_RE"
 # PROJECT = "mock_project"
 # FOLDER = SCEN + "_" + VARIANT
 # OUTPUT_FOLDER = base_dir.joinpath("..", "..", "output", PROJECT, FOLDER)
+
+# Sensitivity Analysis - default, high_stor, high_grid
+SENS_ANALYSIS = "default" 
 
 
 # Conversion factors ---------------------------------------------
@@ -71,5 +76,28 @@ PHEV_CAPACITY_CURRENT = 11.2    #kWh current battery capacity of plugin electric
 # TECH_STORAGE = ?
 
 PHS_KG_PERKWH = 26.8   # kg per kWh storage capacity (as weight addition to existing hydro plants to make them pumped) 
+
+
+
+
+# Visualization related ---------------------------------------------
+
+# Generation technologies
+technologies = [
+    'Solar PV', 'Solar PV residential', 'CSP', 'Wind onshore', 'Wind offshore', 'Wave', 'Hydro', 
+    'Other Renewables', 'Geothermal', 'Hydrogen power', 'Nuclear', '<EMPTY>', 'Conv. Coal', 
+    'Conv. Oil', 'Conv. Natural Gas', 'Waste', 'IGCC', 'OGCC', 'NG CC', 'Biomass CC', 
+    'Coal + CCS', 'Oil/Coal + CCS', 'Natural Gas + CCS', 'Biomass + CCS', 'CHP Coal', 
+    'CHP Oil', 'CHP Natural Gas', 'CHP Biomass', 'CHP Coal + CCS', 'CHP Oil + CCS', 
+    'CHP Natural Gas + CCS', 'CHP Biomass + CCS', 'CHP Geothermal', 'CHP Hydrogen'
+]
+# Define color and linestyle pools
+colors = plt.get_cmap('tab20').colors  # 20 distinct colors
+linestyles = ['-', '--', ':'] #'-.'
+# Create a cycle of (color, linestyle) combinations
+style_combinations = list(itertools.product(colors, linestyles))
+assert len(technologies) <= len(style_combinations), "Not enough unique combinations for all technologies."
+# Map technologies to (color, linestyle)
+dict_gentech_styles = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
 
 

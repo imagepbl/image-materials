@@ -4,6 +4,7 @@ examples/*.nc
 examples/all.prof
 scripts/*.nc
 
+imagematerials/electricity/out_test/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
