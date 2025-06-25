@@ -185,14 +185,16 @@ class ResourceModel():
                                                                 best_rmse_models)           
             
               
-    def project_on_total(self, regions_list):
+    def project_on_total(self, regions_list: list, start_year_projection = None):
+        start_year_projection = self.end_year if start_year_projection is None else start_year_projection
+
         self.projection_per_region = []
         self.not_projected_regions = []
 
         # loop over every region
         for region in regions_list:
             # get gdp_pc as predictor
-            gdp_pc_region = self.gdp_pc_100.loc[self.end_year:, region]
+            gdp_pc_region = self.gdp_pc_100.loc[start_year_projection:, region]
             
             # reshape gdp_pc
             gdp_pc_region = gdp_pc_region.to_numpy().reshape(len(gdp_pc_region), 1)
@@ -215,7 +217,7 @@ class ResourceModel():
         self.projection_per_region = pd.DataFrame(self.projection_per_region).transpose()
         self.projection_per_region.columns = self.pop.columns
     
-        self.projection_per_region.index = np.arange(self.end_year, 2101)
+        self.projection_per_region.index = np.arange(start_year_projection, 2101)
         self.projection_per_region_total = self.projection_per_region*self.pop_100
 
     
@@ -250,3 +252,14 @@ class ResourceModel():
         self.projection_per_region_IMAGE.index = np.arange(2017, 2101)
      
         
+    def smooth_out_interpolation_all(self, nr_years_interpolate: int, start_year = 2012):
+        for region in self.projection_per_region_total.columns:
+            start_interpolate = self.historic_other_fraction_consumption[region].loc[start_year:start_year]
+            end_interpolate = self.projection_per_region_total[region].loc[start_year+nr_years_interpolate:start_year+nr_years_interpolate]
+
+            # interpolate between the two points
+            interpolated = pd.Series(np.linspace(start_interpolate.values[0], end_interpolate.values[0], nr_years_interpolate+1), 
+                                    index = self.projection_per_region_total[region].loc[start_year:start_year+nr_years_interpolate].index)
+
+            # replace the values in the projection with the interpolated values
+            self.projection_per_region_total[region].loc[start_year:start_year+nr_years_interpolate] = interpolated 
