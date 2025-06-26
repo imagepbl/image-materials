@@ -215,7 +215,7 @@ def match_regions_to_best_model(rmse_r2_groups: dict, model_groups: dict,
         if group_name == 'all_regions':
             continue
         if isinstance(region_list, str):
-            # if only one region is given, make it a list
+            # if only one region is given, make it a list to proceed
             region_list = [region_list]
 
         for region in region_list:

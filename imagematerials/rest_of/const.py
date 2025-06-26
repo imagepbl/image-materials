@@ -167,9 +167,10 @@ IAI_TO_IMAGE_CLASSES = {
         'class_ 19',  # Korea
         'class_ 21',  # SE.Asia
         'class_ 22',  # Indonesia
-        'class_ 23',  # Japan
         'class_ 25'   # Rest S.Asia
     ],
+    'Japan' : ['class_ 23'],  # Japan
+
     'China (Estimated)': [
         'class_ 20'  # China
     ],
