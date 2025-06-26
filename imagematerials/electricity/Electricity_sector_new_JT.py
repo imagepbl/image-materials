@@ -29,6 +29,7 @@ import warnings
 from pathlib import Path
 import sys 
 import matplotlib.pyplot as plt
+from matplotlib.ticker import ScalarFormatter
 
 from imagematerials.read_mym import read_mym_df
 
@@ -484,11 +485,330 @@ gcap_materials_all = gcap_materials_all.reorder_levels([3, 2, 1, 0, 5, 4]) / 100
 # gcap_materials_all.to_csv(path_elma_out / 'gcap_materials_output_kt.csv') # in kt
 
 
+
+###########################################################################################################
+#%%% Visualize STOCKS Materials
+###########################################################################################################
+
+#================================================================================
+#%%%% SUM over TECHs - per region
+
+dict_materials_colors = {
+    'Steel':     '#FF9B85',
+    'Aluminium': '#B9FAF8',
+    'Concrete':  '#AAF683',
+    'Plastics':  '#60D394',
+    'Glass':     '#EE6055',
+    'Cu':        '#FB6376',
+    'Nd':        '#B8D0EB',
+    'Ta':        '#B298DC',
+    'Co':        "#F669C0",
+    'Pb':        '#6F2DBD',
+    'Mn':        "#31E7E7",
+    'Ni':        '#FCB1A6',
+    'Other':     '#FFD97D'
+}
+
+# Sum over technologies dimension
+gcap_stock_reg_mat = gcap_stock.groupby(['flow', 'regions', 'materials']).sum()
+gcap_stock_reg_mat = gcap_stock_reg_mat.droplevel('flow').T
+
+data_all = gcap_stock_reg_mat.copy()
+
+# Selected regions ------------------------------------------------------
+
+# Pick desired regions by name
+regions = ["Brazil", "C.Europe", "China"] 
+
+types_level1 = [m for m in data_all.columns.get_level_values(1).unique() if m in ["Steel", "Concrete"]]
+types_level2 = [m for m in data_all.columns.get_level_values(1).unique() if m in ["Aluminium", "Cu"]]
+types_level3 = [m for m in data_all.columns.get_level_values(1).unique() if m not in (types_level1 + types_level2)]
+
+fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(18, 12))
+linewidth = 2
+s_legend = 12
+s_label = 14
+
+for i, region in enumerate(regions):
+    # Top row: Level 1 types
+    for t in types_level1:
+        if (region, t) in data_all.columns:
+            data_plot = data_all[(region, t)]
+            axes[0, i].plot(data_plot.index, data_plot.values, label=t, color=dict_materials_colors[t], linewidth=linewidth)
+    axes[0, i].grid(alpha=0.2)
+    axes[0, i].set_title(region)
+    axes[0, i].legend(loc='upper left', fontsize=s_legend)
+
+    # Middle row: Level 2 types
+    for t in types_level2:
+        if (region, t) in data_all.columns:
+            data_plot = data_all[(region, t)]
+            axes[1, i].plot(data_plot.index, data_plot.values, label=t, color=dict_materials_colors[t], linewidth=linewidth)
+    axes[1, i].grid(alpha=0.2)
+    axes[1, i].legend(loc='upper left', fontsize=s_legend)
+
+    # Bottom row: Level 3 types
+    for t in types_level3:
+        if (region, t) in data_all.columns:
+            data_plot = data_all[(region, t)]
+            axes[2, i].plot(data_plot.index, data_plot.values, label=t, color=dict_materials_colors[t], linewidth=linewidth)
+    axes[2, i].grid(alpha=0.2)
+    axes[2, i].set_xlabel("Time")
+    axes[2, i].legend(loc='upper left', fontsize=s_legend)
+
+# Y-axis labels on the left
+axes[0, 0].set_ylabel("Value")
+axes[1, 0].set_ylabel("Value")
+axes[2, 0].set_ylabel("Value")
+
+
+plt.suptitle("Generation - Stock Materials", fontsize=16)
+plt.tight_layout()
+region_str = "_".join(regions)
+fig.savefig(path_elma_out / f"ELMA_Gen_stock-materials_{region_str}_1971.png", dpi=300)
+plt.show()
+
+
+
+
+#================================================================================
+#%%%% SUM over TECHs - world
+
+dict_materials_colors = {
+    'Steel':     '#FF9B85',
+    'Aluminium': '#B9FAF8',
+    'Concrete':  '#AAF683',
+    'Plastics':  '#60D394',
+    'Glass':     '#EE6055',
+    'Cu':        '#FB6376',
+    'Nd':        '#B8D0EB',
+    'Ta':        '#B298DC',
+    'Co':        '#F669C0',
+    'Pb':        '#6F2DBD',
+    'Mn':        "#31E7E7",
+    'Ni':        '#FCB1A6',
+    'Other':     '#FFD97D'
+}
+
+# data IEA ---------------------------------------------------------------------
+# values for APS  scenario (NZE scenario)
+
+# Cu -------------
+# years = np.array([2024, 2030, 2035, 2040, 2045, 2050])
+# values_solar = np.array([1657, 2803, 2726, 2626, 2448, 2758])*1000 # values in kt -> to kg
+# values_wind = np.array([534, 1171, 1038, 919, 968, 1314])*1000 # values in kt -> to kg
+# values = values_solar + values_wind
+# df_iea_gen_cu = pd.DataFrame({ # lines & transformers, copper
+#     'Year': years,
+#     'Cu': values
+# })
+# df_iea_gen_cu.set_index('Year', inplace=True)
+#------- ---------------------------------------------------------------------
+
+gcap_stock_reg_mat = gcap_stock.groupby(['flow', 'regions', 'materials']).sum()
+gcap_stock_reg_mat = gcap_stock_reg_mat.droplevel('flow').T
+gcap_stock_mat = gcap_stock_reg_mat.groupby(level='materials', axis=1).sum()
+
+data_all = gcap_stock_mat.copy()/1_000_000 # convert grams to tonnes
+
+types_level1 = ["Steel", "Concrete"]
+types_level2 = ["Aluminium", "Cu"]
+types_level3 = [m for m in data_all.columns if m not in (types_level1 + types_level2)]
+
+
+
+fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(8, 10))
+linewidth = 2
+s_legend = 12
+s_label = 14
+
+# Top row: types_level1
+for t in types_level1:
+    if t in data_all.columns:
+        data_plot = data_all[t]
+        axes[0].plot(data_plot.index, data_plot.values, label=t, color=dict_materials_colors[t], linewidth=linewidth)
+
+axes[0].grid(alpha=0.2)
+axes[0].legend(loc='upper left', fontsize=s_legend)
+axes[0].set_ylabel('Material stock (t)', fontsize=s_label)
+axes[0].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+
+# Middle row: types_level2
+for t in types_level2:
+    if t in data_all.columns:
+        data_plot = data_all[t]
+        axes[1].plot(data_plot.index, data_plot.values, label=t, color=dict_materials_colors[t], linewidth=linewidth)
+
+axes[1].grid(alpha=0.2)
+axes[1].legend(loc='upper left', fontsize=s_legend)
+axes[1].set_ylabel('Material stock (t)', fontsize=s_label)
+axes[1].tick_params(axis='both', which='major', labelsize=s_legend)
+
+# Bottom row: types_level3
+for t in types_level3:
+    if t in data_all.columns:
+        data_plot = data_all[t]
+        axes[2].plot(data_plot.index, data_plot.values, label=t, color=dict_materials_colors[t], linewidth=linewidth)
+
+axes[2].grid(alpha=0.2)
+axes[2].legend(loc='upper left', fontsize=s_legend)
+axes[2].set_xlabel('Time', fontsize=s_label)
+axes[2].set_ylabel('Material stock (t)', fontsize=s_label)
+axes[2].tick_params(axis='both', which='major', labelsize=s_legend)
+
+plt.suptitle('ELMA: Generation - Stocks Materials - World', fontsize=16)
+plt.tight_layout()
+fig.savefig(path_elma_out / 'ELMA_Gen_stock-materials_world_1971.png', dpi=300)
+# fig.savefig(path_elma_out / 'ELMA_Gen_stock-materials_world_1971.pdf', dpi=300)
+fig.savefig(path_elma_out / 'ELMA_Gen_stock-materials_world_1971.svg', dpi=300)
+plt.show()
+
+#================================================================================
+#%%%% Per TECH category - world
+
+# Define mapping: technology -> category
+gen_tech_to_category = {
+    "Solar PV": 'Solar', 
+    "Solar PV residential": 'Solar',
+    "CSP": 'Solar', 
+    "Wind onshore": 'Wind',
+    "Wind offshore": 'Wind', 
+    "Wave": 'Other Renewables',
+    "Hydro": 'Other Renewables',
+    "Other Renewables": 'Other Renewables',
+    "Geothermal": 'Other Renewables',
+    'Hydrogen power': 'Hydrogen',
+    "Nuclear": 'Nuclear',
+    "Conv. Coal": 'Fossil',
+    "Conv. Oil": 'Fossil',
+    "Conv. Natural Gas": 'Fossil',
+    "Waste": 'Fossil',
+    "IGCC": 'Fossil',
+    "OGCC": 'Fossil',
+    "NG CC": 'Fossil',
+    "Biomass CC": 'Biomass',
+    "Coal + CCS": 'Fossil + CCS',
+    "Oil/Coal + CCS": 'Fossil + CCS',
+    "Natural Gas + CCS": 'Fossil + CCS',
+    "Biomass + CCS": 'Biomass',
+    "CHP Coal": 'Fossil',
+    "CHP Oil": 'Fossil',
+    "CHP Natural Gas": 'Fossil',
+    "CHP Biomass": 'Biomass',
+    "CHP Geothermal": 'Other Renewables',
+    "CHP Hydrogen": 'Hydrogen',
+    "CHP Coal + CCS": 'Fossil + CCS',
+    "CHP Oil + CCS": 'Fossil + CCS',
+    "CHP Natural Gas + CCS": 'Fossil + CCS',
+    "CHP Biomass + CCS": 'Biomass'
+}
+
+dict_gentechcat_colors = {
+    'Solar':             "#FBBF09",
+    'Wind':              "#4BABFF",
+    'Biomass':           "#42DD88",
+    'Other Renewables':  "#B6F795",
+    'Hydrogen':          '#B9FAF8',
+    'Nuclear':           "#B06106",
+    'Fossil':            "#575354",
+    'Fossil + CCS':      "#BBB8B9"
+}
+
+# data IEA ---------------------------------------------------------------------
+# values for APS  scenario (NZE scenario)
+
+# Cu -------------
+# years = np.array([2024, 2030, 2035, 2040, 2045, 2050])
+# values_solar = np.array([1657, 2803, 2726, 2626, 2448, 2758])*1000 # values in kt -> to kg
+# values_wind = np.array([534, 1171, 1038, 919, 968, 1314])*1000 # values in kt -> to kg
+# values = values_solar + values_wind
+# df_iea_gen_cu = pd.DataFrame({ # lines & transformers, copper
+#     'Year': years,
+#     'Cu': values
+# })
+# df_iea_gen_cu.set_index('Year', inplace=True)
+#------- ---------------------------------------------------------------------
+
+
+# Step 1: Get technology level from index
+tech_level = gcap_stock.index.get_level_values(3)
+# Step 2: Map technologies to categories
+category = tech_level.map(gen_tech_to_category)
+# Step 2: Build a new MultiIndex with the category as level 3
+new_index = pd.MultiIndex.from_arrays([
+    gcap_stock.index.get_level_values(0),  # 'stock'
+    gcap_stock.index.get_level_values(1),  # Region
+    gcap_stock.index.get_level_values(2),  # Material
+    category                                # Mapped Category
+], names=gcap_stock.index.names)
+# Step 3: Assign new index
+gcap_stock_techcat = gcap_stock.copy()
+gcap_stock_techcat.index = new_index
+# Step 5: Group by (region, material, category), sum
+gcap_stock_techcat = gcap_stock_techcat.groupby(
+    [gcap_stock_techcat.index.get_level_values(1),  # Region
+     gcap_stock_techcat.index.get_level_values(2),  # Material
+     gcap_stock_techcat.index.get_level_values(3)]  # Category
+).sum()
+gcap_stock_techcat.index.names = ['regions', 'materials', 'technology_category']
+gcap_stock_techcat = gcap_stock_techcat.T # index = years
+
+gcap_stock_techcat_mat = gcap_stock_techcat.groupby(level=['materials','technology_category'], axis=1).sum()
+data_all = gcap_stock_techcat_mat.copy()
+# rearrange column order for the stacked plot
+desired_order = ['Fossil', 'Fossil + CCS', 'Nuclear', 'Hydrogen', 'Biomass', 'Wind', 'Solar', 'Other Renewables']
+new_columns = []
+for material in data_all.columns.get_level_values(0).unique():
+    for cat in desired_order:
+        if (material, cat) in data_all.columns:
+            new_columns.append((material, cat))
+data_all = data_all.loc[:, new_columns]
+data_all = data_all/ 1_000_000  # Convert from gram to tonnes (t)
+
+
+
+materials = ['Steel', 'Aluminium', 'Nd', 'Co']
+fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(14, 10))
+s_legend = 12
+s_label = 14
+for i, material in enumerate(materials):
+    if material in data_all.columns.get_level_values(0):
+        row = i // 2
+        col = i % 2
+        # Select data for this material (columns under this material)
+        data_plot = data_all.loc[:, material]
+        colors = [dict_gentechcat_colors[cat] for cat in data_plot.columns] # select colors based on technology category
+        data_plot.plot.area(ax=axes[row, col], stacked=True, color = colors)
+
+        axes[row, col].set_title(material, fontsize=15)
+        axes[row, col].set_ylabel('Material stock (t)', fontsize=s_label)
+        handles, labels = axes[row, col].get_legend_handles_labels() # reverse the order of legend to match the stacked plot
+        axes[row, col].legend(handles[::-1], labels[::-1], loc='upper left', fontsize=s_legend)
+
+        # Scientific notation for y-axis
+        formatter = ScalarFormatter(useMathText=True)
+        formatter.set_powerlimits((-2, 2))  # Force scientific for large/small numbers
+        axes[row, col].yaxis.set_major_formatter(formatter)
+        axes[row, col].ticklabel_format(style='sci', axis='y', scilimits=(0, 0))
+        axes[row, col].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+
+for col in range(2): # Set x-labels only for bottom row
+    axes[1, col].set_xlabel('Year', fontsize=s_label)
+
+plt.suptitle("ELMA: Generation - Stocks Materials per Tech. Cat. - World", fontsize=16)
+plt.tight_layout(rect=[0, 0, 1, 0.98])  # Adjust layout to make room for the suptitle
+# fig.savefig(path_elma_out / "ELMA_Gen_stock-materials-techcat_st-al-nd-co_world_1971.png", dpi=300)
+# fig.savefig(path_elma_out / "ELMA_Gen_stock-materials-techcat_st-al-nd-co_world_1971.pdf", dpi=300)
+# fig.savefig(path_elma_out / "ELMA_Gen_stock-materials-techcat_st-al-nd-co_world_1971.svg", dpi=300)
+plt.show()
+
+
+
+
 ###########################################################################################################
 #%%% TEST TEST Visualize Inflow Materials TEST TEST
 ###########################################################################################################
 
-#
 # Sum over technologies dimension
 gcap_inflow_reg_mat = gcap_inflow.groupby(['flow', 'regions', 'materials']).sum()
 gcap_inflow_reg_mat = gcap_inflow_reg_mat.droplevel('flow').T
@@ -640,86 +960,6 @@ plt.show()
 
 
 
-###########################################################################################################
-#%%% TEST TEST Visualize STOCKS Materials TEST TEST
-###########################################################################################################
-
-import itertools
-from matplotlib.ticker import StrMethodFormatter
-
-from imagematerials.electricity.constants import (
-    dict_gentech_styles,
-    dict_materials_colors,
-    dict_grid_colors
-)
-
-
-# Generation technologies
-technologies = [
-    'Solar PV', 'Solar PV residential', 'CSP', 'Wind onshore', 'Wind offshore', 'Wave', 'Hydro', 
-    'Other Renewables', 'Geothermal', 'Hydrogen power', 'Nuclear', '<EMPTY>', 'Conv. Coal', 
-    'Conv. Oil', 'Conv. Natural Gas', 'Waste', 'IGCC', 'OGCC', 'NG CC', 'Biomass CC', 
-    'Coal + CCS', 'Oil/Coal + CCS', 'Natural Gas + CCS', 'Biomass + CCS', 'CHP Coal', 
-    'CHP Oil', 'CHP Natural Gas', 'CHP Biomass', 'CHP Coal + CCS', 'CHP Oil + CCS', 
-    'CHP Natural Gas + CCS', 'CHP Biomass + CCS', 'CHP Geothermal', 'CHP Hydrogen'
-]
-
-# Define color and linestyle pools
-# colors = plt.get_cmap('tab20').colors  # 20 distinct colors
-# linestyles = ['-', '--', ':'] #'-.'
-# # Create a cycle of (color, linestyle) combinations
-# style_combinations = list(itertools.product(colors, linestyles))
-# assert len(technologies) <= len(style_combinations), "Not enough unique combinations for all technologies."
-# # Map technologies to (color, linestyle)
-# dict_gentech_styles = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
-
-
-
-# Output of DSM model is only stocks of materials, not generation technologies
-
-# stocks from TIMER --------------------------------------------------
-
-# 2 COUNTRIES
-countries = ['Brazil','C.Europe']
-threshold = 100_000
-techs_upper = [col for col in gcap.columns if gcap[col].max() > threshold] #gcap.columns[15:30]
-techs_lower = [col for col in gcap.columns if gcap[col].max() <= threshold] #gcap.columns[:15]
-
-fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(14, 8), sharex=True)
-axes[0, 1].sharey(axes[0, 0])
-axes[1, 1].sharey(axes[1, 0])
-
-for i, country in enumerate(countries):
-    df = gcap[gcap.index.get_level_values(1) == country].copy()
-    df.index = df.index.droplevel(1)
-
-    # Top row: techs 15–30
-    for tech in techs_upper:
-        color, ls = dict_gentech_styles[tech]
-        axes[0, i].plot(df.index, df[tech], label=tech, color=color, linestyle=ls)
-    # axes[0, i].set_title(f"{country} (Technologies 16–30)")
-    axes[0, i].grid(alpha=0.3, linestyle='--')
-
-    # Bottom row: techs 0–14
-    for tech in techs_lower:
-        color, ls = dict_gentech_styles[tech]
-        axes[1, i].plot(df.index, df[tech], label=tech, color=color, linestyle=ls)
-    axes[1, i].set_xlabel('Year')
-    axes[1, i].grid(alpha=0.3, linestyle='--')
-    
-
-# Add Y-axis labels only on left side
-axes[0, 0].set_ylabel('Value')
-axes[1, 0].set_ylabel('Value')
-for ax in axes.flat: # change y axis ticks from 100000 to 100,000
-    ax.yaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}'))
-axes[0, 0].legend(fontsize='small', ncol=2, loc='upper left')
-axes[1, 0].legend(fontsize='small', ncol=2, loc='upper left')
-
-plt.suptitle(f"Generation - Stocks in {countries[0]}_{countries[1]} (TIMER)", fontsize=16)
-plt.tight_layout()
-# fig.savefig(path_test_plots / f"TIMER_Gen_stocks_{countries[0]}-{countries[1]}.png", dpi=300)
-plt.show()
 
 
 
