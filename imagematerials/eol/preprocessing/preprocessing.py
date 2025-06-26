@@ -4,8 +4,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 
-from imagematerials.eol.constants import SCENARIO_SELECT, start_year, end_year
-from imagematerials.eol.preprocessing.interpolate import interpolate_eol_rates
+from imagematerials.eol.constants import SCENARIO_SELECT, start_year, end_year,full_time
+
+# define interpolation method
+def interpolate_eol_rates(ds, start_year, end_year, min_value = 0, max_value = 1):              # collection, reuse, and recycling rate cannot be lower than zero or higher than 1
+
+    reindexed = ds.reindex(Time=full_time)
+    interpolated = reindexed.interpolate_na(dim='Time', method='linear', fill_value='extrapolate')
+    clipped = interpolated.clip(min=min_value, max = max_value)
+
+    return clipped
 
 def eol_preprocessing(base_dir):
     collection_in = pd.read_csv(Path(base_dir, "end_of_life","SSP2_2D_RE", "collection.csv"))
@@ -52,7 +60,7 @@ def eol_preprocessing(base_dir):
 
     material_rename = {
         'Cu': 'Copper'
-    } 
+    }
 
     collection_df['material'] = collection_df['material'].replace(material_rename)
     reuse_df['material'] = reuse_df['material'].replace(material_rename)
@@ -84,7 +92,7 @@ def eol_preprocessing(base_dir):
     reuse.coords["Region"] = [str(x.values) for x in reuse.coords["Region"]]
     recycling.coords["Region"] = [str(x.values) for x in recycling.coords["Region"]]
 
-
+    
     return {
         "collection": collection,
         "reuse": reuse,
