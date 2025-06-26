@@ -295,7 +295,7 @@ def create_electricity_graph():
 
     # Generation -----------
     generation_types = ["Solar PV", "Solar PV residential", "CSP", "Wind onshore", "Wind offshore", 
-                        "Wave", "Hydro", "Other Renewables", "Geothermal", "Nuclear", "Conv. Coal",
+                        "Wave", "Hydro", "Other Renewables", "Geothermal","Hydrogen power", "Nuclear", "Conv. Coal",
                         "Conv. Oil", "Conv. Natural Gas","Waste", "IGCC", "OGCC", "NG CC", "Biomass CC",
                         "Coal + CCS", "Oil/Coal + CCS", "Natural Gas + CCS", "Biomass + CCS",
                         "CHP Coal", "CHP Oil", "CHP Natural Gas", "CHP Biomass","CHP Geothermal", "CHP Hydrogen",

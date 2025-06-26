@@ -56,6 +56,43 @@ STD_LIFETIMES_ELECTR = 0.214              # standard deviation as a fraction of 
 
 TECH_GEN = 34   # number of electricity generation technologies -> 33 technologies + 1 empty row
 
+# Define mapping: technology -> category
+gen_tech_to_category = {
+    "Solar PV": 'Solar', 
+    "Solar PV residential": 'Solar',
+    "CSP": 'Solar', 
+    "Wind onshore": 'Wind',
+    "Wind offshore": 'Wind', 
+    "Wave": 'Other Renewables',
+    "Hydro": 'Other Renewables',
+    "Other Renewables": 'Other Renewables',
+    "Geothermal": 'Other Renewables',
+    'Hydrogen power': 'Hydrogen',
+    "Nuclear": 'Nuclear',
+    "Conv. Coal": 'Fossil',
+    "Conv. Oil": 'Fossil',
+    "Conv. Natural Gas": 'Fossil',
+    "Waste": 'Fossil',
+    "IGCC": 'Fossil',
+    "OGCC": 'Fossil',
+    "NG CC": 'Fossil',
+    "Biomass CC": 'Biomass',
+    "Coal + CCS": 'Fossil + CCS',
+    "Oil/Coal + CCS": 'Fossil + CCS',
+    "Natural Gas + CCS": 'Fossil + CCS',
+    "Biomass + CCS": 'Biomass',
+    "CHP Coal": 'Fossil',
+    "CHP Oil": 'Fossil',
+    "CHP Natural Gas": 'Fossil',
+    "CHP Biomass": 'Biomass',
+    "CHP Geothermal": 'Other Renewables',
+    "CHP Hydrogen": 'Hydrogen',
+    "CHP Coal + CCS": 'Fossil + CCS',
+    "CHP Oil + CCS": 'Fossil + CCS',
+    "CHP Natural Gas + CCS": 'Fossil + CCS',
+    "CHP Biomass + CCS": 'Biomass'
+}
+
 # Vehicle related constants ---------------------------------------------
 
 TECH_VEHICLES = 25    # number of vehicle types 
@@ -100,6 +137,18 @@ assert len(technologies) <= len(style_combinations), "Not enough unique combinat
 # Map technologies to (color, linestyle)
 dict_gentech_styles = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
 
+
+dict_gentechcat_colors = {
+    'Solar':             "#FBBF09",
+    'Wind':              "#4BABFF",
+    'Biomass':           "#42DD88",
+    'Other Renewables':  "#B6F795",
+    'Hydrogen':          '#B9FAF8',
+    'Nuclear':           "#B06106",
+    'Fossil':            "#575354",
+    'Fossil + CCS':      "#BBB8B9"
+}
+
 dict_materials_colors = {
     'Steel':     '#FF9B85',
     'Aluminium': '#B9FAF8',
@@ -109,7 +158,7 @@ dict_materials_colors = {
     'Cu':        '#FB6376',
     'Nd':        '#B8D0EB',
     'Ta':        '#B298DC',
-    'Co':        '#A663CC',
+    'Co':        '#F669C0',
     'Pb':        '#6F2DBD',
     'Mn':        "#31E7E7",
     'Ni':        '#FCB1A6',
