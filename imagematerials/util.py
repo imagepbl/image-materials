@@ -451,3 +451,32 @@ def apply_change_per_region(arr: xr.DataArray, base_year: int, target_year: int,
         results.append(result)
     # Concatenate results along columns (axis=1), aligning on index
     return xr.concat(results, 'Region')
+
+
+def overwrite_future_rates(arr: xr.DataArray, target_year: int, supertypes: list, new_val: dict) -> xr.DataArray:
+    """
+    Overwrites values in an Xarray at a specific target year for each material in each Sector.
+    Currently works for collection, reuse, and recycling rates that are not region-specific.
+
+    Parameters
+    ----------
+    arr : xr.DataArray
+        A DataArray with dimensions including 'Time', 'material', and 'Type'.
+    target_year : int
+        The year for which values should be overwritten.
+    supertypes: list
+        List of supertypes considered in a given sector Sector.
+    new_val : dict
+        Dictionary of form {material: new_value}.
+
+    Returns
+    -------
+    xr.DataArray
+        Updated DataArray with overwritten values for target_year.
+    """
+    result = arr.copy()
+    for material, new_value in new_val.items():
+        if material not in result.material.values:
+            raise ValueError(f"'{material}' not found in DataArray.")
+        result.loc[{"Time": target_year,"Type": supertypes, "material": material}] = new_value
+    return result
