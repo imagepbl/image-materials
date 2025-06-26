@@ -90,4 +90,19 @@ USA = 90
 "Other Asia" = 90
 "Other OECD" = 60
 "Reforming Economies" =	90
-"Sub-Saharan Africa" = 60	
+"Sub-Saharan Africa" = 60
+
+[buildings.eol_reuse_rate_2060]
+Steel = 29
+Concrete = 13
+Wood = 25
+Copper = 33
+Glass = 35
+Aluminium = 50
+
+[vehicles.eol_reuse_rate_2060]
+Steel = 20
+Copper = 28
+Glass = 68
+Aluminium = 29
+
