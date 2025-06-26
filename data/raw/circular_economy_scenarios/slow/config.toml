@@ -93,16 +93,16 @@ USA = 90
 "Sub-Saharan Africa" = 60
 
 [buildings.eol_reuse_rate_2060]
-Steel = 29
-Concrete = 13
-Wood = 25
-Copper = 33
-Glass = 35
-Aluminium = 50
+Steel = 0.29
+Concrete = 0.13
+Wood = 0.25
+Copper = 0.33
+Glass = 0.35
+Aluminium = 0.50
 
 [vehicles.eol_reuse_rate_2060]
-Steel = 20
-Copper = 28
-Glass = 68
-Aluminium = 29
+Steel = 0.20
+Copper = 0.28
+Glass = 0.68
+Aluminium = 0.29
 

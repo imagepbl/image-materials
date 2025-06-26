@@ -10,15 +10,15 @@ target_year = 2060
 implementation_rate = 'linear'
 
 [buildings.eol_recycling_rate_2060]
-Steel = 92
-Concrete = 100
-Wood = 30
-Copper = 92
-Glass = 95
-Aluminium = 95
+Steel = 0.92
+Concrete = 1
+Wood = 0.30
+Copper = 0.92
+Glass = 0.95
+Aluminium = 0.95
 
 [vehicles.eol_recycling_rate_2060]
-Steel = 94
-Copper = 86
-Glass = 95
-Aluminium = 95
+Steel = 0.94
+Copper = 0.86
+Glass = 0.95
+Aluminium = 0.95
