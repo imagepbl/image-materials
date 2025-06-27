@@ -56,8 +56,8 @@ class Sector():
                         raise ValueError(
                             f"Mismatch in coordinates with dimension '{coord.name}'"
                             f" with data array '{input_name}' having different coordinates"
-                            f" than previously assumed in '{self.coordinate_sources[coord.name]}'."
-                            f"New: {coord_list}\n\nOld:{self.coordinates[coord.name]}")
+                            f" than previously assumed in '{coordinate_sources[coord.name]}'."
+                            f"New: {coord_list}\n\nOld:{coordinates[coord.name]}")
                     coordinate_sources[coord.name].append(input_name)
         return coordinates, coordinate_sources
 
