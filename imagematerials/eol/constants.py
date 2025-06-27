@@ -6,7 +6,7 @@ import prism
 
 # general
 
-start_year  = 1960
+start_year  = 1920
 end_year    = 2100
 full_time = np.arange(start_year, end_year + 1)
 
