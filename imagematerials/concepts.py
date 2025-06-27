@@ -1,19 +1,28 @@
+import json
 from dataclasses import dataclass, field
 from typing import Optional
 
 import xarray as xr
-import json
+
 
 @dataclass
 class Node():
     name: str
     synonyms: list[str] = field(default_factory=list)
-    inherits_from: Optional[str] = None
+    inherits_from: list[str] = field(default_factory=list)
 
     def __post_init__(self):
-        if self.inherits_from is not None:
+        if self.inherits_from is None:
+            self.inherits_from = []
+        elif isinstance(self.inherits_from, str):
+            self.inherits_from = [self.inherits_from]
+
+        if self.name in self.synonyms:
+            raise ValueError(f"Cannot create node that has its own name as a synonym: {self}.")
+
+        for parent in self.inherits_from:
             try:
-                self.match_coords(self.inherits_from)
+                self.match_coords(parent)
                 raise ValueError(f"Cannot create node that inherits from itself: {self}.")
             except KeyError:
                 pass
@@ -55,10 +64,13 @@ class KnowledgeGraph():
             If the node already exists or the parent does not exist.
 
         """
-        if node.name in self._items:
-            raise ValueError("Node already exists.")
-        if node.inherits_from is not None and node.inherits_from not in self:
-            raise ValueError(f"Parent {node.inherits_from} of {node.name} does not exist.")
+        for name in [node.name] + node.synonyms:
+            if name in self:
+                raise ValueError("Node already exists.")
+        for parent in node.inherits_from:
+            if parent not in self:
+                raise ValueError(f"Parent {parent} of {node.name} does not exist.")
+
         self._items.append(node)
 
     def __contains__(self, node_name) -> bool:
@@ -92,22 +104,20 @@ class KnowledgeGraph():
         except KeyError:
             pass
 
-        try:
-            ancestors = self._find_ancestors(input_coords, output_node)
-        except KeyError:
-            ancestors = []
+        ancestors = self._find_ancestors(input_coords, output_node)
+
         try:
             descendants = self._find_descendants(input_coords, output_node)
         except KeyError:
             descendants = []
 
         if len(ancestors) > 0 and len(descendants) > 0:
-            raise ValueError(f"Cannot find relations, because {output_node} has both ancestors "
-                                "and descendants")
+            raise ValueError(f"Cannot find relations, because {output_node} has both ancestors ({ancestors}) "
+                             f"and descendants ({descendants})")
         if len(ancestors) + len(descendants) == 0:
             raise ValueError(f"Cannot find relations of {output_node} in input coordinates.")
 
-        return ancestors + descendants
+        return list(set(ancestors + descendants))
 
     def find_relations_inverse(self, input_coords, output_coords):
         relations = self.find_relations(input_coords, output_coords)
@@ -120,9 +130,13 @@ class KnowledgeGraph():
         try:
             return [output_node.match_coords(input_coords)]
         except KeyError:
-            if output_node.inherits_from is None:
-                raise KeyError("Ancestor does not exist.")
-            return self._find_ancestors(input_coords, self[output_node.inherits_from])
+            ancestors = []
+            for parent in output_node.inherits_from:
+                try:
+                    ancestors.extend(self._find_ancestors(input_coords, self[parent]))
+                except KeyError:
+                    pass
+        return ancestors
 
 
     def _find_descendants(self, input_coords, output_node):
@@ -133,7 +147,7 @@ class KnowledgeGraph():
 
         all_descendants = []
         for item in self._items:
-            if item.inherits_from == output_node.name:
+            if output_node.name in item.inherits_from:
                 all_descendants.extend(self._find_descendants(input_coords, item))
         return all_descendants
 
