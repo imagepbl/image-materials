@@ -1,3 +1,3 @@
-from imagematerials.eol.preprocessing.main import eol_preprocessing as preprocess_eol
+from imagematerials.eol.preprocessing.preprocessing import eol_preprocessing as eol_preprocess
 
-__all__ = ["preprocess_eol"]
+__all__ = ["eol_preprocess"]

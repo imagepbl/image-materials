@@ -19,7 +19,8 @@ from imagematerials.buildings.constants import (
     SCENARIO_SELECT
 )
 from imagematerials.read_mym import read_mym_df
-from imagematerials.util import dataset_to_array, merge_dims
+from imagematerials.util import dataset_to_array, merge_dims, \
+    scenario_change, apply_change_per_region
 from imagematerials.concepts import create_region_graph
 
 far_start_year = 1721
@@ -211,13 +212,14 @@ def compute_housing_residential(population, average_m2_capita, housing_type, flo
     m2_housing_per_capita = average_m2_capita * housing_type
     m2_housing_share = m2_housing_per_capita / m2_housing_per_capita.sum(["Type"])
     total_m2_housing_per_cap = m2_housing_share*floorspace_rururb
+    region_knowledge_graph = create_region_graph()
+    regions = total_m2_housing_per_cap.coords["Region"].values
 
     if 'base' in circular_economy_config.keys():
         base_year = circular_economy_config["base"]["buildings"]["base_year"]
         target_year = circular_economy_config["base"]["buildings"]["target_year"]
         floor_pc_2020 = circular_economy_config["base"]["buildings"]["residential"]["2020"]["useful_floor_pc"]
-        region_knowledge_graph = create_region_graph()
-        regions = total_m2_housing_per_cap.coords["Region"].values
+
         floor_pc_2020_xr = xr.DataArray(
             list(floor_pc_2020.values()),
             coords={"Region": list(floor_pc_2020.keys())},
@@ -235,6 +237,29 @@ def compute_housing_residential(population, average_m2_capita, housing_type, flo
         scaling_factors = target_vals / current_vals
 
         total_m2_housing_per_cap.loc[{"Region": regions_mapped}] = total_m2_housing_per_cap.sel(Region = regions_mapped) * scaling_factors
+        print("implemented 'base' for Residential Buildings")
+
+    if 'narrow' in circular_economy_config.keys():
+        base_year = circular_economy_config["narrow"]["buildings"]["base_year"]
+        target_year = circular_economy_config["narrow"]["buildings"]["target_year"]
+        
+        residential_scenario_settings = circular_economy_config['narrow']["buildings"]['residential']['m2_change_pc']
+        implementation_rate = circular_economy_config['narrow']['buildings']['implementation_rate']
+
+        residential_scenario_settings_xr = xr.DataArray(
+            list(residential_scenario_settings.values()),
+            coords={"Region": list(residential_scenario_settings.keys())},
+            dims=["Region"],
+            name="residential_scenario_settings"
+        )
+
+        regions_mapped = list(region_knowledge_graph.find_relations_inverse(regions, residential_scenario_settings.keys()))
+        residential_scenario_settings_xr_mapped = region_knowledge_graph.rebroadcast_xarray(residential_scenario_settings_xr, output_coords=regions_mapped, dim="Region")
+        
+        total_m2_housing_per_cap = apply_change_per_region(
+            total_m2_housing_per_cap, base_year, target_year, 
+            residential_scenario_settings_xr_mapped, implementation_rate)
+        print("implemented 'narrow' for Residential Buildings")
 
     total_m2_housing = total_m2_housing_per_cap * population.sel({"Area": ["Rural", "Urban"]})
     floorspace_residential = merge_dims(total_m2_housing, "Type", "Area")

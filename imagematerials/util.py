@@ -354,3 +354,129 @@ def convert_life_time_vehicles(life_time_vehicles: xr.Dataset) -> dict[str, xr.D
     return ret_scipy_params
 
 
+def scenario_change(arr: xr.DataArray, base_year: int, target_year: int, change: dict,
+                    implementation_rate: str, data_type: Optional[str]=None, steepness: float=0.5) -> xr.DataArray:
+    """
+    Applies a time-based change to values in a Xarray between a base and target year using a specified implementation method.
+
+    Parameters
+    ----------
+    arr
+        A time-indexed Xarray containing mode-specific values, such as lifetime or mileage.
+    base_year
+        The starting year for the change.
+    target_year
+        The year by which the full change should be achieved.
+    change
+        A dictionary mapping modes to percentage increases (e.g., {'Cars': 20} for +20%).
+    implementation_rate
+        The implementation method; one of 'linear', 'immediate', or 's-curve'.
+    data_type
+        Indicates what kind of data is being modified; one of 'lifetime' or 'mileages'.
+    steepness
+        Steepness parameter for the 's-curve' implementation; default is 0.5.
+
+    Returns
+    -------
+        A new Xarray with updated values for each year between base_year and target_year, and interpolated values where necessary.
+
+    Raises
+    ------
+    ValueError
+        If the implementation method is unsupported or if the specified column is not found in the DataFrame.
+
+    Notes
+    -----
+    For verhicles, this function has an implementation that works on Pandas dataframes.
+    """
+    result = arr.where(arr.Time <= base_year, np.nan)
+    result.loc[{"Time": target_year}] = result.loc[{"Time": base_year}]
+
+    for region, increase in change.items():
+        base_val = result.loc[{"Time": target_year, "Region": region}]
+        if region in result.Region:
+            if implementation_rate =='linear':
+                result.loc[{"Time": target_year, "Region": region}] *= (1 + increase / 100)
+            elif implementation_rate =='immediate':
+                result.loc[{"Time": base_year + 1, "Region": region}] = \
+                    base_val * (1 + increase / 100)
+                result.loc[{"Time": target_year, "Region": region}] *= (1 + increase / 100)
+            elif implementation_rate =='s-curve':
+                years = list(range(base_year, target_year + 1))
+                mid_year = (base_year + target_year) / 2
+                target_val = base_val * (1 + increase / 100)
+                for year in years:
+                    progress = 1 / (1 + np.exp(-steepness * (year - mid_year)))
+                    result.loc[{"Time": year, "Region": region}] = \
+                        base_val + (target_val - base_val) * progress
+            else: 
+                raise ValueError(f"Unknown implementation method: '{implementation_rate}'. "
+                                  "Supported methods are 'immediate', 'linear', and 's-curve'.")
+        else:
+            raise ValueError(f"Region {region} not found in DataArray.")
+    return result.interpolate_na("Time", method="linear")
+
+
+def apply_change_per_region(arr: xr.DataArray, base_year: int, target_year: int, increase: float,
+                            implementation_rate: str, data_type: Optional[str]=None,
+                            steepness: float=0.5) -> xr.DataArray:
+    """
+    Applies a uniform percentage increase across all regions (columns) in the DataFrame using a specified implementation method.
+
+    Parameters:
+        arr (xarray): A time-indexed Xarray with regions as columns and a common structure across all regions.
+        base_year (int): The starting year for the change.
+        target_year (int): The year by which the full change should be achieved.
+    increase
+        The percentage increase to apply to all regions (e.g., 10 for +10%).
+        implementation_rate (str): The implementation method; one of 'linear', 'immediate', or 's-curve'.
+        data_type (str): Indicates what kind of data is being modified; one of 'lifetime' or 'mileages'.
+        steepness (float, optional): Steepness parameter for the 's-curve' implementation; default is 0.5.
+
+    Returns:
+        array: An xarray with updated values for each region, aligned by year (index).
+    """
+    results = []
+    for region, subarr in arr.groupby('Region'):
+        regional_subarr = subarr.copy()  # Keep as DataFrame for compatibility
+        result = scenario_change(
+            regional_subarr, 
+            base_year=base_year, 
+            target_year=target_year, 
+            change={region: increase.loc[{"Region": region}]}, 
+            implementation_rate=implementation_rate, 
+            data_type=data_type, 
+            steepness=steepness
+        )
+        results.append(result)
+    # Concatenate results along columns (axis=1), aligning on index
+    return xr.concat(results, 'Region')
+
+
+def overwrite_future_rates(arr: xr.DataArray, target_year: int, supertypes: list, new_val: dict) -> xr.DataArray:
+    """
+    Overwrites values in an Xarray at a specific target year for each material in each Sector.
+    Currently works for collection, reuse, and recycling rates that are not region-specific.
+
+    Parameters
+    ----------
+    arr : xr.DataArray
+        A DataArray with dimensions including 'Time', 'material', and 'Type'.
+    target_year : int
+        The year for which values should be overwritten.
+    supertypes: list
+        List of supertypes considered in a given sector Sector.
+    new_val : dict
+        Dictionary of form {material: new_value}.
+
+    Returns
+    -------
+    xr.DataArray
+        Updated DataArray with overwritten values for target_year.
+    """
+    result = arr.copy()
+    for material, new_value in new_val.items():
+        if material not in result.material.values:
+            raise ValueError(f"'{material}' not found in DataArray.")
+        result.loc[{"Time": target_year,"Type": supertypes, "material": material}] = new_value
+    return result
