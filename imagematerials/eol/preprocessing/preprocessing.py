@@ -5,7 +5,8 @@ import numpy as np
 from pathlib import Path
 
 from imagematerials.eol.constants import SCENARIO_SELECT, start_year, end_year, full_time
-from imagematerials.util import overwrite_future_rates
+from imagematerials.util import overwrite_future_rates, read_circular_economy_config
+ 
 
 # define interpolation method
 def interpolate_eol_rates(ds, start_year, end_year, min_value = 0, max_value = 1):              # collection, reuse, and recycling rate cannot be lower than zero or higher than 1
@@ -15,7 +16,9 @@ def interpolate_eol_rates(ds, start_year, end_year, min_value = 0, max_value = 1
 
     return clipped
 
-def eol_preprocessing(base_dir, circular_economy_config):
+def eol_preprocessing(base_dir, circular_economy_scenario_dirs):
+    circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
+
     collection_in = pd.read_csv(Path(base_dir, "end_of_life","SSP2_2D_RE", "collection.csv"))
     reuse_in = pd.read_csv(Path(base_dir, "end_of_life", "SSP2_CP", "reuse.csv"))
     recycling_in = pd.read_csv(Path(base_dir, "end_of_life","SSP2_CP","recycling.csv"))
