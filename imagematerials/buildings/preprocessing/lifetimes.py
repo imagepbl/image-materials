@@ -15,7 +15,6 @@ def compute_lifetimes(base_directory, commercial_types, circular_economy_config,
     else:
         SCENARIO = SCENARIO_SELECT
 
-    
     lifetimes_commercial = pd.read_csv(base_directory / 'buildings'  / 'files_lifetimes' / SCENARIO / 'lifetimes_comm.csv', index_col = [0,1])  # Weibull parameter database for commercial buildings (shape & scale parameters given by region, area & building-type)
     # TODO originally lifetimes_commercial was only read in with flag_normal == 0
 

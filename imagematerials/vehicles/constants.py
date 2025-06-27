@@ -19,7 +19,7 @@ START_YEAR = 1971
 FIRST_YEAR = 1807  # first_year_vehicle.values.min()
 END_YEAR = 2100
 # year of output generation
-OUT_YEAR = 2100
+OUT_YEAR = END_YEAR
 REGIONS = 26
 # reference loadfactor of cars in TIMER (the trp_trvl_Load.out file is
 # relative to this BASE loadfcator (persons/car))

@@ -85,7 +85,7 @@ def get_preprocessing_data(
     """
     if climate_policy_scenario_dir is None and circular_economy_scenario_dirs is None:
         climate_policy_scenario_dir = base_dir / 'SSP2'
-        circular_economy_scenario_dirs = {"slow": base_dir / 'circular_economy_scenarios' / 'slow'}
+        circular_economy_scenario_dirs = {}
     elif climate_policy_scenario_dir is None or circular_economy_scenario_dirs is None:
             raise ValueError("Provide both climate_policy_scenario_dir and "
                              "circular_economy_scenario_dirs  or neither as arguments.")
