@@ -113,7 +113,8 @@ class GenericStocks(prism.Model):
         if t-1 < time.start:
             self.outflow_by_cohort[t] = 0.0
         else:
-            self.outflow_by_cohort[t] = self.stock_by_cohort.loc[t-1] - self.stock_by_cohort.loc[t]
+            self.outflow_by_cohort[t].loc[:, :, :t-1] = self.stock_by_cohort.loc[t-1, :t-1] - self.stock_by_cohort.loc[t, :t-1]
+            self.outflow_by_cohort[t].loc[:, :, t] = self.inflow[t] * (1-self.survival_matrix[t, t])
 
 
 @prism.interface
