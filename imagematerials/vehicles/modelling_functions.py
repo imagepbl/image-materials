@@ -147,10 +147,10 @@ def scenario_change(df, base_year, target_year, change, implementation_rate, dat
         base_val = result.loc[base_year, col]
         if col in result.columns:
             if implementation_rate =='linear':
-                result.loc[target_year, col] = base_val * (1 + increase / 100)
+                result.loc[target_year, col] *= (1 + increase / 100)
             elif implementation_rate =='immediate':
-                result.loc[base_year + 1, col] = base_val * (1 + increase / 100)
-                result.loc[target_year, col] = base_val * (1 + increase / 100)
+                result.loc[base_year + 1, col] *= (1 + increase / 100)
+                result.loc[target_year, col] *= (1 + increase / 100)
             elif implementation_rate =='s-curve':
                 years = list(range(base_year, target_year + 1))
                 mid_year = (base_year + target_year) / 2
@@ -184,7 +184,7 @@ def apply_change_per_region(df, base_year, target_year, increase, implementation
     results = []
     for region in df.columns:
         regional_df = df[[region]].copy()  # Keep as DataFrame for compatibility
-        result = change_value(
+        result = scenario_change(
             regional_df, 
             base_year=base_year, 
             target_year=target_year, 

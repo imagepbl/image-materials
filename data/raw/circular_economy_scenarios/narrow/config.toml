@@ -1,6 +1,7 @@
 [buildings]
 base_year = 2020
 target_year = 2060
+implementation_rate = 'linear'
 
 [vehicles]
 base_year = 2019
@@ -9,34 +10,60 @@ target_year = 2060
 implementation_rate = 'linear'
 
 [buildings.residential.m2_change_pc]
+"Asian-Stan" = -15.0
+Brazil = -16.7
 Canada = -35.0
-China = -19.2
-India = -12.5
-Japan = -15.0
-USA = -35.0
-"Western Europe" = -23.3
 "Central Europe" = -10.0
-"Latin America" = -20.0
-"Middle East and North Africa" = -23.3
-"Reforming Economies" = -13.3
-"Other Asia" = -12.5
-"Other OECD" = -27.5
-"Subsaharan Africa" = -15.0
-
-[buildings.non_residential.m2_change_pc]
-Canada = -35.0
-China = -19.2
-India = -12.5
-Japan = -20.0
+"China +" = -19.2
+"Eastern Africa" = -15.0
+"India +" = -12.5
+"Indonesia +" = -12.5
+Japan = -15.0
+Korea = -10.0
+Mexico = -27.5
+"Middle East" = -23.3
+"Northern Africa" = -23.3
+Oceania = -31.7
+"Rest of Central America" = -12.5
+"Rest of South America" = -20.0
+"Rest of South Asia" = -15.0
+"Rest of Southern Africa" = -15.0
+"Russia +" = -13.3
+"South Africa" = -20.0
+"Southeastern Asia" = -12.5
+Turkey = -27.5
+"Ukraine +" = -10.0
 USA = -35.0
+"Western Africa" = -15.0
 "Western Europe" = -23.3
-"Central Europe" = -15.0
-"Latin America" = -12.5
-"Middle East and North Africa" = -23.3
-"Reforming Economies" = -13.3
-"Other Asia" = -12.5
-"Other OECD" = -20.0
-"Subsaharan Africa" = -15.0
+
+[buildings.commercial.m2_change_pc]
+"Asian-Stan" = -15.0
+Brazil = -16.7
+Canada = -35.0
+"Central Europe" = -10.0
+"China +" = -19.2
+"Eastern Africa" = -15.0
+"India +" = -12.5
+"Indonesia +" = -12.5
+Japan = -20.0
+Korea = -15.0
+Mexico = -20.0
+"Middle East" = -23.3
+"Northern Africa" = -15.0
+Oceania = -40.0
+"Rest of Central America" = -12.5
+"Rest of South America" = -12.5
+"Rest of South Asia" = -15.0
+"Rest of Southern Africa" = -15.0
+"Russia +" = -13.3
+"South Africa" = -20.0
+"Southeastern Asia" = -12.5
+Turkey = -20.0
+"Ukraine +" = -5.0
+USA = -35.0
+"Western Africa" = -15.0
+"Western Europe" = -23.3
 
 [vehicles.passenger]
 kilometers = -25

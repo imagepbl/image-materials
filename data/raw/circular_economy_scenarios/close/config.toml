@@ -1,0 +1,24 @@
+[buildings]
+base_year = 2020
+target_year = 2060
+implementation_rate = 'linear'
+
+[vehicles]
+base_year = 2019
+target_year = 2060
+# possibilities for implementation rate are: linear, immediate, s-curve
+implementation_rate = 'linear'
+
+[buildings.eol_recycling_rate_2060]
+Steel = 0.92
+Concrete = 1
+Wood = 0.30
+Copper = 0.92
+Glass = 0.95
+Aluminium = 0.95
+
+[vehicles.eol_recycling_rate_2060]
+Steel = 0.94
+Copper = 0.86
+Glass = 0.95
+Aluminium = 0.95

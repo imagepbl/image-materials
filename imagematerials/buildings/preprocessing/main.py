@@ -2,6 +2,7 @@ import warnings
 from pathlib import Path
 
 import xarray as xr
+import numpy as np
 
 from imagematerials.buildings.constants import SCENARIO_SELECT
 from imagematerials.buildings.preprocessing.floorspace import (
@@ -50,15 +51,14 @@ def buildings_preprocessing(base_directory, climate_policy_config: dict, circula
 
     floorspace_residential = compute_housing_residential(population, average_m2_capita, housing_type, floorspace_rururb, circular_economy_config)
 
-    floorspace_residential
-
     floorspace = xr.concat((floorspace_residential, floorspace_commercial), dim="Type")
+    
 
     # Lifetime computations, see lifetimes.py
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        lifetimes = compute_lifetimes(base_directory, floorspace_commercial.coords["Type"].values)
+        lifetimes = compute_lifetimes(base_directory, floorspace_commercial.coords["Type"].values, circular_economy_config)
 
     mat_intensities_comm = compute_mat_intensities_commercial(database_directory)
     mat_intensities_res = compute_mat_intensities_residential(database_directory)
@@ -66,6 +66,10 @@ def buildings_preprocessing(base_directory, climate_policy_config: dict, circula
     knowledge_graph = create_building_graph()
     mat_intensities = knowledge_graph.rebroadcast_xarray(
                             mat_intensities, floorspace.coords["Type"].values)
+    
+    #TODO remove this quick fix
+    region_coords = np.sort(floorspace.coords["Region"].values.astype(int)).astype(str)
+    floorspace = knowledge_graph.rebroadcast_xarray(floorspace, region_coords, dim ="Region")
 
     return {"stocks": floorspace, "lifetimes": lifetimes, "material_intensities": mat_intensities,
             "knowledge_graph": knowledge_graph}
