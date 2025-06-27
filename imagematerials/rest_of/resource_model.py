@@ -23,7 +23,7 @@ class ResourceModel():
     '''
     def __init__(self, resource_group: str, resource: str, start_year: int, image_mat_available: bool, 
                  end_year = 2017, convert_image = False, convert_to_tons = None, trade_data = False, 
-                 path_input_data = path_input_data):
+                 path_input_data = path_input_data, adapt_mat_factor = None):
         
         # Name resource group
         self.resource_group = resource_group
@@ -49,6 +49,10 @@ class ResourceModel():
         if image_mat_available == True:
             self.image_mat_data = pd.read_csv(f'{path_input_data}/{resource_group}/image_mat_{self.resource}.csv', 
                                               index_col=0)
+            
+            if adapt_mat_factor is not None:
+                # adapt IMAGE Mat factor to external data
+                self.image_mat_data = self.image_mat_data * adapt_mat_factor
         
         # start year & end year of data
         self.start_year = start_year
@@ -104,7 +108,12 @@ class ResourceModel():
         # match IMAGE Mat data to regions of data source
         if match_external_regions == True:
             image_mat_material_regions = sum_total_over_grouped_regions(self.regions_dict, 
-                                                                        self.image_mat_data)
+                                                                      self.image_mat_data)
+            
+            # this will not be cut to start and end years for plotting later
+            self.image_mat_material_regions_total = image_mat_material_regions
+
+            self.image_mat_material_regions_total = image_mat_material_regions
             
             # select years used for analysis
             self.image_mat_material_regions = image_mat_material_regions.loc[str(self.start_year)
@@ -126,11 +135,10 @@ class ResourceModel():
             
 
     def calculate_historic_other_fraction(self):
-        
         self.historic_other_fraction_consumption = self.historic_consumption_data - self.image_mat_material_regions
         
         
-    def calculate_regressors(self, historic_consumption: pd.DataFrame):
+    def calculate_regressors(self, historic_consumption: pd.DataFrame, drop_regions: list = None):
         
         """
         historic_consumption: either total or other fraction (diff) depending what is available
@@ -151,6 +159,14 @@ class ResourceModel():
          self.gdp_pc_groups) = calculate_material_consumption_pc_and_gdp_pc_groups(self.region_groups, 
                                                                                    self.gdp_pc, 
                                                                                    self.cons_capita)
+        
+        # in case a region should not be fitted because of skewed data, use this
+        if drop_regions is not None:
+            # drop regions that are not available in the data
+            # It removes any regions listed in drop_regions from self.cons_pc_groups.
+            self.cons_pc_groups = {k: v for k, v in self.cons_pc_groups.items() if k not in drop_regions}
+            self.gdp_pc_groups = {k: v for k, v in self.gdp_pc_groups.items() if k not in drop_regions}
+            self.region_groups = {k: v for k, v in self.region_groups.items() if k not in drop_regions}
                
     
     def fit_models(self, best_rmse_models: dict):
@@ -169,31 +185,39 @@ class ResourceModel():
                                                                 best_rmse_models)           
             
               
-    def project_on_total(self, regions_list):
+    def project_on_total(self, regions_list: list, start_year_projection = None):
+        start_year_projection = self.end_year if start_year_projection is None else start_year_projection
+
         self.projection_per_region = []
+        self.not_projected_regions = []
 
         # loop over every region
         for region in regions_list:
             # get gdp_pc as predictor
-            gdp_pc_region = self.gdp_pc_100.loc[self.end_year:, region]
+            gdp_pc_region = self.gdp_pc_100.loc[start_year_projection:, region]
             
             # reshape gdp_pc
             gdp_pc_region = gdp_pc_region.to_numpy().reshape(len(gdp_pc_region), 1)
            
             # use predict function and model for projection
             if self.region_model_match.get(region) is None:
-                # print(region, 'could not be projected')
-                continue
-            region_projected_data = self.region_model_match.get(region).predict(gdp_pc_region)
-            # numpy array from nd array to 1d array
-            region_projected_data = region_projected_data.ravel()
-            self.projection_per_region.append(region_projected_data)
+                print(region, 'could not be projected')
+                # fill region with NaN if no model is available
+                self.projection_per_region.append(np.full(len(gdp_pc_region), np.nan))
+                # save not projected region to list
+                self.not_projected_regions.append(region)
+
+            else:
+                region_projected_data = self.region_model_match.get(region).predict(gdp_pc_region)
+                # numpy array from nd array to 1d array
+                region_projected_data = region_projected_data.ravel()
+                self.projection_per_region.append(region_projected_data)
             
             # list of projections of all regions to DataFrame
         self.projection_per_region = pd.DataFrame(self.projection_per_region).transpose()
         self.projection_per_region.columns = self.pop.columns
     
-        self.projection_per_region.index = np.arange(self.end_year, 2101)
+        self.projection_per_region.index = np.arange(start_year_projection, 2101)
         self.projection_per_region_total = self.projection_per_region*self.pop_100
 
     
@@ -228,3 +252,14 @@ class ResourceModel():
         self.projection_per_region_IMAGE.index = np.arange(2017, 2101)
      
         
+    def smooth_out_interpolation_all(self, nr_years_interpolate: int, start_year = 2012):
+        for region in self.projection_per_region_total.columns:
+            start_interpolate = self.historic_other_fraction_consumption[region].loc[start_year:start_year]
+            end_interpolate = self.projection_per_region_total[region].loc[start_year+nr_years_interpolate:start_year+nr_years_interpolate]
+
+            # interpolate between the two points
+            interpolated = pd.Series(np.linspace(start_interpolate.values[0], end_interpolate.values[0], nr_years_interpolate+1), 
+                                    index = self.projection_per_region_total[region].loc[start_year:start_year+nr_years_interpolate].index)
+
+            # replace the values in the projection with the interpolated values
+            self.projection_per_region_total[region].loc[start_year:start_year+nr_years_interpolate] = interpolated 
