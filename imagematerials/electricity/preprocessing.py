@@ -76,9 +76,6 @@ if not (path_base / 'imagematerials' / 'electricity' / 'out_test').is_dir():
 
 
 
-
-
-
 years = YEAR_END - YEAR_START  + 1
 
 
@@ -290,20 +287,9 @@ main_model_factory.simulate(simulation_timeline)
 
 
 #Tests: Check results
-# list(main_model_factory.default)
-# main_model_factory.inflow
-# tv = main_model_factory.inflow
-# # Extract years
-# years = np.arange(tv.timeline.start, tv.timeline.end + 1, tv.timeline.stepsize)
-# # Extract dimension labels and coordinates
-# dim_labels = [d.label for d in tv.dims]
-# dim_coords = {d.label: d.coords for d in tv.dims}
-# # Example: extract regions and types
-# regions = [str(r) for r in dim_coords["Region"]]
-# types = [str(t) for t in dim_coords["Type"]]
+# list(main_model_factory.elctr_gen)
 
-
-
+path_test_plots = Path(path_base, "imagematerials", "electricity", "out_test", "Figures")
 
 ###########################################################################################################
 #%%% Visualize STOCKS Gen. Cap.
@@ -380,7 +366,7 @@ axes[1, 0].legend(fontsize='small', ncol=2, loc='upper left')
 plt.suptitle("Generation - Stocks: Peak Capacity (MW)", fontsize=16)
 plt.tight_layout(rect=[0, 0, 1, 0.98])  # Adjust layout to make room for the suptitle
 plt.tight_layout()
-fig.savefig(path_test_plots / "Gen_stocks_Brazil-CEurope.png", dpi=300)
+# fig.savefig(path_test_plots / "Gen_stocks_Brazil-CEurope.png", dpi=300)
 plt.show()
 
 
@@ -475,60 +461,136 @@ plt.show()
 #%%%% SUM over TECHs - per region
 
 # Sum over technologies dimension
-gcap_stock_reg_mat = gcap_stock.groupby(['flow', 'regions', 'materials']).sum()
-gcap_stock_reg_mat = gcap_stock_reg_mat.droplevel('flow').T
 
-data_all = gcap_stock_reg_mat.copy()
+da_stocks_mat = main_model_factory.stock_materials.copy() #stock_by_cohort_materials
+
+data_all = da_stocks_mat
+data_all = data_all.sel(Type=data_all.Type != '<EMPTY>').sum('Type')
+# data_all = data_all.sel(Type=data_all.Type != '<EMPTY>').sum('Region')
 
 # Pick desired regions by name
 regions = ["Brazil", "C.Europe", "China"] 
 
-types_level1 = [m for m in data_all.columns.get_level_values(1).unique() if m in ["Steel", "Concrete"]]
-types_level2 = [m for m in data_all.columns.get_level_values(1).unique() if m in ["Aluminium", "Cu"]]
-types_level3 = [m for m in data_all.columns.get_level_values(1).unique() if m not in (types_level1 + types_level2)]
+types_level1 = [m for m in data_all.material.values if m in ["Steel", "Concrete"]]
+types_level2 = [m for m in data_all.material.values if m in ["Aluminium", "Cu"]]
+types_level3 = [m for m in data_all.material.values if m not in (types_level1 + types_level2)]
 
-fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(18, 12))
+fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(18, 12), sharex=True)
 linewidth = 2
 s_legend = 12
 s_label = 14
 
+data_plot = data_all.sel(Time=slice(1971, None))/1_000_000 # convert grams to tonnes
+
 for i, region in enumerate(regions):
-    # Top row: Level 1 types
-    for t in types_level1:
-        if (region, t) in data_all.columns:
-            data_plot = data_all[(region, t)]
-            axes[0, i].plot(data_plot.index, data_plot.values, label=t, color=dict_materials_colors[t], linewidth=linewidth)
-    axes[0, i].grid(alpha=0.2)
-    axes[0, i].set_title(region)
-    axes[0, i].legend(loc='upper left', fontsize=s_legend)
+    # Top row: Level 1 materials
+    for mat in types_level1:
+        if (region in data_plot.Region.values) and (mat in data_plot.material.values):
+            data_plot.sel(material=mat, Region=region).plot(ax=axes[0, i], label=mat, color=dict_materials_colors[mat], linewidth=linewidth)
+    axes[0, i].set_title(f"{region}")
+    axes[0, i].set_xlabel(" ")
+    axes[0, i].set_ylabel(" ")
+    axes[0, i].grid(alpha=0.3, linestyle='--')
+    axes[0, i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+    axes[0, i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+    axes[0, 2].legend(loc='upper left', fontsize=s_legend)
 
-    # Middle row: Level 2 types
-    for t in types_level2:
-        if (region, t) in data_all.columns:
-            data_plot = data_all[(region, t)]
-            axes[1, i].plot(data_plot.index, data_plot.values, label=t, color=dict_materials_colors[t], linewidth=linewidth)
-    axes[1, i].grid(alpha=0.2)
-    axes[1, i].legend(loc='upper left', fontsize=s_legend)
+    # Middle row: Level 2 materials
+    for mat in types_level2:
+        if (region in data_plot.Region.values) and (mat in data_plot.material.values):
+            data_plot.sel(material=mat, Region=region).plot(ax=axes[1, i], label=mat, color=dict_materials_colors[mat], linewidth=linewidth)
+    axes[1, i].set_title(f" ")
+    axes[1, i].set_xlabel(" ")
+    axes[1, i].set_ylabel(" ")
+    axes[1, i].grid(alpha=0.3, linestyle='--')
+    axes[1, i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+    axes[1, i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+    axes[1, 2].legend(loc='upper left', fontsize=s_legend)
 
-    # Bottom row: Level 3 types
-    for t in types_level3:
-        if (region, t) in data_all.columns:
-            data_plot = data_all[(region, t)]
-            axes[2, i].plot(data_plot.index, data_plot.values, label=t, color=dict_materials_colors[t], linewidth=linewidth)
-    axes[2, i].grid(alpha=0.2)
-    axes[2, i].set_xlabel("Time")
-    axes[2, i].legend(loc='upper left', fontsize=s_legend)
+    # Bottom row: Level 3 materials
+    for mat in types_level3:
+        if (region in data_plot.Region.values) and (mat in data_plot.material.values):
+            data_plot.sel(material=mat, Region=region).plot(ax=axes[2, i], label=mat, color=dict_materials_colors[mat], linewidth=linewidth)
+    axes[2, i].set_title(f" ")
+    axes[2, i].set_xlabel("Time", fontsize=s_label)
+    axes[2, i].set_ylabel(" ")
+    axes[2, i].grid(alpha=0.3, linestyle='--')
+    axes[2, i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+    axes[2, i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+    axes[2, 2].legend(loc='upper left', fontsize=s_legend)
+    
 
-# Y-axis labels on the left
-axes[0, 0].set_ylabel("Value")
-axes[1, 0].set_ylabel("Value")
-axes[2, 0].set_ylabel("Value")
+axes[0, 0].set_ylabel("Material inflow (t)", fontsize=s_label)
+axes[1, 0].set_ylabel("Material inflow (t)", fontsize=s_label)
+axes[2, 0].set_ylabel("Material inflow (t)", fontsize=s_label)
 
-
-plt.suptitle("Generation - Stock Materials", fontsize=16)
-plt.tight_layout()
+plt.suptitle("Generation - Stocks Materials", fontsize=16)
+plt.tight_layout(rect=[0, 0, 1, 0.98])  # Adjust layout to make room for the suptitle
 region_str = "_".join(regions)
-# fig.savefig(path_elma_out / f"ELMA_Gen_stock-materials_{region_str}_1971.png", dpi=300)
+fig.savefig(path_test_plots / f"Gen_stocks-materials_{region_str}_1971.png", dpi=300)
+fig.savefig(path_test_plots / f"Gen_stocks-materials_{region_str}_1971.svg", dpi=300)
+plt.show()
+
+
+#================================================================================
+#%%%% SUM over TECHs - world
+
+# Sum over technologies dimension
+da_stocks_mat = main_model_factory.stock_materials.copy() #stock_by_cohort_materials
+data_all = da_stocks_mat
+data_all = data_all.sel(Type=data_all.Type != '<EMPTY>').sum('Type').sum('Region')
+
+
+fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(8, 10))
+linewidth = 2
+s_legend = 12
+s_label = 14
+# only from 1971 onwards
+data_plot = data_all/1_000_000 # convert grams to tonnes #.sel(time=slice(1971, None))
+
+# Top row: Level 1 materials
+for mat in types_level1:
+    if mat in data_plot.material.values:
+        data_plot.sel(material=mat).plot(ax=axes[0], label=mat, color=dict_materials_colors[mat], linewidth=linewidth)
+axes[0].set_title(f" ")
+axes[0].set_xlabel(" ")
+axes[0].set_ylabel("Material stocks (t)", fontsize=s_label)
+axes[0].grid(alpha=0.3, linestyle='--')
+axes[0].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+axes[0].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+axes[0].legend(loc='upper left', fontsize=s_legend)
+
+# Middle row: Level 2 materials
+for mat in types_level2:
+    if mat in data_plot.material.values:
+        data_plot.sel(material=mat).plot(ax=axes[1], label=mat, color=dict_materials_colors[mat], linewidth=linewidth)
+
+axes[1].set_title(" ")
+axes[1].set_xlabel(" ")
+axes[1].set_ylabel("Material stocks (t)", fontsize=s_label)
+axes[1].grid(alpha=0.3, linestyle='--')
+axes[1].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+axes[1].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+axes[1].legend(loc='upper left', fontsize=s_legend)
+
+# Bottom row: Level 3 materials
+for mat in types_level3:
+    if mat in data_plot.material.values:
+        data_plot.sel(material=mat).plot(ax=axes[2], label=mat, color=dict_materials_colors[mat], linewidth=linewidth)
+axes[2].set_title(" ")
+axes[2].set_xlabel("Time", fontsize=s_label)
+axes[2].set_ylabel("Material stocks (t)", fontsize=s_label)
+axes[2].grid(alpha=0.3, linestyle='--')
+axes[2].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+axes[2].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+axes[2].legend(loc='upper left', fontsize=s_legend)
+
+plt.suptitle("Generation - Stocks Materials - World", fontsize=16)
+plt.tight_layout()
+# fig.savefig(path_test_plots / "Gen_inflow-materials_world.png", dpi=300)
+# fig.savefig(path_test_plots / "Gen_inflow-materials_world_1971.png", dpi=300)
+# fig.savefig(path_test_plots / "Gen_inflow-materials_world_1971.pdf", dpi=300)
+# fig.savefig(path_test_plots / "Gen_inflow-materials_world_1971.svg", dpi=300)
 plt.show()
 
 
@@ -592,68 +654,65 @@ axes[1, 2].legend(fontsize='small', ncol=2, loc='upper left')
 plt.suptitle("Generation - Inflow: Peak Capacity (MW)", fontsize=16)
 plt.tight_layout(rect=[0, 0, 1, 0.98])  # Adjust layout to make room for the suptitle
 region_str = "_".join(regions)
-fig.savefig(path_test_plots / f"Gen_inflow_{region_str}.png", dpi=300)
+# fig.savefig(path_test_plots / f"Gen_inflow_{region_str}.png", dpi=300)
 plt.show()
 
 
 ###########################################################################################################
-#%% Visualize INFLOW Materials
+#%%% Visualize INFLOW Materials
 ###########################################################################################################
 
-da_x = main_model_factory.inflow_materials.to_array().sum('Type')
+
+#================================================================================
+#%%%% inlfow mat. - per region
+
+data_all = main_model_factory.inflow_materials.to_array().sum('Type')
 
 regions = ['Brazil', 'C.Europe', 'China']  # Brazil and C.Europe
 # regions = da_x.Region.values[:2]  # First 2 regions
 # types_top = da_x.material.values[1:6]   # Types 1–10
 # types_bottom = da_x.material.values[6:12]  # Types 11–20
-types_level1 = [m for m in da_x.material.values if m in ["Steel", "Concrete"]]
-types_level2 = [m for m in da_x.material.values if m in ["Aluminium", "Cu"]]
-types_level3 = [m for m in da_x.material.values if m not in (types_level1 + types_level2)]
+types_level1 = [m for m in data_all.material.values if m in ["Steel", "Concrete"]]
+types_level2 = [m for m in data_all.material.values if m in ["Aluminium", "Cu"]]
+types_level3 = [m for m in data_all.material.values if m not in (types_level1 + types_level2)]
 
 fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(18, 12), sharex=True)
 linewidth = 2
 s_legend = 12
 s_label = 14
 
-data_plot = da_x.sel(time=slice(1971, None))/1_000_000 # convert grams to tonnes
-
-# Scientific notation for y-axis
-formatter = ScalarFormatter(useMathText=True)
-formatter.set_powerlimits((-2, 2))  # Force scientific for large/small numbers
+data_plot = data_all.sel(time=slice(1971, None))/1_000_000 # convert grams to tonnes
 
 for i, region in enumerate(regions):
     # Top row: Level 1 materials
-    for t in types_level1:
-        if (region in data_plot.Region.values) and (t in data_plot.material.values):
-            data_plot.sel(material=t, Region=region).plot(ax=axes[0, i], label=t, color=dict_materials_colors[t], linewidth=linewidth)
+    for mat in types_level1:
+        if (region in data_plot.Region.values) and (mat in data_plot.material.values):
+            data_plot.sel(material=mat, Region=region).plot(ax=axes[0, i], label=mat, color=dict_materials_colors[mat], linewidth=linewidth)
     axes[0, i].set_title(f"{region}")
     axes[0, i].set_xlabel(" ")
     axes[0, i].set_ylabel(" ")
-    axes[0, i].yaxis.set_major_formatter(formatter) # Scientific notation for y-axis
     axes[0, i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
     axes[0, i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
     axes[0, 2].legend(loc='upper left', fontsize=s_legend)
 
     # Middle row: Level 2 materials
-    for t in types_level2:
-        if (region in data_plot.Region.values) and (t in data_plot.material.values):
-            data_plot.sel(material=t, Region=region).plot(ax=axes[1, i], label=t, color=dict_materials_colors[t], linewidth=linewidth)
+    for mat in types_level2:
+        if (region in data_plot.Region.values) and (mat in data_plot.material.values):
+            data_plot.sel(material=mat, Region=region).plot(ax=axes[1, i], label=mat, color=dict_materials_colors[mat], linewidth=linewidth)
     axes[1, i].set_title(f" ")
     axes[1, i].set_xlabel(" ")
     axes[1, i].set_ylabel(" ")
-    axes[1, i].yaxis.set_major_formatter(formatter) # Scientific notation for y-axis
     axes[1, i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
     axes[1, i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
     axes[1, 2].legend(loc='upper left', fontsize=s_legend)
 
     # Bottom row: Level 3 materials
-    for t in types_level3:
-        if (region in data_plot.Region.values) and (t in data_plot.material.values):
-            data_plot.sel(material=t, Region=region).plot(ax=axes[2, i], label=t, color=dict_materials_colors[t], linewidth=linewidth)
+    for mat in types_level3:
+        if (region in data_plot.Region.values) and (mat in data_plot.material.values):
+            data_plot.sel(material=mat, Region=region).plot(ax=axes[2, i], label=mat, color=dict_materials_colors[mat], linewidth=linewidth)
     axes[2, i].set_title(f" ")
     axes[2, i].set_ylabel(" ")
     axes[2, i].set_xlabel("Time", fontsize=s_label)
-    axes[2, i].yaxis.set_major_formatter(formatter) # Scientific notation for y-axis
     axes[2, i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
     axes[2, i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
     axes[2, 2].legend(loc='upper left', fontsize=s_legend)
@@ -666,8 +725,8 @@ axes[2, 0].set_ylabel("Material inflow (t)", fontsize=s_label)
 plt.suptitle("Generation - Inflow Materials", fontsize=16)
 plt.tight_layout(rect=[0, 0, 1, 0.98])  # Adjust layout to make room for the suptitle
 region_str = "_".join(regions)
-# fig.savefig(path_test_plots / f"Gen_inflow-materials_{region_str}_1971.png", dpi=300)
-# fig.savefig(path_test_plots / f"Gen_inflow-materials_{region_str}_1971.svg", dpi=300)
+fig.savefig(path_test_plots / f"Gen_inflow-materials_{region_str}_1971.png", dpi=300)
+fig.savefig(path_test_plots / f"Gen_inflow-materials_{region_str}_1971.svg", dpi=300)
 plt.show()
 
 
@@ -680,22 +739,22 @@ plt.show()
 
 # for i, region in enumerate(regions):
 #     # Top row: 
-#     for t in types_level1:
-#         da_x.sel(material=t, Region=region).plot(ax=axes[0, i], label=t, color=dict_materials_colors[t])
+#     for mat in types_level1:
+#         da_x.sel(material=mat, Region=region).plot(ax=axes[0, i], label=mat, color=dict_materials_colors[mat])
 #     axes[0, i].set_title(f"{region}")
 #     axes[0, i].set_xlabel("Time")
 #     axes[0, i].legend()
 
 #     # Middle row: 
-#     for t in types_level2:
-#         da_x.sel(material=t, Region=region).plot(ax=axes[1, i], label=t, color=dict_materials_colors[t])
+#     for mat in types_level2:
+#         da_x.sel(material=mat, Region=region).plot(ax=axes[1, i], label=mat, color=dict_materials_colors[mat])
 #     axes[1, i].set_title(f"{region}")
 #     axes[1, i].set_xlabel("Time")
 #     axes[1, i].legend(loc ='upper left')
 
 #     # Bottom row: 
-#     for t in types_level3:
-#         da_x.sel(material=t, Region=region).plot(ax=axes[2, i], label=t, color=dict_materials_colors[t])
+#     for mat in types_level3:
+#         da_x.sel(material=mat, Region=region).plot(ax=axes[2, i], label=mat, color=dict_materials_colors[mat])
 #     axes[2, i].set_title(f"{region}")
 #     axes[2, i].set_xlabel("Time")
 #     axes[2, i].legend(loc ='upper left')
@@ -714,8 +773,8 @@ plt.show()
 
 
 
-###########################################################################################################
-#%% Visualize Inflow Materials World
+#================================================================================
+#%%%% inflow mat. - World
 
 dict_materials_colors = {
     'Steel':     '#FF9B85',
@@ -766,18 +825,18 @@ fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(8, 10), sharex=True)
 # data_plot = da_x.sel(time=slice(1971, None))
 
 # Top row: Level 1 materials
-for t in types_level1:
-    if t in data_plot.material.values:
-        data_plot.sel(material=t).plot(ax=axes[0], label=t, color=dict_materials_colors[t])
+for mat in types_level1:
+    if mat in data_plot.material.values:
+        data_plot.sel(material=mat).plot(ax=axes[0], label=mat, color=dict_materials_colors[mat])
 axes[0].set_title("Level 1 Materials")
 axes[0].set_xlabel("Time")
 axes[0].set_ylabel("Magnitude")
 axes[0].legend()
 
 # Middle row: Level 2 materials
-for t in types_level2:
-    if t in data_plot.material.values:
-        data_plot.sel(material=t).plot(ax=axes[1], label=t, color=dict_materials_colors[t])
+for mat in types_level2:
+    if mat in data_plot.material.values:
+        data_plot.sel(material=mat).plot(ax=axes[1], label=mat, color=dict_materials_colors[mat])
     if t == "Cu":
         # Add IEA data for copper
         axes[1].scatter(df_iea_gen_cu.index, df_iea_gen_cu['Cu'], label="IEA Cu solar+wind", color='#00a5cf', s=4)
@@ -788,9 +847,9 @@ axes[1].set_ylabel("Magnitude")
 axes[1].legend(loc='upper left')
 
 # Bottom row: Level 3 materials
-for t in types_level3:
-    if t in data_plot.material.values:
-        data_plot.sel(material=t).plot(ax=axes[2], label=t, color=dict_materials_colors[t])
+for mat in types_level3:
+    if mat in data_plot.material.values:
+        data_plot.sel(material=mat).plot(ax=axes[2], label=mat, color=dict_materials_colors[mat])
 axes[2].set_title("Level 3 Materials")
 axes[2].set_xlabel("Time")
 axes[2].set_ylabel("Magnitude")
@@ -806,6 +865,15 @@ plt.show()
 
 
 
+###########################################################################################################
+#%%% Visualize Outflow Gen. Cap.
+###########################################################################################################
+
+# da_x = main_model_factory.inflow.to_array().sum('Type')
+da_outflow = main_model_factory.outflow_by_cohort.to_array()
+
+data_all = da_inflow
+data_all = data_all.sel(Type=data_all.Type != '<EMPTY>')
 
 
 
@@ -1999,22 +2067,22 @@ axes[2, 1].sharey(axes[2, 0])
 
 for i, region in enumerate(regions):
     # Top row: 
-    for t in types_level1:
-        da_x.sel(material=t, Region=region).plot(ax=axes[0, i], label=t)
+    for mat in types_level1:
+        da_x.sel(material=mat, Region=region).plot(ax=axes[0, i], label=mat)
     axes[0, i].set_title(f"{region}")
     axes[0, i].set_xlabel("Time")
     axes[0, i].legend()
 
     # Middle row: 
-    for t in types_level2:
-        da_x.sel(material=t, Region=region).plot(ax=axes[1, i], label=t)
+    for mat in types_level2:
+        da_x.sel(material=mat, Region=region).plot(ax=axes[1, i], label=mat)
     axes[1, i].set_title(f"{region}")
     axes[1, i].set_xlabel("Time")
     axes[1, i].legend(loc ='upper left')
 
     # Bottom row: 
-    for t in types_level3:
-        da_x.sel(material=t, Region=region).plot(ax=axes[2, i], label=t)
+    for mat in types_level3:
+        da_x.sel(material=mat, Region=region).plot(ax=axes[2, i], label=mat)
     axes[2, i].set_title(f"{region}")
     axes[2, i].set_xlabel("Time")
     axes[2, i].legend(loc ='upper left')
