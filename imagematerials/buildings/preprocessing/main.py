@@ -11,6 +11,7 @@ from imagematerials.buildings.preprocessing.floorspace import (
     compute_housing_type,
     extrapolate_floorspace,
     get_image_floorspace,
+    implement_circular_economy_commercial_floorspace
 )
 from imagematerials.buildings.preprocessing.lifetimes import compute_lifetimes
 from imagematerials.buildings.preprocessing.materials import (
@@ -25,7 +26,6 @@ def buildings_preprocessing(base_directory, climate_policy_config: dict, circula
     base_directory = Path(base_directory)
     database_directory = base_directory / "buildings" / SCENARIO_SELECT
     image_directory = climate_policy_config["config_file_path"]
-    print(image_directory)
     assert database_directory.is_dir(), database_directory
     assert image_directory.is_dir(), image_directory
 
@@ -42,6 +42,11 @@ def buildings_preprocessing(base_directory, climate_policy_config: dict, circula
     # Commercial floorspace [Time, Region, Type]
     floorspace_commercial = floorspace_commercial_rururb.sel(
         {"Type": [x.values for x in floorspace_commercial_rururb.coords["Type"] if x.values not in ["Urban", "Rural"]]})
+    
+    if "base" or "narrow" in circular_economy_config.keys():
+        # Implement circular economy for commercial floorspace
+        # This is only done for the base and narrow scenarios, as the other scenarios do not have a circular economy component
+        floorspace_commercial = implement_circular_economy_commercial_floorspace(floorspace_commercial, circular_economy_config)
 
     # Calculate population ("Total", "Rural", "Urban")
     population = compute_population(image_directory, base_directory)
