@@ -313,8 +313,8 @@ def implement_circular_economy_commercial_floorspace(floorspace_commercial, circ
         commercial_scenario_settings_xr_mapped = region_knowledge_graph.rebroadcast_xarray(commercial_scenario_settings_xr_mapped, region_coords, dim ="Region")
         
         floorspace_commercial = apply_change_per_region(
-        floorspace_commercial, base_year, target_year, 
-        commercial_scenario_settings_xr, implementation_rate)
+            floorspace_commercial, base_year, target_year, 
+            commercial_scenario_settings_xr_mapped, implementation_rate)
         print("implemented 'narrow' for Commercial Buildings")  
 
 # #TODO move to a util file
