@@ -230,7 +230,7 @@ def compute_housing_residential(population, average_m2_capita, housing_type, flo
         regions_mapped = list(region_knowledge_graph.find_relations_inverse(regions, floor_pc_2020.keys()))
         floor_pc_2020_mapped = region_knowledge_graph.rebroadcast_xarray(floor_pc_2020_xr, output_coords=regions_mapped, dim="Region")
         target_vals = floor_pc_2020_mapped
-        current_vals = total_m2_housing_per_cap.sel(Time=2020)\
+        current_vals = total_m2_housing_per_cap.sel(Time=base_year)\
                                             .sum(dim="Type")\
                                             .mean(dim="Area")
 
