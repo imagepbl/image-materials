@@ -663,6 +663,9 @@ fig.savefig(path_elma_out / 'ELMA_Gen_stock-materials_world_1971.png', dpi=300)
 fig.savefig(path_elma_out / 'ELMA_Gen_stock-materials_world_1971.svg', dpi=300)
 plt.show()
 
+
+
+
 #================================================================================
 #%%%% Per TECH category - world
 
@@ -806,15 +809,16 @@ plt.show()
 
 
 ###########################################################################################################
-#%%% TEST TEST Visualize Inflow Materials TEST TEST
+#%%% Visualize Inflow Materials
 ###########################################################################################################
+
+
+#================================================================================
+#%%%% SUM over TECHs - per region
 
 # Sum over technologies dimension
 gcap_inflow_reg_mat = gcap_inflow.groupby(['flow', 'regions', 'materials']).sum()
 gcap_inflow_reg_mat = gcap_inflow_reg_mat.droplevel('flow').T
-
-# Selected regions ------------------------------------------------------
-
 regions = gcap_inflow_reg_mat.columns.get_level_values(0).unique()[:2]  # First 2 regions
 
 types_level1 = [m for m in gcap_inflow_reg_mat.columns.get_level_values(1).unique() if m in ["Steel", "Concrete"]]
@@ -822,7 +826,6 @@ types_level2 = [m for m in gcap_inflow_reg_mat.columns.get_level_values(1).uniqu
 types_level3 = [m for m in gcap_inflow_reg_mat.columns.get_level_values(1).unique() if m not in (types_level1 + types_level2)]
 
 fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(14, 12), sharex=True)
-
 axes[0, 1].sharey(axes[0, 0])
 axes[1, 1].sharey(axes[1, 0])
 axes[2, 1].sharey(axes[2, 0])
@@ -872,7 +875,11 @@ plt.tight_layout()
 plt.show()
 
 
-# World ------------------------------------------------------
+
+
+#================================================================================
+#%%%% SUM over TECHs - world
+
 dict_materials_colors = {
     'Steel':     '#FF9B85',
     'Aluminium': '#B9FAF8',
@@ -891,7 +898,6 @@ dict_materials_colors = {
 
 # data IEA ---------------------------------------------------------------------
 # values for APS  scenario (NZE scenario)
-
 # Cu -------------
 years = np.array([2024, 2030, 2035, 2040, 2045, 2050])
 values_solar = np.array([1657, 2803, 2726, 2626, 2448, 2758])*1000 # values in kt -> to kg
@@ -902,11 +908,12 @@ df_iea_gen_cu = pd.DataFrame({ # lines & transformers, copper
     'Cu': values
 })
 df_iea_gen_cu.set_index('Year', inplace=True)
-
 #------- ---------------------------------------------------------------------
 
+# Sum over technologies dimension
+gcap_inflow_reg_mat = gcap_inflow.groupby(['flow', 'regions', 'materials']).sum()
+gcap_inflow_reg_mat = gcap_inflow_reg_mat.droplevel('flow').T
 gcap_inflow_mat = gcap_inflow_reg_mat.groupby(level='materials', axis=1).sum()
-
 
 types_level1 = ["Steel", "Concrete"]
 types_level2 = ["Aluminium", "Cu"]
@@ -915,7 +922,6 @@ types_level3 = [m for m in gcap_inflow_mat.columns if m not in (types_level1 + t
 
 
 fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(8, 10), sharex=True)
-
 data_all = gcap_inflow_mat.copy()
 # Top row: types_level1
 for t in types_level1:
