@@ -239,27 +239,27 @@ def compute_housing_residential(population, average_m2_capita, housing_type, flo
         total_m2_housing_per_cap.loc[{"Region": regions_mapped}] = total_m2_housing_per_cap.sel(Region = regions_mapped) * scaling_factors
         print("implemented 'base' for Residential Buildings")
 
-    if 'narrow' in circular_economy_config.keys():
-        base_year = circular_economy_config["narrow"]["buildings"]["base_year"]
-        target_year = circular_economy_config["narrow"]["buildings"]["target_year"]
+    #if 'narrow' in circular_economy_config.keys():
+    #    base_year = circular_economy_config["narrow"]["buildings"]["base_year"]
+    #    target_year = circular_economy_config["narrow"]["buildings"]["target_year"]
         
-        residential_scenario_settings = circular_economy_config['narrow']["buildings"]['residential']['m2_change_pc']
-        implementation_rate = circular_economy_config['narrow']['buildings']['implementation_rate']
+    #    residential_scenario_settings = circular_economy_config['narrow']["buildings"]['residential']['m2_change_pc']
+    #    implementation_rate = circular_economy_config['narrow']['buildings']['implementation_rate']
 
-        residential_scenario_settings_xr = xr.DataArray(
-            list(residential_scenario_settings.values()),
-            coords={"Region": list(residential_scenario_settings.keys())},
-            dims=["Region"],
-            name="residential_scenario_settings"
-        )
+    #    residential_scenario_settings_xr = xr.DataArray(
+    #        list(residential_scenario_settings.values()),
+    #        coords={"Region": list(residential_scenario_settings.keys())},
+    #        dims=["Region"],
+    #        name="residential_scenario_settings"
+    #    )
 
-        regions_mapped = list(region_knowledge_graph.find_relations_inverse(regions, residential_scenario_settings.keys()))
-        residential_scenario_settings_xr_mapped = region_knowledge_graph.rebroadcast_xarray(residential_scenario_settings_xr, output_coords=regions_mapped, dim="Region")
+    #    regions_mapped = list(region_knowledge_graph.find_relations_inverse(regions, residential_scenario_settings.keys()))
+    #    residential_scenario_settings_xr_mapped = region_knowledge_graph.rebroadcast_xarray(residential_scenario_settings_xr, output_coords=regions_mapped, dim="Region")
         
-        total_m2_housing_per_cap = apply_change_per_region(
-            total_m2_housing_per_cap, base_year, target_year, 
-            residential_scenario_settings_xr_mapped, implementation_rate)
-        print("implemented 'narrow' for Residential Buildings")
+    #    total_m2_housing_per_cap = apply_change_per_region(
+    #        total_m2_housing_per_cap, base_year, target_year, 
+    #        residential_scenario_settings_xr_mapped, implementation_rate)
+    #    print("implemented 'narrow' for Residential Buildings")
 
     total_m2_housing = total_m2_housing_per_cap * population.sel({"Area": ["Rural", "Urban"]})
     floorspace_residential = merge_dims(total_m2_housing, "Type", "Area")
@@ -316,6 +316,8 @@ def implement_circular_economy_commercial_floorspace(floorspace_commercial, circ
             floorspace_commercial, base_year, target_year, 
             commercial_scenario_settings_xr_mapped, implementation_rate)
         print("implemented 'narrow' for Commercial Buildings")  
+
+    return floorspace_commercial
 
 # #TODO move to a util file
 # # Define a function to calculate Gompertz growth
