@@ -465,11 +465,13 @@ class EndOfLife(prism.Model):
                         'Heavy Freight Trucks - BEV', 'Heavy Freight Trucks - FCV','Heavy Freight Trucks - HEV', 'Heavy Freight Trucks - ICE','Heavy Freight Trucks - PHEV', 'Heavy Freight Trucks - Trolley'
         ],
             'urban': ["Appartment - Urban","Detached - Urban","High-rise - Urban", "Semi-detached - Urban",
-                        "Office","Retail+","Hotels+","Govt+"
+        
         ],
-
             'rural': ["Appartment - Rural","Detached - Rural","High-rise - Rural", "Semi-detached - Rural",
         ],
+            'commercial': ["Office","Retail+","Hotels+","Govt+"
+        ],
+
         #   'generation':[], 
         #   'grid':[],
         #   'storage': []
@@ -477,11 +479,21 @@ class EndOfLife(prism.Model):
         }
         self.sum_outflow[t].loc[:] = 0
         for outflow in outflow_by_cohort_materials:
-            for supertype, subtypes in type_dict.items():
-                if subtypes[0] not in outflow[t].coords["Type"]:
-                    continue
+            outflow_t = outflow[t] 
 
-                sum_outflow = outflow[t].sel(Type=subtypes).sum("Type")
+            sample_type = outflow_t.coords["Type"].values[0]
+            if sample_type in type_dict['passenger'] + type_dict['freight']:
+                outflow_t = outflow_t / 1e9  # kg → Mt
+            elif sample_type in type_dict['urban'] + type_dict['rural']:
+                outflow_t = outflow_t / 1e3  # kt → Mt
+            else:
+                raise ValueError(f"Unknown Type for unit conversion: {sample_type}")
+            
+            for supertype, subtypes in type_dict.items():
+                if subtypes[0] not in outflow_t.coords["Type"]:
+                    continue
+                sum_outflow = outflow_t.sel(Type=subtypes).sum("Type")
+                
                 coords = {"Type": supertype, "material": sum_outflow.coords["material"], "Region": sum_outflow.coords["Region"]}
                 input_coords = {"Time":t, "Type":supertype}
                 
