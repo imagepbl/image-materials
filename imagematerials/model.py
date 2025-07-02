@@ -223,15 +223,19 @@ class MaterialIntensities(prism.Model):
     # Data dependencies
     input_data: tuple[str] = ("material_intensities", "inflow",
                               "stock_by_cohort", "outflow_by_cohort")
-    output_data: tuple[str] = ("stock_by_cohort_materials", "inflow_materials",
-                               "outflow_by_cohort_materials")
+    output_data: tuple[str] = ("stock_materials", "inflow_materials",
+                               "outflow_materials")
+    # output_data: tuple[str] = ("stock_by_cohort_materials", "inflow_materials",
+    #                            "outflow_by_cohort_materials")
 
     # Output data
     inflow_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
-    outflow_by_cohort_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
+    outflow_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
+    # outflow_by_cohort_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
 
     def compute_initial_values(self, time: prism.Timeline):
-        self.stock_by_cohort_materials = xr.DataArray(
+        # self.stock_by_cohort_materials = xr.DataArray(
+        self.stock_materials = xr.DataArray(
             0.0, dims=("Time", "Region", "Type", "material"),
             coords={"Time": self.Time,
                     # "Cohort": coordinates["Time"].values,
@@ -242,8 +246,10 @@ class MaterialIntensities(prism.Model):
     def compute_values(self, time: prism.Time, inflow, stock_by_cohort, outflow_by_cohort):
         t, dt = time.t, time.dt
         self.inflow_materials[t] = inflow[t]*self.material_intensities.sel(Cohort=t).drop_vars("Cohort")
-        self.outflow_by_cohort_materials[t] = (outflow_by_cohort[t]*self.material_intensities).sum("Cohort")
-        self.stock_by_cohort_materials.loc[t] = (stock_by_cohort.loc[t]*self.material_intensities).sum("Cohort")
+        #self.outflow_by_cohort_materials[t] = (outflow_by_cohort[t]*self.material_intensities) #.sum("Cohort")
+        self.outflow_materials[t] = (outflow_by_cohort[t]*self.material_intensities).sum("Cohort")
+        #self.stock_by_cohort_materials.loc[t] = (stock_by_cohort.loc[t]*self.material_intensities) #.sum("Cohort")
+        self.stock_materials.loc[t] = (stock_by_cohort.loc[t]*self.material_intensities).sum("Cohort")
 
 
 @prism.interface
