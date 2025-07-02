@@ -292,21 +292,6 @@ def create_region_graph():
     for region in target_regions:
         region_knowledge_graph.add(Node(region))
 
-    # Assign IMAGE regions to their respective target regions
-    # for region in ["RCAM", "BRA", "RSAM"]:
-    #     region_knowledge_graph[region].inherits_from="Latin America"
-    # for region in ["NAF", "ME"]:
-    #     region_knowledge_graph[region].inherits_from="Middle East and Northern Africa"
-    # for region in ["WAF", "EAF", "SAF", "RSAF"]:
-    #     region_knowledge_graph[region].inherits_from="Subsaharan Africa"
-    # for region in ["UKR", "STAN", "RUS"]:
-    #     region_knowledge_graph[region].inherits_from="Reforming Economies"
-    # for region in ["KOR", "SEAS", "INDO", "RSAS"]:
-    #     region_knowledge_graph[region].inherits_from="Other Asia"
-    # for region in ["TUR", "OCE", "MEX"]:
-    #     region_knowledge_graph[region].inherits_from="Other OECD"
-
-
     # Add numeric region nodes first with full synonyms
     numeric_region_map = {
         "1": ["Canada", "CAN"],
