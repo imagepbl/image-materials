@@ -124,7 +124,7 @@ class NLS_Model:
         # Fit parameters for NonLinearRegression
         self._y = self._y.reshape(-1)
         self._X = self._X.reshape(-1)  # TODO: Implement for multiple regressors
-        self._coefs, _ = curve_fit(self._model_func, self._X, self._y, maxfev=5000) #bounds=(-100, 100.000), p0=[1, 1000, 1000], method='lm'
+        self._coefs, _ = curve_fit(self._model_func, self._X, self._y, maxfev=10_000, bounds=(0, 10.000)) #bounds=(-100, 100.000), p0=[1, 1000, 1000], method='lm'
         # Estimate R^2
         # self._r2 = self._lin_reg.score(self._X, self._y)
         self._r2 = np.nan
@@ -267,7 +267,7 @@ class NLI_Model(NLS_Model):
 
 class GOMPERTZ_Model(NLS_Model):
     def _transform_X(self, X: np.array):
-        X = np.divide(X, 1_000)
+        X = np.divide(X, 10_000)
         return X
     
     def _transform_y(self, y: np.array):
@@ -283,7 +283,7 @@ class GOMPERTZ_Model(NLS_Model):
 
 class LG_Model(NLS_Model): #logistic_growth_model
     def _transform_X(self, X: np.array):
-        X = np.divide(X, 1_000)
+        X = np.divide(X, 10_000)
         return X
     
     def _transform_y(self, y: np.array):
