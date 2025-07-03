@@ -43,7 +43,7 @@ def _get_vehicles_sector(prep_data):
     knowledge_graph = prep_data["knowledge_graph"]
     new_prep_data = rebroadcast_prep_data(prep_data, knowledge_graph, dim="Type",
                                           output_coords=output_coords_type)
-    region_coords = np.sort(prep_data["stocks"].coords["Region"].values.astype(int)).astype(str)[:-2]
+    region_coords = np.sort(prep_data["stocks"].coords["Region"].values.astype(int)).astype(str)
     new_prep_data = rebroadcast_prep_data(new_prep_data, knowledge_graph, dim="Region",
                                           output_coords=region_coords)
 
