@@ -66,7 +66,7 @@ class KnowledgeGraph():
         """
         for name in [node.name] + node.synonyms:
             if name in self:
-                raise ValueError("Node already exists.")
+                raise ValueError(f"Node {name} already exists.")
         for parent in node.inherits_from:
             if parent not in self:
                 raise ValueError(f"Parent {parent} of {node.name} does not exist.")
