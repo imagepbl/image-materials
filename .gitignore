@@ -5,6 +5,8 @@ examples/all.prof
 scripts/*.nc
 
 imagematerials/electricity/out_test/
+data/raw/SSP2_M_CP/
+data/raw/SSP2_VLHO/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

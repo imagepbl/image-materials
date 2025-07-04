@@ -42,7 +42,7 @@ scen_folder = scenario + "_" + variant
 #YOUR_DIR = "C:\\Users\\Admin\\surfdrive\\Projects\\IRP\\GRO23\\Modelling\\2060\\ELMA"   # Change the running directory here
 # os.chdir(YOUR_DIR)
 # path_current = Path.cwd() # 
-path_current = Path(__file__).resolve().parent # absolute path of file
+path_current = Path().resolve() # absolute path of file
 path_base = path_current.parent.parent # base path of the project -> image-materials
 # NEW
 path_image_output = Path(path_base, "data", "raw", scenario, "EnergyServices")
@@ -62,7 +62,23 @@ assert path_external_data_scenario.is_dir()
 sys.path.append(str(path_current))
 from dynamic_stock_model import DynamicStockModel as DSM
 
+# NEW --------------------------------------------------
+from imagematerials.electricity.constants import (
+    gen_tech_to_category,
+    dict_gentech_styles,
+    dict_gentechcat_colors,
+    dict_materials_colors,
+    dict_grid_colors
+)
 
+from imagematerials.electricity.electr_external_data import (
+    df_iea_cu_aps,
+    df_iea_cu_nzs,
+    df_iea_co_aps,
+    df_iea_mn_aps,
+    df_iea_ni_aps
+)
+# --------------------------------------------------
 
 
 
@@ -493,29 +509,27 @@ gcap_materials_all = gcap_materials_all.reorder_levels([3, 2, 1, 0, 5, 4]) / 100
 #================================================================================
 #%%%% SUM over TECHs - per region
 
-dict_materials_colors = {
-    'Steel':     '#FF9B85',
-    'Aluminium': '#B9FAF8',
-    'Concrete':  '#AAF683',
-    'Plastics':  '#60D394',
-    'Glass':     '#EE6055',
-    'Cu':        '#FB6376',
-    'Nd':        '#B8D0EB',
-    'Ta':        '#B298DC',
-    'Co':        "#F669C0",
-    'Pb':        '#6F2DBD',
-    'Mn':        "#31E7E7",
-    'Ni':        '#FCB1A6',
-    'Other':     '#FFD97D'
-}
+# dict_materials_colors = {
+#     'Steel':     '#FF9B85',
+#     'Aluminium': '#B9FAF8',
+#     'Concrete':  '#AAF683',
+#     'Plastics':  '#60D394',
+#     'Glass':     '#EE6055',
+#     'Cu':        '#FB6376',
+#     'Nd':        '#B8D0EB',
+#     'Ta':        '#B298DC',
+#     'Co':        "#F669C0",
+#     'Pb':        '#6F2DBD',
+#     'Mn':        "#31E7E7",
+#     'Ni':        '#FCB1A6',
+#     'Other':     '#FFD97D'
+# }
 
 # Sum over technologies dimension
 gcap_stock_reg_mat = gcap_stock.groupby(['flow', 'regions', 'materials']).sum()
 gcap_stock_reg_mat = gcap_stock_reg_mat.droplevel('flow').T
 
-data_all = gcap_stock_reg_mat.copy()
-
-# Selected regions ------------------------------------------------------
+data_all = gcap_stock_reg_mat.copy()/1_000_000  # convert grams to tonnes
 
 # Pick desired regions by name
 regions = ["Brazil", "C.Europe", "China"] 
@@ -536,8 +550,10 @@ for i, region in enumerate(regions):
             data_plot = data_all[(region, t)]
             axes[0, i].plot(data_plot.index, data_plot.values, label=t, color=dict_materials_colors[t], linewidth=linewidth)
     axes[0, i].grid(alpha=0.2)
-    axes[0, i].set_title(region)
-    axes[0, i].legend(loc='upper left', fontsize=s_legend)
+    axes[0, i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+    axes[0, i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+    axes[0, i].set_title(region, fontsize=s_label)
+    axes[0, 2].legend(loc='upper left', fontsize=s_legend)
 
     # Middle row: Level 2 types
     for t in types_level2:
@@ -545,7 +561,9 @@ for i, region in enumerate(regions):
             data_plot = data_all[(region, t)]
             axes[1, i].plot(data_plot.index, data_plot.values, label=t, color=dict_materials_colors[t], linewidth=linewidth)
     axes[1, i].grid(alpha=0.2)
-    axes[1, i].legend(loc='upper left', fontsize=s_legend)
+    axes[1, i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+    axes[1, i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+    axes[1, 2].legend(loc='upper left', fontsize=s_legend)
 
     # Bottom row: Level 3 types
     for t in types_level3:
@@ -553,16 +571,18 @@ for i, region in enumerate(regions):
             data_plot = data_all[(region, t)]
             axes[2, i].plot(data_plot.index, data_plot.values, label=t, color=dict_materials_colors[t], linewidth=linewidth)
     axes[2, i].grid(alpha=0.2)
-    axes[2, i].set_xlabel("Time")
-    axes[2, i].legend(loc='upper left', fontsize=s_legend)
+    axes[2, i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+    axes[2, i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+    axes[2, i].set_xlabel("Time", fontsize=s_label)
+    axes[2, 2].legend(loc='upper left', fontsize=s_legend)
 
 # Y-axis labels on the left
-axes[0, 0].set_ylabel("Value")
-axes[1, 0].set_ylabel("Value")
-axes[2, 0].set_ylabel("Value")
+axes[0, 0].set_ylabel("Material Stock (t)", fontsize=s_label)
+axes[1, 0].set_ylabel("Material Stock (t)", fontsize=s_label)
+axes[2, 0].set_ylabel("Material Stock (t)", fontsize=s_label)
 
 
-plt.suptitle("Generation - Stock Materials", fontsize=16)
+plt.suptitle("ELMA: Generation - Stock Materials", fontsize=16)
 plt.tight_layout()
 region_str = "_".join(regions)
 fig.savefig(path_elma_out / f"ELMA_Gen_stock-materials_{region_str}_1971.png", dpi=300)
@@ -574,21 +594,21 @@ plt.show()
 #================================================================================
 #%%%% SUM over TECHs - world
 
-dict_materials_colors = {
-    'Steel':     '#FF9B85',
-    'Aluminium': '#B9FAF8',
-    'Concrete':  '#AAF683',
-    'Plastics':  '#60D394',
-    'Glass':     '#EE6055',
-    'Cu':        '#FB6376',
-    'Nd':        '#B8D0EB',
-    'Ta':        '#B298DC',
-    'Co':        '#F669C0',
-    'Pb':        '#6F2DBD',
-    'Mn':        "#31E7E7",
-    'Ni':        '#FCB1A6',
-    'Other':     '#FFD97D'
-}
+# dict_materials_colors = {
+#     'Steel':     '#FF9B85',
+#     'Aluminium': '#B9FAF8',
+#     'Concrete':  '#AAF683',
+#     'Plastics':  '#60D394',
+#     'Glass':     '#EE6055',
+#     'Cu':        '#FB6376',
+#     'Nd':        '#B8D0EB',
+#     'Ta':        '#B298DC',
+#     'Co':        '#F669C0',
+#     'Pb':        '#6F2DBD',
+#     'Mn':        "#31E7E7",
+#     'Ni':        '#FCB1A6',
+#     'Other':     '#FFD97D'
+# }
 
 # data IEA ---------------------------------------------------------------------
 # values for APS  scenario (NZE scenario)
@@ -658,9 +678,9 @@ axes[2].tick_params(axis='both', which='major', labelsize=s_legend)
 
 plt.suptitle('ELMA: Generation - Stocks Materials - World', fontsize=16)
 plt.tight_layout()
-fig.savefig(path_elma_out / 'ELMA_Gen_stock-materials_world_1971.png', dpi=300)
+# fig.savefig(path_elma_out / 'ELMA_Gen_stock-materials_world_1971.png', dpi=300)
 # fig.savefig(path_elma_out / 'ELMA_Gen_stock-materials_world_1971.pdf', dpi=300)
-fig.savefig(path_elma_out / 'ELMA_Gen_stock-materials_world_1971.svg', dpi=300)
+# fig.savefig(path_elma_out / 'ELMA_Gen_stock-materials_world_1971.svg', dpi=300)
 plt.show()
 
 
@@ -670,52 +690,52 @@ plt.show()
 #%%%% Per TECH category - world
 
 # Define mapping: technology -> category
-gen_tech_to_category = {
-    "Solar PV": 'Solar', 
-    "Solar PV residential": 'Solar',
-    "CSP": 'Solar', 
-    "Wind onshore": 'Wind',
-    "Wind offshore": 'Wind', 
-    "Wave": 'Other Renewables',
-    "Hydro": 'Other Renewables',
-    "Other Renewables": 'Other Renewables',
-    "Geothermal": 'Other Renewables',
-    'Hydrogen power': 'Hydrogen',
-    "Nuclear": 'Nuclear',
-    "Conv. Coal": 'Fossil',
-    "Conv. Oil": 'Fossil',
-    "Conv. Natural Gas": 'Fossil',
-    "Waste": 'Fossil',
-    "IGCC": 'Fossil',
-    "OGCC": 'Fossil',
-    "NG CC": 'Fossil',
-    "Biomass CC": 'Biomass',
-    "Coal + CCS": 'Fossil + CCS',
-    "Oil/Coal + CCS": 'Fossil + CCS',
-    "Natural Gas + CCS": 'Fossil + CCS',
-    "Biomass + CCS": 'Biomass',
-    "CHP Coal": 'Fossil',
-    "CHP Oil": 'Fossil',
-    "CHP Natural Gas": 'Fossil',
-    "CHP Biomass": 'Biomass',
-    "CHP Geothermal": 'Other Renewables',
-    "CHP Hydrogen": 'Hydrogen',
-    "CHP Coal + CCS": 'Fossil + CCS',
-    "CHP Oil + CCS": 'Fossil + CCS',
-    "CHP Natural Gas + CCS": 'Fossil + CCS',
-    "CHP Biomass + CCS": 'Biomass'
-}
+# gen_tech_to_category = {
+#     "Solar PV": 'Solar', 
+#     "Solar PV residential": 'Solar',
+#     "CSP": 'Solar', 
+#     "Wind onshore": 'Wind',
+#     "Wind offshore": 'Wind', 
+#     "Wave": 'Other Renewables',
+#     "Hydro": 'Other Renewables',
+#     "Other Renewables": 'Other Renewables',
+#     "Geothermal": 'Other Renewables',
+#     'Hydrogen power': 'Hydrogen',
+#     "Nuclear": 'Nuclear',
+#     "Conv. Coal": 'Fossil',
+#     "Conv. Oil": 'Fossil',
+#     "Conv. Natural Gas": 'Fossil',
+#     "Waste": 'Fossil',
+#     "IGCC": 'Fossil',
+#     "OGCC": 'Fossil',
+#     "NG CC": 'Fossil',
+#     "Biomass CC": 'Biomass',
+#     "Coal + CCS": 'Fossil + CCS',
+#     "Oil/Coal + CCS": 'Fossil + CCS',
+#     "Natural Gas + CCS": 'Fossil + CCS',
+#     "Biomass + CCS": 'Biomass',
+#     "CHP Coal": 'Fossil',
+#     "CHP Oil": 'Fossil',
+#     "CHP Natural Gas": 'Fossil',
+#     "CHP Biomass": 'Biomass',
+#     "CHP Geothermal": 'Other Renewables',
+#     "CHP Hydrogen": 'Hydrogen',
+#     "CHP Coal + CCS": 'Fossil + CCS',
+#     "CHP Oil + CCS": 'Fossil + CCS',
+#     "CHP Natural Gas + CCS": 'Fossil + CCS',
+#     "CHP Biomass + CCS": 'Biomass'
+# }
 
-dict_gentechcat_colors = {
-    'Solar':             "#FBBF09",
-    'Wind':              "#4BABFF",
-    'Biomass':           "#42DD88",
-    'Other Renewables':  "#B6F795",
-    'Hydrogen':          '#B9FAF8',
-    'Nuclear':           "#B06106",
-    'Fossil':            "#575354",
-    'Fossil + CCS':      "#BBB8B9"
-}
+# dict_gentechcat_colors = {
+#     'Solar':             "#FBBF09",
+#     'Wind':              "#4BABFF",
+#     'Biomass':           "#42DD88",
+#     'Other Renewables':  "#B6F795",
+#     'Hydrogen':          '#B9FAF8',
+#     'Nuclear':           "#B06106",
+#     'Fossil':            "#575354",
+#     'Fossil + CCS':      "#BBB8B9"
+# }
 
 # data IEA ---------------------------------------------------------------------
 # values for APS  scenario (NZE scenario)
@@ -818,60 +838,63 @@ plt.show()
 
 # Sum over technologies dimension
 gcap_inflow_reg_mat = gcap_inflow.groupby(['flow', 'regions', 'materials']).sum()
-gcap_inflow_reg_mat = gcap_inflow_reg_mat.droplevel('flow').T
-regions = gcap_inflow_reg_mat.columns.get_level_values(0).unique()[:2]  # First 2 regions
+data_all = gcap_inflow_reg_mat.droplevel('flow').T / 1_000_000  # Convert from gram to tonnes (t)
 
-types_level1 = [m for m in gcap_inflow_reg_mat.columns.get_level_values(1).unique() if m in ["Steel", "Concrete"]]
-types_level2 = [m for m in gcap_inflow_reg_mat.columns.get_level_values(1).unique() if m in ["Aluminium", "Cu"]]
-types_level3 = [m for m in gcap_inflow_reg_mat.columns.get_level_values(1).unique() if m not in (types_level1 + types_level2)]
+#------------
+regions = ["Brazil", "C.Europe", "China"] 
 
-fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(14, 12), sharex=True)
-axes[0, 1].sharey(axes[0, 0])
-axes[1, 1].sharey(axes[1, 0])
-axes[2, 1].sharey(axes[2, 0])
+types_level1 = [m for m in data_all.columns.get_level_values(1).unique() if m in ["Steel", "Concrete"]]
+types_level2 = [m for m in data_all.columns.get_level_values(1).unique() if m in ["Aluminium", "Cu"]]
+types_level3 = [m for m in data_all.columns.get_level_values(1).unique() if m not in (types_level1 + types_level2)]
 
-data_all = gcap_inflow_reg_mat.copy()
+fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(18, 12))
+linewidth = 2
+s_legend = 12
+s_label = 14
 
 for i, region in enumerate(regions):
-    # Top row: 
+    # Top row: Level 1 types
     for t in types_level1:
-        # Select the column using (region, material) tuple
         if (region, t) in data_all.columns:
-            data_plot = data_all[(region, t)]  # This gives you a Series with years as index
-            axes[0, i].plot(data_plot.index, data_plot.values, label=t)
-    
-    axes[0, i].set_title(f"{region}")
-    axes[0, i].set_xlabel("Time")
-    axes[0, i].legend()
+            data_plot = data_all[(region, t)]
+            axes[0, i].plot(data_plot.index, data_plot.values, label=t, color=dict_materials_colors[t], linewidth=linewidth)
+    axes[0, i].grid(alpha=0.2)
+    axes[0, i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+    axes[0, i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+    axes[0, i].set_title(region, fontsize=s_label)
+    axes[0, 2].legend(loc='upper left', fontsize=s_legend)
 
-    # Middle row: 
+    # Middle row: Level 2 types
     for t in types_level2:
         if (region, t) in data_all.columns:
             data_plot = data_all[(region, t)]
-            axes[1, i].plot(data_plot.index, data_plot.values, label=t)
-    
-    axes[1, i].set_title(f"{region}")
-    axes[1, i].set_xlabel("Time")
-    axes[1, i].legend(loc='upper left')
+            axes[1, i].plot(data_plot.index, data_plot.values, label=t, color=dict_materials_colors[t], linewidth=linewidth)
+    axes[1, i].grid(alpha=0.2)
+    axes[1, i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+    axes[1, i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+    axes[1, 2].legend(loc='upper left', fontsize=s_legend)
 
-    # Bottom row: 
+    # Bottom row: Level 3 types
     for t in types_level3:
         if (region, t) in data_all.columns:
             data_plot = data_all[(region, t)]
-            axes[2, i].plot(data_plot.index, data_plot.values, label=t)
-    
-    axes[2, i].set_title(f"{region}")
-    axes[2, i].set_xlabel("Time")
-    axes[2, i].legend(loc='upper left')
+            axes[2, i].plot(data_plot.index, data_plot.values, label=t, color=dict_materials_colors[t], linewidth=linewidth)
+    axes[2, i].grid(alpha=0.2)
+    axes[2, i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+    axes[2, i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+    axes[2, i].set_xlabel("Time", fontsize=s_label)
+    axes[2, 2].legend(loc='upper left', fontsize=s_legend)
 
-# Label only left side with y-axis label
-axes[0, 0].set_ylabel("Value")
-axes[1, 0].set_ylabel("Value")
-axes[2, 0].set_ylabel("Value")
+# Y-axis labels on the left
+axes[0, 0].set_ylabel("Material Inflow (t)", fontsize=s_label)
+axes[1, 0].set_ylabel("Material Inflow (t)", fontsize=s_label)
+axes[2, 0].set_ylabel("Material Inflow (t)", fontsize=s_label)
 
-plt.suptitle("Generation - Inflow Materials", fontsize=16)
+
+plt.suptitle("ELMA: Generation - Inflow Materials", fontsize=16)
 plt.tight_layout()
-# fig.savefig(path_elma_out / "ELMA_Gen_inflow-materials_1971_Brazil-CEurope.png", dpi=300)
+region_str = "_".join(regions)
+fig.savefig(path_elma_out / f"ELMA_Gen_inflow-materials_{region_str}_1971.png", dpi=300)
 plt.show()
 
 
@@ -880,21 +903,21 @@ plt.show()
 #================================================================================
 #%%%% SUM over TECHs - world
 
-dict_materials_colors = {
-    'Steel':     '#FF9B85',
-    'Aluminium': '#B9FAF8',
-    'Concrete':  '#AAF683',
-    'Plastics':  '#60D394',
-    'Glass':     '#EE6055',
-    'Cu':        '#FB6376',
-    'Nd':        '#B8D0EB',
-    'Ta':        '#B298DC',
-    'Co':        '#A663CC',
-    'Pb':        '#6F2DBD',
-    'Mn':        "#31E7E7",
-    'Ni':        '#FCB1A6',
-    'Other':     '#FFD97D'
-}
+# dict_materials_colors = {
+#     'Steel':     '#FF9B85',
+#     'Aluminium': '#B9FAF8',
+#     'Concrete':  '#AAF683',
+#     'Plastics':  '#60D394',
+#     'Glass':     '#EE6055',
+#     'Cu':        '#FB6376',
+#     'Nd':        '#B8D0EB',
+#     'Ta':        '#B298DC',
+#     'Co':        '#A663CC',
+#     'Pb':        '#6F2DBD',
+#     'Mn':        "#31E7E7",
+#     'Ni':        '#FCB1A6',
+#     'Other':     '#FFD97D'
+# }
 
 # data IEA ---------------------------------------------------------------------
 # values for APS  scenario (NZE scenario)
@@ -965,6 +988,142 @@ plt.show()
 
 
 
+
+
+
+###########################################################################################################
+#%%% Visualize Outflow Materials
+###########################################################################################################
+
+
+#================================================================================
+#%%%% O-M: SUM over TECHs - per region
+
+# Sum over technologies dimension
+gcap_outflow_reg_mat = gcap_outflow.groupby(['flow', 'regions', 'materials']).sum()
+data_all = gcap_outflow_reg_mat.droplevel('flow').T / 1_000_000  # Convert from gram to tonnes (t)
+
+#------------
+regions = ["Brazil", "C.Europe", "China"] 
+
+types_level1 = [m for m in data_all.columns.get_level_values(1).unique() if m in ["Steel", "Concrete"]]
+types_level2 = [m for m in data_all.columns.get_level_values(1).unique() if m in ["Aluminium", "Cu"]]
+types_level3 = [m for m in data_all.columns.get_level_values(1).unique() if m not in (types_level1 + types_level2)]
+
+fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(18, 12))
+linewidth = 2
+s_legend = 12
+s_label = 14
+
+for i, region in enumerate(regions):
+    # Top row: Level 1 types
+    for t in types_level1:
+        if (region, t) in data_all.columns:
+            data_plot = data_all[(region, t)]
+            axes[0, i].plot(data_plot.index, data_plot.values, label=t, color=dict_materials_colors[t], linewidth=linewidth)
+    axes[0, i].grid(alpha=0.2)
+    axes[0, i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+    axes[0, i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+    axes[0, i].set_title(region, fontsize=s_label)
+    axes[0, 2].legend(loc='upper left', fontsize=s_legend)
+
+    # Middle row: Level 2 types
+    for t in types_level2:
+        if (region, t) in data_all.columns:
+            data_plot = data_all[(region, t)]
+            axes[1, i].plot(data_plot.index, data_plot.values, label=t, color=dict_materials_colors[t], linewidth=linewidth)
+    axes[1, i].grid(alpha=0.2)
+    axes[1, i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+    axes[1, i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+    axes[1, 2].legend(loc='upper left', fontsize=s_legend)
+
+    # Bottom row: Level 3 types
+    for t in types_level3:
+        if (region, t) in data_all.columns:
+            data_plot = data_all[(region, t)]
+            axes[2, i].plot(data_plot.index, data_plot.values, label=t, color=dict_materials_colors[t], linewidth=linewidth)
+    axes[2, i].grid(alpha=0.2)
+    axes[2, i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+    axes[2, i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+    axes[2, i].set_xlabel("Time", fontsize=s_label)
+    axes[2, 2].legend(loc='upper left', fontsize=s_legend)
+
+# Y-axis labels on the left
+axes[0, 0].set_ylabel("Material Outflow (t)", fontsize=s_label)
+axes[1, 0].set_ylabel("Material Outflow (t)", fontsize=s_label)
+axes[2, 0].set_ylabel("Material Outflow (t)", fontsize=s_label)
+
+
+plt.suptitle("ELMA: Generation - Outflow Materials", fontsize=16)
+plt.tight_layout()
+region_str = "_".join(regions)
+fig.savefig(path_elma_out / f"ELMA_Gen_outflow-materials_{region_str}_1971.png", dpi=300)
+plt.show()
+
+
+
+
+#================================================================================
+#%%%% O-M: SUM over TECHs - world
+
+
+# Sum over technologies dimension
+data_all = gcap_outflow.groupby(['flow', 'regions', 'materials']).sum()
+data_all = data_all.droplevel('flow').T
+data_all = data_all.groupby(level='materials', axis=1).sum()/1_000_000  # Convert from gram to tonnes (t)
+
+types_level1 = ["Steel", "Concrete"]
+types_level2 = ["Aluminium", "Cu"]
+types_level3 = [m for m in data_all.columns if m not in (types_level1 + types_level2)]
+
+
+
+fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(8, 10))
+linewidth = 2
+s_legend = 12
+s_label = 14
+# Top row: types_level1
+for t in types_level1:
+    if t in data_all.columns:
+        data_plot = data_all[t]
+        axes[0].plot(data_plot.index, data_plot.values, label=t, color=dict_materials_colors[t])
+axes[0].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+axes[0].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+axes[0].set_xlabel(" ")
+axes[0].set_ylabel("Material Outflow (t)", fontsize=s_label)
+axes[0].legend(loc='upper left', fontsize=s_legend)
+
+# Middle row: types_level2
+for t in types_level2:
+    if t in data_all.columns:
+        data_plot = data_all[t]
+        axes[1].plot(data_plot.index, data_plot.values, label=t, color=dict_materials_colors[t])
+    if t == "Cu":
+        # Add IEA data for copper
+        axes[1].scatter(df_iea_gen_cu.index, df_iea_gen_cu['Cu'], label="IEA Cu solar+wind", color='#00a5cf', s=4)
+axes[1].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+axes[1].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+axes[1].set_xlabel(" ")
+axes[1].set_ylabel("Material Outflow (t)", fontsize=s_label)
+axes[1].legend(loc='upper left', fontsize=s_legend)
+
+# Bottom row: types_level3
+for t in types_level3:
+    if t in data_all.columns:
+        data_plot = data_all[t]
+        axes[2].plot(data_plot.index, data_plot.values, label=t, color=dict_materials_colors[t])
+axes[2].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+axes[2].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+axes[2].set_xlabel("Time", fontsize=s_label)
+axes[2].set_ylabel("Material Outflow (t)", fontsize=s_label)
+axes[2].legend(loc='upper left', fontsize=s_legend)
+
+plt.suptitle("ELMA: Generation - Outflow Materials - World", fontsize=16)
+plt.tight_layout()
+fig.savefig(path_elma_out / "ELMA_Gen_outflow-materials_world_1971.png", dpi=300)
+# fig.savefig(path_elma_out / "ELMA_Gen_inflow-materials_world_1971.pdf", dpi=300)
+# fig.savefig(path_elma_out / "ELMA_Gen_inflow-materials_world_1971.svg", dpi=300)
+plt.show()
 
 
 

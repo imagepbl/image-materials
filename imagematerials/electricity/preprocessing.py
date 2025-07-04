@@ -69,7 +69,8 @@ scen_folder = SCEN + "_" + VARIANT
 # path_base = Path().resolve() # TODO absolute path of file "preprocessing.py" ? current solution can differ depending on IDE used (?) 
 path_current = Path().resolve()
 path_base = path_current.parent.parent # base path of the project -> image-materials
-path_image_output = Path(path_base, "data", "raw", SCEN, "EnergyServices")
+# path_image_output = Path(path_base, "data", "raw", SCEN, "EnergyServices")
+path_image_output = Path(path_base, "data", "raw", scen_folder, "EnergyServices")
 path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
 path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scen_folder)
 
@@ -296,7 +297,7 @@ main_model_factory.simulate(simulation_timeline)
 #Tests: Check results
 # list(main_model_factory.elctr_gen)
 
-path_test_plots = Path(path_base, "imagematerials", "electricity", "out_test", "Figures")
+path_test_plots = Path(path_base, "imagematerials", "electricity", "out_test", scen_folder, "Figures")
 
 ###########################################################################################################
 #%%% Visualize STOCKS Gen. Cap.
@@ -578,19 +579,16 @@ plt.show()
 #================================================================================
 #%%%% SUM over TECHs - world
 
-# Sum over technologies dimension
 da_stocks_mat = main_model_factory.stock_materials.copy() #stock_by_cohort_materials
 data_all = da_stocks_mat
 data_all = data_all.sel(Type=data_all.Type != '<EMPTY>').sum('Type').sum('Region')
-
+# data_plot = data_all/1_000_000 # convert grams to tonnes
+data_plot = data_all.sel(Time=slice(1971, None))/1_000_000 # only from 1971 onwards, convert grams to tonnes
 
 fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(8, 10))
 linewidth = 2
 s_legend = 12
 s_label = 14
-
-# data_plot = data_all/1_000_000 # convert grams to tonnes
-data_plot = data_all.sel(Time=slice(1971, None))/1_000_000 # only from 1971 onwards
 
 # Top row: Level 1 materials
 for mat in types_level1:
@@ -635,6 +633,144 @@ plt.tight_layout()
 # fig.savefig(path_test_plots / "Gen_stocks-materials_world_1971.png", dpi=300)
 # fig.savefig(path_test_plots / "Gen_stocks-materials_world_1971.pdf", dpi=300)
 # fig.savefig(path_test_plots / "Gen_stocks-materials_world_1971.svg", dpi=300)
+plt.show()
+
+
+
+#================================================================================
+#%%%% Per TECH category - world - STACKED
+
+# Define mapping: technology -> category
+# gen_tech_to_category = {
+#     "Solar PV": 'Solar', 
+#     "Solar PV residential": 'Solar',
+#     "CSP": 'Solar', 
+#     "Wind onshore": 'Wind',
+#     "Wind offshore": 'Wind', 
+#     "Wave": 'Other Renewables',
+#     "Hydro": 'Other Renewables',
+#     "Other Renewables": 'Other Renewables',
+#     "Geothermal": 'Other Renewables',
+#     'Hydrogen power': 'Hydrogen',
+#     "Nuclear": 'Nuclear',
+#     "Conv. Coal": 'Fossil',
+#     "Conv. Oil": 'Fossil',
+#     "Conv. Natural Gas": 'Fossil',
+#     "Waste": 'Fossil',
+#     "IGCC": 'Fossil',
+#     "OGCC": 'Fossil',
+#     "NG CC": 'Fossil',
+#     "Biomass CC": 'Biomass',
+#     "Coal + CCS": 'Fossil + CCS',
+#     "Oil/Coal + CCS": 'Fossil + CCS',
+#     "Natural Gas + CCS": 'Fossil + CCS',
+#     "Biomass + CCS": 'Biomass',
+#     "CHP Coal": 'Fossil',
+#     "CHP Oil": 'Fossil',
+#     "CHP Natural Gas": 'Fossil',
+#     "CHP Biomass": 'Biomass',
+#     "CHP Geothermal": 'Other Renewables',
+#     "CHP Hydrogen": 'Hydrogen',
+#     "CHP Coal + CCS": 'Fossil + CCS',
+#     "CHP Oil + CCS": 'Fossil + CCS',
+#     "CHP Natural Gas + CCS": 'Fossil + CCS',
+#     "CHP Biomass + CCS": 'Biomass'
+# }
+
+# dict_gentechcat_colors = {
+#     'Solar':             "#FBBF09",
+#     'Wind':              "#4BABFF",
+#     'Biomass':           "#42DD88",
+#     'Other Renewables':  "#B6F795",
+#     'Hydrogen':          '#B9FAF8',
+#     'Nuclear':           "#B06106",
+#     'Fossil':            "#575354",
+#     'Fossil + CCS':      "#BBB8B9"
+# }
+
+
+data_all = main_model_factory.stock_materials.copy() #stock_by_cohort_materials
+data_all = data_all.sel(Type=data_all.Type != '<EMPTY>', Time=slice(1971, None))/1_000_000 # only from 1971 onwards, convert grams to tonnes
+data_all = data_all.sum('Region')
+
+# Step 1: Get technology level from index
+tech_level = data_all.Type.values
+# Step 2: Map technologies to categories
+category = pd.Series(tech_level).map(gen_tech_to_category)
+
+# Step 3: Add this mapping as a new coordinate to the DataArray
+data_all.coords['tech_category'] = ('Type', category)
+
+# Step 4: Group by this new coordinate and sum over Type
+data_all = data_all.groupby('tech_category').sum(dim='Type')
+
+# # Step 2: Build a new MultiIndex with the category as level 3
+# new_index = pd.MultiIndex.from_arrays([
+#     gcap_stock.index.get_level_values(0),  # 'stock'
+#     gcap_stock.index.get_level_values(1),  # Region
+#     gcap_stock.index.get_level_values(2),  # Material
+#     category                                # Mapped Category
+# ], names=gcap_stock.index.names)
+# # Step 3: Assign new index
+# gcap_stock_techcat = gcap_stock.copy()
+# gcap_stock_techcat.index = new_index
+# # Step 5: Group by (region, material, category), sum
+# gcap_stock_techcat = gcap_stock_techcat.groupby(
+#     [gcap_stock_techcat.index.get_level_values(1),  # Region
+#      gcap_stock_techcat.index.get_level_values(2),  # Material
+#      gcap_stock_techcat.index.get_level_values(3)]  # Category
+# ).sum()
+# gcap_stock_techcat.index.names = ['regions', 'materials', 'technology_category']
+# gcap_stock_techcat = gcap_stock_techcat.T # index = years
+
+# gcap_stock_techcat_mat = gcap_stock_techcat.groupby(level=['materials','technology_category'], axis=1).sum()
+# data_all = gcap_stock_techcat_mat.copy()
+# rearrange column order for the stacked plot
+desired_order = ['Fossil', 'Fossil + CCS', 'Nuclear', 'Hydrogen', 'Biomass', 'Wind', 'Solar', 'Other Renewables']
+# new_columns = []
+# for material in data_all.material.values:
+#     for cat in desired_order:
+#         if (material, cat) in data_all.columns:
+#             new_columns.append((material, cat))
+# data_all = data_all.loc[:, new_columns]
+
+
+
+materials = ['Steel', 'Aluminium', 'Nd', 'Co']
+fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(14, 10))
+s_legend = 12
+s_label = 14
+for i, material in enumerate(materials):
+    row = i // 2
+    col = i % 2
+    # Select data for this material (columns under this material)
+    data_plot = data_all.sel(material = material)
+    data_plot = data_plot.drop_vars('material')
+    data_plot = data_plot.to_pandas()
+    data_plot = data_plot[desired_order] # Reorder columns
+    colors = [dict_gentechcat_colors[cat] for cat in data_plot.columns] # select colors based on technology category
+    data_plot.plot.area(ax=axes[row, col], stacked=True, color = colors)
+
+    axes[row, col].set_title(material, fontsize=15)
+    axes[row, col].set_ylabel('Material stock (t)', fontsize=s_label)
+    handles, labels = axes[row, col].get_legend_handles_labels() # reverse the order of legend to match the stacked plot
+    axes[row, col].legend(handles[::-1], labels[::-1], loc='upper left', fontsize=s_legend)
+
+    # Scientific notation for y-axis
+    formatter = ScalarFormatter(useMathText=True)
+    formatter.set_powerlimits((-2, 2))  # Force scientific for large/small numbers
+    axes[row, col].yaxis.set_major_formatter(formatter)
+    axes[row, col].ticklabel_format(style='sci', axis='y', scilimits=(0, 0))
+    axes[row, col].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+
+for col in range(2): # Set x-labels only for bottom row
+    axes[1, col].set_xlabel('Year', fontsize=s_label)
+
+plt.suptitle("Generation - Stocks Materials per Tech. Cat. - World", fontsize=16)
+plt.tight_layout(rect=[0, 0, 1, 0.98])  # Adjust layout to make room for the suptitle
+fig.savefig(path_elma_out / "Gen_stock-materials-techcat_st-al-nd-co_world_1971.png", dpi=300)
+# fig.savefig(path_elma_out / "ELMA_Gen_stock-materials-techcat_st-al-nd-co_world_1971.pdf", dpi=300)
+# fig.savefig(path_elma_out / "ELMA_Gen_stock-materials-techcat_st-al-nd-co_world_1971.svg", dpi=300)
 plt.show()
 
 
@@ -1071,9 +1207,7 @@ plt.show()
 data_all = main_model_factory.outflow_materials.to_array().sum('Type')
 
 regions = ['Brazil', 'C.Europe', 'China']  # Brazil and C.Europe
-# regions = da_x.Region.values[:2]  # First 2 regions
-# types_top = da_x.material.values[1:6]   # Types 1–10
-# types_bottom = da_x.material.values[6:12]  # Types 11–20
+
 types_level1 = [m for m in data_all.material.values if m in ["Steel", "Concrete"]]
 types_level2 = [m for m in data_all.material.values if m in ["Aluminium", "Cu"]]
 types_level3 = [m for m in data_all.material.values if m not in (types_level1 + types_level2)]
@@ -1083,8 +1217,8 @@ linewidth = 2
 s_legend = 12
 s_label = 14
 
-data_plot = data_all/1_000_000 # convert grams to tonnes
-# data_plot = data_all.sel(time=slice(1971, None))/1_000_000 
+# data_plot = data_all/1_000_000 # convert grams to tonnes
+data_plot = data_all.sel(time=slice(1971, None))/1_000_000 
 
 for i, region in enumerate(regions):
     # Top row: Level 1 materials
@@ -1132,7 +1266,7 @@ plt.suptitle("Generation - Outflow Materials", fontsize=16)
 plt.tight_layout(rect=[0, 0, 1, 0.98])  # Adjust layout to make room for the suptitle
 region_str = "_".join(regions)
 # fig.savefig(path_test_plots / f"Gen_outflow-materials_{region_str}.png", dpi=300)
-# fig.savefig(path_test_plots / f"Gen_outflow-materials_{region_str}_1971.png", dpi=300)
+fig.savefig(path_test_plots / f"Gen_outflow-materials_{region_str}_1971.png", dpi=300)
 # fig.savefig(path_test_plots / f"Gen_outflow-materials_{region_str}_1971.svg", dpi=300)
 plt.show()
 
@@ -1509,6 +1643,45 @@ plt.show()
 
 
 
+###########################################################################################################
+#%%% Other
+###########################################################################################################
+
+
+#%%%% Material Intenisties ------------------------------------------------------------
+
+# Load data
+df = pd.read_csv(path_external_data_scenario / 'composition_generation.csv',index_col=[0,1])
+df = df.reset_index()
+# Clean up empty rows
+df = df[df['g/MW'] != '<EMPTY>']
+
+# Ensure year is numeric
+df['year'] = df['year'].astype(int)
+n_rows = 4
+n_cols = 3
+
+fig, axes = plt.subplots(n_rows, n_cols, figsize=(16, 12), sharex=True)
+axes = axes.flatten()
+# Plot each material
+for i, material in enumerate(df.columns[2:]):
+    ax = axes[i]
+    for tech in df['g/MW'].unique():
+        sub = df[df['g/MW'] == tech]
+        if len(sub) == 2:
+            ax.plot(sub['year'], sub[material], marker='o', label=tech)
+    ax.set_title(material)
+    # ax.grid(True)
+    if i % n_cols == 0:
+        ax.set_ylabel('[g/MW]')
+    if i >= (n_rows - 1) * n_cols:
+        ax.set_xlabel('Year')
+
+# One shared legend outside the plot
+handles, labels = ax.get_legend_handles_labels()
+fig.legend(handles, labels, bbox_to_anchor=(0.9, 0.5), loc='center left')
+plt.tight_layout(rect=[0, 0, 0.85, 1])
+plt.show()
 
 
 

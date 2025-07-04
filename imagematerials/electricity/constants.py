@@ -31,8 +31,8 @@ COHORTS = 50
 SCEN = "SSP2"
 # CP or 2D (Add "_RE" for Resource Efficiency)
 VARIANT = "2D_RE"
-# PROJECT = "mock_project"
-# FOLDER = SCEN + "_" + VARIANT
+# VARIANT = "M_CP"
+# VARIANT = "VLHO"
 # OUTPUT_FOLDER = base_dir.joinpath("..", "..", "output", PROJECT, FOLDER)
 
 # Sensitivity Analysis - default, high_stor, high_grid
