@@ -210,18 +210,6 @@ IAI_TO_IMAGE_CLASSES = {
     ]
 }
 
-copper_regions = {
-    'copper_regions': ['Other North America countries',
-                    'USA',
-                    'South America',
-                    'Europe',
-                    'Rest of Asia',
-                    'Africa',
-                    'Oceania',
-                    'India',
-                    'Japan',
-                    'Korea'],
-    'china': ['China']}
 
 aluminium_regions = {
     'all_together' : ['Africa', 'Asia (ex China)', 
