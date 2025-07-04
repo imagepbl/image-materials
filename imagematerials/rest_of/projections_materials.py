@@ -24,7 +24,7 @@ from imagematerials.rest_of.regression_models_classes import (Log_Log_Model, Sem
 
 #%% Estimate models
 
-def estimate_models(cons_capita: pd.DataFrame, gdp_pc: pd.DataFrame):
+def estimate_models(cons_capita: pd.DataFrame, gdp_pc: pd.DataFrame, bounds:tuple):
     """
     Calcualte regression for every mathematical model and every region(group).
     
@@ -75,7 +75,7 @@ def estimate_models(cons_capita: pd.DataFrame, gdp_pc: pd.DataFrame):
         bw_model = None
         
     try:
-        gompertz_model = GOMPERTZ_Model(cons_capita, gdp_pc)
+        gompertz_model = GOMPERTZ_Model(cons_capita, gdp_pc, bounds = bounds)
     except RuntimeError as e:
         print('Gompertz model', e)
         gompertz_model = None   
@@ -139,7 +139,8 @@ def rmse_r2_models(models_output: tuple) -> pd.DataFrame:
 
 def estimate_models_per_region_group(regions_groups_dict: dict, 
                                      cons_pc_groups: dict,
-                                     gdp_pc_groups: dict):
+                                     gdp_pc_groups: dict,
+                                     bounds: dict = None) -> tuple:
     """
     Estimate all regression models for all groups of regions. Builds on estimate_models and rmse_r2_models
 
@@ -164,12 +165,22 @@ def estimate_models_per_region_group(regions_groups_dict: dict,
     """
     model_groups = {}
     rmse_r2_groups = {}
-    
+
+    if bounds is None:
+        bounds = ([0, 0, 0], [10, 10, 10])  # default values for bounds if not provided
+
     for region_group in regions_groups_dict.keys():
-        print(region_group)
-        model_groups[region_group] = estimate_models(cons_pc_groups.get(region_group), gdp_pc_groups.get(region_group))
+        if isinstance(bounds, dict):
+            group_bounds = bounds.get(region_group, ([0, 0, 0], [10, 10, 10]))
+        else:
+            group_bounds = bounds
+        model_groups[region_group] = estimate_models(
+            cons_pc_groups.get(region_group),
+            gdp_pc_groups.get(region_group),
+            group_bounds
+        )
         rmse_r2_groups[region_group] = rmse_r2_models(model_groups[region_group])
-    
+        
     merged_rmse_r2 = pd.concat(rmse_r2_groups.values(), axis=1, keys=rmse_r2_groups.keys())
     
     return model_groups, rmse_r2_groups, merged_rmse_r2
