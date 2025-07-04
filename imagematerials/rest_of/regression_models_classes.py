@@ -114,7 +114,7 @@ class OLS_Model:
 #%% NLS class
 
 class NLS_Model:
-    def __init__(self, y: pd.DataFrame, *X: tuple[pd.DataFrame]):
+    def __init__(self, y: pd.DataFrame, *X: tuple[pd.DataFrame], bounds=([0, 0, 0], [10, 10, 10])):
         # Prepare regression data
         y, X = prepare_regression_data(y, *X)
         self._y = self._transform_y(y)
@@ -124,9 +124,10 @@ class NLS_Model:
         # Fit parameters for NonLinearRegression
         self._y = self._y.reshape(-1)
         self._X = self._X.reshape(-1)  # TODO: Implement for multiple regressors
-        self._coefs, _ = curve_fit(self._model_func, self._X, self._y, maxfev=10_000, bounds=(0, 10.000)) #bounds=(-100, 100.000), p0=[1, 1000, 1000], method='lm'
-        # Estimate R^2
-        # self._r2 = self._lin_reg.score(self._X, self._y)
+        self._coefs, _ = curve_fit(self._model_func, 
+                                   self._X, 
+                                   self._y, maxfev=10_000, 
+                                   bounds=bounds) #p0=[1, 1000, 1000]) #, method='lm'
         self._r2 = np.nan
         # Estimate RMSE
         y_pred = self.predict_transformed(self._X)  # y in transformed form
@@ -260,9 +261,9 @@ class NLI_Model(NLS_Model):
     def _inverse_transform_y(self, y: np.array):
         return y
         
-    def _model_func(self, X: np.ndarray, a: float, b: float):
+    def _model_func(self, X: np.ndarray, a: float, b: float, c: float):
         ''' function of non linear inverse (nli)'''
-        return a * np.exp(b / X)
+        return a * np.exp(b / X) +c*0
 
 
 class GOMPERTZ_Model(NLS_Model):
