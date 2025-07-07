@@ -185,6 +185,11 @@ class MaintenanceLinear(prism.Model):
         
         # Cache maintenance types for performance
         self.maintenance_types = set(self.maintenance_material_fractions.coords["Type"].values)
+        self.has_maintenance = xr.DataArray(
+            [str(vtype) in self.maintenance_types for vtype in self.Type.values],
+            dims=["Type"], 
+            coords={"Type": self.Type.values}
+        )
         
         print(f"Initialized MaintenanceLinear with {len(self.maintenance_types)} maintenance types")
     
@@ -194,12 +199,14 @@ class MaintenanceLinear(prism.Model):
         current_stock = stock_by_cohort.loc[t]
         
         # Calculate vehicle ages
-        cohort_years = current_stock.coords["Cohort"].values.astype(int)
-        ages = xr.DataArray(
-            t - cohort_years, 
-            dims=["Cohort"], 
-            coords={"Cohort": current_stock.coords["Cohort"]}
-        )
+        #cohort_years = current_stock.coords["Cohort"].values.astype(int)
+        #ages = xr.DataArray(
+        #    t - cohort_years, 
+        #    dims=["Cohort"], 
+        #    coords={"Cohort": current_stock.coords["Cohort"]}
+        #)
+
+        ages = t-current_stock.coords["Cohort"]
         
         # Get vehicle lifetimes
         lifetimes = self.vehicle_lifetime_maintenance.sel(Type=current_stock.coords["Type"])
@@ -212,12 +219,8 @@ class MaintenanceLinear(prism.Model):
         age_factors = start_factor + slope * ages_bc
         
         # Apply maintenance mask (set to 0 for types without maintenance)
-        has_maintenance = xr.DataArray(
-            [str(vtype) in self.maintenance_types for vtype in current_stock.coords["Type"]],
-            dims=["Type"], 
-            coords={"Type": current_stock.coords["Type"]}
-        )
-        age_factors = xr.where(has_maintenance, age_factors, 0)
+        
+        age_factors = xr.where(self.has_maintenance, age_factors, 0)
         
         # Calculate maintenance with age factors and sum over cohorts
         maintenance = (
