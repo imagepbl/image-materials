@@ -14,7 +14,7 @@ from imagematerials.read_mym import read_mym_df
 def compute_population(image_directory, base_directory):
     # Compute total/rural/urban populations
     tot_population_xr, _ = compute_total_population(image_directory, base_directory)
-    rurpop_total, urbpop_total = compute_rur_urb_pop(image_directory, base_directory)
+    urbpop_total, rurpop_total = compute_rur_urb_pop(image_directory, base_directory)
 
     #TODO: use function from util if possible? problem: extra_dims?
     rurpop_total_xr = xr.DataArray(

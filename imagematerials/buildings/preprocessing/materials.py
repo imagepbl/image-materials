@@ -8,7 +8,7 @@ idx = pd.IndexSlice
 
 
 def compute_mat_intensities_residential(database_dir):
-    building_materials = pd.read_csv(database_dir / 'Building_materials.csv', index_col = [0,1,2])   # Building_materials; unit: kg/m2; meaning: the average material use per square meter (by building type, by region & by area)
+    building_materials = pd.read_csv(database_dir / 'Building_materials_rasmi.csv', index_col = [0,1,2])   # Building_materials; unit: kg/m2; meaning: the average material use per square meter (by building type, by region & by area)
     building_materials_dynamic   = pd.DataFrame(index=pd.MultiIndex.from_product([list(range(HIST_YEAR, END_YEAR + 1)), list(range(1,27)), list(range(1,5))]), columns=building_materials.columns)
 
     # interpolate material intensity data from files (residential buildings)

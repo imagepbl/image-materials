@@ -210,18 +210,6 @@ IAI_TO_IMAGE_CLASSES = {
     ]
 }
 
-copper_regions = {
-    'copper_regions': ['Other North America countries',
-                    'USA',
-                    'South America',
-                    'Europe',
-                    'Rest of Asia',
-                    'Africa',
-                    'Oceania',
-                    'India',
-                    'Japan',
-                    'Korea'],
-    'china': ['China']}
 
 aluminium_regions = {
     'all_together' : ['Africa', 'Asia (ex China)', 
@@ -277,7 +265,8 @@ models_output_dict = {
     'non-linear inverse model' : 5,
     'gompertz model' : 6,
     'logistic growth model' : 7,
-    'limited growth model' : 8 # (beschraenktes Wachstum)
+    'limited growth model' : 8,
+    'log gauss saturate model' : 9
     }
 
 #%% parser function to write query function based on variable names of DIM1 and DIM2

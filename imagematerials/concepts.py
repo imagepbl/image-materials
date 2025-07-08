@@ -66,7 +66,7 @@ class KnowledgeGraph():
         """
         for name in [node.name] + node.synonyms:
             if name in self:
-                raise ValueError("Node already exists.")
+                raise ValueError(f"Node {name} already exists.")
         for parent in node.inherits_from:
             if parent not in self:
                 raise ValueError(f"Parent {parent} of {node.name} does not exist.")
@@ -284,6 +284,14 @@ def create_region_graph():
     
     region_knowledge_graph = KnowledgeGraph()
 
+    # Add target regions as main nodes (non-numeric)
+    target_regions = [
+        "Latin America", "Middle East and Northern Africa",
+        "Other Asia", "Other OECD", "Reforming Economies", "Subsaharan Africa"
+    ]
+    for region in target_regions:
+        region_knowledge_graph.add(Node(region))
+
     # Add numeric region nodes first with full synonyms
     numeric_region_map = {
         "1": ["Canada", "CAN"],
@@ -314,31 +322,22 @@ def create_region_graph():
         "26": ["Rest of Southern Africa", "RSAF", "Rest S.Africa"]
     }
 
+    subregion_division = {
+        "Latin America": {"RCAM", "BRA", "RSAM"},
+        "Middle East and Northern Africa": {"NAF", "ME"},
+        "Subsaharan Africa": {"WAF", "EAF", "SAF", "RSAF"},
+        "Reforming Economies": {"UKR", "STAN", "RUS"},
+        "Other Asia": {"KOR", "SEAS", "INDO", "RSAS"},
+        "Other OECD": {"TUR", "OCE", "MEX"},
+    }
+
     for number, synonyms in numeric_region_map.items():
-        region_knowledge_graph.add(Node(number))
-        region_knowledge_graph[number].synonyms = synonyms
-
-    # Add target regions as main nodes (non-numeric)
-    target_regions = [
-        "Latin America", "Middle East and Northern Africa",
-        "Other Asia", "Other OECD", "Reforming Economies", "Subsaharan Africa"
-    ]
-    for region in target_regions:
-        region_knowledge_graph.add(Node(region))
-
-    # Assign IMAGE regions to their respective target regions
-    for region in ["RCAM", "BRA", "RSAM"]:
-        region_knowledge_graph[region].inherits_from="Latin America"
-    for region in ["NAF", "ME"]:
-        region_knowledge_graph[region].inherits_from="Middle East and Northern Africa"
-    for region in ["WAF", "EAF", "SAF", "RSAF"]:
-        region_knowledge_graph[region].inherits_from="Subsaharan Africa"
-    for region in ["UKR", "STAN", "RUS"]:
-        region_knowledge_graph[region].inherits_from="Reforming Economies"
-    for region in ["KOR", "SEAS", "INDO", "RSAS"]:
-        region_knowledge_graph[region].inherits_from="Other Asia"
-    for region in ["TUR", "OCE", "MEX"]:
-        region_knowledge_graph[region].inherits_from="Other OECD"
+        inherits_from = None
+        for super_region, regions in subregion_division.items():
+            if len(regions.intersection(synonyms)) > 0:
+                inherits_from = super_region
+                break
+        region_knowledge_graph.add(Node(number, synonyms=synonyms, inherits_from=inherits_from))
 
     return region_knowledge_graph
 

@@ -15,7 +15,6 @@ from imagematerials.rest_of.correlation_materials import (calculate_gdp, summari
                                    sum_total_over_grouped_regions)
 
 from imagematerials.rest_of.projections_materials import estimate_models_per_region_group, match_regions_to_best_model
-from imagematerials.read_mym import read_mym_df
 
 class ResourceModel():
     '''
@@ -169,14 +168,17 @@ class ResourceModel():
             self.region_groups = {k: v for k, v in self.region_groups.items() if k not in drop_regions}
                
     
-    def fit_models(self, best_rmse_models: dict):
+    def fit_models(self, best_rmse_models: dict, bounds:dict=None):
         # fit all groups of regions to mathematical models and do statistical analysis (RMSE and R2)
+        
         (self.model_groups, 
-         self.rmse_r2_groups, 
-         self.merged_rmse_r2) = estimate_models_per_region_group(self.region_groups, 
-                                                                 self.cons_pc_groups, 
-                                                                 self.gdp_pc_groups)
+        self.rmse_r2_groups, 
+        self.merged_rmse_r2) = estimate_models_per_region_group(self.region_groups, 
+                                                                self.cons_pc_groups, 
+                                                                self.gdp_pc_groups,
+                                                                bounds)
     
+
         # select best fitting model per group of region and match them back to every 26 IMAGE regions
         (self.best_rmse_models, 
          self.region_model_match) = match_regions_to_best_model(self.rmse_r2_groups, 

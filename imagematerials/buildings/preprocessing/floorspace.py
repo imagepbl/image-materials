@@ -208,7 +208,7 @@ def compute_average_m2_capita(base_directory):
     average_m2_capita.coords["Region"] = [str(x.values) for x in average_m2_capita.coords["Region"]]
     return average_m2_capita
 
-def compute_housing_residential(population, average_m2_capita, housing_type, floorspace_rururb, circular_economy_config):
+def compute_housing_residential(population, average_m2_capita, housing_type, floorspace_rururb, circular_economy_config:[]):
     m2_housing_per_capita = average_m2_capita * housing_type
     m2_housing_share = m2_housing_per_capita / m2_housing_per_capita.sum(["Type"])
     total_m2_housing_per_cap = m2_housing_share*floorspace_rururb
