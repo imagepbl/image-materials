@@ -428,7 +428,7 @@ def stock_tail(stock):
     return stock_new
 
 # first define a Function in which the stock-driven DSM is applied to return (the moving average of the) inflow & outflow for all regions
-def inflow_outflow(stock, lifetime, material_intensity, key):
+def inflow_outflow_original(stock, lifetime, material_intensity, key):
 
     initial_year = stock.first_valid_index()
     outflow_mat  = pd.DataFrame(index=pd.MultiIndex.from_product([range(startyear,outyear+1), material_intensity.columns]), columns=stock.columns)
@@ -443,9 +443,10 @@ def inflow_outflow(stock, lifetime, material_intensity, key):
     stdev_list = [mean_list[i] * stdev_mult for i in range(0,len(stock))]  
 
     for region in list(stock.columns):
-        # define and run the DSM                                                                                            # list with the fixed (=mean) lifetime of grid elements, given for every timestep (1926-2100), needed for the DSM as it allows to change lifetime for different cohort (even though we keep it constant)
+        # define and run the DSM
+        # list with the fixed (=mean) lifetime of grid elements, given for every timestep (1926-2100), needed for the DSM as it allows to change lifetime for different cohort (even though we keep it constant)
         DSMforward = DSM(t = np.arange(0,len(stock[region]),1), s=np.array(stock[region]), lt = {'Type': 'FoldedNormal', 'Mean': np.array(mean_list), 'StdDev': np.array(stdev_list)})  # definition of the DSM based on a folded normal distribution
-        out_sc, out_oc, out_i = DSMforward.compute_stock_driven_model(NegativeInflowCorrect = True)                                                                 # run the DSM, to give 3 outputs: stock_by_cohort, outflow_by_cohort & inflow_per_year
+        out_sc, out_oc, out_i = DSMforward.compute_stock_driven_model(NegativeInflowCorrect = True)  # run the DSM, to give 3 outputs: stock_by_cohort, outflow_by_cohort & inflow_per_year
 
         #convert to pandas df before multiplication with material intensity
         index=list(range(first_year_grid, outyear+1))
@@ -460,11 +461,58 @@ def inflow_outflow(stock, lifetime, material_intensity, key):
            out_in_mat.loc[idx[:,material],region] = out_in_pd.mul(material_intensity.loc[:,material], axis=0).to_numpy()                
     
            # apply moving average to inflow & outflow & return only 1971-2050 values
-           outflow_mat.loc[idx[:,material],region] = pd.Series(out_oc_mat.loc[idx[2:,material],region].astype('float64').values, index=list(range(initial_year, outyear + 1))).rolling(window=5).mean().loc[list(range(1971,outyear + 1))].to_numpy()    # Apply moving average                                                                                                      # sum the outflow by cohort to get the total outflow per year
+           outflow_mat.loc[idx[:,material],region] = pd.Series(out_oc_mat.loc[idx[2:,material],region].astype('float64').values, index=list(range(initial_year, outyear + 1))).rolling(window=5).mean().loc[list(range(1971,outyear + 1))].to_numpy()  # Apply moving average  # sum the outflow by cohort to get the total outflow per year
            inflow_mat.loc[idx[:,material],region]  = pd.Series(out_in_mat.loc[idx[2:,material],region].astype('float64').values, index=list(range(initial_year, outyear + 1))).rolling(window=5).mean().loc[list(range(1971,outyear + 1))].to_numpy()
-           stock_mat.loc[idx[:,material],region]   = out_sc_mat.loc[idx[:,material],region].loc[list(range(1971,outyear + 1))].to_numpy()                                                                                                        # sum the stock by cohort to get the total stock per year
+           stock_mat.loc[idx[:,material],region]   = out_sc_mat.loc[idx[:,material],region].loc[list(range(1971,outyear + 1))].to_numpy()   # sum the stock by cohort to get the total stock per year
         
     return pd.concat([inflow_mat.stack().unstack(level=1)], keys=[key], axis=1), pd.concat([outflow_mat.stack().unstack(level=1)], keys=[key], axis=1), pd.concat([stock_mat.stack().unstack(level=1)], keys=[key], axis=1)
+    
+
+
+def inflow_outflow(stock, lifetime, material_intensity, key):
+
+    initial_year = stock.first_valid_index()
+    outflow_mat  = pd.DataFrame(index=pd.MultiIndex.from_product([range(first_year_grid,outyear+1), material_intensity.columns]), columns=stock.columns)
+    inflow_mat   = pd.DataFrame(index=pd.MultiIndex.from_product([range(first_year_grid,outyear+1), material_intensity.columns]), columns=stock.columns)   
+    stock_mat    = pd.DataFrame(index=pd.MultiIndex.from_product([range(first_year_grid,outyear+1), material_intensity.columns]), columns=stock.columns)
+    out_oc_mat   = pd.DataFrame(index=pd.MultiIndex.from_product([range(first_year_grid,outyear+1), material_intensity.columns]), columns=stock.columns)
+    out_sc_mat   = pd.DataFrame(index=pd.MultiIndex.from_product([range(first_year_grid,outyear+1), material_intensity.columns]), columns=stock.columns)
+    out_in_mat   = pd.DataFrame(index=pd.MultiIndex.from_product([range(first_year_grid,outyear+1), material_intensity.columns]), columns=stock.columns)
+
+    # define mean & standard deviation
+    mean_list = list(lifetime)
+    stdev_list = [mean_list[i] * stdev_mult for i in range(0,len(stock))]  
+
+    for region in list(stock.columns):
+        # define and run the DSM
+        # list with the fixed (=mean) lifetime of grid elements, given for every timestep (1926-2100), needed for the DSM as it allows to change lifetime for different cohort (even though we keep it constant)
+        DSMforward = DSM(t = np.arange(0,len(stock[region]),1), s=np.array(stock[region]), lt = {'Type': 'FoldedNormal', 'Mean': np.array(mean_list), 'StdDev': np.array(stdev_list)})  # definition of the DSM based on a folded normal distribution
+        out_sc, out_oc, out_i = DSMforward.compute_stock_driven_model(NegativeInflowCorrect = True)  # run the DSM, to give 3 outputs: stock_by_cohort, outflow_by_cohort & inflow_per_year
+
+        #convert to pandas df before multiplication with material intensity
+        index=list(range(first_year_grid, outyear+1))
+        out_sc_pd = pd.DataFrame(out_sc, index=index,  columns=index)
+        out_oc_pd = pd.DataFrame(out_oc, index=index,  columns=index)
+        out_in_pd = pd.DataFrame(out_i,  index=index)
+
+        # sum the outflow & stock by cohort (using cohort specific material intensities)
+        for material in list(material_intensity.columns):    
+           out_oc_mat.loc[idx[:,material],region] = out_oc_pd.mul(material_intensity.loc[:,material], axis=1).sum(axis=1).to_numpy()
+           out_sc_mat.loc[idx[:,material],region] = out_sc_pd.mul(material_intensity.loc[:,material], axis=1).sum(axis=1).to_numpy() 
+           out_in_mat.loc[idx[:,material],region] = out_in_pd.mul(material_intensity.loc[:,material], axis=0).to_numpy()                
+    
+           # apply moving average to inflow & outflow & return only 1971-2050 values
+        #    outflow_mat.loc[idx[:,material],region] = pd.Series(out_oc_mat.loc[idx[2:,material],region].astype('float64').values, index=list(range(initial_year, outyear + 1))).rolling(window=5).mean().loc[list(range(1971,outyear + 1))].to_numpy()  # Apply moving average  # sum the outflow by cohort to get the total outflow per year
+        #    inflow_mat.loc[idx[:,material],region]  = pd.Series(out_in_mat.loc[idx[2:,material],region].astype('float64').values, index=list(range(initial_year, outyear + 1))).rolling(window=5).mean().loc[list(range(1971,outyear + 1))].to_numpy()
+           print(out_oc_pd.shape)
+           print(out_in_pd.shape)
+           outflow_mat.loc[idx[:,material],region] = pd.Series(out_oc_mat.loc[idx[2:,material],region].astype('float64').values, index=list(range(initial_year, outyear + 1))).rolling(window=5).mean().to_numpy()    # Apply moving average   # sum the outflow by cohort to get the total outflow per year
+           inflow_mat.loc[idx[:,material],region]  = pd.Series(out_in_mat.loc[idx[2:,material],region].astype('float64').values, index=list(range(initial_year, outyear + 1))).rolling(window=5).mean().to_numpy()
+           stock_mat.loc[idx[:,material],region]   = out_sc_mat.loc[idx[:,material],region].to_numpy() #.loc[list(range(1971,outyear + 1))]  # sum the stock by cohort to get the total stock per year
+        
+    # return pd.concat([inflow_mat.stack().unstack(level=1)], keys=[key], axis=1), pd.concat([outflow_mat.stack().unstack(level=1)], keys=[key], axis=1), pd.concat([stock_mat.stack().unstack(level=1)], keys=[key], axis=1)
+    return pd.concat([out_in_mat.stack().unstack(level=1)], keys=[key], axis=1), pd.concat([out_oc_mat.stack().unstack(level=1)], keys=[key], axis=1), pd.concat([out_sc_mat.stack().unstack(level=1)], keys=[key], axis=1), out_oc, out_i
+
 
 # Calculate the historic tail to the Gcap (stock) 
 gcap_new = pd.DataFrame(index=pd.MultiIndex.from_product([range(first_year_grid,outyear+1), region_list], names=['years', 'regions']), columns=gcap.columns)
@@ -480,7 +528,7 @@ gcap_stock   = pd.DataFrame(index=index, columns=pd.MultiIndex.from_product([gca
 
 # Materials in Gcap (in: Gcap: MW, lifetime: yrs, materials intensity: gram/MW)
 for tech in gcap_tech_list: 
-    gcap_inflow.loc[idx[:,:],idx[tech,:]], gcap_outflow.loc[idx[:,:],idx[tech,:]], gcap_stock.loc[idx[:,:],idx[tech,:]] = inflow_outflow(gcap_new.loc[idx[:,:],tech].unstack(level=1), gcap_lifetime.loc[:,tech], gcap_materials_interpol.loc[idx[:,:],tech].unstack(), tech)
+    gcap_inflow.loc[idx[:,:],idx[tech,:]], gcap_outflow.loc[idx[:,:],idx[tech,:]], gcap_stock.loc[idx[:,:],idx[tech,:]], out_oc, out_i = inflow_outflow(gcap_new.loc[idx[:,:],tech].unstack(level=1), gcap_lifetime.loc[:,tech], gcap_materials_interpol.loc[idx[:,:],tech].unstack(), tech)
 
 #prepare variables on materials in generation capacity (in gram) for output in csv
 gcap_stock = gcap_stock.stack().stack().unstack(level=0)               # use years as column names
