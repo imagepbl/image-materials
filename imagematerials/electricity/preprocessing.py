@@ -2690,6 +2690,7 @@ df_iea_lt_cu = pd.DataFrame({ # lines & transformers, copper
     'Cu': values
 })
 df_iea_lt_cu.set_index('Year', inplace=True)
+df_iea_lt_cu = df_iea_lt_cu /1_000  # Convert kg -> t
 
 # Alu -------------
 years = np.arange(2012, 2051)
@@ -2704,6 +2705,7 @@ df_iea_lt_alu = pd.DataFrame({ # lines & transformers, aluminium
     'Aluminium': values
 })
 df_iea_lt_alu.set_index('Year', inplace=True)
+df_iea_lt_alu = df_iea_lt_alu /1_000  # Convert kg -> t
 
 # Steel -------------
 years = np.arange(2012, 2051)
@@ -2718,24 +2720,29 @@ df_iea_t_steel = pd.DataFrame({ # transformers, steel
     'Steel': values
 })
 df_iea_t_steel.set_index('Year', inplace=True)
+df_iea_t_steel = df_iea_t_steel /1_000  # Convert kg -> t
 # ----------------------------------------------------------------------------------
 
-da_x = main_model_factory.inflow_materials.to_array().sum('Region')
-da_x = da_x.sel(time=slice(1971, None))
-da_x_sum = da_x.sum(dim='Type')
+data_all = main_model_factory.inflow_materials.to_array().sum('Region')
+data_all = data_all/1_000  # Convert kg -> tonnes
+data_all = data_all.sel(time=slice(1971, None))
+data_plot = data_all.sum(dim='Type')
 
-lines_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Lines' in t]).sum(dim='Type') # Get group sums by keyword and sum over types (sum over HV, MV and LV (and overground/underground for lines))
-transformers_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Transformers' in t]).sum(dim='Type')
-substations_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Substations' in t]).sum(dim='Type')
+lines_sum = data_all.sel(Type=[t for t in data_all.Type.values if 'Lines' in t]).sum(dim='Type') # Get group sums by keyword and sum over types (sum over HV, MV and LV (and overground/underground for lines))
+transformers_sum = data_all.sel(Type=[t for t in data_all.Type.values if 'Transformers' in t]).sum(dim='Type')
+substations_sum = data_all.sel(Type=[t for t in data_all.Type.values if 'Substations' in t]).sum(dim='Type')
 
 
-fig, axes = plt.subplots(nrows=4, ncols=1, figsize=(12, 10), sharex=True)
+fig, axes = plt.subplots(nrows=4, ncols=1, figsize=(12, 10))
+linewidth = 2
+s_legend = 12
+s_label = 14
 
 for i, mat in enumerate(materials):
     lines_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Lines'], label="Lines")
     transformers_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Transformers'], label="Transformers")
     substations_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Substations'], label="Substations")
-    da_x_sum.sel(material=mat).plot(ax=axes[i], label="Total", color='red', alpha=0.8, linestyle='--', linewidth=3)
+    data_plot.sel(material=mat).plot(ax=axes[i], label="Total", color='red', alpha=0.8, linestyle='--', linewidth=3)
 
     if mat == "Cu":
         # Add IEA data for copper
@@ -2749,20 +2756,22 @@ for i, mat in enumerate(materials):
         # Add IEA data for steel
         axes[i].plot(df_iea_t_steel.index, df_iea_t_steel['Steel'], label="IEA T", color='#00a5cf', linestyle=':', linewidth=4)
     
+    axes[i].grid(alpha=0.3, linestyle='--')
+    axes[i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+    axes[i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
     axes[i].set_title(f"{mat}")
     axes[i].set_xlabel(" ")
-    axes[i].set_ylabel("Inflow [kg]")
+    axes[i].set_ylabel("Inflow [t]", fontsize=s_label)
     axes[i].legend()
-    axes[i].grid(alpha=0.3, linestyle='--')
 
-axes[-1].set_xlabel("Time")
+axes[-1].set_xlabel("Time", fontsize=s_label)
 
 plt.suptitle("Electricity Grid Inflow Materials", fontsize=16)
 plt.tight_layout()
 # fig.savefig(path_test_plots / "Grid_inflow-materials_world.svg")
-fig.savefig(path_test_plots / "Grid_inflow-materials_world_1971.pdf")
-fig.savefig(path_test_plots / "Grid_inflow-materials_world_1971.png")
-fig.savefig(path_test_plots / "Grid_inflow-materials_world_1971.svg")
+# fig.savefig(path_test_plots / "Grid_inflow-materials_world_1971.pdf")
+# fig.savefig(path_test_plots / "Grid_inflow-materials_world_1971.png")
+# fig.savefig(path_test_plots / "Grid_inflow-materials_world_1971.svg")
 plt.show()
 
 
