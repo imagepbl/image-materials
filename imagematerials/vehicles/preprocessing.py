@@ -539,7 +539,6 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
             load[label].values[0],
             loadfactor[label].values[0]
         )
-        
 
     # %%
     # Fill the vehicle types that need conversion from Mega-ton-kms
