@@ -13,7 +13,7 @@ import plotly.graph_objects as go
 
 from imagematerials.read_mym import read_mym_df
 from imagematerials.rest_of.const import (parse_dim, get_key, DIM2_primary_dict, 
-                                          path_figures, path_scenario_data_fossil)
+                                          path_figures, path_input_data, SCENARIO)
 
 from imagematerials.rest_of.sankey_function import create_node_dict, index_mapper, convert_index_to_node_id, prepare_Sankey_lists
 
@@ -146,16 +146,16 @@ def plot_fossils_sankey(year: int, country_id: int, df1: pd.DataFrame,
     fig.write_html(f"{path_figures}/fossils_global_{unit}.html")
 
 
-def fossil_fuel_data():
+def fossil_fuel_data(scenario: str = SCENARIO):
     # https://www.engineeringtoolbox.com/fossil-fuels-energy-content-d_1298.html
     # read in and format relevant IMAGE data
 
     # Total Primary Energy Supply (TPES) in PJ per region by energy carrier, [NRCT, PRIM + 4](t), [28,13](t), # unit: PJ
-    primary_energy_supply = read_mym_df(f'{path_scenario_data_fossil}/tpes_ext.out').set_index(["time", "DIM_1"])
+    primary_energy_supply = read_mym_df(path_input_data.joinpath(SCENARIO, 'EnergyFlows/tpes_ext.out')).set_index(["time", "DIM_1"])
     # Primary to Secondary energy flows DIM_1:Primary, DIM_2:Secondary GJ/yr
-    prim_per_sec = read_mym_df(f'{path_scenario_data_fossil}/PrimPerSec.out').set_index(["time", "DIM_1", "DIM_2"])
+    prim_per_sec = read_mym_df(path_input_data.joinpath(SCENARIO, 'EnergyFlows/PrimPerSec.out')).set_index(["time", "DIM_1", "DIM_2"])
     # Final Energy in PJ/yr by region, sector, and energy carrier [NRCT, S, NECS9T](t), [28,8,10](t) # PJ
-    final_energy = read_mym_df(f'{path_scenario_data_fossil}/final_energy_rt.out').set_index(["time", "DIM_1", "DIM_2"])  
+    final_energy = read_mym_df(path_input_data.joinpath(SCENARIO, 'EnergyFlows/final_energy_rt.out')).set_index(["time", "DIM_1", "DIM_2"])  
 
     # Total Primary Energy Supply (TPES) in PJ/yr
     # TODO: region 27 has some values? Why? it is not exactly the sum of sth...
@@ -192,8 +192,16 @@ def fossil_fuel_data():
     fossils_primsecond_converted = convert_primary_to_secondary_to_mass(fossils_prim_per_sec)
     fossils_final_converteted = convert_secondary_to_final_mass(fossils_final)
 
-    return (fossils_primary, fossils_prim_per_sec, fossils_final,
-            fossils_primary_converted, fossils_primsecond_converted, fossils_final_converteted)
+    return_dict = {
+        'fossils_primary': fossils_primary,
+        'fossils_prim_per_sec': fossils_prim_per_sec,
+        'fossils_final': fossils_final,
+        'fossils_primary_converted': fossils_primary_converted,
+        'fossils_primsecond_converted': fossils_primsecond_converted,
+        'fossils_final_converteted': fossils_final_converteted
+    }
+
+    return return_dict
 
 
 

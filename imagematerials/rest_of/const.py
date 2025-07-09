@@ -6,6 +6,7 @@ Created on Thu Jan 18 14:36:58 2024
 """
 
 import pandas as pd
+from pathlib import Path
 
 #%%
 # start year of analysis
@@ -21,11 +22,11 @@ switch_year = 2100
 # INPUT
 SCENARIO = "SSP2_CP"
 
-path_input_data = "../../../data/raw/rest-of"
+path_input_data = Path(f"../../../data/raw/image/")
+path_input_data_cons = "../../../data/raw/rest-of"
 
-path_scenario_data = f"../../../data/raw/image/{SCENARIO}/Biomass/"
 path_scenario_data_fossil = f"../../../data/raw/image/{SCENARIO}/EnergyFlows/"
-path_scenario_data_water = f"../../../data/raw/SSP2/EnergyFlows/"
+path_scenario_data_water = f"../../../data/raw/image/{SCENARIO}/EnergyFlows/"
 
 # Output
 path_figures = "../figures_test"

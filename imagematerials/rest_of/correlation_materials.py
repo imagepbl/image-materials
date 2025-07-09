@@ -7,13 +7,14 @@ Created on Sat Feb 10 21:25:57 2024
 # This script prepares the data to calculate correlations 
 
 import pandas as pd
+from imagematerials.read_mym import read_mym_df
 
 from imagematerials.rest_of.const import path_input_data
 
 #%% Calculate consumption, GDP, and population data both real data points and projections
 
-def calculate_gdp(end_year_gdp_pc: int = 47, end_year_pop: int = 48, 
-                  image_pop_gd_data: str = 'gdp_pc_edits', keep_global = False):
+def calculate_gdp(scenario: str, end_year_gdp_pc: int = 47, end_year_pop: int = 48, 
+                  keep_global = False, path_input_data = path_input_data):
     """
     Read in gdp per capita data and population data (real & projections) from IMAGE EDITS project to calculate total and global gdp per IMAGE region.
 
@@ -44,13 +45,18 @@ def calculate_gdp(end_year_gdp_pc: int = 47, end_year_pop: int = 48,
     pop_100 : pd.DataFrame
         interpolated population until 2100.
     """
-    # GDP per capita of IMAGE regions (from EDITS project)
-    gdp_pc = pd.read_excel(f"{path_input_data}/IMAGE_out/SSP2/{image_pop_gd_data}.xlsx", header=3, index_col=0)
-    gdp_pc = gdp_pc.drop(columns=['class_ 27']) #drop empty global column
-    gdp_pc = gdp_pc.rename(columns={'class_ 28': 'class_ 27'})
+    # GDP per capita of IMAGE regions 
+    gdp_pc = read_mym_df(path_input_data.joinpath(scenario, "Socioeconomic", "gdp_pc.scn"))
+    gdp_pc = gdp_pc.drop(columns=27) #drop empty global column
+    gdp_pc = gdp_pc.rename(columns={28: 27})
+    # rename index to class_ 1, ...
+    gdp_pc.columns = [f'class_ {i+1}' for i in range(len(gdp_pc.columns))]
 
     # Population of IMAGE regions (from EDITS project)
-    pop_100 = pd.read_excel(f"{path_input_data}/IMAGE_out/SSP2/pop_edits.xlsx", header=6, index_col=0)*1e6 # Million persons
+    pop_100: pd.DataFrame = read_mym_df(path_input_data.joinpath(scenario, "Socioeconomic", "pop.scn"))
+    pop_100 = pop_100.loc[:, :26]
+    pop_100.columns = [f'class_ {i+1}' for i in range(len(pop_100.columns))]
+    pop_100 = pop_100*1000_000 # convert to millions
     
     # Get exact population data (no projections)
     pop = pop_100.iloc[1:end_year_pop, :] # 1971 - 2017
@@ -59,8 +65,8 @@ def calculate_gdp(end_year_gdp_pc: int = 47, end_year_pop: int = 48,
         gdp_pc_2017 = gdp_pc.iloc[0:end_year_gdp_pc, 0:-1] # 1971 - 2017 & removed sum of ''region 28''
         # gdp until 2100 for projections
         gdp_pc_2100 = gdp_pc.iloc[:, 0:-1] # 1971 - 2100 & removed global 
-        pop = pop.drop(columns=['class_ 27']) #drop empty global column
-        pop_100 = pop_100.drop(columns=['class_ 27']) #drop empty global column
+        # pop = pop.drop(columns=['class_ 27']) #drop empty global column
+        # pop_100 = pop_100.drop(columns=['class_ 27']) #drop empty global column
     
     if keep_global == True:
         gdp_pc_2017 = gdp_pc.iloc[0:end_year_gdp_pc, :] # 1971 - 2017 & removed sum of ''region 28''

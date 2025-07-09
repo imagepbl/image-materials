@@ -8,7 +8,7 @@ Created on Tue Aug 27 13:31:40 2024
 import pandas as pd
 import numpy as np
 
-from imagematerials.rest_of.const import (path_input_data)
+from imagematerials.rest_of.const import (path_input_data_cons)
 
 from imagematerials.rest_of.correlation_materials import (calculate_gdp, summarize_IMAGE_regions, 
                                    calculate_material_consumption_pc_and_gdp_pc_groups, 
@@ -20,14 +20,18 @@ class ResourceModel():
     '''
     initialize basic resource model with resource data and gdp, pop data
     '''
-    def __init__(self, resource_group: str, resource: str, start_year: int, image_mat_available: bool, 
+    def __init__(self, resource_group: str, resource: str, start_year: int, scenario: str, 
+                 image_mat_available: bool, 
                  end_year = 2017, convert_image = False, convert_to_tons = None, trade_data = False, 
-                 path_input_data = path_input_data, adapt_mat_factor = None):
+                 path_input_data = path_input_data_cons, adapt_mat_factor = None,):
         
         # Name resource group
         self.resource_group = resource_group
         # Name resource
         self.resource = resource
+        # mat data available    
+        self.image_mat_available = image_mat_available
+
         
         # historic conumpstion data
         if trade_data == False: 
@@ -45,7 +49,7 @@ class ResourceModel():
             self.historic_consumption_data = self.historic_consumption_data/convert_to_tons # convert IMAGE output to tons
         
         # data if IMAGE Mat calculations available
-        if image_mat_available == True:
+        if self.image_mat_available == True:
             self.image_mat_data = pd.read_csv(f'{path_input_data}/{resource_group}/image_mat_{self.resource}.csv', 
                                               index_col=0)
             
@@ -64,7 +68,7 @@ class ResourceModel():
         (self.gdp_original, self.gdp_global_original, 
          self.gdp_pc_original, self.pop_original, 
          self.gdp_pc_100_original, self.pop_100_original,
-         self.gdp_100) = calculate_gdp()
+         self.gdp_100) = calculate_gdp(scenario)
         
         
     def data_grouped_regions(self, regions_grouping):
@@ -203,7 +207,7 @@ class ResourceModel():
            
             # use predict function and model for projection
             if self.region_model_match.get(region) is None:
-                print(region, 'could not be projected')
+                print(region, 'could not be projected, choose global fit')
                 # fill region with NaN if no model is available
                 self.projection_per_region.append(np.full(len(gdp_pc_region), np.nan))
                 # save not projected region to list
@@ -221,6 +225,13 @@ class ResourceModel():
     
         self.projection_per_region.index = np.arange(start_year_projection, 2101)
         self.projection_per_region_total = self.projection_per_region*self.pop_100
+
+        # if IMAGE Mat data is available, add it to the total projection to get total demand, else projection is total demand
+        if self.image_mat_available == True:
+            self.total_material_demand = self.projection_per_region_total + self.image_mat_data
+        else:
+            self.total_material_demand = self.projection_per_region_total
+
 
     
     def project_on_total_IMAGE_regions(self, REGION_TO_CLASS_DICT, GROUPS_TO_IMAGE_DICT):
