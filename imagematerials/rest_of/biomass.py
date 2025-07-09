@@ -17,8 +17,7 @@ import plotly.graph_objects as go
 from pathlib import Path
 
 from imagematerials.rest_of.const import (parse_dim,
-                                          path_input_data,
-                                          SCENARIO)
+                                          path_input_data)
 
 from imagematerials.read_mym import read_mym_df
 #%% Conversion
@@ -354,22 +353,22 @@ def sankey_total_biomass(splitted_up_crops_food,
     return fig, link_source, link_target, link_value 
     
 
-def biomass_data(scenario = SCENARIO):
+def biomass_data(scenario: str):
     # Crop consumption in Gg dm/yr, per type of use and crop type including other crops. Dimensions:  [5,17,27] (t) , [NUFPT, NFCT, NRT](time)
-    crops_cons = read_mym_df(path_input_data.joinpath(SCENARIO, 'Biomass/AGRCONSCTF_DM.OUT')).set_index(["time", "DIM_1", "DIM_2"])  
+    crops_cons = read_mym_df(path_input_data.joinpath(scenario, 'Biomass/AGRCONSCTF_DM.OUT')).set_index(["time", "DIM_1", "DIM_2"])  
 
     # Wood demand per woodtype in 1000m3/yr. Dimensions: [4,27](t), [NWCT,NRT] (time)
-    wood_demand = read_mym_df(path_input_data.joinpath(SCENARIO, 'Biomass/WDEMAND.OUT')).set_index(["time", "DIM_1"])
+    wood_demand = read_mym_df(path_input_data.joinpath(scenario, 'Biomass/WDEMAND.OUT')).set_index(["time", "DIM_1"])
 
     # Feed consumption per grazing system type, feed product type and animal type in Gg dm/yr Dimensions:  [3,6,6,27] (t), [NGST,NFPT,NAT,NRT] (t)
-    feed_cons = read_mym_df(path_input_data.joinpath(SCENARIO, 'Biomass/TFEED.OUT')).set_index(["time", "DIM_1", "DIM_2", "DIM_3"])
+    feed_cons = read_mym_df(path_input_data.joinpath(scenario, 'Biomass/TFEED.OUT')).set_index(["time", "DIM_1", "DIM_2", "DIM_3"])
 
     # Animal products  Unit=Gg dm/yr; Label=Consumption of animal products in dry matter, per type of use and animal type [5,6,27] (t) [NUFPT,NAPT,NRT] 
-    animal_products_cons = read_mym_df(path_input_data.joinpath(SCENARIO, 'Biomass/AGRCONSA_DM.OUT')).set_index(["time", "DIM_1", "DIM_2"])
+    animal_products_cons = read_mym_df(path_input_data.joinpath(scenario, 'Biomass/AGRCONSA_DM.OUT')).set_index(["time", "DIM_1", "DIM_2"])
 
     # Biofuel crops production (same as consumption) difference is only made in energy trade, not for actual crops calculation
     # Unit= Gg dm/yr; Label= Production of biofuels (dry matter) [5,27] [NBCT,NRT] (t)
-    biofuel_crops = read_mym_df(path_input_data.joinpath(SCENARIO, 'Biomass/AGRPRODBF_dm.OUT')).set_index(["time", "DIM_1"])
+    biofuel_crops = read_mym_df(path_input_data.joinpath(scenario, 'Biomass/AGRPRODBF_dm.OUT')).set_index(["time", "DIM_1"])
 
     # Materials buildings (BUMA output) in kt
     # TODO: adapt scenario path

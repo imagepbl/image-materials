@@ -73,6 +73,8 @@ def cement_projection(scenario: str):
 
     # project based on best model
     cement.project_on_total(all_regions_list_class[:-1])
+    cement.smooth_out_interpolation_all(10, 2012)
+
     return cement
 
 
@@ -128,6 +130,7 @@ def limestone_projection(scenario: str):
 
     limestone.fit_models(best_rmse_models, bounds)
     limestone.project_on_total(all_regions_list_class[:-1])
+    limestone.smooth_out_interpolation_all(10, 2017)
 
     return limestone
 
@@ -184,6 +187,7 @@ def sand_projections(scenario: str):
 
     # project based on best model
     sand.project_on_total(all_regions_list_class[:-1])
+    sand.smooth_out_interpolation_all(10, 2017)
     return sand
 
 def clay_projections(scenario: str):
@@ -236,5 +240,6 @@ def clay_projections(scenario: str):
 
     clay.fit_models(best_rmse_models, bounds)
     clay.project_on_total(all_regions_list_class[:-1])
+    clay.smooth_out_interpolation_all(10, 2017)
 
     return clay
