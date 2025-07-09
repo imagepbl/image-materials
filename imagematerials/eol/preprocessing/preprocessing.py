@@ -9,12 +9,36 @@ from imagematerials.util import overwrite_future_rates, read_circular_economy_co
  
 
 # define interpolation method
-def interpolate_eol_rates(ds, start_year, end_year, min_value = 0, max_value = 1):              # collection, reuse, and recycling rate cannot be lower than zero or higher than 1
-    reindexed = ds.reindex(Time=full_time)
-    interpolated = reindexed.interpolate_na(dim='Time', method='linear', fill_value='extrapolate')
-    clipped = interpolated.clip(min=min_value, max = max_value)
+def interpolate_eol_rates(
+    ds: xr.DataArray,
+    anchor_year: int = 2020,
+    target_year: int = 2060,
+    min_value: float = 0,
+    max_value: float = 1,
+    full_time: list[int] = None,
+) -> xr.DataArray:
+    """
+    Interpolate rates from anchor_year to target_year.
+    - Constant before anchor_year
+    - Linear interpolation between anchor_year and target_year
+    - Constant after target_year
+    - Clipped between min_value and max_value
+    """
+    # Fill pre-anchor with anchor value
+    ds = ds.reindex(Time=full_time)
+    ds_before = ds.sel(Time=anchor_year)
+    ds.loc[dict(Time=slice(None, anchor_year - 1))] = ds_before
 
-    return clipped
+    # Interpolate between anchor and target
+    ds = ds.interpolate_na(dim="Time", method="linear")
+
+    # Fill post-target with target value
+    ds_after = ds.sel(Time=target_year)
+    ds.loc[dict(Time=slice(target_year + 1, None))] = ds_after
+
+    # Clip to valid range
+    return ds.clip(min=min_value, max=max_value)
+
 
 def eol_preprocessing(base_dir, circular_economy_scenario_dirs):
     circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
@@ -114,9 +138,9 @@ def eol_preprocessing(base_dir, circular_economy_scenario_dirs):
         print("implemented 'close' for vehicles eol")    
 
     # inter and extrapolated collection, reuse and recycling xr 
-    collection = interpolate_eol_rates(xr_collection, start_year= start_year, end_year=end_year,min_value = 0,max_value = 1)
-    reuse = interpolate_eol_rates(xr_reuse, start_year= start_year, end_year=end_year,min_value = 0,max_value = 1)
-    recycling = interpolate_eol_rates(xr_recycling, start_year= start_year, end_year=end_year,min_value = 0,max_value = 1)
+    collection = interpolate_eol_rates(xr_collection, anchor_year=2020, target_year=2060, min_value=0, max_value=1, full_time=full_time)
+    reuse = interpolate_eol_rates(xr_reuse, anchor_year=2020, target_year=2060, min_value=0, max_value=1, full_time=full_time)
+    recycling = interpolate_eol_rates(xr_recycling, anchor_year=2020, target_year=2060, min_value=0, max_value=1, full_time=full_time)
 
     collection.coords["Region"] = [str(x.values) for x in collection.coords["Region"]]
     reuse.coords["Region"] = [str(x.values) for x in reuse.coords["Region"]]

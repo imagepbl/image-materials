@@ -14,13 +14,10 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
-from imagematerials.rest_of.const import (DIM1_crops_dict, DIM2_crops_dict, 
-                                          DIM1_tfeed_dict, DIM2_tfeed_dict, 
-                                          DIM3_tfeed_dict, DIM1_wood_dict, 
-                                          DIM2_animalproducts_dict, DIM1_biofuelcrops_dict, 
-                                          parse_dim, path_input_data, 
-                                          path_figures, scenario, 
-                                          path_scenario_data,
+from pathlib import Path
+
+from imagematerials.rest_of.const import (parse_dim,
+                                          path_input_data,
                                           SCENARIO)
 
 from imagematerials.read_mym import read_mym_df
@@ -357,25 +354,26 @@ def sankey_total_biomass(splitted_up_crops_food,
     return fig, link_source, link_target, link_value 
     
 
-def biomass_data():
+def biomass_data(scenario = SCENARIO):
     # Crop consumption in Gg dm/yr, per type of use and crop type including other crops. Dimensions:  [5,17,27] (t) , [NUFPT, NFCT, NRT](time)
-    crops_cons = read_mym_df(path_scenario_data + f'AGRCONSCTF_DM.OUT').set_index(["time", "DIM_1", "DIM_2"])  
+    crops_cons = read_mym_df(path_input_data.joinpath(SCENARIO, 'Biomass/AGRCONSCTF_DM.OUT')).set_index(["time", "DIM_1", "DIM_2"])  
 
     # Wood demand per woodtype in 1000m3/yr. Dimensions: [4,27](t), [NWCT,NRT] (time)
-    wood_demand = read_mym_df(path_scenario_data + 'WDEMAND.OUT').set_index(["time", "DIM_1"])
+    wood_demand = read_mym_df(path_input_data.joinpath(SCENARIO, 'Biomass/WDEMAND.OUT')).set_index(["time", "DIM_1"])
 
     # Feed consumption per grazing system type, feed product type and animal type in Gg dm/yr Dimensions:  [3,6,6,27] (t), [NGST,NFPT,NAT,NRT] (t)
-    feed_cons = read_mym_df(path_scenario_data + 'TFEED.OUT').set_index(["time", "DIM_1", "DIM_2", "DIM_3"])
+    feed_cons = read_mym_df(path_input_data.joinpath(SCENARIO, 'Biomass/TFEED.OUT')).set_index(["time", "DIM_1", "DIM_2", "DIM_3"])
 
     # Animal products  Unit=Gg dm/yr; Label=Consumption of animal products in dry matter, per type of use and animal type [5,6,27] (t) [NUFPT,NAPT,NRT] 
-    animal_products_cons = read_mym_df(path_scenario_data + 'AGRCONSA_DM.OUT').set_index(["time", "DIM_1", "DIM_2"])
+    animal_products_cons = read_mym_df(path_input_data.joinpath(SCENARIO, 'Biomass/AGRCONSA_DM.OUT')).set_index(["time", "DIM_1", "DIM_2"])
 
     # Biofuel crops production (same as consumption) difference is only made in energy trade, not for actual crops calculation
     # Unit= Gg dm/yr; Label= Production of biofuels (dry matter) [5,27] [NBCT,NRT] (t)
-    biofuel_crops = read_mym_df(path_scenario_data + 'AGRPRODBF_dm.OUT').set_index(["time", "DIM_1"])
+    biofuel_crops = read_mym_df(path_input_data.joinpath(SCENARIO, 'Biomass/AGRPRODBF_dm.OUT')).set_index(["time", "DIM_1"])
 
     # Materials buildings (BUMA output) in kt
-    buildings_mat = pd.read_csv(path_input_data + f'/IMAGE_MAT_out/{SCENARIO}/material_output_buma_RASMI.csv', header = 0).set_index(['Unnamed: 0', 'flow', 'type', 'area', 'material'])
+    # TODO: adapt scenario path
+    buildings_mat = pd.read_csv('../../../data/raw/rest-of/IMAGE_MAT_out/SSP2_CP/material_output_buma_RASMI.csv', header = 0).set_index(['Unnamed: 0', 'flow', 'type', 'area', 'material'])
 
     # Split up different biomass types 
     # Crops: Split up crops
@@ -405,6 +403,15 @@ def biomass_data():
     crops_total_consumption_global = sum_by_region(splitted_up_crops_total)
     feed_total_consumption_global = sum_by_region(splitted_up_feed)
 
-    return (splitted_up_crops_total, splitted_up_crops_food, splitted_up_crops_feed,
-            splitted_up_crops_other_use, splitted_up_feed, splitted_up_wood, splitted_up_animal_products,
-            splitted_up_biofuel_crops)
+    return_dict = {
+        'splitted_up_crops_total': splitted_up_crops_total,
+        'splitted_up_crops_food': splitted_up_crops_food,
+        'splitted_up_crops_feed': splitted_up_crops_feed,
+        'splitted_up_crops_other_use': splitted_up_crops_other_use,
+        'splitted_up_feed': splitted_up_feed,
+        'splitted_up_wood': splitted_up_wood,
+        'splitted_up_animal_products': splitted_up_animal_products,
+        'splitted_up_biofuel_crops': splitted_up_biofuel_crops
+    }
+
+    return return_dict
