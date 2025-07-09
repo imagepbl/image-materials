@@ -265,7 +265,7 @@ def compute_housing_residential(population, average_m2_capita, housing_type, flo
     floorspace_residential = merge_dims(total_m2_housing, "Type", "Area")
     return floorspace_residential.transpose("Time", "Region", "Type")
 
-def implement_circular_economy_commercial_floorspace(floorspace_commercial, circular_economy_config):
+def apply_circular_economy_commercial_floorspace(floorspace_commercial, circular_economy_config):
     """Implement circular economy measures for commercial floorspace."""
     region_knowledge_graph = create_region_graph()
     regions = floorspace_commercial.coords["Region"].values
