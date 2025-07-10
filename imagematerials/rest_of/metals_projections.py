@@ -54,13 +54,15 @@ def copper_projection(scenario: str):
     copper.calculate_regressors(copper.historic_other_fraction_consumption)
     copper.fit_models(best_rmse_models=best_rmse_models, bounds=bounds)
 
-    # Projections 
-    copper.project_on_total(list(COPPER_AVERAGE_REGIONS_TO_IMAGE.keys()))
-
     # add regions to regions model match that are not in there yet becaused they are fitted to the global average
     for key in COPPER_AVERAGE_REGIONS_TO_IMAGE.keys():
         if key not in copper.region_model_match:
             copper.region_model_match[key] = copper.model_groups.get("all_regions")[6]
+
+    # Projections 
+    copper.project_on_total(list(COPPER_AVERAGE_REGIONS_TO_IMAGE.keys()))
+
+
         
     copper.smooth_out_interpolation_all(10, 2017)
     copper.adjust_alpha_and_project(list(COPPER_AVERAGE_REGIONS_TO_IMAGE.keys()), 

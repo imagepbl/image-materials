@@ -74,6 +74,10 @@ def cement_projection(scenario: str):
     # project based on best model
     cement.project_on_total(all_regions_list_class[:-1])
     cement.smooth_out_interpolation_all(10, 2012)
+    cement.adjust_alpha_and_project(all_regions_list_class[:-1], 
+                        start_year_adjust=2050, 
+                        end_year_adjust=2100, 
+                        min_alpha=None)
 
     return cement
 
@@ -131,6 +135,10 @@ def limestone_projection(scenario: str):
     limestone.fit_models(best_rmse_models, bounds)
     limestone.project_on_total(all_regions_list_class[:-1])
     limestone.smooth_out_interpolation_all(10, 2017)
+    limestone.adjust_alpha_and_project(all_regions_list_class[:-1], 
+                    start_year_adjust=2050, 
+                    end_year_adjust=2100, 
+                    min_alpha=None)
 
     return limestone
 
@@ -166,28 +174,35 @@ def sand_projections(scenario: str):
 
     # Fit models 
     rmse_models = {'all_regions': 'gompertz model',
-    'Canada': 'log gauss saturate model',
+    'Canada': 'gompertz model',
     'China': 'gompertz model',
     'Average': 'gompertz model',
     'Lower': 'gompertz model',
-    'Japan': 'log gauss saturate model',
+    'Japan': 'gompertz model',
     'High': 'gompertz model'}
 
     bounds = {
         'all_regions' : ([0, 0, 0], [10, 10, 10]),
-        'Canada' : ([0, 0, 0, 0], [10, 10, 10, 8]),
+        'Canada' : ([0, 2, 2], [10, 10, 10]),
         'China' : ([0, 0, 0], [8, 10, 10]),
         'Average' : ([0, 0, 0], [10, 10, 10]),
         'Lower' : ([0, 0, 0], [10, 10, 10]),
-        'Japan' : ([1, 0, 0, 2], [10, 10, 10, 10]),
-        'High' : ([1, 5, 0], [10, 10, 10])
+        'Japan' : ([0, 2, 2], [10, 10, 10]),
+        'High' : ([0, 5, 0], [10, 10, 10])
     }
+
+
 
     sand.fit_models(best_rmse_models=rmse_models, bounds=bounds)
 
     # project based on best model
     sand.project_on_total(all_regions_list_class[:-1])
     sand.smooth_out_interpolation_all(10, 2017)
+
+    sand.adjust_alpha_and_project(all_regions_list_class[:-1], 
+                        start_year_adjust=2050, 
+                        end_year_adjust=2100, 
+                        min_alpha=None)
     return sand
 
 def clay_projections(scenario: str):
@@ -241,5 +256,10 @@ def clay_projections(scenario: str):
     clay.fit_models(best_rmse_models, bounds)
     clay.project_on_total(all_regions_list_class[:-1])
     clay.smooth_out_interpolation_all(10, 2017)
+    
+    clay.adjust_alpha_and_project(all_regions_list_class[:-1], 
+                        start_year_adjust=2050, 
+                        end_year_adjust=2100, 
+                        min_alpha=None)
 
     return clay
