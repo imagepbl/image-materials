@@ -5,7 +5,7 @@ from imagematerials.rest_of.const import path_input_data, SCENARIO
 
 scen = 'SSP2'
 
-def water_consumption(scenario: str = SCENARIO):
+def water_consumption(scenario):
     # water conusmption 
     # 1: electricity, 2: industrial, 3: municipality, 4: total
     water_consumption = read_mym_df(path_input_data.joinpath(scenario, 'EnergyFlows/ALLWCS.out')).set_index(["time", "DIM_1"])

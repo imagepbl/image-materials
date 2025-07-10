@@ -233,7 +233,7 @@ class ResourceModel():
             self.total_material_demand = self.projection_per_region_total
 
 
-    
+
     def project_on_total_IMAGE_regions(self, REGION_TO_CLASS_DICT, GROUPS_TO_IMAGE_DICT):
         self.projection_per_region_IMAGE = []
 
@@ -266,13 +266,97 @@ class ResourceModel():
      
         
     def smooth_out_interpolation_all(self, nr_years_interpolate: int, start_year = 2012):
-        for region in self.projection_per_region_total.columns:
-            start_interpolate = self.historic_other_fraction_consumption[region].loc[start_year:start_year]
-            end_interpolate = self.projection_per_region_total[region].loc[start_year+nr_years_interpolate:start_year+nr_years_interpolate]
 
-            # interpolate between the two points
-            interpolated = pd.Series(np.linspace(start_interpolate.values[0], end_interpolate.values[0], nr_years_interpolate+1), 
-                                    index = self.projection_per_region_total[region].loc[start_year:start_year+nr_years_interpolate].index)
+        if self.image_mat_available == False:
+            for region in self.projection_per_region_total.columns:
+                start_interpolate = self.historic_consumption_data[region].loc[start_year:start_year]
+                end_interpolate = self.projection_per_region_total[region].loc[start_year+nr_years_interpolate:start_year+nr_years_interpolate]
 
-            # replace the values in the projection with the interpolated values
-            self.projection_per_region_total[region].loc[start_year:start_year+nr_years_interpolate] = interpolated 
+                # interpolate between the two points
+                interpolated = pd.Series(np.linspace(start_interpolate.values[0], end_interpolate.values[0], nr_years_interpolate+1), 
+                                        index = self.projection_per_region_total[region].loc[start_year:start_year+nr_years_interpolate].index)
+
+                # replace the values in the projection with the interpolated values
+                self.projection_per_region_total[region].loc[start_year:start_year+nr_years_interpolate] = interpolated
+        else:
+            for region in self.projection_per_region_total.columns:
+
+                start_interpolate = self.historic_other_fraction_consumption[region].loc[start_year:start_year]
+                end_interpolate = self.projection_per_region_total[region].loc[start_year+nr_years_interpolate:start_year+nr_years_interpolate]
+
+                # interpolate between the two points
+                interpolated = pd.Series(np.linspace(start_interpolate.values[0], end_interpolate.values[0], nr_years_interpolate+1), 
+                                        index = self.projection_per_region_total[region].loc[start_year:start_year+nr_years_interpolate].index)
+
+                # replace the values in the projection with the interpolated values
+                self.projection_per_region_total[region].loc[start_year:start_year+nr_years_interpolate] = interpolated
+
+
+
+    # calculate y for gompertz function
+    def gompertz_function(self, x, a, b, c):
+        return a * np.exp(-b * np.exp(-c * x))
+
+
+    def adjust_alpha_and_project(self, regions_list: list, 
+                                 start_year_adjust = 2050, end_year_adjust = 2100, 
+                                 min_alpha = None, start_year_projection = None):
+        
+        start_year_projection = self.end_year if start_year_projection is None else start_year_projection
+        
+        # get smalles alpha values from all coefs
+        # export coefs to csv file
+        coefs_df = pd.DataFrame.from_dict({region: self.region_model_match.get(region)._coefs for region in self.region_model_match.keys()}, 
+                                        orient='index',
+                                        columns=['a', 'b', 'c'])
+        if min_alpha is None:
+            # get minimum alpha value from coefs
+            min_alpha = coefs_df.min().min()  # minimum alpha 
+        
+        # create dataframe for adjusted alpha values
+        alpha_df = pd.DataFrame()
+
+        for region, model in self.region_model_match.items():
+            # print(region, model._coefs)
+            # extract alpha value and make it same length as gdp/cap
+            alpha = np.array([model._coefs[0]])
+            alpha = np.repeat(alpha, len(self.gdp_pc_100.index)//len(alpha))
+
+            alpha_df[region] = alpha
+            alpha_df.index = self.gdp_pc_100.index
+
+        alpha_df_start = alpha_df.loc[start_year_adjust:start_year_adjust]
+        # set all values after start_year_adjust to np.nan
+        alpha_df.loc[start_year_adjust+1:] = np.nan
+        # set all values in end_year_adjust to min_alpha
+        alpha_df.loc[end_year_adjust] = min_alpha
+
+        # now linearly interpolate between start and end values to reach min_alpha in end_year_adjust
+        alpha_df = alpha_df.interpolate(method='linear')
+
+        # project on total
+
+        self.projection_per_region_adapted_alpha = []
+
+        # loop over every region
+        for region in regions_list:
+            # get gdp_pc as predictor
+            gdp_pc_region = self.gdp_pc_100.loc[start_year_projection:, region]
+
+
+            # fill region with NaN if no model is available
+            projected_data = self.gompertz_function(gdp_pc_region/10_000, 
+                                    alpha_df[region].loc[start_year_projection:].values, 
+                                    *self.region_model_match.get(region)._coefs[1:])
+            
+            self.projection_per_region_adapted_alpha.append(projected_data)
+
+            
+            # list of projections of all regions to DataFrame
+        self.projection_per_region_adapted_alpha = pd.DataFrame(self.projection_per_region_adapted_alpha).transpose()
+        self.projection_per_region_adapted_alpha.columns = self.pop.columns
+    
+        self.projection_per_region_adapted_alpha.index = np.arange(start_year_projection, 2101)
+        self.projection_per_region_adapted_alpha = self.projection_per_region_adapted_alpha*self.pop_100
+
+        
