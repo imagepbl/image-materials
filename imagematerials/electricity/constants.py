@@ -51,6 +51,18 @@ TONNES_TO_KGS = 1000
 STD_LIFETIMES_ELECTR = 0.214              # standard deviation as a fraction of the mean lifetime applicable to energy equipment (Asset Management for Infrastructure Systems: Energy and Water, Balzer & Schorn 2015)
 # TODO: different std for lines, transformers, generation, storage, etc.? scenario dependent?
 
+# Define the units for each dimension
+unit_mapping = {
+    'time': ureg.year,
+    'year': ureg.year,
+    'Year': ureg.year,
+    'kg': ureg.kilogram,
+    'yr': ureg.year,
+    '%': ureg.percent,
+    't': ureg.tonne,
+    'MW': ureg.megawatt, #added
+    'GW': ureg.gigawatt, #added
+}
 
 # Electricity Generation related constants ---------------------------------------------
 
@@ -171,6 +183,46 @@ dict_grid_colors = {
     'Lines':        '#8cb369', #'#007f5f',
     'Transformers': '#f4a259', #'#aacc00',
     'Substations':  '#bc4b51' #'#55a630'
+}
+
+dict_grid_styles = {
+    'HV':                           ('#ef767a', '-'),
+    'HV - Lines - Overhead':        ('#ef767a', '-'),
+    'HV - Lines - Underground':     ('#ef767a', '--'),
+    'HV - Transformers':            ('#ef767a', '-'),
+    'HV - Substations':             ('#ef767a', '--'),
+
+    'MV':                           ('#456990', '-'),
+    'MV - Lines - Overhead':        ('#456990', '-'),
+    'MV - Lines - Underground':     ('#456990', '--'),
+    'MV - Transformers':            ('#456990', '-'),
+    'MV - Substations':             ('#456990', '--'),
+
+    'LV':                           ('#49beaa', '-'),
+    'LV - Lines - Overhead':        ('#49beaa', '-'),
+    'LV - Lines - Underground':     ('#49beaa', '--'),
+    'LV - Transformers':            ('#49beaa', '-'),
+    'LV - Substations':             ('#49beaa', '--')
+}
+
+dict_grid_styles2 = {
+    'HV':                           ('#ef767a', '-'),
+    'HV - Lines - Overhead':        ('#f4845f', '-'),
+    'HV - Lines - Underground':     ('#f4845f', '--'),
+    'HV - Transformers':            ('#f7b267', '-'),
+    'HV - Substations':             ('#f25c54', '--'),
+
+    'MV':                           ('#456990', '-'),
+    'MV - Lines - Overhead':        ('#0077b6', '-'),
+    'MV - Lines - Underground':     ('#0077b6', '--'),
+    'MV - Transformers':            ('#c0fdff', '-'),
+    'MV - Substations':             ('#023e8a', '--'),
+
+    'LV':                           ('#38b000', '-'), ##49beaa
+    'LV - Lines - Overhead':        ('#70e000', '-'),
+    'LV - Lines - Underground':     ('#70e000', '--'),
+    'LV - Transformers':            ('#ccff33', '-'),
+    'LV - Substations':             ('#007200', '--')
 }
 
 dict_electricity_colors = {
