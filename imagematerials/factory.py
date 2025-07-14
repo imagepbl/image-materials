@@ -1,4 +1,6 @@
 """Module to dynamically create models."""
+import pickle as pkl
+from pathlib import Path
 from typing import Any, Optional, Union
 
 import prism
@@ -235,12 +237,23 @@ class ModelFactory():
                 """
                 try:
                     return super().__getattribute__(attr)
-                except AttributeError:
+                except AttributeError as exc:
                     if len(factory.sectors) == 1:
-                        return list(factory.sectors.values())[0].all_data[attr]
-                    return {sec_name: factory.sectors[sec_name].all_data[attr]
-                            for sec_name in factory.sectors
-                            if attr in factory.sectors[sec_name].all_data}
+                        try:
+                            return list(factory.sectors.values())[0].all_data[attr]
+                        except KeyError:
+                            raise exc
+                    all_data = {sec_name: factory.sectors[sec_name].all_data[attr]
+                                for sec_name in factory.sectors
+                                if attr in factory.sectors[sec_name].all_data}
+                    if len(all_data) == 0:
+                        raise exc
+                    return all_data
+
+            def save_pkl(self, data_fp: Union[Path, str]):
+                all_data = {sec_name: getattr(self, sec_name) for sec_name in factory.sectors}
+                with open(data_fp, "wb") as handle:
+                    pkl.dump(all_data, handle)
 
         main_model = MainModule(self.complete_timeline)
 
