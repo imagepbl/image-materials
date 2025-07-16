@@ -34,34 +34,78 @@ import warnings
 from pathlib import Path
 import sys 
 
-from imagematerials.read_mym import read_mym_df
-from imagematerials.__main__ import export_summary_netcdf, simulate_stocks
-from imagematerials.vehicles.preprocessing import (
-    preprocessing,
+
+from imagematerials.electricity.preprocessing import (
+    get_preprocessing_data_gen
+    # get_preprocessing_data_grid,
+    # get_preprocessing_data_stor
 )
-from imagematerials.util import import_from_netcdf, export_to_netcdf
+# from imagematerials.util import import_from_netcdf, export_to_netcdf
 from imagematerials.model import GenericMainModel, GenericMaterials, GenericStocks, Maintenance
 from imagematerials.factory import ModelFactory
 import prism
+
+
+VARIANT = "VLHO"
+SCEN = "SSP2"
+scen_folder = SCEN + "_" + VARIANT
+# path_base = Path().resolve() # TODO absolute path of file "preprocessing.py" ? current solution can differ depending on IDE used (?) 
+path_current = Path().resolve()
+path_base = path_current.parent.parent # base path of the project -> image-materials
+
 
 
 ####################################################################################################################
 #%% Settings
 ####################################################################################################################
 
-# path_current = Path(__file__).resolve().parent # absolute path of file
-# path_base = path_current.parent.parent # base path of the project -> image-materials
+prep_data = get_preprocessing_data_gen(path_base, scen_folder)
 
-# Define the complete timeline, including historic tail
-# time_start = prep_data["stocks"].coords["Time"].min().values
-time_start = 1960
-complete_timeline = prism.Timeline(time_start, 2060, 1)
-simulation_timeline = prism.Timeline(1970, 2060, 1)
-
+# # Define the complete timeline, including historic tail
+time_start = prep_data["stocks"].coords["Time"].min().values
+time_end = 2060
+complete_timeline = prism.Timeline(time_start, time_end, 1)
+simulation_timeline = prism.Timeline(1970, time_end, 1)
 
 
+sec_electr_gen = Sector("electr_gen", prep_data)
 
+
+
+main_model_factory = ModelFactory(
+    sec_electr_gen, complete_timeline
+    ).add(GenericStocks
+    ).add(MaterialIntensities
+    ).finish()
+
+main_model_factory.simulate(simulation_timeline)
+
+# list(main_model_factory.elctr_gen)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###########################################################################################################
    
+# OLD CODE:
 
 ###########################################################################################################
 #%% 0) Before we start the calculations we define the general functions used in multiple parts of the code
