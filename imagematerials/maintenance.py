@@ -2,6 +2,7 @@ from pint import UnitRegistry
 
 import prism
 import xarray as xr
+import numpy as np
 
 from imagematerials.constants import modes
 from imagematerials.vehicles.constants import maintenance_lifetime_per_mode
@@ -126,6 +127,7 @@ class MaintenanceLinear(prism.Model):
     
     # Configuration parameters for age-dependent maintenance
     end_multiplier: float = 10  
+    cap_at_lifetime: bool = False 
     
     def compute_initial_values(self, time: prism.Timeline):
         """Compute the initial values for maintenance materials used by stock cohorts.
@@ -201,6 +203,12 @@ class MaintenanceLinear(prism.Model):
         ages_bc, lifetimes_bc = xr.broadcast(ages, lifetimes)
         slope = xr.where(lifetimes_bc > 0, ((start_factor * self.end_multiplier) - start_factor) / lifetimes_bc, 0.0)
         age_factors = start_factor + slope * ages_bc
+
+
+        # Cap age factors at lifetime if requested
+        if self.cap_at_lifetime:            
+            max_age_factor = start_factor * self.end_multiplier
+            age_factors = xr.where(ages_bc <= lifetimes_bc, age_factors, max_age_factor)
 
         has_maintenance = xr.DataArray(
             [str(vtype) in self.maintenance_types for vtype in current_stock.coords["Type"].values],
