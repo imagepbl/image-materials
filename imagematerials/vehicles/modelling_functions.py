@@ -149,8 +149,8 @@ def scenario_change(df, base_year, target_year, change, implementation_rate, dat
             if implementation_rate =='linear':
                 result.loc[target_year, col] *= (1 + increase / 100)
             elif implementation_rate =='immediate':
-                result.loc[base_year + 1, col] *= (1 + increase / 100)
                 result.loc[target_year, col] *= (1 + increase / 100)
+                result.loc[base_year + 1, col] = result.loc[target_year, col]
             elif implementation_rate =='s-curve':
                 years = list(range(base_year, target_year + 1))
                 mid_year = (base_year + target_year) / 2
