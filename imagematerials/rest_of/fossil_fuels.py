@@ -13,7 +13,7 @@ import plotly.graph_objects as go
 
 from imagematerials.read_mym import read_mym_df
 from imagematerials.rest_of.const import (parse_dim, get_key, DIM2_primary_dict, 
-                                          path_figures, path_input_data, SCENARIO)
+                                          path_figures, path_input_data)
 
 from imagematerials.rest_of.sankey_function import create_node_dict, index_mapper, convert_index_to_node_id, prepare_Sankey_lists
 
@@ -146,16 +146,16 @@ def plot_fossils_sankey(year: int, country_id: int, df1: pd.DataFrame,
     fig.write_html(f"{path_figures}/fossils_global_{unit}.html")
 
 
-def fossil_fuel_data(scenario: str = SCENARIO):
+def fossil_fuel_data(scenario):
     # https://www.engineeringtoolbox.com/fossil-fuels-energy-content-d_1298.html
     # read in and format relevant IMAGE data
 
     # Total Primary Energy Supply (TPES) in PJ per region by energy carrier, [NRCT, PRIM + 4](t), [28,13](t), # unit: PJ
-    primary_energy_supply = read_mym_df(path_input_data.joinpath(SCENARIO, 'EnergyFlows/tpes_ext.out')).set_index(["time", "DIM_1"])
+    primary_energy_supply = read_mym_df(path_input_data.joinpath(scenario, 'EnergyFlows/tpes_ext.out')).set_index(["time", "DIM_1"])
     # Primary to Secondary energy flows DIM_1:Primary, DIM_2:Secondary GJ/yr
-    prim_per_sec = read_mym_df(path_input_data.joinpath(SCENARIO, 'EnergyFlows/PrimPerSec.out')).set_index(["time", "DIM_1", "DIM_2"])
+    prim_per_sec = read_mym_df(path_input_data.joinpath(scenario, 'EnergyFlows/PrimPerSec.out')).set_index(["time", "DIM_1", "DIM_2"])
     # Final Energy in PJ/yr by region, sector, and energy carrier [NRCT, S, NECS9T](t), [28,8,10](t) # PJ
-    final_energy = read_mym_df(path_input_data.joinpath(SCENARIO, 'EnergyFlows/final_energy_rt.out')).set_index(["time", "DIM_1", "DIM_2"])  
+    final_energy = read_mym_df(path_input_data.joinpath(scenario, 'EnergyFlows/final_energy_rt.out')).set_index(["time", "DIM_1", "DIM_2"])  
 
     # Total Primary Energy Supply (TPES) in PJ/yr
     # TODO: region 27 has some values? Why? it is not exactly the sum of sth...
