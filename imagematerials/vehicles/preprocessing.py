@@ -574,6 +574,37 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
     car_total_nr.columns = list(range(1, REGIONS + 3))
     total_nr_vehicles_simple["Cars"] = car_total_nr
 
+    # Sum across regions to get total car numbers per year
+    car_total_global = car_total_nr.sum(axis=1)
+
+    # Get the value for 2016
+    car_total_2016 = car_total_global.loc[2016]
+
+    print(f"Total number of cars in 2016 (millions): {car_total_2016/1_000_000:.2f} million")
+
+    # Define the years you want to display
+    decade_years = [1971, 1980, 1990, 2000, 2010, 2020]
+
+    # Convert to millions for easier reading
+    car_total_global_millions = car_total_global / 1_000_000
+
+    # Print header
+    print("\nTotal number of cars (in millions):")
+    print("-" * 40)
+    print(f"{'Year':<10}{'Cars (millions)':<15}{'% of 2020 value':<20}")
+    print("-" * 40)
+
+    # Print values for each year
+    for year in decade_years:
+        if year in car_total_global.index:
+            cars_millions = car_total_global.loc[year] / 1_000_000
+            percentage = (cars_millions / car_total_global.loc[2020] * 1_000_000) * 100
+            print(f"{year:<10}{cars_millions:<15.2f}{percentage:<20.1f}%")
+        else:
+            print(f"{year:<10}Not available")
+
+    print("-" * 40)
+
     # for buses do the same, but first remove region 27 & 28 (empty & world total) & kilometrage column names
     # bus_regl_pkms  = bus_regl_pkms.drop([27, 28], axis=1)
     # TODO: remove/change this hack!
