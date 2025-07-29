@@ -51,13 +51,21 @@ def convert_primary_to_secondary_to_mass(fossils_prim_per_sec):
 
 def convert_secondary_to_final_mass(fossils_final):
     coal_converted = fossils_final.query(parse_dim('seconden_reversed', '3', 'coal')) * mega_to_peta / coal_conversion
+    coal_converted.drop(columns=[27, 28], inplace=True)  # drop 27 and 28, which are empty regions & global region
+
     heavy_oil_converted = fossils_final.query(parse_dim('seconden_reversed', '3', 'heavy oil')) * mega_to_peta / oil_conversion
+    heavy_oil_converted.drop(columns=[27, 28], inplace=True)  
+
     light_oil_converted = fossils_final.query(parse_dim('seconden_reversed', '3', 'light oil')) * mega_to_peta / oil_conversion
+    light_oil_converted.drop(columns=[27, 28], inplace=True)
+
     gas_converted = fossils_final.query(parse_dim('seconden_reversed', '3', 'natural gas')) * mega_to_peta / gas_conversion
-    
-    fossils_final_converteted = pd.concat([coal_converted, heavy_oil_converted, light_oil_converted, gas_converted])
-    
-    return fossils_final_converteted
+    gas_converted.drop(columns=[27, 28], inplace=True)
+
+    return {'coal': coal_converted, 
+            'heavy oil': heavy_oil_converted, 
+            'light oil': light_oil_converted, 
+            'natural gas': gas_converted }
 
 
 
