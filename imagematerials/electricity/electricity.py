@@ -41,8 +41,8 @@ from imagematerials.electricity.preprocessing import (
     # get_preprocessing_data_stor
 )
 # from imagematerials.util import import_from_netcdf, export_to_netcdf
-from imagematerials.model import GenericMainModel, GenericMaterials, GenericStocks, Maintenance
-from imagematerials.factory import ModelFactory
+from imagematerials.model import GenericMainModel, GenericMaterials, GenericStocks, Maintenance, MaterialIntensities
+from imagematerials.factory import ModelFactory, Sector
 import prism
 
 
@@ -56,7 +56,7 @@ path_base = path_current.parent.parent # base path of the project -> image-mater
 
 
 ####################################################################################################################
-#%% Settings
+#%% Generation
 ####################################################################################################################
 
 prep_data = get_preprocessing_data_gen(path_base, scen_folder)
@@ -80,7 +80,7 @@ main_model_factory = ModelFactory(
 
 main_model_factory.simulate(simulation_timeline)
 
-# list(main_model_factory.elctr_gen)
+list(main_model_factory.electr_gen)
 
 
 
