@@ -128,7 +128,7 @@ class MaintenanceLinear(prism.Model):
     material: prism.Coords[MATERIAL_TYPE]
     
     # Data dependencies (matching original + vehicle_lifetimes)
-    input_data: tuple[str] = ("weights", "maintenance_material_fractions", "stock_by_cohort")#, "maintenance_lifetime_per_mode")
+    input_data: tuple[str] = ("weights", "maintenance_material_fractions", "stock_by_cohort","cap_at_lifetime")#, "maintenance_lifetime_per_mode")
     output_data: tuple[str] = ("inflow_maintenance", "outflow_maintenance")
     
     # Output data (matching original)
@@ -137,34 +137,7 @@ class MaintenanceLinear(prism.Model):
     
     # Configuration parameters for age-dependent maintenance
     end_multiplier: float = 10  
-    cap_at_lifetime: bool = False 
-    
-    def compute_initial_values(self, time: prism.Timeline):
-        """Compute the initial values for maintenance materials used by stock cohorts.
-
-        Parameters
-        ----------
-        time : prism.Timeline
-            The simulation timeline.
-        """
-
-        maintenance_lifetime_per_mode_ = maintenance_lifetime_per_mode.copy()
-        maintenance_lifetime_per_mode_['Vehicles'] = 0
-        modes_lifetime = list(maintenance_lifetime_per_mode_.keys())
-        expected_lifetimes = xr.DataArray(
-                data=[maintenance_lifetime_per_mode_[mode] for mode in modes_lifetime],
-                dims=["Type"],
-                coords={"Type": modes_lifetime},
-                name="vehicle_lifetime"
-            )
-
-        self.vehicle_lifetime_maintenance = create_vehicle_graph().rebroadcast_xarray(expected_lifetimes, output_coords=modes, dim="Type")
-
-        
-        # Pre-identify which vehicle types have maintenance 
-        self.maintenance_types = set(self.maintenance_material_fractions.coords["Type"].values)
-        
-        print(f"Initialized MaintenanceWithAge with {len(self.maintenance_types)} maintenance types")
+    #cap_at_lifetime: bool  
     
     def compute_initial_values(self, time: prism.Timeline):
         """Setup vehicle lifetimes and maintenance types."""
@@ -186,10 +159,11 @@ class MaintenanceLinear(prism.Model):
         
         # Cache maintenance types for performance
         self.maintenance_types = set(self.maintenance_material_fractions.coords["Type"].values)
-        
+
         print(f"Initialized MaintenanceLinear with {len(self.maintenance_types)} maintenance types")
+        #print(f"Capping lifetime is set to {cap_at_lifetime}")
     
-    def compute_values(self, time: prism.Time, stock_by_cohort):
+    def compute_values(self, time: prism.Time, stock_by_cohort, cap_at_lifetime):
         """Compute maintenance with age-dependent linear factors (vectorized)."""
         t, dt = time.t, time.dt
         current_stock = stock_by_cohort.loc[t]
@@ -216,7 +190,7 @@ class MaintenanceLinear(prism.Model):
 
 
         # Cap age factors at lifetime if requested
-        if self.cap_at_lifetime:            
+        if cap_at_lifetime:            
             max_age_factor = start_factor * self.end_multiplier
             age_factors = xr.where(ages_bc <= lifetimes_bc, age_factors, max_age_factor)
 
