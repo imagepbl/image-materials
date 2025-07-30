@@ -61,8 +61,7 @@ class Battery(prism.Model):
     # Data dependencies
     input_data: tuple[str] = ("battery_weights", "battery_materials", "battery_shares",
                               "stock_by_cohort", "inflow", "outflow_by_cohort")
-    output_data: tuple[str] = ("inflow_battery",
-                               "stock_battery","outflow_battery")
+    output_data: tuple[str] = ("inflow_battery","stock_battery","outflow_battery")
 
     
     def compute_initial_values(self, time: prism.Timeline):
@@ -107,12 +106,21 @@ class Battery(prism.Model):
         ----------
         time : prism.Time
             The current simulation time step.
-        inflow : xr.DataArray
-            Inflow data for vehicles, defined per cohort and vehicle type.
+        inflow : TimeVariable
+            Inflow data for vehicles, defined per region, cohort and vehicle type.
         stock_by_cohort : xr.DataArray
-            The stock-by-cohort data.
-        outflow_by_cohort : xr.DataArray
-            Outflow data for vehicles, defined per cohort and vehicle type.
+            The stock-by-cohort data for vehicles per region, cohort and vehicle type.
+        outflow_by_cohort : TimeVariable
+            Outflow data for vehicles, defined per region, cohort and vehicle type.
+
+        Returns
+        -------
+        inflow_battery : xr.DataArray
+            Inflow of battery materials at the current time step, defined per region, vehicle type, material.
+        stock_battery : xr.DataArray
+            Stock of battery materials at the current time step, defined per region, vehicle type, material.
+        outflow_battery : xr.DataArray
+            Outflow of battery materials at the current time step, defined per region, vehicle type, material.
         """
          
         t, dt = time.t, time.dt
