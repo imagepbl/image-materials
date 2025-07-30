@@ -64,8 +64,8 @@ from imagematerials.electricity.electr_external_data import (
     df_iea_mn_aps,
     df_iea_ni_aps
 )
-VARIANT = "VLHO"
-# VARIANT = "M_CP"
+# VARIANT = "VLHO"
+VARIANT = "M_CP"
 # Define paths ----------------------------------------------------------------------
 #YOUR_DIR = "C:\\Users\\Admin\\surfdrive\\Projects\\IRP\\GRO23\\Modelling\\2060\\ELMA"   # Change the running directory here
 # os.chdir(YOUR_DIR)
@@ -3182,10 +3182,10 @@ axes[1].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific n
 axes[1].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
 axes[1].legend(loc='upper left', fontsize=s_legend)
 
-plt.suptitle("Electricity Grid - Stocks", fontsize=16)
+plt.suptitle(f"{scen_folder}: Electricity Grid - Stocks", fontsize=16)
 
 plt.tight_layout()
-# fig.savefig(path_test_plots / "Grid_stocks_world.png", dpi=300)
+fig.savefig(path_test_plots / "Grid_stocks_world.png", dpi=300)
 plt.show()
 
 
@@ -3194,68 +3194,62 @@ plt.show()
 ###########################################################################################################
 
 materials = ["Steel", "Concrete", "Aluminium", "Cu"]
-dict_grid_colors = {
-    #'Lines Overhead': 'FF9B85',
-    #'Lines Underground': 'FFD97D',
-    'Lines': '#8cb369', #'#007f5f',
-    'Transformers': '#f4a259', #'#aacc00',
-    'Substations': '#bc4b51' #'#55a630'
-}
-
-#%%%% 1 model ---------------------------------------------------
-
-data_all = main_model_factory.stock_materials.copy().sum('Region')
-
-# data_all = main_model_factory.inflow_materials.to_array().sum('Region')
-data_all = data_all/1_000  # Convert kg -> tonnes
-data_all = data_all.sel(Time=slice(1971, None))
-data_plot = data_all.sum(dim='Type')
-
-lines_sum = data_all.sel(Type=[t for t in data_all.Type.values if 'Lines' in t]).sum(dim='Type') # Get group sums by keyword and sum over types (sum over HV, MV and LV (and overground/underground for lines))
-transformers_sum = data_all.sel(Type=[t for t in data_all.Type.values if 'Transformers' in t]).sum(dim='Type')
-substations_sum = data_all.sel(Type=[t for t in data_all.Type.values if 'Substations' in t]).sum(dim='Type')
 
 
-fig, axes = plt.subplots(nrows=4, ncols=1, figsize=(12, 10))
-linewidth = 2
-s_legend = 12
-s_label = 14
+# #%%%% 1 model ---------------------------------------------------
 
-for i, mat in enumerate(materials):
-    lines_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Lines'], label="Lines")
-    transformers_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Transformers'], label="Transformers")
-    substations_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Substations'], label="Substations")
-    data_plot.sel(material=mat).plot(ax=axes[i], label="Total", color='red', alpha=0.8, linestyle='--', linewidth=3)
+# data_all = main_model_factory.stock_materials.copy().sum('Region')
 
-    # if mat == "Cu":
-    #     # Add IEA data for copper
-    #     axes[i].plot(df_iea_lt_cu.index, df_iea_lt_cu['Cu'], label="IEA L&T", color='#00a5cf', linestyle=':', linewidth=4)
+# # data_all = main_model_factory.inflow_materials.to_array().sum('Region')
+# data_all = data_all/1_000  # Convert kg -> tonnes
+# data_all = data_all.sel(Time=slice(1971, None))
+# data_plot = data_all.sum(dim='Type')
 
-    # if mat == "Aluminium":
-    #     # Add IEA data for aluminium
-    #     axes[i].plot(df_iea_lt_alu.index, df_iea_lt_alu['Aluminium'], label="IEA L&T", color='#00a5cf', linestyle=':', linewidth=4)
+# lines_sum = data_all.sel(Type=[t for t in data_all.Type.values if 'Lines' in t]).sum(dim='Type') # Get group sums by keyword and sum over types (sum over HV, MV and LV (and overground/underground for lines))
+# transformers_sum = data_all.sel(Type=[t for t in data_all.Type.values if 'Transformers' in t]).sum(dim='Type')
+# substations_sum = data_all.sel(Type=[t for t in data_all.Type.values if 'Substations' in t]).sum(dim='Type')
 
-    # if mat == "Steel":
-    #     # Add IEA data for steel
-    #     axes[i].plot(df_iea_t_steel.index, df_iea_t_steel['Steel'], label="IEA T", color='#00a5cf', linestyle=':', linewidth=4)
+
+# fig, axes = plt.subplots(nrows=4, ncols=1, figsize=(12, 10))
+# linewidth = 2
+# s_legend = 12
+# s_label = 14
+
+# for i, mat in enumerate(materials):
+#     lines_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Lines'], label="Lines")
+#     transformers_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Transformers'], label="Transformers")
+#     substations_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Substations'], label="Substations")
+#     data_plot.sel(material=mat).plot(ax=axes[i], label="Total", color='red', alpha=0.8, linestyle='--', linewidth=3)
+
+#     # if mat == "Cu":
+#     #     # Add IEA data for copper
+#     #     axes[i].plot(df_iea_lt_cu.index, df_iea_lt_cu['Cu'], label="IEA L&T", color='#00a5cf', linestyle=':', linewidth=4)
+
+#     # if mat == "Aluminium":
+#     #     # Add IEA data for aluminium
+#     #     axes[i].plot(df_iea_lt_alu.index, df_iea_lt_alu['Aluminium'], label="IEA L&T", color='#00a5cf', linestyle=':', linewidth=4)
+
+#     # if mat == "Steel":
+#     #     # Add IEA data for steel
+#     #     axes[i].plot(df_iea_t_steel.index, df_iea_t_steel['Steel'], label="IEA T", color='#00a5cf', linestyle=':', linewidth=4)
     
-    axes[i].grid(alpha=0.3, linestyle='--')
-    axes[i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
-    axes[i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
-    axes[i].set_title(f"{mat}")
-    axes[i].set_xlabel(" ")
-    axes[i].set_ylabel("Inflow [t]", fontsize=s_label)
-    axes[i].legend()
+#     axes[i].grid(alpha=0.3, linestyle='--')
+#     axes[i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+#     axes[i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+#     axes[i].set_title(f"{mat}")
+#     axes[i].set_xlabel(" ")
+#     axes[i].set_ylabel("Inflow [t]", fontsize=s_label)
+#     axes[i].legend()
 
-axes[-1].set_xlabel("Time", fontsize=s_label)
+# axes[-1].set_xlabel("Time", fontsize=s_label)
 
-plt.suptitle("Electricity Grid Stocks Materials", fontsize=16)
-plt.tight_layout()
-# fig.savefig(path_test_plots / "Grid_inflow-materials_world.svg")
-# fig.savefig(path_test_plots / "Grid_inflow-materials_world_1971.pdf")
-# fig.savefig(path_test_plots / "Grid_inflow-materials_world_1971.png")
-# fig.savefig(path_test_plots / "Grid_inflow-materials_world_1971.svg")
-plt.show()
+# plt.suptitle("Electricity Grid Stocks Materials", fontsize=16)
+# plt.tight_layout()
+# # fig.savefig(path_test_plots / "Grid_inflow-materials_world.svg")
+# # fig.savefig(path_test_plots / "Grid_inflow-materials_world_1971.pdf")
+# # fig.savefig(path_test_plots / "Grid_inflow-materials_world_1971.png")
+# # fig.savefig(path_test_plots / "Grid_inflow-materials_world_1971.svg")
+# plt.show()
 
 #%%%% 2 model ---------------------------------------------------
 
@@ -3305,11 +3299,11 @@ for i, mat in enumerate(materials):
 
 axes[-1].set_xlabel("Time", fontsize=s_label)
 
-plt.suptitle("Electricity Grid Stocks Materials", fontsize=16)
+plt.suptitle(f"{scen_folder}: Electricity Grid Stocks Materials", fontsize=16)
 plt.tight_layout()
 # fig.savefig(path_test_plots / "Grid_stocks-materials_world.svg")
 # fig.savefig(path_test_plots / "Grid_stocks-materials_world_1971.pdf")
-# fig.savefig(path_test_plots / "Grid_stocks-materials_world_1971.png")
+fig.savefig(path_test_plots / "Grid_stocks-materials_world_1971.png")
 # fig.savefig(path_test_plots / "Grid_stocks-materials_world_1971.svg")
 plt.show()
 
@@ -3332,7 +3326,7 @@ data_lines  = main_model_factory_lines.inflow.to_array()
 data_add    = main_model_factory_add.inflow.to_array()
 
 data        = xr.concat([data_lines, data_add], dim='Type')
-data        = data.sel(time=slice(1971, None), Type=data_all.Type != '<EMPTY>', Region=regions)
+data        = data.sel(time=slice(1971, None), Type=data.Type != '<EMPTY>', Region=regions)
 
 techs_upper = [coord_name.item() for coord_name in data.coords['Type']  
                if data.sel(Type = coord_name).values.max() > threshold]
@@ -3378,11 +3372,11 @@ for row in range(2):
 axes[0, 2].legend(fontsize=s_legend, ncol=2, loc='upper center', bbox_to_anchor=(-1.4, -1.41))
 axes[1, 2].legend(fontsize=s_legend, ncol=2, loc='upper center', bbox_to_anchor=(-0.1, -0.21))
 
-plt.suptitle("Grid - Inflow", fontsize=16)
+plt.suptitle(f"{scen_folder}: Grid - Inflow", fontsize=16)
 plt.tight_layout(rect=[0, 0, 1, 0.98])  # Adjust layout to make room for the suptitle
 region_str = "_".join(regions)
 # fig.savefig(path_test_plots / f"Gen_inflow_{region_str}.png", dpi=300, bbox_inches='tight')
-# fig.savefig(path_test_plots / f"Grid_inflow_{region_str}_1971.png", dpi=300, bbox_inches='tight')
+fig.savefig(path_test_plots / f"Grid_inflow_{region_str}_1971.png", dpi=300, bbox_inches='tight')
 plt.show()
 
 
@@ -3394,7 +3388,7 @@ data_lines  = main_model_factory_lines.inflow.to_array()
 data_add    = main_model_factory_add.inflow.to_array()
 
 data        = xr.concat([data_lines, data_add], dim='Type')
-data        = data.sel(time=slice(1971, None), Type=data_all.Type != '<EMPTY>').sum('Region')
+data        = data.sel(time=slice(1971, None), Type=data.Type != '<EMPTY>').sum('Region')
 
 types_top    = ['HV - Lines - Overhead', 'HV - Lines - Underground', 'MV - Lines - Overhead', 'MV - Lines - Underground', 
                 'LV - Lines - Overhead', 'LV - Lines - Underground']
@@ -3436,7 +3430,7 @@ labels = labels0 + labels1
 # Add a single legend below the plots
 fig.legend(handles, labels, ncol=4, loc='lower center', bbox_to_anchor=(0.5, -0.1), fontsize=s_legend)
 
-plt.suptitle("Grid - Inflow", fontsize=16)
+plt.suptitle(f"{scen_folder}: Grid - Inflow", fontsize=16)
 plt.tight_layout(rect=[0, 0, 1, 0.98])  # Adjust layout to make room for the suptitle
 # fig.savefig(path_test_plots / f"Gen_inflow_world.png", dpi=300, bbox_inches='tight')
 fig.savefig(path_test_plots / f"Grid_inflow_world_1971.png", dpi=300, bbox_inches='tight')
@@ -3514,56 +3508,56 @@ df_iea_t_steel = df_iea_t_steel /1_000  # Convert kg -> t
 
 #%%%% 1 model ---------------------------------------------------
 
-data_all = main_model_factory.inflow_materials.to_array().sum('Region')
-data_all = data_all/1_000  # Convert kg -> tonnes
-data_all = data_all.sel(time=slice(1971, None))
-data_plot = data_all.sum(dim='Type')
+# data_all = main_model_factory.inflow_materials.to_array().sum('Region')
+# data_all = data_all/1_000  # Convert kg -> tonnes
+# data_all = data_all.sel(time=slice(1971, None))
+# data_plot = data_all.sum(dim='Type')
 
-lines_sum = data_all.sel(Type=[t for t in data_all.Type.values if 'Lines' in t]).sum(dim='Type') # Get group sums by keyword and sum over types (sum over HV, MV and LV (and overground/underground for lines))
-transformers_sum = data_all.sel(Type=[t for t in data_all.Type.values if 'Transformers' in t]).sum(dim='Type')
-substations_sum = data_all.sel(Type=[t for t in data_all.Type.values if 'Substations' in t]).sum(dim='Type')
+# lines_sum = data_all.sel(Type=[t for t in data_all.Type.values if 'Lines' in t]).sum(dim='Type') # Get group sums by keyword and sum over types (sum over HV, MV and LV (and overground/underground for lines))
+# transformers_sum = data_all.sel(Type=[t for t in data_all.Type.values if 'Transformers' in t]).sum(dim='Type')
+# substations_sum = data_all.sel(Type=[t for t in data_all.Type.values if 'Substations' in t]).sum(dim='Type')
 
 
-fig, axes = plt.subplots(nrows=4, ncols=1, figsize=(12, 10))
-linewidth = 2
-s_legend = 12
-s_label = 14
+# fig, axes = plt.subplots(nrows=4, ncols=1, figsize=(12, 10))
+# linewidth = 2
+# s_legend = 12
+# s_label = 14
 
-for i, mat in enumerate(materials):
-    lines_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Lines'], label="Lines")
-    transformers_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Transformers'], label="Transformers")
-    substations_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Substations'], label="Substations")
-    data_plot.sel(material=mat).plot(ax=axes[i], label="Total", color='red', alpha=0.8, linestyle='--', linewidth=3)
+# for i, mat in enumerate(materials):
+#     lines_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Lines'], label="Lines")
+#     transformers_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Transformers'], label="Transformers")
+#     substations_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Substations'], label="Substations")
+#     data_plot.sel(material=mat).plot(ax=axes[i], label="Total", color='red', alpha=0.8, linestyle='--', linewidth=3)
 
-    if mat == "Cu":
-        # Add IEA data for copper
-        axes[i].plot(df_iea_lt_cu.index, df_iea_lt_cu['Cu'], label="IEA L&T", color='#00a5cf', linestyle=':', linewidth=4)
+#     if mat == "Cu":
+#         # Add IEA data for copper
+#         axes[i].plot(df_iea_lt_cu.index, df_iea_lt_cu['Cu'], label="IEA L&T", color='#00a5cf', linestyle=':', linewidth=4)
 
-    if mat == "Aluminium":
-        # Add IEA data for aluminium
-        axes[i].plot(df_iea_lt_alu.index, df_iea_lt_alu['Aluminium'], label="IEA L&T", color='#00a5cf', linestyle=':', linewidth=4)
+#     if mat == "Aluminium":
+#         # Add IEA data for aluminium
+#         axes[i].plot(df_iea_lt_alu.index, df_iea_lt_alu['Aluminium'], label="IEA L&T", color='#00a5cf', linestyle=':', linewidth=4)
 
-    if mat == "Steel":
-        # Add IEA data for steel
-        axes[i].plot(df_iea_t_steel.index, df_iea_t_steel['Steel'], label="IEA T", color='#00a5cf', linestyle=':', linewidth=4)
+#     if mat == "Steel":
+#         # Add IEA data for steel
+#         axes[i].plot(df_iea_t_steel.index, df_iea_t_steel['Steel'], label="IEA T", color='#00a5cf', linestyle=':', linewidth=4)
     
-    axes[i].grid(alpha=0.3, linestyle='--')
-    axes[i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
-    axes[i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
-    axes[i].set_title(f"{mat}")
-    axes[i].set_xlabel(" ")
-    axes[i].set_ylabel("Inflow [t]", fontsize=s_label)
-    axes[i].legend()
+#     axes[i].grid(alpha=0.3, linestyle='--')
+#     axes[i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+#     axes[i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+#     axes[i].set_title(f"{mat}")
+#     axes[i].set_xlabel(" ")
+#     axes[i].set_ylabel("Inflow [t]", fontsize=s_label)
+#     axes[i].legend()
 
-axes[-1].set_xlabel("Time", fontsize=s_label)
+# axes[-1].set_xlabel("Time", fontsize=s_label)
 
-plt.suptitle("Electricity Grid Inflow Materials", fontsize=16)
-plt.tight_layout()
-# fig.savefig(path_test_plots / "Grid_inflow-materials_world.svg")
-# fig.savefig(path_test_plots / "Grid_inflow-materials_world_1971.pdf")
-# fig.savefig(path_test_plots / "Grid_inflow-materials_world_1971.png")
-# fig.savefig(path_test_plots / "Grid_inflow-materials_world_1971.svg")
-plt.show()
+# plt.suptitle("Electricity Grid Inflow Materials", fontsize=16)
+# plt.tight_layout()
+# # fig.savefig(path_test_plots / "Grid_inflow-materials_world.svg")
+# # fig.savefig(path_test_plots / "Grid_inflow-materials_world_1971.pdf")
+# # fig.savefig(path_test_plots / "Grid_inflow-materials_world_1971.png")
+# # fig.savefig(path_test_plots / "Grid_inflow-materials_world_1971.svg")
+# plt.show()
 
 #%%%% 2 model ---------------------------------------------------
 
@@ -3613,7 +3607,7 @@ for i, mat in enumerate(materials):
 
 axes[-1].set_xlabel("Time", fontsize=s_label)
 
-plt.suptitle("Electricity Grid Inflow Materials", fontsize=16)
+plt.suptitle(f"{scen_folder}: Electricity Grid Inflow Materials", fontsize=16)
 plt.tight_layout()
 # fig.savefig(path_test_plots / "Grid_inflow-materials_world.svg")
 # fig.savefig(path_test_plots / "Grid_inflow-materials_world_1971.pdf")
@@ -3662,7 +3656,7 @@ for i, mat in enumerate(materials):
 
 axes[-1].set_xlabel("Time", fontsize=s_label)
 
-plt.suptitle("Electricity Grid Outflow Materials", fontsize=16)
+plt.suptitle(f"{scen_folder}: Electricity Grid Outflow Materials", fontsize=16)
 plt.tight_layout()
 # fig.savefig(path_test_plots / "Grid_inflow-materials_world.svg")
 # fig.savefig(path_test_plots / "Grid_inflow-materials_world_1971.pdf")
@@ -3674,8 +3668,6 @@ plt.show()
 
 ###########################################################################################################
 #%% Visualize STOCK Materials - World per type Lines, Trans., Subst.
-
-
 
 materials = ["Steel", "Concrete", "Aluminium", "Cu"]
 

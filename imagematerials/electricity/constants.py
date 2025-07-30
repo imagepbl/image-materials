@@ -30,9 +30,9 @@ COHORTS = 50
 # Scenario settings ---------------------------------------------
 SCEN = "SSP2"
 # CP or 2D (Add "_RE" for Resource Efficiency)
-VARIANT = "2D_RE"
+# VARIANT = "2D_RE"
 # VARIANT = "M_CP"
-# VARIANT = "VLHO"
+VARIANT = "VLHO"
 # OUTPUT_FOLDER = base_dir.joinpath("..", "..", "output", PROJECT, FOLDER)
 
 # Sensitivity Analysis - default, high_stor, high_grid
