@@ -109,8 +109,9 @@ idx = pd.IndexSlice             # needed for slicing multi-index
 
 
 
-def get_preprocessing_data_gen(base_dir: str, scenario): #, climate_policy_config: dict, circular_economy_config: dict
+def get_preprocessing_data_gen(base_dir: str, SCEN, VARIANT): #, climate_policy_config: dict, circular_economy_config: dict
 
+    scen_folder = SCEN + "_" + VARIANT
     path_image_output = Path(path_base, "data", "raw", scen_folder, "EnergyServices")
     path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
     path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scen_folder)

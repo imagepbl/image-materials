@@ -6,6 +6,8 @@ import math
 import matplotlib.pyplot as plt
 import scipy.stats
 
+from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_life_time_vehicles
+from imagematerials.concepts import create_electricity_graph
 from imagematerials.electricity.constants import (
     YEAR_START,
     YEAR_FIRST,
