@@ -75,7 +75,7 @@ def cement_projection(scenario: str):
     cement.project_on_total(all_regions_list_class[:-1])
     cement.smooth_out_interpolation_all(10, 2012)
     cement.adjust_alpha_and_project(all_regions_list_class[:-1], 
-                        start_year_adjust=2050, 
+                        start_year_adjust=2025, 
                         end_year_adjust=2100, 
                         min_alpha=None)
 
@@ -136,7 +136,7 @@ def limestone_projection(scenario: str):
     limestone.project_on_total(all_regions_list_class[:-1])
     limestone.smooth_out_interpolation_all(10, 2017)
     limestone.adjust_alpha_and_project(all_regions_list_class[:-1], 
-                    start_year_adjust=2050, 
+                    start_year_adjust=2025, 
                     end_year_adjust=2100, 
                     min_alpha=None)
 
@@ -200,7 +200,7 @@ def sand_projections(scenario: str):
     sand.smooth_out_interpolation_all(10, 2017)
 
     sand.adjust_alpha_and_project(all_regions_list_class[:-1], 
-                        start_year_adjust=2050, 
+                        start_year_adjust=2025, 
                         end_year_adjust=2100, 
                         min_alpha=None)
     return sand
@@ -258,7 +258,7 @@ def clay_projections(scenario: str):
     clay.smooth_out_interpolation_all(10, 2017)
     
     clay.adjust_alpha_and_project(all_regions_list_class[:-1], 
-                        start_year_adjust=2050, 
+                        start_year_adjust=2025, 
                         end_year_adjust=2100, 
                         min_alpha=None)
 

@@ -51,14 +51,21 @@ def convert_primary_to_secondary_to_mass(fossils_prim_per_sec):
 
 def convert_secondary_to_final_mass(fossils_final):
     coal_converted = fossils_final.query(parse_dim('seconden_reversed', '3', 'coal')) * mega_to_peta / coal_conversion
-    heavy_oil_converted = fossils_final.query(parse_dim('seconden_reversed', '3', 'heavy oil')) * mega_to_peta / oil_conversion
-    light_oil_converted = fossils_final.query(parse_dim('seconden_reversed', '3', 'light oil')) * mega_to_peta / oil_conversion
-    gas_converted = fossils_final.query(parse_dim('seconden_reversed', '3', 'natural gas')) * mega_to_peta / gas_conversion
-    
-    fossils_final_converteted = pd.concat([coal_converted, heavy_oil_converted, light_oil_converted, gas_converted])
-    
-    return fossils_final_converteted
+    coal_converted.drop(columns=[27, 28], inplace=True)  # drop 27 and 28, which are empty regions & global region
 
+    heavy_oil_converted = fossils_final.query(parse_dim('seconden_reversed', '3', 'heavy oil')) * mega_to_peta / oil_conversion
+    heavy_oil_converted.drop(columns=[27, 28], inplace=True)  
+
+    light_oil_converted = fossils_final.query(parse_dim('seconden_reversed', '3', 'light oil')) * mega_to_peta / oil_conversion
+    light_oil_converted.drop(columns=[27, 28], inplace=True)
+
+    gas_converted = fossils_final.query(parse_dim('seconden_reversed', '3', 'natural gas')) * mega_to_peta / gas_conversion
+    gas_converted.drop(columns=[27, 28], inplace=True)
+
+    return {'coal': coal_converted, 
+            'heavy oil': heavy_oil_converted, 
+            'light oil': light_oil_converted, 
+            'natural gas': gas_converted }
 
 
 #%% Plot primary energy of selected region (in joule or kg)
@@ -172,6 +179,18 @@ def fossil_fuel_data(scenario):
     prim_per_sec = prim_per_sec[sorted(prim_per_sec.columns)] # sort so that 27 is before 28
 
     # Final Energy in PJ/yr 
+    # Sectors: ! 	1 Industry, 
+    # !	2 = transport (no bunkers)
+    # !	3 = residential
+    # !	4 = service
+    # !	5 = other TFC
+    # !	6 = non-energy (feedstock + energy)
+    # !	7 = bunkers
+    # !	8 = agriculture - Variable created for reporting tool; because of feedstock / agriculture included in industry
+    # !	9 = Carbon Management (Energy use in DAC)
+    # !	10 = Total
+
+
     #TODO: region 27 is empty
     final_energy = final_energy.T # transpose to make DIM_1 the index
     final_energy = final_energy.stack(['time', 'DIM_2'])  # add years as and DIM_2 index

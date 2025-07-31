@@ -20,7 +20,7 @@ switch_year = 2100
 # PATHS - set here your own data paths 
 
 # INPUT
-SCENARIO = "SSP2_CP23"
+SCENARIO = "SSP2_CP"
 
 path_input_data = Path(f"../../../data/raw/image/")
 path_input_data_cons = "../../../data/raw/rest-of"
