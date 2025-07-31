@@ -121,8 +121,9 @@ class GenericStocks(prism.Model):
 class GenericMaterials(prism.Model):
     """
     A model class for managing materials used in stock cohorts, including 
-    inflows and outflows of materials and the computation of stock-by-cohort 
+    inflows and outflows of materials and the computation of stock 
     material use over time.
+
     Attributes
     ----------
     weights : xr.DataArray
@@ -157,12 +158,12 @@ class GenericMaterials(prism.Model):
     # Data dependencies
     input_data: tuple[str] = ("weights", "material_fractions", "inflow",
                               "stock_by_cohort", "outflow_by_cohort")
-    output_data: tuple[str] = ("stock_by_cohort_materials", "inflow_materials",
-                               "outflow_by_cohort_materials")
+    output_data: tuple[str] = ("stock_materials", "inflow_materials",
+                               "outflow_materials") # eventually outflow_by_cohort_materials, currently requires too much memory
 
     # Output data
     inflow_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
-    outflow_by_cohort_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
+    outflow_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
 
     def compute_initial_values(self, time: prism.Timeline):
         """
@@ -173,7 +174,7 @@ class GenericMaterials(prism.Model):
         time : prism.Timeline
             The simulation timeline.
         """
-        self.stock_by_cohort_materials = xr.DataArray(
+        self.stock_materials = xr.DataArray(
             0.0, dims=("Time", "Region", "Type", "material"),
             coords={"Time": self.Time,
                     # "Cohort": coordinates["Time"].values,
@@ -200,8 +201,8 @@ class GenericMaterials(prism.Model):
          
         t, dt = time.t, time.dt
         self.inflow_materials[t] = inflow[t]*self.material_fractions.sel(Cohort=t).drop_vars("Cohort")*self.weights.sel(Cohort=t).drop_vars("Cohort")
-        self.outflow_by_cohort_materials[t] = (outflow_by_cohort[t]*self.material_fractions*self.weights).sum("Cohort")
-        self.stock_by_cohort_materials.loc[t] = (stock_by_cohort.loc[t]*self.material_fractions*self.weights).sum("Cohort")
+        self.outflow_materials[t] = (outflow_by_cohort[t]*self.material_fractions*self.weights).sum("Cohort")
+        self.stock_materials.loc[t] = (stock_by_cohort.loc[t]*self.material_fractions*self.weights).sum("Cohort")
 
 @prism.interface
 class RestModel(prism.Model):
@@ -236,14 +237,11 @@ class MaterialIntensities(prism.Model):
     input_data: tuple[str] = ("material_intensities", "inflow",
                               "stock_by_cohort", "outflow_by_cohort")
     output_data: tuple[str] = ("stock_materials", "inflow_materials",
-                               "outflow_materials")
-    # output_data: tuple[str] = ("stock_by_cohort_materials", "inflow_materials",
-    #                            "outflow_by_cohort_materials")
+                               "outflow_materials") # eventually outflow_by_cohort_materials, currently requires too much memory
 
     # Output data
     inflow_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
     outflow_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
-    # outflow_by_cohort_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
 
     def compute_initial_values(self, time: prism.Timeline):
         # self.stock_by_cohort_materials = xr.DataArray(
@@ -251,16 +249,14 @@ class MaterialIntensities(prism.Model):
             0.0, dims=("Time", "Region", "Type", "material"),
             coords={"Time": self.Time,
                     # "Cohort": coordinates["Time"].values,
-                    "Region": self.Region,
+                    "Region": self.Region
                     "Type": self.Type,
                     "material": self.material})
 
     def compute_values(self, time: prism.Time, inflow, stock_by_cohort, outflow_by_cohort):
         t, dt = time.t, time.dt
         self.inflow_materials[t] = inflow[t]*self.material_intensities.sel(Cohort=t).drop_vars("Cohort")
-        #self.outflow_by_cohort_materials[t] = (outflow_by_cohort[t]*self.material_intensities) #.sum("Cohort")
         self.outflow_materials[t] = (outflow_by_cohort[t]*self.material_intensities).sum("Cohort")
-        #self.stock_by_cohort_materials.loc[t] = (stock_by_cohort.loc[t]*self.material_intensities) #.sum("Cohort")
         self.stock_materials.loc[t] = (stock_by_cohort.loc[t]*self.material_intensities).sum("Cohort")
 
 
@@ -422,7 +418,7 @@ class EndOfLife(prism.Model):
     material: prism.Coords[MATERIAL_TYPE]
 
     # Data dependencies
-    input_data: tuple[str] = ("collection", "reuse", "recycling", "outflow_by_cohort_materials")
+    input_data: tuple[str] = ("collection", "reuse", "recycling", "outflow_materials")
     output_data: tuple[str] = ("sum_outflow","collected_materials","reusable_materials", "recyclable_materials","losses_materials")
 
     # Output data
@@ -436,7 +432,7 @@ class EndOfLife(prism.Model):
     def compute_initial_values(self, timeline: prism.Timeline):
         pass
 
-    def compute_values(self, time: prism.Time, outflow_by_cohort_materials, collection, reuse, recycling):
+    def compute_values(self, time: prism.Time, outflow_materials, collection, reuse, recycling):
         """
         Computes reused material within sector and recyclable material from each sector/type, given collection, 
         reuse and recycling rates at each time step 
@@ -445,7 +441,7 @@ class EndOfLife(prism.Model):
         ----------
         time : prism.Time
             The current simulation time step.
-        outflow_by_cohort_materials : xr.DataArray
+        outflow_materials : xr.DataArray
             Outflow data after lifetime.
         collection : xr.DataArray
             Collection rate data by material and type. 
@@ -482,7 +478,7 @@ class EndOfLife(prism.Model):
 
         }
         self.sum_outflow[t].loc[:] = 0
-        for outflow in outflow_by_cohort_materials:
+        for outflow in outflow_materials:
             for supertype, subtypes in type_dict.items():
                 if subtypes[0] not in outflow[t].coords["Type"]:
                     continue
