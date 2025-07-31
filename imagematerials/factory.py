@@ -288,11 +288,11 @@ class ModelFactory():
 
         sec_groups = {sec: i for i, sec in enumerate(self.sectors)}
         graph = nx.DiGraph()
-        # Add sector preprocessing node
-        for sec in self.sectors:
-            graph.add_node(label_id, group=sec_groups[sec], label=f"{sec}.preprocessing")
-            prep_nodes[f"{sec}.preprocessing"] = label_id
-            label_id += 1
+        # # Add sector preprocessing node
+        # for sec in self.sectors:
+        #     graph.add_node(label_id, group=sec_groups[sec], label=f"{sec}.preprocessing")
+        #     prep_nodes[f"{sec}.preprocessing"] = label_id
+        #     label_id += 1
 
         for map in self.datamap:
             # Add model node
@@ -310,6 +310,10 @@ class ModelFactory():
                 for sec in sectors:
                     full_var_name = f"{sec}.{var_name}"
                     if full_var_name not in data_nodes:
+                        if f"{sec}.preprocessing" not in prep_nodes:
+                            graph.add_node(label_id, group=sec_groups[sec], label=f"{sec}.preprocessing")
+                            prep_nodes[f"{sec}.preprocessing"] = label_id
+                            label_id += 1
                         source_id = prep_nodes[f"{sec}.preprocessing"]
                         graph.add_node(label_id, label=full_var_name, group=sec_groups[sec])
                         data_nodes[full_var_name] = label_id
