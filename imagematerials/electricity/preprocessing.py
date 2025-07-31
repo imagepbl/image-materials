@@ -67,25 +67,23 @@ from imagematerials.electricity.electr_external_data import (
 VARIANT = "VLHO"
 # VARIANT = "M_CP"
 # Define paths ----------------------------------------------------------------------
-#YOUR_DIR = "C:\\Users\\Admin\\surfdrive\\Projects\\IRP\\GRO23\\Modelling\\2060\\ELMA"   # Change the running directory here
-# os.chdir(YOUR_DIR)
-scen_folder = SCEN + "_" + VARIANT
-# path_base = Path().resolve() # TODO absolute path of file "preprocessing.py" ? current solution can differ depending on IDE used (?) 
-path_current = Path().resolve()
-path_base = path_current.parent.parent # base path of the project -> image-materials
+# scen_folder = SCEN + "_" + VARIANT
+# # path_base = Path().resolve() # TODO absolute path of file "preprocessing.py" ? current solution can differ depending on IDE used (?) 
+# path_current = Path().resolve()
+# path_base = path_current.parent.parent # base path of the project -> image-materials
 
-# path_image_output = Path(path_base, "data", "raw", SCEN, "EnergyServices")
-path_image_output = Path(path_base, "data", "raw", scen_folder, "EnergyServices")
-path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
-path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scen_folder)
+# # path_image_output = Path(path_base, "data", "raw", SCEN, "EnergyServices")
+# path_image_output = Path(path_base, "data", "raw", scen_folder, "EnergyServices")
+# path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
+# path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scen_folder)
 
 # assert path_image_output.is_dir()
 # assert path_external_data_standard.is_dir()
 # assert path_external_data_scenario.is_dir()
 
 # create the folder out_test if it does not exist
-if not (path_base / 'imagematerials' / 'electricity' / 'out_test').is_dir():
-    (path_base / 'imagematerials' / 'electricity' / 'out_test').mkdir(parents=True)
+# if not (path_base / 'imagematerials' / 'electricity' / 'out_test').is_dir():
+#     (path_base / 'imagematerials' / 'electricity' / 'out_test').mkdir(parents=True)
 
 
 
@@ -109,7 +107,7 @@ idx = pd.IndexSlice             # needed for slicing multi-index
 
 
 
-def get_preprocessing_data_gen(base_dir: str, SCEN, VARIANT): #, climate_policy_config: dict, circular_economy_config: dict
+def get_preprocessing_data_gen(path_base: str, SCEN, VARIANT): #, climate_policy_config: dict, circular_economy_config: dict
 
     scen_folder = SCEN + "_" + VARIANT
     path_image_output = Path(path_base, "data", "raw", scen_folder, "EnergyServices")
@@ -228,7 +226,7 @@ def get_preprocessing_data_gen(base_dir: str, SCEN, VARIANT): #, climate_policy_
 ###########################################################################################################
 ###########################################################################################################
 
-def get_preprocessing_data_grid(base_dir: str, SCEN, VARIANT): #, climate_policy_config: dict, circular_economy_config: dict
+def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT): #, climate_policy_config: dict, circular_economy_config: dict
 
     scen_folder = SCEN + "_" + VARIANT
     path_image_output = Path(path_base, "data", "raw", scen_folder, "EnergyServices")
