@@ -20,19 +20,22 @@ Script in which the stock modelling should take place. Currently it still contai
 
 # Old ones -------------------------------------------
 
-Electricity_sector_new.py
+Electricity_sector_new.py (in electricity/archive)
 Sebastiaans ELMA code
 
-Electricity_sector_new_JT.py
+Electricity_sector_new_JT.py (in electricity/archive)
 Same, just formatted a bit cleaner and some minor changes to accomodate package changes (not supported functionality)
 
 Electricity_sector_restructured.py
 Same, but restructured: separated generation and storage; clearer devision between read in of files, preprocessing, modelling and postprocessing.
 
-grid_materials.py
-Sebastiaans code to model the electricity transmission grid infrastructure. I have not looked at this yet.
+grid_materials.py (in electricity/archive)
+Sebastiaans code to model the electricity transmission grid infrastructure.
 
-graphs_elec.py
+grid_materials_JT.py
+Same, but a bit of formatting done.
+
+graphs_elec.py (in electricity/archive)
 Sebastiaans code: visualizations of the electricity module, figures used for his publication.
 
 dynamic_stock_model.py

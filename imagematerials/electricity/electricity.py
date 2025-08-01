@@ -45,7 +45,7 @@ import prism
 from imagematerials.electricity.constants import (
     SCEN,
     VARIANT
-}
+)
 
 # VARIANT = "VLHO"
 # SCEN = "SSP2"
