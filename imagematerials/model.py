@@ -249,7 +249,7 @@ class MaterialIntensities(prism.Model):
             0.0, dims=("Time", "Region", "Type", "material"),
             coords={"Time": self.Time,
                     # "Cohort": coordinates["Time"].values,
-                    "Region": self.Region
+                    "Region": self.Region,
                     "Type": self.Type,
                     "material": self.material})
 
