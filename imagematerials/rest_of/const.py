@@ -32,13 +32,6 @@ path_scenario_data_water = f"../../../data/raw/image/{SCENARIO}/EnergyFlows/"
 path_figures = "../figures_test"
 
 
-
-#%%
-# Scenario data
-
-scenario = 'SSP2'
-
-
 #%%
 
 def class_num_to_str(num: int):
@@ -484,7 +477,6 @@ DIM2_sectors_dict = {
     7 : 'bunkers',
     8 : 'total'
     }
-
 
 colors_country = {
       'Canada': 'blue',
