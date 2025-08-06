@@ -4,11 +4,17 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+import pint_xarray
+from pint import UnitRegistry
+
 from imagematerials.buildings.constants import (
     urban_share_1820)
 
 from imagematerials.util import dataset_to_array
 from imagematerials.read_mym import read_mym_df
+
+ureg = UnitRegistry("../units.txt", force_ndarray_like=True)
+pint_xarray.accessors.default_registry = ureg
 
 
 def compute_population(image_directory, base_directory):
@@ -34,6 +40,8 @@ def compute_population(image_directory, base_directory):
     all_population = xr.concat((tot_population_xr, rurpop_total_xr, urbpop_total_xr), dim="Area")
     all_population = all_population.assign_coords({"Area": ["Total", "Rural", "Urban"]})
     all_population = all_population.transpose("Time", "Region", "Area")
+    all_population = all_population * 1e6 # data from TIMER comes in million persons
+    all_population = all_population.pint.quantify("person")
 
     return all_population
 

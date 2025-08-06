@@ -4,6 +4,9 @@ import math
 import numpy as np
 import pandas as pd
 import xarray as xr
+import pint_xarray
+
+from pint import UnitRegistry
 
 from imagematerials.buildings.constants import (
     END_YEAR,
@@ -22,6 +25,9 @@ from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, merge_dims, \
     scenario_change, apply_change_per_region
 from imagematerials.concepts import create_region_graph
+
+ureg = UnitRegistry("../units.txt", force_ndarray_like=True)
+pint_xarray.accessors.default_registry = ureg
 
 far_start_year = 1721
 start_year = 1820
@@ -73,6 +79,14 @@ def get_image_floorspace(image_directory, base_directory):
     for data_name, data_var in floorspace_dataset.data_vars.items():
         floorspace_xr.loc[:, :, data_name] = data_var
     floorspace_xr.coords["Region"] = [str(x.values) for x in floorspace_xr.coords["Region"]]
+
+    # Quantify units
+    floorspace_xr = floorspace_xr * 1e6 # data from TIMER comes in million m2 convert to m2
+    minimum_comm = minimum_comm * 1e6  # convert to m2
+
+    floorspace_xr = floorspace_xr.pint.quantify("m^2")
+    minimum_comm = minimum_comm.pint.quantify("m^2")
+
     return floorspace_xr, minimum_comm
 
 def extrapolate_floorspace(floorspace_image, minimum_comm):
@@ -101,6 +115,10 @@ def extrapolate_floorspace(floorspace_image, minimum_comm):
 
     # combine historic with IMAGE data here
     floorspace = xr.concat((floor_1721_1820, floor_1820_1970, floorspace_image), dim="Time")
+    
+    # Quantify units
+    floorspace = floorspace.pint.quantify("m^2")
+
     return floorspace.transpose()
 
 
@@ -198,6 +216,10 @@ def compute_housing_type(database_directory):
 
     housing_type_xr = dataset_to_array(housing_type.to_xarray(), ["Time", "Region", "Area"], ["Type"])
     housing_type_xr.coords["Region"] = [str(x.values) for x in housing_type_xr.coords["Region"]]
+
+    # Quantify units (share - dimensionless)
+    housing_type_xr = housing_type_xr.pint.quantify("")
+
     return housing_type_xr
 
 def compute_average_m2_capita(base_directory):
@@ -206,14 +228,29 @@ def compute_average_m2_capita(base_directory):
     average_m2_capita_df.rename(columns=column_mapping, inplace=True)
     average_m2_capita = dataset_to_array(average_m2_capita_df.to_xarray(), ["Region", "Area"], ["Type"])
     average_m2_capita.coords["Region"] = [str(x.values) for x in average_m2_capita.coords["Region"]]
+
+    # Quantify units
+    average_m2_capita = average_m2_capita.pint.quantify("m^2/person")
+
     return average_m2_capita
 
-def compute_housing_residential(population, average_m2_capita, housing_type, floorspace_rururb, circular_economy_config:[]):
+def compute_housing_residential(population, average_m2_capita, housing_type, floorspace_rururb, circular_economy_config:dict):
     m2_housing_per_capita = average_m2_capita * housing_type
+    print(m2_housing_per_capita.pint.units, 'm2_housing_per_capita')
+    
     m2_housing_share = m2_housing_per_capita / m2_housing_per_capita.sum(["Type"])
+    print(m2_housing_share.pint.units, 'm2_housing_share')
+
     total_m2_housing_per_cap = m2_housing_share*floorspace_rururb
+    print(total_m2_housing_per_cap.pint.units, 'total_m2_housing_per_cap')
+    
     region_knowledge_graph = create_region_graph()
     regions = total_m2_housing_per_cap.coords["Region"].values
+
+    if circular_economy_config is None:
+        total_m2_housing = total_m2_housing_per_cap * population.sel({"Area": ["Rural", "Urban"]})
+        floorspace_residential = merge_dims(total_m2_housing, "Type", "Area")
+        return floorspace_residential.transpose("Time", "Region", "Type")
 
     if 'base' in circular_economy_config.keys():
         base_year = circular_economy_config["base"]["buildings"]["base_year"]

@@ -1,3 +1,5 @@
+from pint import UnitRegistry
+
 import prism
 import xarray as xr
 
@@ -6,6 +8,8 @@ STOCK_TYPE = prism.Dimension("Type")
 COHORT = prism.Dimension("Cohort")
 TIME = prism.Dimension("Time")
 MATERIAL_TYPE = prism.Dimension("material")
+
+ureg = UnitRegistry()
 
 @prism.interface
 class Maintenance(prism.Model):
@@ -55,8 +59,8 @@ class Maintenance(prism.Model):
                                "outflow_maintenance")
 
     # Output data
-    inflow_maintenance: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
-    outflow_maintenance: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
+    inflow_maintenance: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "kg"] = prism.export()
+    outflow_maintenance: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "kg"] = prism.export()
 
     def compute_initial_values(self, time: prism.Timeline):
         """Compute the initial values for maintenance materials used by stock cohorts.
@@ -79,6 +83,9 @@ class Maintenance(prism.Model):
             The stock-by-cohort data.
 
         """
+        self.maintenance_material_fractions = prism.Q_(self.maintenance_material_fractions, ureg.dimensionless)
+        self.weights = prism.Q_(self.weights, "kg")
+        
         t, dt = time.t, time.dt
 
         self.inflow_maintenance[t] = (stock_by_cohort.loc[t]*self.maintenance_material_fractions*
