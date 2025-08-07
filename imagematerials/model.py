@@ -19,8 +19,7 @@ MATERIAL_TYPE = prism.Dimension("material")
 BATTERY_TYPE = prism.Dimension("battery")
 EOL_TYPE = prism.Dimension("eoltype")
 
-ureg = UnitRegistry("../units.txt", force_ndarray_like=True)
-pint_xarray.accessors.default_registry = ureg
+prism.unit_registry.load_definitions("../units.txt")
 
 @prism.interface
 class GenericStocks(prism.Model):
@@ -66,8 +65,9 @@ class GenericStocks(prism.Model):
     output_data: tuple[str] = ("outflow_by_cohort", "inflow", "stock_by_cohort")
 
     # stock_by_cohort: prism.TimeVariable[Region, Mode, Cohort, "count"] = prism.export(initial_value = prism.Array[Region, Mode, Cohort, 'count'](0.0))
-    inflow: prism.TimeVariable[REGION, STOCK_TYPE, ureg.dimensionless] = prism.export()
-    outflow_by_cohort: prism.TimeVariable[REGION, STOCK_TYPE, COHORT, ureg.dimensionless] = prism.export()
+    # TODO: how to pass unit in a flexible manner??
+    inflow: prism.TimeVariable[REGION, STOCK_TYPE, "m^2"] = prism.export()
+    outflow_by_cohort: prism.TimeVariable[REGION, STOCK_TYPE, COHORT, "m^2"] = prism.export()
 
     def compute_initial_values(self, time: prism.Timeline):
         """Compute the initial values for stocks and the survival matrix.
@@ -88,6 +88,7 @@ class GenericStocks(prism.Model):
                     "Cohort": self.Cohort,
                     "Region": self.Region,
                     "Type": self.Type})
+        self.stock_by_cohort = prism.Q_(self.stock_by_cohort, "m^2")
 
     def compute_values(self, time: prism.Time):
         """
@@ -98,15 +99,17 @@ class GenericStocks(prism.Model):
         time : prism.Time
             The current simulation time step.
         """
-         
+        
         t, dt = time.t, time.dt
-        self.inflow[t].loc[:] = 0.0
-        self.outflow_by_cohort[t].loc[:] = 0.0
+        self.inflow[t].loc[:] = prism.Q_(0.0, "m^2")
+        self.outflow_by_cohort[t].loc[:] = prism.Q_(0.0, "m^2")
 
         input_stock = self.stocks
+        print('stocks unit:', input_stock.pint.units)
         stock_diff = input_stock.loc[t] - self.stock_by_cohort.loc[t].sum("Cohort")
         # Drop dimension cohort
         stock_diff = xr.where(stock_diff>0, stock_diff/self.survival_matrix[t, t].drop("Cohort"), 0)
+
         self.inflow[t] = stock_diff
         self.stock_by_cohort.loc[t:, t] = self.inflow[t] * self.survival_matrix[t:, t]
         # for t_future in stock_by_cohort[t].coords["Cohort"].loc[t_str:]:
@@ -115,7 +118,7 @@ class GenericStocks(prism.Model):
 
         # Prevent out of bounds error, assume first outflow to be 0.
         if t-1 < time.start:
-            self.outflow_by_cohort[t] = 0.0
+            self.outflow_by_cohort[t] = prism.Q_(0.0, "m^2")
         else:
             self.outflow_by_cohort[t].loc[:, :, :t-1] = self.stock_by_cohort.loc[t-1, :t-1] - self.stock_by_cohort.loc[t, :t-1]
             self.outflow_by_cohort[t].loc[:, :, t] = self.inflow[t] * (1-self.survival_matrix[t, t])
@@ -202,7 +205,7 @@ class GenericMaterials(prism.Model):
             Outflow data by cohort.
         """
 
-        self.material_fractions = prism.Q_(self.material_fractions, ureg.dimensionless)
+        self.material_fractions = prism.Q_(self.material_fractions, "")
         self.weights = prism.Q_(self.weights, "kg")
        
         t, dt = time.t, time.dt

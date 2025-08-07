@@ -3,9 +3,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import xarray as xr
-
-import pint_xarray
-from pint import UnitRegistry
+import prism
 
 from imagematerials.buildings.constants import (
     urban_share_1820)
@@ -13,9 +11,7 @@ from imagematerials.buildings.constants import (
 from imagematerials.util import dataset_to_array
 from imagematerials.read_mym import read_mym_df
 
-ureg = UnitRegistry("../units.txt", force_ndarray_like=True)
-pint_xarray.accessors.default_registry = ureg
-
+prism.unit_registry.load_definitions("../units.txt")
 
 def compute_population(image_directory, base_directory):
     # Compute total/rural/urban populations
@@ -41,7 +37,8 @@ def compute_population(image_directory, base_directory):
     all_population = all_population.assign_coords({"Area": ["Total", "Rural", "Urban"]})
     all_population = all_population.transpose("Time", "Region", "Area")
     all_population = all_population * 1e6 # data from TIMER comes in million persons
-    all_population = all_population.pint.quantify("person")
+    # all_population = all_population.pint.quantify("person")
+    all_population = prism.Q_(all_population, "person")
 
     return all_population
 
