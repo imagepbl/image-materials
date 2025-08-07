@@ -4,9 +4,7 @@ import math
 import numpy as np
 import pandas as pd
 import xarray as xr
-import pint_xarray
-
-from pint import UnitRegistry
+import prism
 
 from imagematerials.buildings.constants import (
     END_YEAR,
@@ -26,8 +24,7 @@ from imagematerials.util import dataset_to_array, merge_dims, \
     scenario_change, apply_change_per_region
 from imagematerials.concepts import create_region_graph
 
-ureg = UnitRegistry("../units.txt", force_ndarray_like=True)
-pint_xarray.accessors.default_registry = ureg
+prism.unit_registry.load_definitions("../units.txt")
 
 far_start_year = 1721
 start_year = 1820
@@ -81,11 +78,8 @@ def get_image_floorspace(image_directory, base_directory):
     floorspace_xr.coords["Region"] = [str(x.values) for x in floorspace_xr.coords["Region"]]
 
     # Quantify units
-    floorspace_xr = floorspace_xr * 1e6 # data from TIMER comes in million m2 convert to m2
-    minimum_comm = minimum_comm * 1e6  # convert to m2
-
-    floorspace_xr = floorspace_xr.pint.quantify("m^2")
-    minimum_comm = minimum_comm.pint.quantify("m^2")
+    floorspace_xr = prism.Q_(floorspace_xr, "m^2/person")
+    minimum_comm = prism.Q_(minimum_comm, "m^2/person")
 
     return floorspace_xr, minimum_comm
 
@@ -117,7 +111,7 @@ def extrapolate_floorspace(floorspace_image, minimum_comm):
     floorspace = xr.concat((floor_1721_1820, floor_1820_1970, floorspace_image), dim="Time")
     
     # Quantify units
-    floorspace = floorspace.pint.quantify("m^2")
+    floorspace = prism.Q_(floorspace, "m^2/person")
 
     return floorspace.transpose()
 
@@ -134,6 +128,7 @@ def get_floorspace_urban_rural(image_directory):
     floorspace = floorspace.rename({"t":"Time"}, axis = 1)
     floorspace = floorspace.set_index(["Time", "Region"])
     floorspace = floorspace.rename_axis("Type", axis = 1)
+    # UNIT: df has no pint --> ("m^2/person")
     return floorspace
 
 
@@ -218,7 +213,7 @@ def compute_housing_type(database_directory):
     housing_type_xr.coords["Region"] = [str(x.values) for x in housing_type_xr.coords["Region"]]
 
     # Quantify units (share - dimensionless)
-    housing_type_xr = housing_type_xr.pint.quantify("")
+    housing_type_xr = prism.Q_(housing_type_xr, "")
 
     return housing_type_xr
 
@@ -230,26 +225,25 @@ def compute_average_m2_capita(base_directory):
     average_m2_capita.coords["Region"] = [str(x.values) for x in average_m2_capita.coords["Region"]]
 
     # Quantify units
-    average_m2_capita = average_m2_capita.pint.quantify("m^2/person")
+    average_m2_capita = prism.Q_(average_m2_capita, "m^2/person")
 
     return average_m2_capita
 
 def compute_housing_residential(population, average_m2_capita, housing_type, floorspace_rururb, circular_economy_config:dict):
+    # Calculate the m2 per capita for each housing type
     m2_housing_per_capita = average_m2_capita * housing_type
-    print(m2_housing_per_capita.pint.units, 'm2_housing_per_capita')
-    
+    # Calculate the share of housing types on a m2 basis
     m2_housing_share = m2_housing_per_capita / m2_housing_per_capita.sum(["Type"])
-    print(m2_housing_share.pint.units, 'm2_housing_share')
-
     total_m2_housing_per_cap = m2_housing_share*floorspace_rururb
-    print(total_m2_housing_per_cap.pint.units, 'total_m2_housing_per_cap')
-    
+
     region_knowledge_graph = create_region_graph()
     regions = total_m2_housing_per_cap.coords["Region"].values
 
     if circular_economy_config is None:
         total_m2_housing = total_m2_housing_per_cap * population.sel({"Area": ["Rural", "Urban"]})
         floorspace_residential = merge_dims(total_m2_housing, "Type", "Area")
+        # merge_dims strips unit --> reattach unit
+        floorspace_residential = prism.Q_(floorspace_residential, total_m2_housing.pint.units)
         return floorspace_residential.transpose("Time", "Region", "Type")
 
     if 'base' in circular_economy_config.keys():
@@ -261,11 +255,12 @@ def compute_housing_residential(population, average_m2_capita, housing_type, flo
             list(floor_pc_2020.values()),
             coords={"Region": list(floor_pc_2020.keys())},
             dims=["Region"],
-            name="floor_pc_2020"
+            name="floor_pc_2020",
         )
 
         regions_mapped = list(region_knowledge_graph.find_relations_inverse(regions, floor_pc_2020.keys()))
         floor_pc_2020_mapped = region_knowledge_graph.rebroadcast_xarray(floor_pc_2020_xr, output_coords=regions_mapped, dim="Region")
+        floor_pc_2020_mapped = prism.Q_(floor_pc_2020_mapped, "m^2/person")
         target_vals = floor_pc_2020_mapped
         current_vals = total_m2_housing_per_cap.sel(Time=base_year)\
                                             .sum(dim="Type")\
@@ -299,7 +294,11 @@ def compute_housing_residential(population, average_m2_capita, housing_type, flo
         print("implemented 'narrow' for Residential Buildings")
 
     total_m2_housing = total_m2_housing_per_cap * population.sel({"Area": ["Rural", "Urban"]})
+
     floorspace_residential = merge_dims(total_m2_housing, "Type", "Area")
+    # merge_dims strips unit --> reattach unit
+    floorspace_residential = prism.Q_(floorspace_residential, total_m2_housing.pint.units)
+
     return floorspace_residential.transpose("Time", "Region", "Type")
 
 # #TODO move to a util file
