@@ -65,7 +65,6 @@ class GenericStocks(prism.Model):
     output_data: tuple[str] = ("outflow_by_cohort", "inflow", "stock_by_cohort")
 
     # stock_by_cohort: prism.TimeVariable[Region, Mode, Cohort, "count"] = prism.export(initial_value = prism.Array[Region, Mode, Cohort, 'count'](0.0))
-    # TODO: how to pass unit in a flexible manner??
     inflow: prism.TimeVariable[REGION, STOCK_TYPE, "m^2"] = prism.export()
     outflow_by_cohort: prism.TimeVariable[REGION, STOCK_TYPE, COHORT, "m^2"] = prism.export()
 
@@ -105,7 +104,6 @@ class GenericStocks(prism.Model):
         self.outflow_by_cohort[t].loc[:] = prism.Q_(0.0, "m^2")
 
         input_stock = self.stocks
-        print('stocks unit:', input_stock.pint.units)
         stock_diff = input_stock.loc[t] - self.stock_by_cohort.loc[t].sum("Cohort")
         # Drop dimension cohort
         stock_diff = xr.where(stock_diff>0, stock_diff/self.survival_matrix[t, t].drop("Cohort"), 0)
