@@ -20,7 +20,7 @@ switch_year = 2100
 # PATHS - set here your own data paths 
 
 # INPUT
-SCENARIO = "SSP2_CP23"
+SCENARIO = "SSP2_CP"
 
 path_input_data = Path(f"../../../data/raw/image/")
 path_input_data_cons = "../../../data/raw/rest-of"
@@ -30,13 +30,6 @@ path_scenario_data_water = f"../../../data/raw/image/{SCENARIO}/EnergyFlows/"
 
 # Output
 path_figures = "../figures_test"
-
-
-
-#%%
-# Scenario data
-
-scenario = 'SSP2'
 
 
 #%%
@@ -484,7 +477,6 @@ DIM2_sectors_dict = {
     7 : 'bunkers',
     8 : 'total'
     }
-
 
 colors_country = {
       'Canada': 'blue',
