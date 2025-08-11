@@ -465,7 +465,6 @@ class EndOfLife(prism.Model):
                         'Heavy Freight Trucks - BEV', 'Heavy Freight Trucks - FCV','Heavy Freight Trucks - HEV', 'Heavy Freight Trucks - ICE','Heavy Freight Trucks - PHEV', 'Heavy Freight Trucks - Trolley'
         ],
             'urban': ["Appartment - Urban","Detached - Urban","High-rise - Urban", "Semi-detached - Urban",
-                        "Office","Retail+","Hotels+","Govt+"
         ],
 
             'rural': ["Appartment - Rural","Detached - Rural","High-rise - Rural", "Semi-detached - Rural",
@@ -491,7 +490,7 @@ class EndOfLife(prism.Model):
                 raise ValueError(f"Unknown Type for unit conversion: {sample_type}")
             
             for supertype, subtypes in type_dict.items():
-                if subtypes[0] not in outflow[t].coords["Type"]:
+                if subtypes[0] not in outflow_t.coords["Type"]:
                     continue
                 sum_outflow = outflow_t.sel(Type=subtypes).sum("Type")
 
