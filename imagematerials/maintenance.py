@@ -84,7 +84,7 @@ class Maintenance(prism.Model):
 
         """
         self.maintenance_material_fractions = prism.Q_(self.maintenance_material_fractions, ureg.dimensionless)
-        self.weights = prism.Q_(self.weights, "kg")
+        self.weights = prism.Q_(self.weights, "kg/count")
         
         t, dt = time.t, time.dt
 
