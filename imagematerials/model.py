@@ -10,7 +10,6 @@ from imagematerials.maintenance import Maintenance
 from imagematerials.survival import ScipySurvival, SurvivalMatrix
 from imagematerials.vehicles.battery import Battery
 
-
 REGION = prism.Dimension("Region")
 STOCK_TYPE = prism.Dimension("Type")
 COHORT = prism.Dimension("Cohort")
@@ -18,6 +17,7 @@ TIME = prism.Dimension("Time")
 MATERIAL_TYPE = prism.Dimension("material")
 BATTERY_TYPE = prism.Dimension("battery")
 EOL_TYPE = prism.Dimension("eoltype")
+UnitFlexibleStock = prism.DynamicUnit("my_unit_stock")
 
 prism.unit_registry.load_definitions("../units.txt")
 
@@ -59,14 +59,16 @@ class GenericStocks(prism.Model):
     stocks: xr.DataArray #TODO check how to have property that can be both input and output within prism
     # stock_function: Callable    # defines the stock function to use e.g. stock or inflow driven
     knowledge_graph: KnowledgeGraph
+    # set a flexible unit that can be changed depending on type of stock - is passed by preprocessing
+    set_unit_flexible: prism.VarUnit[UnitFlexibleStock]
 
     # For module dependency, ignored by prism
-    input_data: tuple[str] = ("stocks", "lifetimes", "knowledge_graph")
+    input_data: tuple[str] = ("stocks", "lifetimes", "knowledge_graph", "set_unit_flexible")
     output_data: tuple[str] = ("outflow_by_cohort", "inflow", "stock_by_cohort")
 
     # stock_by_cohort: prism.TimeVariable[Region, Mode, Cohort, "count"] = prism.export(initial_value = prism.Array[Region, Mode, Cohort, 'count'](0.0))
-    inflow: prism.TimeVariable[REGION, STOCK_TYPE, "m^2"] = prism.export()
-    outflow_by_cohort: prism.TimeVariable[REGION, STOCK_TYPE, COHORT, "m^2"] = prism.export()
+    inflow: prism.TimeVariable[REGION, STOCK_TYPE, UnitFlexibleStock] = prism.export()
+    outflow_by_cohort: prism.TimeVariable[REGION, STOCK_TYPE, COHORT, UnitFlexibleStock] = prism.export()
 
     def compute_initial_values(self, time: prism.Timeline):
         """Compute the initial values for stocks and the survival matrix.
@@ -76,7 +78,8 @@ class GenericStocks(prism.Model):
         time : prism.Timeline
             The simulation timeline.
         """
-
+        # pass unit from stocks
+        unit = str(self.stocks.pint.units)
         survival = ScipySurvival(self.lifetimes, self.stocks.coords["Type"],
                                  knowledge_graph=self.knowledge_graph)
         self.survival_matrix = SurvivalMatrix(survival)
@@ -87,7 +90,7 @@ class GenericStocks(prism.Model):
                     "Cohort": self.Cohort,
                     "Region": self.Region,
                     "Type": self.Type})
-        self.stock_by_cohort = prism.Q_(self.stock_by_cohort, "m^2")
+        self.stock_by_cohort = prism.Q_(self.stock_by_cohort, unit)
 
     def compute_values(self, time: prism.Time):
         """
@@ -98,10 +101,11 @@ class GenericStocks(prism.Model):
         time : prism.Time
             The current simulation time step.
         """
-        
+        # pass unit from stocks
+        unit = str(self.stocks.pint.units)
         t, dt = time.t, time.dt
-        self.inflow[t].loc[:] = prism.Q_(0.0, "m^2")
-        self.outflow_by_cohort[t].loc[:] = prism.Q_(0.0, "m^2")
+        self.inflow[t].loc[:] = prism.Q_(0.0, unit)
+        self.outflow_by_cohort[t].loc[:] = prism.Q_(0.0, unit)
 
         input_stock = self.stocks
         stock_diff = input_stock.loc[t] - self.stock_by_cohort.loc[t].sum("Cohort")
@@ -116,7 +120,7 @@ class GenericStocks(prism.Model):
 
         # Prevent out of bounds error, assume first outflow to be 0.
         if t-1 < time.start:
-            self.outflow_by_cohort[t] = prism.Q_(0.0, "m^2")
+            self.outflow_by_cohort[t] = prism.Q_(0.0, unit)
         else:
             self.outflow_by_cohort[t].loc[:, :, :t-1] = self.stock_by_cohort.loc[t-1, :t-1] - self.stock_by_cohort.loc[t, :t-1]
             self.outflow_by_cohort[t].loc[:, :, t] = self.inflow[t] * (1-self.survival_matrix[t, t])

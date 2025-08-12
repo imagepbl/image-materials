@@ -74,4 +74,5 @@ def buildings_preprocessing(base_directory, climate_policy_config: dict, circula
     floorspace = knowledge_graph.rebroadcast_xarray(floorspace, region_coords, dim ="Region")
 
     return {"stocks": floorspace, "lifetimes": lifetimes, "material_intensities": mat_intensities,
-            "knowledge_graph": knowledge_graph}
+            "knowledge_graph": knowledge_graph, "set_unit_flexible": str(floorspace.pint.units), 
+            "population": population}
