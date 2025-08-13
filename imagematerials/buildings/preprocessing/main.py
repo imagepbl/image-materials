@@ -24,10 +24,14 @@ from imagematerials.concepts import create_building_graph
 def buildings_preprocessing(base_directory, climate_policy_config: dict, circular_economy_config: dict):
     base_directory = Path(base_directory)
     database_directory = base_directory / "buildings" / SCENARIO_SELECT
-    image_directory = base_directory / "IMAGE_CircoMod" / "SSP2"
+
+    if climate_policy_config is not None:
+        image_directory = Path(climate_policy_config["config_file_path"])
+    else:
+        image_directory = base_directory / "IMAGE_CircoMod" / "SSP2"
+
     assert database_directory.is_dir(), database_directory
     assert image_directory.is_dir(), image_directory
-
 
     # Get floorspace for commercial + urban/rural
     with warnings.catch_warnings():
