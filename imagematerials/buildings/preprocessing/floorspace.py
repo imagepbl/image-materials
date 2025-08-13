@@ -263,9 +263,60 @@ def compute_housing_residential(population, average_m2_capita, housing_type, flo
 
     total_m2_housing = total_m2_housing_per_cap * population.sel({"Area": ["Rural", "Urban"]})
     floorspace_residential = merge_dims(total_m2_housing, "Type", "Area")
-    
-    
     return floorspace_residential.transpose("Time", "Region", "Type")
+
+def apply_circular_economy_commercial_floorspace(floorspace_commercial, circular_economy_config):
+    """Implement circular economy measures for commercial floorspace."""
+    region_knowledge_graph = create_region_graph()
+    regions = floorspace_commercial.coords["Region"].values
+
+    if 'base' in circular_economy_config.keys():
+        base_year = circular_economy_config["base"]["buildings"]["base_year"]
+        target_year = circular_economy_config["base"]["buildings"]["target_year"]
+        floor_pc_2020 = circular_economy_config["base"]["buildings"]["commercial"]["2020"]["useful_floor_pc"]
+
+        floor_pc_2020_xr = xr.DataArray(
+            list(floor_pc_2020.values()),
+            coords={"Region": list(floor_pc_2020.keys())},
+            dims=["Region"],
+            name="floor_pc_2020"
+        )
+
+        regions_mapped = list(region_knowledge_graph.find_relations_inverse(regions, floor_pc_2020.keys()))
+        floor_pc_2020_mapped = region_knowledge_graph.rebroadcast_xarray(floor_pc_2020_xr, output_coords=regions_mapped, dim="Region")
+        target_vals = floor_pc_2020_mapped
+        current_vals = floorspace_commercial.sel(Time=2020).sum(dim="Type")
+
+        scaling_factors = target_vals / current_vals
+
+        floorspace_commercial.loc[{"Region": regions_mapped}] *= scaling_factors
+        print("implemented 'base' for Commercial Buildings")
+
+    if 'narrow' in circular_economy_config.keys():
+        base_year = circular_economy_config["narrow"]["buildings"]["base_year"]
+        target_year = circular_economy_config["narrow"]["buildings"]["target_year"]
+
+        commercial_scenario_settings = circular_economy_config['narrow']["buildings"]['commercial']['m2_change_pc']
+        implementation_rate = circular_economy_config['narrow']['buildings']['implementation_rate']
+
+        commercial_scenario_settings_xr = xr.DataArray(
+            list(commercial_scenario_settings.values()),
+            coords={"Region": list(commercial_scenario_settings.keys())},
+            dims=["Region"],
+            name="commercial_scenario_settings"
+        )
+
+        regions_mapped = list(region_knowledge_graph.find_relations_inverse(regions, commercial_scenario_settings.keys()))
+        commercial_scenario_settings_xr_mapped = region_knowledge_graph.rebroadcast_xarray(commercial_scenario_settings_xr, output_coords=regions_mapped, dim="Region")
+
+        region_coords = np.sort(commercial_scenario_settings_xr_mapped.coords["Region"].values.astype(int)).astype(str)
+        commercial_scenario_settings_xr_mapped = region_knowledge_graph.rebroadcast_xarray(commercial_scenario_settings_xr_mapped, region_coords, dim ="Region")
+
+        floorspace_commercial = apply_change_per_region(
+        floorspace_commercial, base_year, target_year, 
+        commercial_scenario_settings_xr_mapped, implementation_rate)
+        print("implemented 'narrow' for Commercial Buildings")
+    return floorspace_commercial.transpose("Time", "Region", "Type")
 
 # #TODO move to a util file
 # # Define a function to calculate Gompertz growth
