@@ -25,11 +25,7 @@ def buildings_preprocessing(base_directory, climate_policy_config: dict, circula
     base_directory = Path(base_directory)
     database_directory = base_directory / "buildings" / SCENARIO_SELECT
 
-    if climate_policy_config is not None:
-        image_directory = Path(climate_policy_config["config_file_path"])
-    else:
-        image_directory = base_directory / "SSP2"
-
+    image_directory = Path(climate_policy_config["config_file_path"])
     assert database_directory.is_dir(), database_directory
     assert image_directory.is_dir(), image_directory
 
