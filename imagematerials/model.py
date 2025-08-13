@@ -495,17 +495,9 @@ class EndOfLife(prism.Model):
         #   'storage': []
 
         }
-        self.sum_outflow[t].loc[:] = 0
+        self.sum_outflow[t] = prism.Q_(0.0, 'kg')
         for outflow in outflow_by_cohort_materials:
             outflow_t = outflow[t] 
-
-            sample_type = outflow_t.coords["Type"].values[0]
-            if sample_type in type_dict['passenger'] + type_dict['freight']:
-                outflow_t = outflow_t / 1e9  # kg → Mt
-            elif sample_type in type_dict['urban'] + type_dict['rural']+ type_dict['commercial']:
-                outflow_t = outflow_t / 1e3  # kt → Mt
-            else:
-                raise ValueError(f"Unknown Type for unit conversion: {sample_type}")
             
             for supertype, subtypes in type_dict.items():
                 if subtypes[0] not in outflow[t].coords["Type"]:
