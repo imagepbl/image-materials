@@ -189,6 +189,7 @@ class GenericMaterials(prism.Model):
                     "Region": self.Region,
                     "Type": self.Type,
                     "material": self.material})
+        self.stock_by_cohort_materials = prism.Q_(self.stock_by_cohort_materials, "kg")
 
     def compute_values(self, time: prism.Time, inflow, stock_by_cohort, outflow_by_cohort):
         """
@@ -207,7 +208,7 @@ class GenericMaterials(prism.Model):
             Outflow data by cohort.
         """
 
-        self.material_fractions = prism.Q_(self.material_fractions, "")
+        self.material_fractions = prism.Q_(self.material_fractions, "1")
         self.weights = prism.Q_(self.weights, "kg/count")
        
         t, dt = time.t, time.dt
@@ -262,6 +263,7 @@ class MaterialIntensities(prism.Model):
                     "Region": self.Region,
                     "Type": self.Type,
                     "material": self.material})
+        self.stock_by_cohort_materials = prism.Q_(self.stock_by_cohort_materials, "kg")
 
     def compute_values(self, time: prism.Time, inflow, stock_by_cohort, outflow_by_cohort):
 
