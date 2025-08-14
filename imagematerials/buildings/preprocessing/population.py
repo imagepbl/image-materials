@@ -5,13 +5,15 @@ import pandas as pd
 import xarray as xr
 import prism
 
+
 from imagematerials.buildings.constants import (
     urban_share_1820)
 
 from imagematerials.util import dataset_to_array
 from imagematerials.read_mym import read_mym_df
 
-prism.unit_registry.load_definitions("../units.txt")
+here = Path(__file__).resolve().parent
+prism.unit_registry.load_definitions(here.parent.parent.parent / "units.txt")
 
 def compute_population(image_directory, base_directory):
     # Compute total/rural/urban populations

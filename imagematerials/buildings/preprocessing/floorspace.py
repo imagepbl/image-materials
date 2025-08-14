@@ -5,6 +5,9 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import prism
+from pathlib import Path
+
+here = Path(__file__).resolve().parent
 
 from imagematerials.buildings.constants import (
     END_YEAR,
@@ -24,7 +27,8 @@ from imagematerials.util import dataset_to_array, merge_dims, \
     scenario_change, apply_change_per_region
 from imagematerials.concepts import create_region_graph
 
-prism.unit_registry.load_definitions("../units.txt")
+here = Path(__file__).resolve().parent
+prism.unit_registry.load_definitions(here.parent.parent.parent / "units.txt")
 
 far_start_year = 1721
 start_year = 1820
