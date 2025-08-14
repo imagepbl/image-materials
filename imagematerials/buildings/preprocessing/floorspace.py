@@ -237,6 +237,7 @@ def compute_housing_residential(population, average_m2_capita, housing_type, flo
     # Calculate the share of housing types on a m2 basis
     m2_housing_share = m2_housing_per_capita / m2_housing_per_capita.sum(["Type"])
     total_m2_housing_per_cap = m2_housing_share*floorspace_rururb
+    total_m2_housing_per_cap = prism.Q_(total_m2_housing_per_cap, "m^2/person")
 
     region_knowledge_graph = create_region_graph()
     regions = total_m2_housing_per_cap.coords["Region"].values
@@ -244,8 +245,6 @@ def compute_housing_residential(population, average_m2_capita, housing_type, flo
     if circular_economy_config is None:
         total_m2_housing = total_m2_housing_per_cap * population.sel({"Area": ["Rural", "Urban"]})
         floorspace_residential = merge_dims(total_m2_housing, "Type", "Area")
-        # merge_dims strips unit --> reattach unit
-        floorspace_residential = prism.Q_(floorspace_residential, total_m2_housing.pint.units)
         return floorspace_residential.transpose("Time", "Region", "Type")
 
     if 'base' in circular_economy_config.keys():
@@ -267,7 +266,6 @@ def compute_housing_residential(population, average_m2_capita, housing_type, flo
         current_vals = total_m2_housing_per_cap.sel(Time=base_year)\
                                             .sum(dim="Type")\
                                             .mean(dim="Area")
-
         scaling_factors = target_vals / current_vals
 
         total_m2_housing_per_cap.loc[{"Region": regions_mapped}] = total_m2_housing_per_cap.sel(Region = regions_mapped) * scaling_factors
@@ -303,6 +301,7 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial, circular
     """Implement circular economy measures for commercial floorspace."""
     region_knowledge_graph = create_region_graph()
     regions = floorspace_commercial.coords["Region"].values
+    #floorspace_commercial in m^2/cap
 
     if 'base' in circular_economy_config.keys():
         base_year = circular_economy_config["base"]["buildings"]["base_year"]
@@ -315,6 +314,7 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial, circular
             dims=["Region"],
             name="floor_pc_2020"
         )
+        floor_pc_2020_xr = prism.Q_(floor_pc_2020_xr, "m^2/person")
 
         regions_mapped = list(region_knowledge_graph.find_relations_inverse(regions, floor_pc_2020.keys()))
         floor_pc_2020_mapped = region_knowledge_graph.rebroadcast_xarray(floor_pc_2020_xr, output_coords=regions_mapped, dim="Region")
@@ -345,12 +345,12 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial, circular
 
         region_coords = np.sort(commercial_scenario_settings_xr_mapped.coords["Region"].values.astype(int)).astype(str)
         commercial_scenario_settings_xr_mapped = region_knowledge_graph.rebroadcast_xarray(commercial_scenario_settings_xr_mapped, region_coords, dim ="Region")
-
-        floorspace_commercial = apply_change_per_region(
-        floorspace_commercial, base_year, target_year, 
-        commercial_scenario_settings_xr_mapped, implementation_rate)
-        floorspace_commercial = prism.Q_(floorspace_commercial, "m^2")
+        floorspace_commercial = apply_change_per_region(floorspace_commercial, base_year, target_year, 
+                                                        commercial_scenario_settings_xr_mapped, implementation_rate)
         print("implemented 'narrow' for Commercial Buildings")
+        # fix unit like this for now :TODO to improve
+        floorspace_commercial = prism.Q_(floorspace_commercial, "m^2/person")
+
     return floorspace_commercial.transpose("Time", "Region", "Type")
 
 # #TODO move to a util file
