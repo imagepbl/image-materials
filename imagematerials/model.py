@@ -464,8 +464,7 @@ class EndOfLife(prism.Model):
                         'Small Ships','Inland Ships','Medium Ships','Large Ships', 'Very Large Ships',
                         'Heavy Freight Trucks - BEV', 'Heavy Freight Trucks - FCV','Heavy Freight Trucks - HEV', 'Heavy Freight Trucks - ICE','Heavy Freight Trucks - PHEV', 'Heavy Freight Trucks - Trolley'
         ],
-            'urban': ["Appartment - Urban","Detached - Urban","High-rise - Urban", "Semi-detached - Urban",
-                        "Office","Retail+","Hotels+","Govt+"
+            'urban': ["Appartment - Urban","Detached - Urban","High-rise - Urban", "Semi-detached - Urban",    
         ],
 
             'rural': ["Appartment - Rural","Detached - Rural","High-rise - Rural", "Semi-detached - Rural",
@@ -480,9 +479,9 @@ class EndOfLife(prism.Model):
         }
         self.sum_outflow[t].loc[:] = 0
         for outflow in outflow_by_cohort_materials:
-            outflow_t = outflow[t] 
-
+            outflow_t = outflow[t]
             sample_type = outflow_t.coords["Type"].values[0]
+            # Convert units based on sector/type (TODO: this is a temporary solution, fix when units are implemented in preprocessing/simulation)
             if sample_type in type_dict['passenger'] + type_dict['freight']:
                 outflow_t = outflow_t / 1e9  # kg → Mt
             elif sample_type in type_dict['urban'] + type_dict['rural']+ type_dict['commercial']:
@@ -491,7 +490,7 @@ class EndOfLife(prism.Model):
                 raise ValueError(f"Unknown Type for unit conversion: {sample_type}")
             
             for supertype, subtypes in type_dict.items():
-                if subtypes[0] not in outflow[t].coords["Type"]:
+                if subtypes[0] not in outflow_t.coords["Type"]:
                     continue
                 sum_outflow = outflow_t.sel(Type=subtypes).sum("Type")
 
