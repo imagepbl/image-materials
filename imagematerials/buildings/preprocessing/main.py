@@ -55,6 +55,7 @@ def buildings_preprocessing(base_directory, climate_policy_config: dict, circula
     floorspace_commercial_total = floorspace_commercial * population.sel({"Area": "Total"})
     floorspace_commercial_total = floorspace_commercial_total.drop_vars("Area")
     floorspace = xr.concat((floorspace_residential, floorspace_commercial_total), dim="Type")
+    import prism
 
     # Lifetime computations, see lifetimes.py
 

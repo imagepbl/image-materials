@@ -291,6 +291,7 @@ def compute_housing_residential(population, average_m2_capita, housing_type, flo
         total_m2_housing_per_cap = apply_change_per_region(
             total_m2_housing_per_cap, base_year, target_year, 
             residential_scenario_settings_xr_mapped, implementation_rate)
+        total_m2_housing_per_cap = prism.Q_(total_m2_housing_per_cap, "m^2/person")
         print("implemented 'narrow' for Residential Buildings")
 
     total_m2_housing = total_m2_housing_per_cap * population.sel({"Area": ["Rural", "Urban"]})
