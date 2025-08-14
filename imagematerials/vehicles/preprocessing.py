@@ -501,7 +501,10 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
 
     # demand for freight planes is reduced by 50% because about half of the air freight is transported as cargo on
     # passenger planes
-    air_freight_tkms = tonkms_Mtkms["Freight Planes"].unstack() * market_share["Passenger Planes"].values[0]
+    # TODO: this is clearly off: value of market_share["Passenger Planes"].values[0] == 1
+    # fix for now hardcoded - fix when rewriting this file
+    # air_freight_tkms = tonkms_Mtkms["Freight Planes"].unstack() * market_share["Passenger Planes"].values[0]
+    air_freight_tkms = tonkms_Mtkms["Freight Planes"].unstack() * 0.5
 
     # Buses are adjusted to account for the higher material intensity of
     # mini-buses
@@ -549,7 +552,7 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
         "Heavy Freight Trucks":         (trucks_HFT_tkm, "Heavy Freight Trucks", 'M'),
         "Medium Freight Trucks":        (trucks_MFT_tkm, "Medium Freight Trucks", 'M'),
         "Light Commercial Vehicles":    (trucks_LCV_tkm, "Light Commercial Vehicles", 'M'),
-        "Freight Planes":               (air_freight_tkms, "Light Commercial Vehicles", 'M'),
+        "Freight Planes":               (air_freight_tkms, "Freight Planes", 'M'),
         "Freight Trains":               (tonkms_Mtkms['Freight Trains'].unstack(), "Freight Trains", 'M'),
         "Inland Ships":                 (tonkms_Mtkms['Inland Ships'].unstack(), "Inland Ships", 'M')
     }
