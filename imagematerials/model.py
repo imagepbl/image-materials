@@ -109,12 +109,15 @@ class GenericStocks(prism.Model):
         self.inflow[t].loc[:] = prism.Q_(0.0, unit)
         self.outflow_by_cohort[t].loc[:] = prism.Q_(0.0, unit)
 
+        # copy only for readability
         input_stock = self.stocks
+        # calculate missing stock to fulfill demand (input stock)
         stock_diff = input_stock.loc[t] - self.stock_by_cohort.loc[t].sum("Cohort")
-        # Drop dimension cohort
+        # stock_diff cannot be negative (no negative inflow); when positive, divide by survival matrix in case there is a loss in the first year (inflow needs to be larger than input stock)
         stock_diff = xr.where(stock_diff>0, stock_diff/self.survival_matrix[t, t].drop("Cohort"), 0)
 
         self.inflow[t] = stock_diff
+        # calculate future development of the current cohort (inflow at time t; t: = time from current time onwards, t = cohort of time t)
         self.stock_by_cohort.loc[t:, t] = self.inflow[t] * self.survival_matrix[t:, t]
         # for t_future in stock_by_cohort[t].coords["Cohort"].loc[t_str:]:
             # t_future = int(t_future)
@@ -124,7 +127,9 @@ class GenericStocks(prism.Model):
         if t-1 < time.start:
             self.outflow_by_cohort[t] = prism.Q_(0.0, unit)
         else:
+            # for previous cohorts: calculate outflow by subtracting stocks of previous - current year
             self.outflow_by_cohort[t].loc[:, :, :t-1] = self.stock_by_cohort.loc[t-1, :t-1] - self.stock_by_cohort.loc[t, :t-1]
+            # for current cohort: calculate outflow by inflow * (1-survival matrix) as stock at t-1 is not existent
             self.outflow_by_cohort[t].loc[:, :, t] = self.inflow[t] * (1-self.survival_matrix[t, t])
 
 
