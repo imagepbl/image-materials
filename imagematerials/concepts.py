@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 import xarray as xr
+import prism
 
 
 @dataclass
@@ -171,6 +172,9 @@ class KnowledgeGraph():
             else:
                 new_array.loc[{dim: cur_coord}] = input_array.loc[{dim: parent}]
         new_array.loc[{dim: keep_coords}] = input_array.loc[{dim: keep_coords}]
+        # check if input array had a unit and if so, reapply this unit to new array
+        if input_array.pint.units:
+            new_array = prism.Q_(new_array, input_array.pint.units)    
         return new_array
 
     def aggregate_sum(self, input_array, output_coords, dim="Type"):

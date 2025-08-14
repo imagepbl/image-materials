@@ -1,0 +1,5 @@
+person = [population] = persons = people
+
+meter = [length] = m
+
+share = 1 = ratio = fraction
