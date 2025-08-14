@@ -6,6 +6,7 @@ from typing import Optional
 import netCDF4
 import numpy as np
 import xarray as xr
+import prism
 
 if sys.version_info < (3, 11):
     import tomli as tomllib
@@ -131,6 +132,10 @@ def merge_dims(xr_array, dim_one, dim_two):
         for cur_coor_two in xr_array.coords[dim_two].values:
             new_coor_one = SUBTYPE_SEPARATOR.join((cur_coor_one, cur_coor_two))
             new_array.loc[{dim_one: new_coor_one}] = xr_array.loc[{dim_one: cur_coor_one, dim_two: cur_coor_two}]
+
+    # function strips unit, reattach unit, first check if unit exists
+    if prism.U_(xr_array) is not None:
+        new_array = prism.Q_(new_array, prism.U_(xr_array))
     return new_array
 
 
@@ -203,6 +208,8 @@ def summarize_prep_data(data):
         elif isinstance(array, KnowledgeGraph):
             continue
         elif array is None:
+            all_summary[data_name] = array
+        elif isinstance(array, str):
             all_summary[data_name] = array
         else:
             raise ValueError(f"Cannot compare data with name '{data_name}' with type {type(array)}")
