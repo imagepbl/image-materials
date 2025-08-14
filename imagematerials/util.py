@@ -204,6 +204,8 @@ def summarize_prep_data(data):
             continue
         elif array is None:
             all_summary[data_name] = array
+        elif isinstance(array, str):
+            all_summary[data_name] = array
         else:
             raise ValueError(f"Cannot compare data with name '{data_name}' with type {type(array)}")
     return all_summary

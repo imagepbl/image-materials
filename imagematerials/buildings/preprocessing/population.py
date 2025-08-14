@@ -12,6 +12,9 @@ from imagematerials.buildings.constants import (
 from imagematerials.util import dataset_to_array
 from imagematerials.read_mym import read_mym_df
 
+here = Path(__file__).resolve().parent
+prism.unit_registry.load_definitions(here.parent.parent.parent / "units.txt")
+
 def compute_population(image_directory, base_directory):
     # Compute total/rural/urban populations
     tot_population_xr, _ = compute_total_population(image_directory, base_directory)
