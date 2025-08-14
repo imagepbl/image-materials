@@ -481,8 +481,7 @@ class EndOfLife(prism.Model):
                         'Small Ships','Inland Ships','Medium Ships','Large Ships', 'Very Large Ships',
                         'Heavy Freight Trucks - BEV', 'Heavy Freight Trucks - FCV','Heavy Freight Trucks - HEV', 'Heavy Freight Trucks - ICE','Heavy Freight Trucks - PHEV', 'Heavy Freight Trucks - Trolley'
         ],
-            'urban': ["Appartment - Urban","Detached - Urban","High-rise - Urban", "Semi-detached - Urban",
-                        "Office","Retail+","Hotels+","Govt+"
+            'urban': ["Appartment - Urban","Detached - Urban","High-rise - Urban", "Semi-detached - Urban",    
         ],
 
             'rural': ["Appartment - Rural","Detached - Rural","High-rise - Rural", "Semi-detached - Rural",
@@ -497,10 +496,12 @@ class EndOfLife(prism.Model):
         }
         self.sum_outflow[t] = prism.Q_(0.0, 'kg')
         for outflow in outflow_by_cohort_materials:
+
             outflow_t = outflow[t] 
+
             
             for supertype, subtypes in type_dict.items():
-                if subtypes[0] not in outflow[t].coords["Type"]:
+                if subtypes[0] not in outflow_t.coords["Type"]:
                     continue
                 sum_outflow = outflow_t.sel(Type=subtypes).sum("Type")
 
