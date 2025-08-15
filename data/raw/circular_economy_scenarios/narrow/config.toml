@@ -84,3 +84,9 @@ kilometers = -25
 [vehicles.freight]
 kilometers = -13
 
+[buildings.material_intensity_change]
+"Steel" = -17
+"Concrete" = -15
+"Aluminium" = -19
+
+
