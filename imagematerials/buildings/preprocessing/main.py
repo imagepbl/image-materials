@@ -68,8 +68,8 @@ def buildings_preprocessing(base_directory, climate_policy_config: dict, circula
         warnings.simplefilter("ignore")
         lifetimes = compute_lifetimes(base_directory, floorspace_commercial.coords["Type"].values, circular_economy_config)
 
-    mat_intensities_comm = compute_mat_intensities_commercial(database_directory)
-    mat_intensities_res = compute_mat_intensities_residential(database_directory)
+    mat_intensities_comm = compute_mat_intensities_commercial(database_directory, circular_economy_config)
+    mat_intensities_res = compute_mat_intensities_residential(database_directory, circular_economy_config)
     mat_intensities = xr.concat((mat_intensities_res, mat_intensities_comm), dim="Type")
     knowledge_graph = create_building_graph()
     mat_intensities = knowledge_graph.rebroadcast_xarray(
