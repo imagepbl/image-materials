@@ -1,3 +1,4 @@
+from math import exp
 from typing import Callable, ClassVar, Optional
 import pint_xarray
 from pint import UnitRegistry
@@ -223,21 +224,31 @@ class GenericMaterials(prism.Model):
         self.outflow_by_cohort_materials[t] = (outflow_by_cohort[t]*self.material_fractions*self.weights).sum("Cohort")
         self.stock_by_cohort_materials.loc[t] = (stock_by_cohort.loc[t]*self.material_fractions*self.weights).sum("Cohort")
 
+
 @prism.interface
-class RestModel(prism.Model):
-    # Input data
-    gdp_per_capita: xr.DataArray  # Will be a prism time variable probably
-    population: xr.DataArray
+class Rest_Of(prism.Model):
+
+    # Dimensions
+    Region: prism.Coords[REGION]
+    Time: prism.Coords[TIME]
+    material: prism.Coords[MATERIAL_TYPE]
+
+    # Data dependencies
+    input_data: tuple[str] = ("gompertz_coefs", "gdp_per_capita", "population")
+    output_data: tuple[str] = ("demand_rest_of")
 
     # Output data
-    inflow_materials_rest: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "kg"] = prism.export()
+    inflow_materials_rest: prism.TimeVariable[REGION, MATERIAL_TYPE] = prism.export()
 
-    input_data: tuple[str] = ("total_inflow_materials_class", "gdp_per_capita", "population")
-    output_data: tuple[str] = ("inflow_materials_rest")
+    def compute_initial_values(self, timeline: prism.Timeline):
+        self.inflow_materials_rest = xr.DataArray(
+        0.0, dims=("Time", "Region",  "material"),
+        coords={"Time": self.Time,
+                "material": self.material})
 
-    def compute_values(self, time: prism.Time, total_inflow_materials_class):
-        t = time.t
-        self.total_inflow_materials_rest[t] = self.total_inflow_materials_class.predict(self.gdp_per_capita)*self.population
+    def compute_values(self, time: prism.Time, gompertz_coefs, gdp_per_capita, population):
+        t, dt = time.t, time.dt
+        self.inflow_materials_rest[t] = gompertz_coefs[0] * exp(-gompertz_coefs[1] * exp(-gompertz_coefs[2] * gdp_per_capita[t] * population[t]))
 
 
 @prism.interface

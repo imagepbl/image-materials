@@ -22,7 +22,8 @@ from imagematerials.buildings.preprocessing.population import compute_population
 from imagematerials.concepts import create_building_graph
 
 
-def buildings_preprocessing(base_directory, climate_policy_config: dict, circular_economy_config: dict):
+def buildings_preprocessing(base_directory, climate_policy_config: dict, 
+                            circular_economy_config: dict, SCENARIO_SELECT: str = SCENARIO_SELECT):
     base_directory = Path(base_directory)
     database_directory = base_directory / "buildings" / SCENARIO_SELECT
 
