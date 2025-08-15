@@ -18,6 +18,7 @@ from imagematerials.distribution import ALL_DISTRIBUTIONS, NAME_TO_DIST
 
 NONE_SENTINEL = "__NETCDF_NONE_SENTINEL__"
 END_YEAR = 2100
+INTERMEDIATE_YEAR = 2080
 
 def pandas_to_xarray(df, unit_mapping):
     ds = df.to_xarray()
@@ -398,7 +399,7 @@ def scenario_change(arr: xr.DataArray, base_year: int, target_year: int, change:
         if region in result.Region:
             if implementation_rate =='linear':
                 result.loc[{"Time": target_year, "Region": region}] *= (1 + increase / 100)
-                result.loc[{"Time": 2080, "Region": region}] = result.loc[{"Time": target_year, "Region": region}]
+                result.loc[{"Time": INTERMEDIATE_YEAR, "Region": region}] = result.loc[{"Time": target_year, "Region": region}]
                 result.loc[{"Time": END_YEAR, "Region": region}] = result.loc[{"Time": target_year, "Region": region}]            
             elif implementation_rate =='immediate':
                 result.loc[{"Time": base_year + 1, "Region": region}] = \
