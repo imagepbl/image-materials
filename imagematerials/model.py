@@ -1,4 +1,4 @@
-from math import exp
+
 from typing import Callable, ClassVar, Optional
 import pint_xarray
 from pint import UnitRegistry
@@ -6,6 +6,7 @@ from pathlib import Path
 
 import prism
 import xarray as xr
+import numpy as np
 
 from imagematerials.concepts import KnowledgeGraph
 from imagematerials.maintenance import Maintenance
@@ -226,32 +227,6 @@ class GenericMaterials(prism.Model):
 
 
 @prism.interface
-class Rest_Of(prism.Model):
-
-    # Dimensions
-    Region: prism.Coords[REGION]
-    Time: prism.Coords[TIME]
-    material: prism.Coords[MATERIAL_TYPE]
-
-    # Data dependencies
-    input_data: tuple[str] = ("gompertz_coefs", "gdp_per_capita", "population")
-    output_data: tuple[str] = ("demand_rest_of")
-
-    # Output data
-    inflow_materials_rest: prism.TimeVariable[REGION, MATERIAL_TYPE] = prism.export()
-
-    def compute_initial_values(self, timeline: prism.Timeline):
-        self.inflow_materials_rest = xr.DataArray(
-        0.0, dims=("Time", "Region",  "material"),
-        coords={"Time": self.Time,
-                "material": self.material})
-
-    def compute_values(self, time: prism.Time, gompertz_coefs, gdp_per_capita, population):
-        t, dt = time.t, time.dt
-        self.inflow_materials_rest[t] = gompertz_coefs[0] * exp(-gompertz_coefs[1] * exp(-gompertz_coefs[2] * gdp_per_capita[t] * population[t]))
-
-
-@prism.interface
 class MaterialIntensities(prism.Model):
     # Input data
     material_intensities: xr.DataArray
@@ -296,7 +271,7 @@ class MaterialIntensities(prism.Model):
 @prism.interface
 class GenericMainModel(prism.Model):
     """
-    The main model class that integrates multiple submodels (stocks, materials, maintenance).
+    The main model class that integrates multiple submodels (stocks, materials, maintenance).z
     It initializes submodels based on the configuration and computes values over time.
     
     Attributes
@@ -541,3 +516,54 @@ class EndOfLife(prism.Model):
                 self.remaining_materials[t].loc[coords] = remaining_materials
                 self.recyclable_materials[t].loc[coords] = recyclable_materials
                 self.losses_materials[t].loc[coords] = losses_materials
+
+
+@prism.interface
+class Rest_Of(prism.Model):
+
+    # Dimensions
+    Region: prism.Coords[REGION]
+    Time: prism.Coords[TIME]
+    material: prism.Coords[MATERIAL_TYPE]
+
+    # Data dependencies
+    input_data: tuple[str] = ("gompertz_coefs", "gdp_per_capita", "population")
+    # TODO: this fixes a bug, because one output variable is not working, only returns first letter
+    output_data: tuple[str] = ("inflow_materials_rest", "inflow_materials_rest_2")
+
+    # Output data inflow_materials_rest
+    # inflow_materials_rest: prism.TimeVariable[REGION, MATERIAL_TYPE] = prism.export()
+
+    def compute_initial_values(self, time: prism.Timeline):
+        self.inflow_materials_rest = xr.DataArray(
+            0.0, dims=("Time", "Region", "material"),
+            coords={
+                "Time": self.Time,
+                "Region": self.Region,  
+                "material": self.material
+            }
+        )
+
+        self.inflow_materials_rest_2 = xr.DataArray(
+            0.0, dims=("Time", "Region", "material"),
+            coords={
+                "Time": self.Time,
+                "Region": self.Region,  
+                "material": self.material
+            }
+        )
+
+    def compute_values(self, time: prism.Time, gompertz_coefs, gdp_per_capita, population):
+        t, dt = time.t, time.dt
+        if t > 1970:
+            # Select coefficients for all regions/materials
+            a = gompertz_coefs.sel(coef='a')
+            b = gompertz_coefs.sel(coef='b')
+            c = gompertz_coefs.sel(coef='c')
+            gdp = gdp_per_capita.sel(Time=t)
+            pop = population.sel(Time=t)
+
+
+            self.inflow_materials_rest.loc[t] = (a * np.exp(-b * np.exp(-c * gdp))) * pop
+        else:
+            pass # No inflow before 1970

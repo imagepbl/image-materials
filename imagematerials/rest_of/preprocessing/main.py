@@ -11,16 +11,22 @@ def read_gompertz_values(base_directory):
 
     xr_gompertz = xr.open_dataset(base_directory / "rest-of" / "gompertz_values" / "coefs_gompertz.nc", engine="netcdf4")
 
-    # make this dataset an xarray DataArray
+    # Get region values as strings and sort numerically
+    region_values = [str(r) for r in xr_gompertz['Region'].values]
+    region_values_sorted = sorted(region_values, key=lambda x: int(x))
+
+    # Reorder the data to match the sorted regions
+    data = xr_gompertz['__xarray_dataarray_variable__'].sel(Region=region_values_sorted)
+
     gompertz_coefs_xr = xr.DataArray(
-        xr_gompertz['__xarray_dataarray_variable__'].values,
+        data.values,
         dims=('Region', 'material', 'coef'),
         coords={
-            'Region': list(map(str, xr_gompertz['Region'].values)),
+            'Region': region_values_sorted,
             'material': [str(m) for m in xr_gompertz['material'].values],
             'coef': ['a', 'b', 'c']
-    }
-)
+        }
+    )
 
     return gompertz_coefs_xr
 
@@ -41,7 +47,6 @@ def read_image_gdp_cap_data(image_scenario_directory):
         coords={"Time": gdp_per_capita.index,      # Time coordinates from the DataFrame index
                 "Region": gdp_per_capita.columns}  # Region coordinates from the DataFrame columns
     )
-    # gdp_per_capita_xr.coords["Region"] = [str(x.values) for x in gdp_per_capita_xr.coords["Region"]]
     gdp_per_capita_xr.coords["Region"]  = [str(x.values) for x in gdp_per_capita_xr.coords["Region"]]
 
     return gdp_per_capita_xr
