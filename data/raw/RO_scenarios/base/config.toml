@@ -30,10 +30,10 @@ Japan = 39.7
 USA = 62.8
 "Western Europe" = 39.7
 
-[buildings.commercial.2020.useful_floor_pc]
+[buildings.non_residential.2020.useful_floor_pc]
 "Central Europe" = 8.7
 "Western Europe" = 14.1
 
-[buildings.commercial.2060.useful_floor_pc]
+[buildings.non_residential.2060.useful_floor_pc]
 "Central Europe" = 41.2
 "Western Europe" = 14.1

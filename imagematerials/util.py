@@ -6,6 +6,7 @@ from typing import Optional
 import netCDF4
 import numpy as np
 import xarray as xr
+import prism
 
 if sys.version_info < (3, 11):
     import tomli as tomllib
@@ -17,6 +18,8 @@ from imagematerials.constants import SUBTYPE_SEPARATOR
 from imagematerials.distribution import ALL_DISTRIBUTIONS, NAME_TO_DIST
 
 NONE_SENTINEL = "__NETCDF_NONE_SENTINEL__"
+END_YEAR = 2100
+INTERMEDIATE_YEAR = 2080
 
 def pandas_to_xarray(df, unit_mapping):
     ds = df.to_xarray()
@@ -131,6 +134,10 @@ def merge_dims(xr_array, dim_one, dim_two):
         for cur_coor_two in xr_array.coords[dim_two].values:
             new_coor_one = SUBTYPE_SEPARATOR.join((cur_coor_one, cur_coor_two))
             new_array.loc[{dim_one: new_coor_one}] = xr_array.loc[{dim_one: cur_coor_one, dim_two: cur_coor_two}]
+
+    # function strips unit, reattach unit, first check if unit exists
+    if prism.U_(xr_array) is not None:
+        new_array = prism.Q_(new_array, prism.U_(xr_array))
     return new_array
 
 
@@ -203,6 +210,8 @@ def summarize_prep_data(data):
         elif isinstance(array, KnowledgeGraph):
             continue
         elif array is None:
+            all_summary[data_name] = array
+        elif isinstance(array, str):
             all_summary[data_name] = array
         else:
             raise ValueError(f"Cannot compare data with name '{data_name}' with type {type(array)}")
@@ -397,6 +406,8 @@ def scenario_change(arr: xr.DataArray, base_year: int, target_year: int, change:
         if region in result.Region:
             if implementation_rate =='linear':
                 result.loc[{"Time": target_year, "Region": region}] *= (1 + increase / 100)
+                result.loc[{"Time": INTERMEDIATE_YEAR, "Region": region}] = result.loc[{"Time": target_year, "Region": region}]
+                result.loc[{"Time": END_YEAR, "Region": region}] = result.loc[{"Time": target_year, "Region": region}]            
             elif implementation_rate =='immediate':
                 result.loc[{"Time": base_year + 1, "Region": region}] = \
                     base_val * (1 + increase / 100)
@@ -414,7 +425,7 @@ def scenario_change(arr: xr.DataArray, base_year: int, target_year: int, change:
                                   "Supported methods are 'immediate', 'linear', and 's-curve'.")
         else:
             raise ValueError(f"Region {region} not found in DataArray.")
-    return result.interpolate_na("Time", method="linear")
+    return result.interpolate_na("Time", method="cubic")
 
 
 def apply_change_per_region(arr: xr.DataArray, base_year: int, target_year: int, increase: float,

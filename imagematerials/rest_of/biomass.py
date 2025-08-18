@@ -141,8 +141,6 @@ def wood_buildings(buildings_mat, filters: dict[str, str]):
     buildings_mat_wood = buildings_mat_wood.groupby('region').sum() # sum values for the same regions
     #print(buildings_mat_wood)
     buildings_mat_wood = buildings_mat_wood.transpose()*kt_to_bt
-    #print(buildings_mat_wood)
-    buildings_mat_wood['27'] = buildings_mat_wood.sum(axis = 1) #add column for total value (region: 27 as in IMAGE for consitency)
     
     return buildings_mat_wood
 
@@ -165,6 +163,8 @@ def split_up_wood(wood_demand, buildings_mat: pd.DataFrame,
     wood_demand_total = wood_demand_total.reindex(all_years).interpolate(method='linear')
     
     buma_wood = wood_buildings(buildings_mat, filters={'material': 'wood', 'flow' : 'inflow'})
+    buma_wood.index = buma_wood.index.astype(int)  # convert index to int for consistency with other DataFrames
+
     
     return {
         'pulp & particles' : wood_demand_pulp,
@@ -351,28 +351,39 @@ def sankey_total_biomass(splitted_up_crops_food,
     fig.write_html(f"{path_figures}/biomass_sankey.html")
     
     return fig, link_source, link_target, link_value 
-    
+   
 
 def biomass_data(scenario: str):
     # Crop consumption in Gg dm/yr, per type of use and crop type including other crops. Dimensions:  [5,17,27] (t) , [NUFPT, NFCT, NRT](time)
     crops_cons = read_mym_df(path_input_data.joinpath(scenario, 'Biomass/AGRCONSCTF_DM.OUT')).set_index(["time", "DIM_1", "DIM_2"])  
+    # drop global level 27
+    crops_cons = crops_cons.drop(columns=27)  # drop global level 27, as not needed for further calculations
 
     # Wood demand per woodtype in 1000m3/yr. Dimensions: [4,27](t), [NWCT,NRT] (time)
     wood_demand = read_mym_df(path_input_data.joinpath(scenario, 'Biomass/WDEMAND.OUT')).set_index(["time", "DIM_1"])
+    # drop global level 27
+    wood_demand = wood_demand.drop(columns=27)  # drop global level
 
     # Feed consumption per grazing system type, feed product type and animal type in Gg dm/yr Dimensions:  [3,6,6,27] (t), [NGST,NFPT,NAT,NRT] (t)
     feed_cons = read_mym_df(path_input_data.joinpath(scenario, 'Biomass/TFEED.OUT')).set_index(["time", "DIM_1", "DIM_2", "DIM_3"])
+    # drop global level 27
+    feed_cons = feed_cons.drop(columns=27)  # drop global level 27,
 
     # Animal products  Unit=Gg dm/yr; Label=Consumption of animal products in dry matter, per type of use and animal type [5,6,27] (t) [NUFPT,NAPT,NRT] 
     animal_products_cons = read_mym_df(path_input_data.joinpath(scenario, 'Biomass/AGRCONSA_DM.OUT')).set_index(["time", "DIM_1", "DIM_2"])
+    # drop global level 27
+    animal_products_cons = animal_products_cons.drop(columns=27)  # drop global level
 
     # Biofuel crops production (same as consumption) difference is only made in energy trade, not for actual crops calculation
     # Unit= Gg dm/yr; Label= Production of biofuels (dry matter) [5,27] [NBCT,NRT] (t)
     biofuel_crops = read_mym_df(path_input_data.joinpath(scenario, 'Biomass/AGRPRODBF_dm.OUT')).set_index(["time", "DIM_1"])
+    # drop global level 27
+    biofuel_crops = biofuel_crops.drop(columns=27)  # drop global
 
     # Materials buildings (BUMA output) in kt
     # TODO: adapt scenario path
     buildings_mat = pd.read_csv('../../../data/raw/rest-of/IMAGE_MAT_out/SSP2_CP/material_output_buma_RASMI.csv', header = 0).set_index(['Unnamed: 0', 'flow', 'type', 'area', 'material'])
+
 
     # Split up different biomass types 
     # Crops: Split up crops
@@ -402,6 +413,16 @@ def biomass_data(scenario: str):
     crops_total_consumption_global = sum_by_region(splitted_up_crops_total)
     feed_total_consumption_global = sum_by_region(splitted_up_feed)
 
+    total_consumption_biomass_categories = {
+        'crops_food': splitted_up_crops_total['total'],
+        'crops_feed': splitted_up_crops_feed['total'],
+        'wood': splitted_up_wood['total wood IMAGE'] - splitted_up_wood['fuelwood & charcoal'], 
+        #'wood_buma': splitted_up_wood['wood buildings (BUMA)'], #TODO: is not the same legth --> 2100 data needed
+        'biofuels': splitted_up_biofuel_crops['total biofuel'],
+        'animal_products_food': splitted_up_animal_products['animal products for food'],
+        'other_animal_products': splitted_up_animal_products['animal products total'] - splitted_up_animal_products['animal products for food']
+    }
+
     return_dict = {
         'splitted_up_crops_total': splitted_up_crops_total,
         'splitted_up_crops_food': splitted_up_crops_food,
@@ -410,7 +431,8 @@ def biomass_data(scenario: str):
         'splitted_up_feed': splitted_up_feed,
         'splitted_up_wood': splitted_up_wood,
         'splitted_up_animal_products': splitted_up_animal_products,
-        'splitted_up_biofuel_crops': splitted_up_biofuel_crops
+        'splitted_up_biofuel_crops': splitted_up_biofuel_crops,
+        'consumption_in_categories': total_consumption_biomass_categories
     }
 
     return return_dict

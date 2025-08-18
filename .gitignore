@@ -2,6 +2,7 @@
 
 examples/*.nc
 examples/all.prof
+examples/model.html
 scripts/*.nc
 
 imagematerials/electricity/out_test/

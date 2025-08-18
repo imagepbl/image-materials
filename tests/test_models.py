@@ -69,13 +69,15 @@ def _get_xarray(coordinates, *dims):
 def test_generic_stocks(coordinates, timelines):
     """Test the GenericStocks model."""
     stocks = _get_xarray(coordinates, "Time", "Region", "Type")
+    stocks = prism.Q_(stocks, "count")
     lt =  _get_xarray(coordinates, "Time", "Region", "Type", "ScipyParam")
     lt.attrs["loc"] = 0
     lifetimes = {"weibull": lt}
     complete_timeline, simulation_timeline = timelines
     model = GenericStocks(
         complete_timeline, stocks=stocks, lifetimes=lifetimes,
-        knowledge_graph=knowledge_graph, Region=coordinates["Region"], Type=coordinates["Type"],
+        knowledge_graph=knowledge_graph, set_unit_flexible="count",
+        Region=coordinates["Region"], Type=coordinates["Type"],
         Cohort=coordinates["Cohort"], Time=coordinates["Time"])
     model.simulate(complete_timeline)
     for var_name in model.output_data:

@@ -15,6 +15,8 @@ def _get_new_compare(data, key_list):
     for name, cur_data in data.items():
         if "dims" in cur_data:
             all_compares.append([key_list + [name], cur_data])
+        elif isinstance(cur_data, str):
+            all_compares.append([[name], cur_data])
         else:
             all_compares.extend(_get_new_compare(cur_data, key_list + [name]))
     return all_compares
@@ -84,6 +86,9 @@ def _check_data_same(orig_data, new_data, name=""):
         return
     if orig_data is None:
         assert orig_data == new_data
+        return
+    if isinstance(orig_data, str):
+        assert orig_data == new_data, f"Wrong string value: {name}"
         return
 
     if isinstance(orig_data, xr.DataArray):
