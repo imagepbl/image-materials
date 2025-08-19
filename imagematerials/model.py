@@ -271,7 +271,7 @@ class MaterialIntensities(prism.Model):
 @prism.interface
 class GenericMainModel(prism.Model):
     """
-    The main model class that integrates multiple submodels (stocks, materials, maintenance).z
+    The main model class that integrates multiple submodels (stocks, materials, maintenance).
     It initializes submodels based on the configuration and computes values over time.
     
     Attributes
