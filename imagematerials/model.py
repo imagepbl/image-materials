@@ -529,7 +529,7 @@ class RestOf(prism.Model):
     # Data dependencies
     input_data: tuple[str] = ("gompertz_coefs", "gdp_per_capita", "population")
     # TODO: this fixes a bug, because one output variable is not working, only returns first letter
-    output_data: tuple[str] = ("inflow_materials_rest", "inflow_materials_rest_2")
+    output_data: tuple[str] = ("inflow_materials_rest",)
 
     # Output data inflow_materials_rest
     # inflow_materials_rest: prism.TimeVariable[REGION, MATERIAL_TYPE] = prism.export()
