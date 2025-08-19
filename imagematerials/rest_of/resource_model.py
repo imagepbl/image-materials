@@ -44,7 +44,9 @@ class ResourceModel():
             self.net_trade = pd.read_csv(f'{path_input_data}/{resource_group}/{self.resource}_net_trade.csv', 
                                                         index_col=0).loc[:end_year]
             self.historic_consumption_data = self.production - self.net_trade
-        
+            # make a copy of historic_consumption_data
+            self.historic_consumption_data_complete = self.historic_consumption_data.copy()
+
         if convert_image == True:
             self.historic_consumption_data = self.historic_consumption_data/convert_to_tons # convert IMAGE output to tons
         
@@ -188,7 +190,21 @@ class ResourceModel():
          self.region_model_match) = match_regions_to_best_model(self.rmse_r2_groups, 
                                                                 self.model_groups, 
                                                                 self.region_groups, 
-                                                                best_rmse_models)           
+                                                                best_rmse_models)
+
+    def create_region_model_match_per_image(self, regions_dict):
+        '''
+        use to spread fit models to IMAGE classes
+        '''
+        self.region_model_match_per_image = {}
+
+
+        # create dict from class_ 1 to class_ 26 that is empty
+        self.region_model_match_per_image = {f'class_ {i}': None for i in range(1, 27)}
+
+        for key, item in regions_dict.items():
+            for classes in item:
+                self.region_model_match_per_image[classes] = self.region_model_match[key]           
             
               
     def project_on_total(self, regions_list: list, start_year_projection = None):
