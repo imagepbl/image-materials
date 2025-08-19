@@ -44,7 +44,9 @@ class ResourceModel():
             self.net_trade = pd.read_csv(f'{path_input_data}/{resource_group}/{self.resource}_net_trade.csv', 
                                                         index_col=0).loc[:end_year]
             self.historic_consumption_data = self.production - self.net_trade
-        
+            # make a copy of historic_consumption_data
+            self.historic_consumption_data_complete = self.historic_consumption_data.copy()
+
         if convert_image == True:
             self.historic_consumption_data = self.historic_consumption_data/convert_to_tons # convert IMAGE output to tons
         
