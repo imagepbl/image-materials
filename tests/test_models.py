@@ -9,7 +9,7 @@ import xarray as xr
 from pytest import mark
 
 from imagematerials.concepts import knowledge_graph
-from imagematerials.model import GenericMaterials, GenericStocks, MaterialIntensities, Rest_Of
+from imagematerials.model import GenericMaterials, GenericStocks, MaterialIntensities, RestOf
 from imagematerials.vehicles.battery import Battery
 
 @pytest.fixture(scope="module")
@@ -29,7 +29,7 @@ def timelines():
     return prism.Timeline(2000, 2002, 1), prism.Timeline(2001, 2002, 1)
 
 @mark.parametrize(
-    "model_class", [GenericStocks, GenericMaterials, MaterialIntensities, Rest_Of,
+    "model_class", [GenericStocks, GenericMaterials, MaterialIntensities, RestOf,
                     Battery]
 )
 def test_basic_model(model_class):

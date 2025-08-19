@@ -519,7 +519,7 @@ class EndOfLife(prism.Model):
 
 
 @prism.interface
-class Rest_Of(prism.Model):
+class RestOf(prism.Model):
 
     # Dimensions
     Region: prism.Coords[REGION]
