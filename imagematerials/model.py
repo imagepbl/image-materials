@@ -558,3 +558,4 @@ class RestOf(prism.Model):
             self.inflow_materials_rest.loc[t] = (a * np.exp(-b * np.exp(-c * gdp))) * pop
         else:
             pass # No inflow before 1970
+        
