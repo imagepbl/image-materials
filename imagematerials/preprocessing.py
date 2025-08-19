@@ -92,9 +92,12 @@ def get_preprocessing_data(
     elif circular_economy_scenario_dirs is None and climate_policy_scenario_dir is not None:
         climate_policy_scenario_dir = climate_policy_scenario_dir
         circular_economy_scenario_dirs = {}
-    elif climate_policy_scenario_dir is None or circular_economy_scenario_dirs is not None:
-            raise ValueError("Provide both climate_policy_scenario_dir and "
-                             "circular_economy_scenario_dirs  or neither as arguments.")
+    elif climate_policy_scenario_dir is not None and circular_economy_scenario_dirs is not None:
+        pass
+    elif climate_policy_scenario_dir is None and circular_economy_scenario_dirs is not None:
+        raise ValueError("if circular_economy_scenario_dirs is set, climate_policy_scenario_dir has to be set too")
+
+
 
     if cache is False or not Path(cache).is_file():
         if sector == "vehicles":
