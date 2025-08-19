@@ -543,16 +543,7 @@ class RestOf(prism.Model):
                 "material": self.material
             }
         )
-
-        self.inflow_materials_rest_2 = xr.DataArray(
-            0.0, dims=("Time", "Region", "material"),
-            coords={
-                "Time": self.Time,
-                "Region": self.Region,  
-                "material": self.material
-            }
-        )
-
+        
     def compute_values(self, time: prism.Time, gompertz_coefs, gdp_per_capita, population):
         t, dt = time.t, time.dt
         if t > 1970:
