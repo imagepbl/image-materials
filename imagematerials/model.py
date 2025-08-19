@@ -1,3 +1,4 @@
+
 from typing import Callable, ClassVar, Optional
 import pint_xarray
 from pint import UnitRegistry
@@ -5,6 +6,7 @@ from pathlib import Path
 
 import prism
 import xarray as xr
+import numpy as np
 
 from imagematerials.concepts import KnowledgeGraph
 from imagematerials.maintenance import Maintenance
@@ -222,22 +224,6 @@ class GenericMaterials(prism.Model):
         self.inflow_materials[t] = inflow[t]*self.material_fractions.sel(Cohort=t).drop_vars("Cohort")*self.weights.sel(Cohort=t).drop_vars("Cohort")
         self.outflow_by_cohort_materials[t] = (outflow_by_cohort[t]*self.material_fractions*self.weights).sum("Cohort")
         self.stock_by_cohort_materials.loc[t] = (stock_by_cohort.loc[t]*self.material_fractions*self.weights).sum("Cohort")
-
-@prism.interface
-class RestModel(prism.Model):
-    # Input data
-    gdp_per_capita: xr.DataArray  # Will be a prism time variable probably
-    population: xr.DataArray
-
-    # Output data
-    inflow_materials_rest: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "kg"] = prism.export()
-
-    input_data: tuple[str] = ("total_inflow_materials_class", "gdp_per_capita", "population")
-    output_data: tuple[str] = ("inflow_materials_rest")
-
-    def compute_values(self, time: prism.Time, total_inflow_materials_class):
-        t = time.t
-        self.total_inflow_materials_rest[t] = self.total_inflow_materials_class.predict(self.gdp_per_capita)*self.population
 
 
 @prism.interface
@@ -530,3 +516,46 @@ class EndOfLife(prism.Model):
                 self.remaining_materials[t].loc[coords] = remaining_materials
                 self.recyclable_materials[t].loc[coords] = recyclable_materials
                 self.losses_materials[t].loc[coords] = losses_materials
+
+
+@prism.interface
+class RestOf(prism.Model):
+
+    # Dimensions
+    Region: prism.Coords[REGION]
+    Time: prism.Coords[TIME]
+    material: prism.Coords[MATERIAL_TYPE]
+
+    # Data dependencies
+    input_data: tuple[str] = ("gompertz_coefs", "gdp_per_capita", "population")
+    # TODO: this fixes a bug, because one output variable is not working, only returns first letter
+    output_data: tuple[str] = ("inflow_materials_rest",)
+
+    # Output data inflow_materials_rest
+    # inflow_materials_rest: prism.TimeVariable[REGION, MATERIAL_TYPE] = prism.export()
+
+    def compute_initial_values(self, time: prism.Timeline):
+        self.inflow_materials_rest = xr.DataArray(
+            0.0, dims=("Time", "Region", "material"),
+            coords={
+                "Time": self.Time,
+                "Region": self.Region,  
+                "material": self.material
+            }
+        )
+        
+    def compute_values(self, time: prism.Time, gompertz_coefs, gdp_per_capita, population):
+        t, dt = time.t, time.dt
+        if t > 1970:
+            # Select coefficients for all regions/materials
+            a = gompertz_coefs.sel(coef='a')
+            b = gompertz_coefs.sel(coef='b')
+            c = gompertz_coefs.sel(coef='c')
+            gdp = gdp_per_capita.sel(Time=t)
+            pop = population.sel(Time=t)
+
+
+            self.inflow_materials_rest.loc[t] = (a * np.exp(-b * np.exp(-c * gdp))) * pop
+        else:
+            pass # No inflow before 1970
+        

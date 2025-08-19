@@ -39,7 +39,6 @@ def compute_population(image_directory, base_directory):
     all_population = all_population.assign_coords({"Area": ["Total", "Rural", "Urban"]})
     all_population = all_population.transpose("Time", "Region", "Area")
     all_population = all_population * 1e6 # data from TIMER comes in million persons
-    # all_population = all_population.pint.quantify("person")
     all_population = prism.Q_(all_population, "person")
 
     return all_population
