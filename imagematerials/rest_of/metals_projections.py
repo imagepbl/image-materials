@@ -244,13 +244,14 @@ def aluminium_projection(scenario: str):
     }
 
     aluminium.fit_models(best_rmse_models, bounds)
-
-
+    
 
     # add regions to regions model match that are not in there yet becaused they are fitted to the global average
     for key in IAI_TO_IMAGE_CLASSES.keys():
         if key not in aluminium.region_model_match:
             aluminium.region_model_match[key] = aluminium.model_groups.get("all_regions")[6]
+            
+    aluminium.create_region_model_match_per_image(IAI_TO_IMAGE_CLASSES)
     
     # Projections
     aluminium.project_on_total(list(IAI_TO_IMAGE_CLASSES.keys()), start_year_projection=2012)

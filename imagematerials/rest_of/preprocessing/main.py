@@ -10,25 +10,25 @@ from imagematerials.buildings.preprocessing.population import compute_population
 def read_gompertz_values(base_directory):
 
     xr_gompertz = xr.open_dataset(base_directory / "rest-of" / "gompertz_values" / "coefs_gompertz.nc", engine="netcdf4")
+    xr_gompertz = xr_gompertz.to_array().isel(variable=0).drop_vars("variable")
+    # # Get region values as strings and sort numerically
+    # region_values = [str(r) for r in xr_gompertz['Region'].values]
+    # region_values_sorted = sorted(region_values, key=lambda x: int(x))
 
-    # Get region values as strings and sort numerically
-    region_values = [str(r) for r in xr_gompertz['Region'].values]
-    region_values_sorted = sorted(region_values, key=lambda x: int(x))
+    # # Reorder the data to match the sorted regions
+    xr_gompertz = xr_gompertz.sel(Region=sorted(xr_gompertz.coords["Region"].values, key=lambda x: int(x)))
 
-    # Reorder the data to match the sorted regions
-    data = xr_gompertz['__xarray_dataarray_variable__'].sel(Region=region_values_sorted)
+    # gompertz_coefs_xr = xr.DataArray(
+    #     data.values,
+    #     dims=('Region', 'material', 'coef'),
+    #     coords={
+    #         'Region': region_values_sorted,
+    #         'material': [str(m) for m in xr_gompertz['material'].values],
+    #         'coef': ['a', 'b', 'c']
+    #     }
+    # )
 
-    gompertz_coefs_xr = xr.DataArray(
-        data.values,
-        dims=('Region', 'material', 'coef'),
-        coords={
-            'Region': region_values_sorted,
-            'material': [str(m) for m in xr_gompertz['material'].values],
-            'coef': ['a', 'b', 'c']
-        }
-    )
-
-    return gompertz_coefs_xr
+    return xr_gompertz
 
 
 def read_image_gdp_cap_data(image_scenario_directory):

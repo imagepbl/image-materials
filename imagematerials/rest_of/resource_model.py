@@ -188,7 +188,23 @@ class ResourceModel():
          self.region_model_match) = match_regions_to_best_model(self.rmse_r2_groups, 
                                                                 self.model_groups, 
                                                                 self.region_groups, 
-                                                                best_rmse_models)           
+                                                                best_rmse_models)
+
+    def create_region_model_match_per_image(self, regions_dict):
+        '''
+        use to spread fit models to IMAGE classes
+        '''
+        self.region_model_match_per_image = {}
+
+
+        # create dict from class_ 1 to class_ 26 that is empty
+        self.region_model_match_per_image = {f'class_ {i}': None for i in range(1, 27)}
+
+        for key, item in regions_dict.items():
+            for classes in item:
+                self.region_model_match_per_image[classes] = self.region_model_match[key]
+
+        
             
               
     def project_on_total(self, regions_list: list, start_year_projection = None):
