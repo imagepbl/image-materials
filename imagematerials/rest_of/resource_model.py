@@ -52,7 +52,7 @@ class ResourceModel():
         
         # data if IMAGE Mat calculations available
         if self.image_mat_available == True:
-            self.image_mat_data = pd.read_csv(f'{path_input_data}/{resource_group}/image_mat_{self.resource}.csv', 
+            self.image_mat_data = pd.read_csv(f'{path_input_data}/{resource_group}/image_materials_{self.resource}.csv', 
                                               index_col=0)
             
             if adapt_mat_factor is not None:

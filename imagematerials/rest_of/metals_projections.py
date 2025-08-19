@@ -59,6 +59,8 @@ def copper_projection(scenario: str):
         if key not in copper.region_model_match:
             copper.region_model_match[key] = copper.model_groups.get("all_regions")[6]
 
+    copper.create_region_model_match_per_image(COPPER_AVERAGE_REGIONS_TO_IMAGE)
+
     # Projections 
     copper.project_on_total(list(COPPER_AVERAGE_REGIONS_TO_IMAGE.keys()))
 
