@@ -23,9 +23,9 @@ from imagematerials.concepts import create_building_graph
 
 
 def buildings_preprocessing(base_directory, climate_policy_config: dict, 
-                            circular_economy_config: dict, SCENARIO_SELECT: str = SCENARIO_SELECT):
+                            circular_economy_config: dict, image_scenario: str = SCENARIO_SELECT):
     base_directory = Path(base_directory)
-    database_directory = base_directory / "buildings" / SCENARIO_SELECT
+    database_directory = base_directory / "buildings" / image_scenario
 
     image_directory = Path(climate_policy_config["config_file_path"])
     assert database_directory.is_dir(), database_directory
