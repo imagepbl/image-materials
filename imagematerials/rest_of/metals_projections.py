@@ -71,6 +71,8 @@ def copper_projection(scenario: str):
                             start_year_adjust=2025, 
                             end_year_adjust=2100, 
                             min_alpha=None)
+    
+    copper.remove_regions_with_no_good_fit_from_region_model_match(rest)
 
     return copper
 
@@ -86,15 +88,16 @@ def steel_projection(scenario: str):
 
     high = ['class_ 19', 'class_ 20']
 
-    medium = ['class_ 1','class_ 13', 'class_ 16', 'class_ 23'] 
+    medium = ['class_ 1', 'class_ 12', 'class_ 13', 'class_ 16', 'class_ 23'] 
 
-    low = ['class_ 2',  'class_ 3', 'class_ 11' , 'class_ 24']
+    low = ['class_ 2', 'class_ 11' , 'class_ 24']
 
     # trajectory not to forseen, will be fitted with global regression
-    low_gdp = ['class_ 4', 'class_ 5', 'class_ 6', 'class_ 7',
-            'class_ 8', 'class_ 9',  'class_ 10', 'class_ 12',
+    low_gdp = ['class_ 3', 'class_ 4',  'class_ 5', 'class_ 6', 'class_ 7',
+            'class_ 8', 'class_ 9',  'class_ 10',
             'class_ 15', 'class_ 17', 'class_ 18', 'class_ 21', 
             'class_ 22', 'class_ 25', 'class_ 26']
+    
 
     # what is in rset will not be fitted because of outliers - will follow global projections       
     rest = all_regions_list_class[:-1]
@@ -140,6 +143,10 @@ def steel_projection(scenario: str):
                                start_year_adjust=2025, 
                                end_year_adjust=2100, 
                                min_alpha=None)
+    
+    steel.remove_regions_with_no_good_fit_from_region_model_match(low_gdp)
+    
+
 
     return steel
 
@@ -263,7 +270,8 @@ def aluminium_projection(scenario: str):
                                start_year_adjust=2025, 
                                end_year_adjust=2100, 
                                min_alpha=None, start_year_projection=2014)
-
+    
+    aluminium.remove_regions_with_no_good_fit_from_region_model_match(rest)
 
     return aluminium
 
