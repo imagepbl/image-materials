@@ -14,7 +14,7 @@ from imagematerials.rest_of.const import path_input_data
 #%% Calculate consumption, GDP, and population data both real data points and projections
 
 def calculate_gdp(scenario: str, end_year_gdp_pc: int = 47, end_year_pop: int = 48, 
-                  keep_global = False, path_input_data = path_input_data):
+                  keep_global = False, path_input_data_image = path_input_data):
     """
     Read in gdp per capita data and population data (real & projections) from IMAGE EDITS project to calculate total and global gdp per IMAGE region.
 
@@ -46,14 +46,14 @@ def calculate_gdp(scenario: str, end_year_gdp_pc: int = 47, end_year_pop: int = 
         interpolated population until 2100.
     """
     # GDP per capita of IMAGE regions 
-    gdp_pc = read_mym_df(path_input_data.joinpath(scenario, "Socioeconomic", "gdp_pc.scn"))
+    gdp_pc = read_mym_df(path_input_data_image.joinpath(scenario, "Socioeconomic", "gdp_pc.scn"))
     gdp_pc = gdp_pc.drop(columns=27) #drop empty global column
     gdp_pc = gdp_pc.rename(columns={28: 27})
     # rename index to class_ 1, ...
     gdp_pc.columns = [f'class_ {i+1}' for i in range(len(gdp_pc.columns))]
 
     # Population of IMAGE regions (from EDITS project)
-    pop_100: pd.DataFrame = read_mym_df(path_input_data.joinpath(scenario, "Socioeconomic", "pop.scn"))
+    pop_100: pd.DataFrame = read_mym_df(path_input_data_image.joinpath(scenario, "Socioeconomic", "pop.scn"))
     pop_100 = pop_100.loc[:, :26]
     pop_100.columns = [f'class_ {i+1}' for i in range(len(pop_100.columns))]
     pop_100 = pop_100*1000_000 # convert to millions
