@@ -8,7 +8,7 @@ Created on Tue Aug 27 13:31:40 2024
 import pandas as pd
 import numpy as np
 
-from imagematerials.rest_of.const import (path_input_data_cons)
+from imagematerials.rest_of.const import (path_input_data_cons, path_input_data)
 
 from imagematerials.rest_of.correlation_materials import (calculate_gdp, summarize_IMAGE_regions, 
                                    calculate_material_consumption_pc_and_gdp_pc_groups, 
@@ -23,7 +23,8 @@ class ResourceModel():
     def __init__(self, resource_group: str, resource: str, start_year: int, scenario: str, 
                  image_mat_available: bool, 
                  end_year = 2017, convert_image = False, convert_to_tons = None, trade_data = False, 
-                 path_input_data = path_input_data_cons, adapt_mat_factor = None,):
+                 path_input_data = path_input_data_cons, adapt_mat_factor = None,
+                 path_input_data_image = path_input_data):
         
         # Name resource group
         self.resource_group = resource_group
@@ -70,7 +71,7 @@ class ResourceModel():
         (self.gdp_original, self.gdp_global_original, 
          self.gdp_pc_original, self.pop_original, 
          self.gdp_pc_100_original, self.pop_100_original,
-         self.gdp_100) = calculate_gdp(scenario)
+         self.gdp_100) = calculate_gdp(scenario, path_input_data_image=path_input_data_image)
         
         
     def data_grouped_regions(self, regions_grouping):
@@ -375,4 +376,10 @@ class ResourceModel():
         self.projection_per_region_adapted_alpha.index = np.arange(start_year_projection, 2101)
         self.projection_per_region_adapted_alpha = self.projection_per_region_adapted_alpha*self.pop_100
 
-        
+
+    def remove_regions_with_no_good_fit_from_region_model_match(self, list_remove_regions):
+        self.new_region_model_match = self.region_model_match.copy()
+        # fill with nan instead
+        for region in list_remove_regions:
+            if region in self.new_region_model_match:
+                self.new_region_model_match[region] = None

@@ -78,6 +78,8 @@ def cement_projection(scenario: str):
                         start_year_adjust=2025, 
                         end_year_adjust=2100, 
                         min_alpha=None)
+    
+    cement.remove_regions_with_no_good_fit_from_region_model_match(rest)
 
     return cement
 
@@ -140,6 +142,8 @@ def limestone_projection(scenario: str):
                     end_year_adjust=2100, 
                     min_alpha=None)
 
+    limestone.remove_regions_with_no_good_fit_from_region_model_match(rest)
+
     return limestone
 
 
@@ -149,6 +153,7 @@ def sand_projections(scenario: str):
                         image_mat_available = True, start_year = 1970, scenario=scenario)
 
     # collect these above defined groups in a dictionary
+
     SAND_GROUPING_REGIONS = {
         'all_regions': [k for k in CLASS_TO_REGION_DICT.keys() if k != 'class_ 27'],
         'Canada':  ['class_ 1'],
@@ -161,7 +166,8 @@ def sand_projections(scenario: str):
         'Japan':    ['class_ 23'],
         'High' : ['class_ 2', 'class_ 24', 'class_ 11']
         }
-
+    
+    rest = []
     sand.data_grouped_regions(regions_grouping = SAND_GROUPING_REGIONS) #list(sand_AVERAGE_REGIONS_TO_IMAGE.keys()
     sand.sum_IMAGE_drivers_regions(regions_dict=None)
     sand.match_MAT_data_to_regions_year(match_external_regions=False)
@@ -203,6 +209,8 @@ def sand_projections(scenario: str):
                         start_year_adjust=2025, 
                         end_year_adjust=2100, 
                         min_alpha=None)
+    
+    sand.remove_regions_with_no_good_fit_from_region_model_match(rest)
     return sand
 
 def clay_projections(scenario: str):
@@ -262,4 +270,5 @@ def clay_projections(scenario: str):
                         end_year_adjust=2100, 
                         min_alpha=None)
 
+    clay.remove_regions_with_no_good_fit_from_region_model_match(rest)
     return clay
