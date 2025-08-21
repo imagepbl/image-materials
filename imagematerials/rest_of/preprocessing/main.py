@@ -1,5 +1,6 @@
 import pandas as pd
 import xarray as xr
+import prism
 
 from pathlib import Path
 
@@ -17,6 +18,16 @@ def read_gompertz_values(base_directory):
 
 
     return xr_gompertz
+
+
+def read_historic_diff_cons_data(base_directory):
+
+    diff_consumption = xr.open_dataset(base_directory / "rest-of" / "gompertz_values" / "diff_cons_all.nc", engine="netcdf4")
+    diff_consumption = diff_consumption.to_array().isel(variable=0).drop_vars("variable")
+    diff_consumption = prism.Q_(diff_consumption, 'tons')
+
+    return diff_consumption
+
 
 def read_image_gdp_cap_data(image_scenario_directory):
 
@@ -42,6 +53,7 @@ def read_image_gdp_cap_data(image_scenario_directory):
 def rest_of_preprocessing(base_directory, image_scenario_directory):
     gompertz_values = read_gompertz_values(base_directory)
     gdp_per_capita = read_image_gdp_cap_data(image_scenario_directory)
+    historic_diff_consumption = read_historic_diff_cons_data(base_directory)
     population = compute_population(image_scenario_directory, base_directory)
     # Filter population data to start from 1971 & only total population needed
     population = population.sel(Area = 'Total').loc[1971:]
@@ -54,5 +66,6 @@ def rest_of_preprocessing(base_directory, image_scenario_directory):
         "gompertz_coefs": gompertz_values,
         "gdp_per_capita": gdp_per_capita,
         "population": population,
+        "historic_diff_consumption": historic_diff_consumption
     }
     return preprocessing_dict

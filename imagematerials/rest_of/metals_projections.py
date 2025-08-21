@@ -85,30 +85,37 @@ def steel_projection(scenario: str):
                         scenario=scenario,
                         convert_image=True, end_year = 2012, convert_to_tons = 1/1000_000, 
                         trade_data=True)
+    
+    class_1 = ['class_ 1'] 
 
-    high = ['class_ 19', 'class_ 20']
+    high = ['class_ 19', 'class_ 23']
 
-    medium = ['class_ 1', 'class_ 12', 'class_ 13', 'class_ 16', 'class_ 23'] 
+    china = ['class_ 20']
 
-    low = ['class_ 2', 'class_ 11' , 'class_ 24']
+    low = ['class_ 2', 'class_ 11' , 'class_ 12', 'class_ 13', 'class_ 24']
+
+    very_low = ['class_ 4', 'class_ 8', 'class_ 22', 'class_ 25']
+
+    very_low_2 = ["class_ 3", "class_ 5", "class_ 6", "class_ 7", "class_ 9", "class_ 17", "class_ 18", "class_ 21", "class_ 26"]
 
     # trajectory not to forseen, will be fitted with global regression
-    low_gdp = ['class_ 3', 'class_ 4',  'class_ 5', 'class_ 6', 'class_ 7',
-            'class_ 8', 'class_ 9',  'class_ 10',
-            'class_ 15', 'class_ 17', 'class_ 18', 'class_ 21', 
-            'class_ 22', 'class_ 25', 'class_ 26']
-    
+    spreaded = ['class_ 10', 'class_ 14', 'class_ 15', 'class_ 16']
 
-    # what is in rset will not be fitted because of outliers - will follow global projections       
+    exclude = very_low_2
+
+    # what is in rest will not be fitted because of outliers - will follow global projections       
     rest = all_regions_list_class[:-1]
-    rest = [r for r in rest if r not in (high+low+medium+low_gdp)]
+    rest = [r for r in rest if r not in (low+class_1+high+very_low+very_low_2+china)]
 
     # for these models a regression will be made
     # all reginos that are not in the high, medium, low will be fitted with the global regression
     steel_grouping = {'all' : all_regions_list_class[:-1],
-                    'high': high,
-                    'medium': medium,
-                    'low': low,
+                      'class_ 1': class_1,
+                      'high': high,
+                      'china': china,
+                      'low': low,
+                      'very_low': very_low,
+                      'very_low_2': very_low_2,
                     }
 
     #steel_grouping = {'all' : all_regions_list_class[:-1]}
@@ -120,20 +127,30 @@ def steel_projection(scenario: str):
     steel.match_MAT_data_to_regions_year(match_external_regions=False)
     steel.calculate_historic_other_fraction()
 
-    neg_classes = ['class_ 4', 'class_ 8', 'class_ 9', 'class_ 22', 'class_ 25', 'class_ 26']
-    steel.historic_other_fraction_consumption[neg_classes] = steel.historic_consumption_data[neg_classes]
-
     # deal with single negative numbers by removing them from dataset
     steel.historic_other_fraction_consumption[steel.historic_other_fraction_consumption < 0] = np.nan
     
     # Fit models 
     steel.calculate_regressors(steel.historic_other_fraction_consumption)
 
+    bounds = {
+    'all': ([0, 0, 0], [10, 10, 10]),
+    'class_1': ([0, 0, 0], [10, 10, 10]),
+    'high': ([0, 0, 0], [0.5, 10, 10]),
+    'china': ([0, 0, 0], [10, 10, 10]),
+    'low': ([0, 0, 0], [10, 10, 10]),
+    'very_low': ([0, 0, 0], [10, 10, 10]),
+    'very_low_2': ([0, 0, 0], [10, 10, 10])}
+
     # enforce that for all groups gompertz model is selected as best fit
     steel.fit_models(best_rmse_models={'all' : 'gompertz model',
+                                    'class_ 1': 'gompertz model',
                                     'high': 'gompertz model',
-                                    'medium': 'gompertz model',
-                                    'low': 'gompertz model'})
+                                    'china': 'gompertz model',
+                                    'low': 'gompertz model',
+                                    'very_low': 'gompertz model',
+                                    'very_low_2': 'gompertz model'},
+                                    bounds=bounds)  
 
 
     # project based on best model
@@ -144,11 +161,10 @@ def steel_projection(scenario: str):
                                end_year_adjust=2100, 
                                min_alpha=None)
     
-    steel.remove_regions_with_no_good_fit_from_region_model_match(low_gdp)
+    steel.remove_regions_with_no_good_fit_from_region_model_match(exclude)
     
-
-
     return steel
+
 
 # Aluminium
 def aluminium_projection(scenario: str):
