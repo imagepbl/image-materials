@@ -547,17 +547,16 @@ class RestOf(prism.Model):
     def compute_values(self, time: prism.Time, gompertz_coefs, gdp_per_capita, population, historic_diff_consumption):
         t, dt = time.t, time.dt
         if t > 1970:
-            if np.isnan(gompertz_coefs).any():
-                # projection will be made based on historical data assuming the difference will stay the same
-                self.inflow_materials_rest.loc[t] = historic_diff_consumption
-            else:
-                # Select coefficients for all regions/materials
-                a = gompertz_coefs.sel(coef='a')
-                b = gompertz_coefs.sel(coef='b')
-                c = gompertz_coefs.sel(coef='c')
-                self.inflow_per_capita_rest = (a * np.exp(-b * np.exp(-c * gdp_per_capita.loc[t])))
-                self.inflow_per_capita_rest = prism.Q_(self.inflow_per_capita_rest, "t/person")
-                self.inflow_materials_rest.loc[t] = self.inflow_per_capita_rest * population.loc[t]
+            # if np.isnan(gompertz_coefs).any():
+            #     # projection will be made based on historical data assuming the difference will stay the same
+            #     self.inflow_materials_rest.loc[t] = np.nan #historic_diff_consumption
+            # Select coefficients for all regions/materials
+            a = gompertz_coefs.sel(coef='a')
+            b = gompertz_coefs.sel(coef='b')
+            c = gompertz_coefs.sel(coef='c')
+            self.inflow_per_capita_rest = (a * np.exp(-b * np.exp(-c * gdp_per_capita.loc[t])))
+            self.inflow_per_capita_rest = prism.Q_(self.inflow_per_capita_rest, "t/person")
+            self.inflow_materials_rest.loc[t] = self.inflow_per_capita_rest * population.loc[t]
         else:
             pass # No inflow before 1970
         
