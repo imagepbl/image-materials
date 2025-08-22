@@ -35,7 +35,7 @@ def fit_models_all_materials(scenarios_list: list = ["SSP2_M_CP"]):
         sand = sand_projections(scenario=scenario)
         limestone = limestone_projection(scenario=scenario)
         clay = clay_projections(scenario=scenario)
-        biomass = biomass_data(scenario=scenario)
+        # biomass = biomass_data(scenario=scenario)
         fossil_fuel = fossil_fuel_data(scenario=scenario)
         water = water_consumption(scenario=scenario)
         
@@ -48,7 +48,7 @@ def fit_models_all_materials(scenarios_list: list = ["SSP2_M_CP"]):
             'sand': sand,
             'limestone': limestone,
             'clay': clay,
-            'biomass': biomass,
+            # 'biomass': biomass,
             'fossil_fuel': fossil_fuel,
             'water': water
     }
@@ -69,8 +69,8 @@ def make_gompertz_coefs_da(results_models, material_order=None, region_order=Non
     Returns:
         xr.DataArray: (Region, material, coef)
     """
-    material_list_complete_fit = ['steel', 'cement', 'limestone', 'clay', 'sand']
-    material_list_sub_regions_fit = ['aluminium', 'copper']
+    material_list_complete_fit = ['steel', 'cement', 'limestone', 'clay', 'sand', 'copper']
+    material_list_sub_regions_fit = ['aluminium']
     region_order = [str(i) for i in range(1, 27)]
     rows = []
 
@@ -131,8 +131,8 @@ def make_gompertz_coefs_da(results_models, material_order=None, region_order=Non
 
 def historic_other_fraction_comsumption_to_xr(results_models):
     no_full_data_avaiable_on_region_list = ['limestone', 'clay']
-    material_list_complete_fit = ['steel', 'cement', 'limestone', 'clay', 'sand']
-    material_list_sub_regions_fit = ['aluminium', 'copper']
+    material_list_complete_fit = ['steel', 'cement', 'limestone', 'clay', 'sand', 'copper']
+    material_list_sub_regions_fit = ['aluminium']
 
     # create an empty xarray dataset
     diff_cons_all = xr.Dataset()
