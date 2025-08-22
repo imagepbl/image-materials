@@ -88,7 +88,9 @@ def steel_projection(scenario: str):
     
     class_1 = ['class_ 1'] 
 
-    high = ['class_ 19', 'class_ 20', 'class_ 23']
+    high = ['class_ 19', 'class_ 23']
+
+    china = ['class_ 20']
 
     low = ['class_ 2', 'class_ 11' , 'class_ 12', 'class_ 13', 'class_ 24']
 
@@ -99,8 +101,8 @@ def steel_projection(scenario: str):
     spreaded = ['class_ 10', 'class_ 14', 'class_ 15', 'class_ 16']
 
     # will be excluded and assigned average diff
-    fit_not_good = ['class_ 6', 'class_ 10', 'class_ 14', 
-                    'class_ 15', "class_ 18"]
+    fit_not_good = ['class_ 5', 'class_ 6', 'class_ 10', 'class_ 14', 
+                    'class_ 15', "class_ 18", "class_ 24"]
     
     too_low = ['class_ 4', 'class_ 8', "class_ 9", 
                'class_ 22', 'class_ 25', "class_ 26"]
@@ -109,13 +111,14 @@ def steel_projection(scenario: str):
 
     # what is in rest will not be fitted because of outliers - will follow global projections       
     rest = all_regions_list_class[:-1]
-    rest = [r for r in rest if r not in (low+class_1+high+very_low+too_low+fit_not_good)]
+    rest = [r for r in rest if r not in (low+class_1+high+very_low+too_low+fit_not_good+china)]
 
     # for these models a regression will be made
     # all reginos that are not in the high, medium, low will be fitted with the global regression
     steel_grouping = {'all' : all_regions_list_class[:-1],
                       'class_ 1': class_1,
                       'high': high,
+                      'china': china,
                       'low': low,
                       'very_low': very_low,
                       'too_low': too_low,
@@ -140,6 +143,7 @@ def steel_projection(scenario: str):
     'all': ([0, 0, 0], [10, 10, 10]),
     'class_ 1': ([0, 0, 0], [10, 10, 10]),
     'high': ([0, 0, 0], [0.7, 10, 10]),
+    'china': ([0, 0, 0], [0.5, 10, 10]),
     'low': ([0, 0, 0], [10, 10, 10]),
     'very_low': ([0, 0, 0], [10, 10, 10]),
     'too_low': ([0, 0, 0], [10, 10, 10])}
@@ -148,6 +152,7 @@ def steel_projection(scenario: str):
     steel.fit_models(best_rmse_models={'all' : 'gompertz model',
                                     'class_ 1': 'gompertz model',
                                     'high': 'gompertz model',
+                                    'china': 'gompertz model',
                                     'low': 'gompertz model',
                                     'very_low': 'gompertz model',
                                     'too_low': 'gompertz model'},
