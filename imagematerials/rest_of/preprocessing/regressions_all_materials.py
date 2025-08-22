@@ -1,0 +1,169 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import xarray as xr
+
+from imagematerials.rest_of.metals_projections import (
+    steel_projection, 
+    aluminium_projection, 
+    copper_projection)
+
+from imagematerials.rest_of.water import water_consumption
+
+from imagematerials.rest_of.biomass import biomass_data
+
+from imagematerials.rest_of.fossil_fuels import fossil_fuel_data
+
+from imagematerials.rest_of.nmm_projections import (cement_projection, 
+                                                    sand_projections, 
+                                                    limestone_projection,
+                                                    clay_projections) 
+
+from pathlib import Path
+
+def fit_models_all_materials(scenarios_list: list = ["SSP2_M_CP"]):
+
+    results = {}
+
+    for scenario in scenarios_list:
+        print(scenario)
+        # Run all projections for this scenario
+        copper = copper_projection(scenario=scenario)
+        steel = steel_projection(scenario=scenario)
+        aluminium = aluminium_projection(scenario=scenario)
+        cement = cement_projection(scenario=scenario)
+        sand = sand_projections(scenario=scenario)
+        limestone = limestone_projection(scenario=scenario)
+        clay = clay_projections(scenario=scenario)
+        biomass = biomass_data(scenario=scenario)
+        fossil_fuel = fossil_fuel_data(scenario=scenario)
+        water = water_consumption(scenario=scenario)
+        
+        # Store model objects or just their outputs
+        results[scenario] = {
+            'copper': copper,
+            'steel': steel,
+            'aluminium': aluminium,
+            'cement': cement,
+            'sand': sand,
+            'limestone': limestone,
+            'clay': clay,
+            'biomass': biomass,
+            'fossil_fuel': fossil_fuel,
+            'water': water
+    }
+        
+    return results
+
+
+
+def make_gompertz_coefs_da(results_models, material_order=None, region_order=None):
+    """
+    Create a DataArray of Gompertz coefficients with desired material and region order.
+
+    Parameters:
+        rows (list of dict): Each dict must have keys 'Region', 'material', 'a', 'b', 'c'
+        material_order (list of str): Desired order of materials, e.g. ['Steel', 'Cement']
+        region_order (list of str): Desired order of regions as strings, e.g. ['1', '2', ..., '26']
+
+    Returns:
+        xr.DataArray: (Region, material, coef)
+    """
+    material_list_complete_fit = ['steel', 'cement', 'limestone', 'clay', 'sand']
+    material_list_sub_regions_fit = ['aluminium', 'copper']
+    region_order = [str(i) for i in range(1, 27)]
+    rows = []
+
+    for material in material_list_complete_fit + material_list_sub_regions_fit:
+        if material in material_list_complete_fit:
+            region_model_match = results_models['SSP2_M_CP'][material].new_region_model_match
+        else:
+            region_model_match = results_models['SSP2_M_CP'][material].region_model_match_per_image
+
+        for region, model in region_model_match.items():
+            if model != None:
+                rows.append({
+                    "Region": region,
+                    "material": material,
+                    "a": model.coefs[0],
+                    "b": model.coefs[1],
+                    "c": model.coefs[2]
+                })
+            else:
+                rows.append({
+                    "Region": region,
+                    "material": material,
+                    "a": np.nan,
+                    "b": np.nan,
+                    "c": np.nan
+                })
+
+    coefs_df = pd.DataFrame(rows)
+    coefs_df['Region'] = coefs_df['Region'].map(str).str.replace('class_ ', '')
+    coefs_df['material'] = coefs_df['material'].str.capitalize()
+
+    if material_order is None:
+        material_order = sorted(coefs_df['material'].unique())
+    if region_order is None:
+        region_order = sorted(coefs_df['Region'].unique(), key=lambda x: int(x))
+
+    # Set index and reindex to enforce order
+    coefs_df = coefs_df.set_index(['Region', 'material']).reindex(
+        pd.MultiIndex.from_product([region_order, material_order], names=['Region', 'material'])
+    )
+
+    # Convert to xarray Dataset
+    coefs_xr = coefs_df[['a', 'b', 'c']].to_xarray()
+
+    # Stack the 'a', 'b', 'c' variables into a new 'coef' dimension
+    coefs_da = xr.concat(
+        [coefs_xr['a'], coefs_xr['b'], coefs_xr['c']],
+        dim='coef'
+    ).assign_coords(coef=['a', 'b', 'c'])
+
+    coefs_da = coefs_da.rename("gompertz_coefs")  # <-- Set a descriptive name
+
+    # coefs_da now has dims ('Region', 'material', 'coef')
+    coefs_da.to_netcdf('../../../data/raw/rest-of/gompertz_values/coefs_gompertz.nc')
+    return coefs_da
+
+
+
+def historic_other_fraction_comsumption_to_xr(results_models):
+    no_full_data_avaiable_on_region_list = ['limestone', 'clay']
+    material_list_complete_fit = ['steel', 'cement', 'limestone', 'clay', 'sand']
+    material_list_sub_regions_fit = ['aluminium', 'copper']
+
+    # create an empty xarray dataset
+    diff_cons_all = xr.Dataset()
+
+    # save both in one xarray
+    for material in material_list_complete_fit + material_list_sub_regions_fit:
+        if material in no_full_data_avaiable_on_region_list:
+            diff_cons = results_models['SSP2_M_CP']['steel'].historic_other_fraction_consumption.iloc[-5:]
+            diff_cons = diff_cons.mean(axis=0)
+            # replace all values with np.nan
+            diff_cons = diff_cons.mask(diff_cons != 0, np.nan)
+
+        else:
+            diff_cons = results_models['SSP2_M_CP'][material].historic_other_fraction_consumption.iloc[-5:]
+            diff_cons = diff_cons.mean(axis=0)
+        
+        # to xarray
+        diff_cons = diff_cons.to_xarray()
+        # rename coords
+        diff_cons = diff_cons.rename({'index': 'Region'})
+        # replace dimension of coords Region to '1', '2', 3,... instead of class_ 1, class_ 2, ...
+        diff_cons['Region'] = diff_cons['Region'].str.replace('class_ ', '')
+        # capitalize material
+        material = material.capitalize()
+        diff_cons_all[material] = diff_cons
+
+
+    diff_cons_all = diff_cons_all.to_array(dim='material')
+    # sort material alphabetically
+    diff_cons_all = diff_cons_all.sortby('material')
+    # Save the results to a file
+    diff_cons_all.to_netcdf('../../../data/raw/rest-of/gompertz_values/diff_cons_all.nc')
+
+        
