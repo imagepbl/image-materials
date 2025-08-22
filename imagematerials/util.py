@@ -363,65 +363,64 @@ def convert_life_time_vehicles(life_time_vehicles: xr.Dataset) -> dict[str, xr.D
 
 def scenario_change(arr: xr.DataArray, base_year: int, target_year: int, change: dict,
                     implementation_rate: str, data_type: Optional[str]=None, steepness: float=0.5) -> xr.DataArray:
-    """
-    Applies a time-based change to values in a Xarray between a base and target year using a specified implementation method.
-
-    Parameters
-    ----------
-    arr
-        A time-indexed Xarray containing mode-specific values, such as lifetime or mileage.
-    base_year
-        The starting year for the change.
-    target_year
-        The year by which the full change should be achieved.
-    change
-        A dictionary mapping modes to percentage increases (e.g., {'Cars': 20} for +20%).
-    implementation_rate
-        The implementation method; one of 'linear', 'immediate', or 's-curve'.
-    data_type
-        Indicates what kind of data is being modified; one of 'lifetime' or 'mileages'.
-    steepness
-        Steepness parameter for the 's-curve' implementation; default is 0.5.
-
-    Returns
-    -------
-        A new Xarray with updated values for each year between base_year and target_year, and interpolated values where necessary.
-
-    Raises
-    ------
-    ValueError
-        If the implementation method is unsupported or if the specified column is not found in the DataFrame.
-
-    Notes
-    -----
-    For verhicles, this function has an implementation that works on Pandas dataframes.
-    """
-    result = arr.where(arr.Time <= base_year, np.nan)
-    result.loc[{"Time": target_year}] = result.loc[{"Time": base_year}]
+    result = arr.copy()
 
     for region, increase in change.items():
-        base_val = result.loc[{"Time": target_year, "Region": region}]
+        base_val = result.loc[{"Time": target_year, "Region": region}]  # kept (not relied on)
         if region in result.Region:
-            if implementation_rate =='linear':
-                result.loc[{"Time": target_year, "Region": region}] *= (1 + increase / 100)
-            elif implementation_rate =='immediate':
-                result.loc[{"Time": base_year + 1, "Region": region}] = \
-                    base_val * (1 + increase / 100)
-                result.loc[{"Time": target_year, "Region": region}] *= (1 + increase / 100)
-            elif implementation_rate =='s-curve':
+            if implementation_rate == 'linear':
+                # ramp progress: 0 at base_year, 1 at target_year, held at 1 after
+                span = max(1, target_year - base_year)
+                # apply to each year explicitly to preserve structure
+                for year in range(base_year + 1, target_year + 1):
+                    progress = (year - base_year) / span
+                    result.loc[{"Time": year, "Region": region}] = (
+                        arr.loc[{"Time": year, "Region": region}] * (1 + (increase / 100.0) * progress)
+                    )
+                # after target_year, full effect but still relative to same-year baseline
+                result.loc[{"Time": slice(target_year + 1, None), "Region": region}] = (
+                    arr.loc[{"Time": slice(target_year + 1, None), "Region": region}] * (1 + increase / 100.0)
+                )
+                # keep explicit anchor years
+                if 'INTERMEDIATE_YEAR' in globals():
+                    result.loc[{"Time": INTERMEDIATE_YEAR, "Region": region}] = (
+                        arr.loc[{"Time": INTERMEDIATE_YEAR, "Region": region}] * (1 + increase / 100.0)
+                    )
+                if 'END_YEAR' in globals():
+                    result.loc[{"Time": END_YEAR, "Region": region}] = (
+                        arr.loc[{"Time": END_YEAR, "Region": region}] * (1 + increase / 100.0)
+                    )
+
+            elif implementation_rate == 'immediate':
+                # unchanged up to base_year; full step from base_year+1 onward, relative to same-year baseline
+                result.loc[{"Time": slice(None, base_year), "Region": region}] = \
+                    arr.loc[{"Time": slice(None, base_year), "Region": region}]
+                result.loc[{"Time": slice(base_year + 1, None), "Region": region}] = \
+                    arr.loc[{"Time": slice(base_year + 1, None), "Region": region}] * (1 + increase / 100.0)
+
+            elif implementation_rate == 's-curve':
                 years = list(range(base_year, target_year + 1))
                 mid_year = (base_year + target_year) / 2
-                target_val = base_val * (1 + increase / 100)
+                # normalize logistic so progress(base)=0 and progress(target)=1
+                s0 = 1.0 / (1.0 + np.exp(-steepness * (base_year - mid_year)))
+                s1 = 1.0 / (1.0 + np.exp(-steepness * (target_year - mid_year)))
                 for year in years:
-                    progress = 1 / (1 + np.exp(-steepness * (year - mid_year)))
-                    result.loc[{"Time": year, "Region": region}] = \
-                        base_val + (target_val - base_val) * progress
+                    s = 1.0 / (1.0 + np.exp(-steepness * (year - mid_year)))
+                    progress = np.clip((s - s0) / (s1 - s0), 0.0, 1.0)
+                    result.loc[{"Time": year, "Region": region}] = (
+                        arr.loc[{"Time": year, "Region": region}] * (1 + (increase / 100.0) * progress)
+                    )
+                # after target_year, full effect relative to same-year baseline
+                result.loc[{"Time": slice(target_year + 1, None), "Region": region}] = (
+                    arr.loc[{"Time": slice(target_year + 1, None), "Region": region}] * (1 + increase / 100.0)
+                )
             else: 
                 raise ValueError(f"Unknown implementation method: '{implementation_rate}'. "
                                   "Supported methods are 'immediate', 'linear', and 's-curve'.")
         else:
             raise ValueError(f"Region {region} not found in DataArray.")
-    return result.interpolate_na("Time", method="linear")
+    return result.interpolate_na("Time", method="cubic")
+
 
 
 def apply_change_per_region(arr: xr.DataArray, base_year: int, target_year: int, increase: float,
@@ -450,7 +449,7 @@ def apply_change_per_region(arr: xr.DataArray, base_year: int, target_year: int,
             regional_subarr, 
             base_year=base_year, 
             target_year=target_year, 
-            change={region: increase.loc[{"Region": region}]}, 
+            change={region: float(increase.loc[{"Region": region}].item())}, 
             implementation_rate=implementation_rate, 
             data_type=data_type, 
             steepness=steepness
