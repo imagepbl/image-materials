@@ -136,7 +136,7 @@ def get_preprocessing_data_gen(path_base: str, SCEN, VARIANT): #, climate_policy
     # 2. IMAGE/TIMER files -----------------------------------------
 
     # Generation capacity (stock & inflow/new) in MW peak capacity, FILES from TIMER
-    gcap_data = read_mym_df(path_image_output / 'Gcap.out')
+    gcap_data = read_mym_df(path_image_output / 'GCap.out')
 
     ###########################################################################################################
     # Prepare model specific variables #
@@ -272,9 +272,9 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT): #, climate_polic
     # 2. IMAGE/TIMER files ---------------------------------------------
 
     # Generation capacity (stock & inflow/new) in MW peak capacity, FILES from TIMER
-    gcap_data = read_mym_df(path_image_output / 'Gcap.out')
-    # gcap_BL_data = read_mym_df('SSP2\\SSP2_BL\\Gcap.out') # baseline scenario? TODO: what is the purpose of reading in the scneario + the baseline?
-    gcap_BL_data = read_mym_df(path_image_output_BL / 'Gcap.out')
+    gcap_data = read_mym_df(path_image_output / 'GCap.out')
+    # gcap_BL_data = read_mym_df('SSP2\\SSP2_BL\\GCap.out') # baseline scenario? TODO: what is the purpose of reading in the scneario + the baseline?
+    gcap_BL_data = read_mym_df(path_image_output_BL / 'GCap.out')
 
     ###########################################################################################################
     # Prepare model specific variables #
