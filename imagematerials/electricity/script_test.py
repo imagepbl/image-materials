@@ -1905,6 +1905,7 @@ gcap_data = gcap_data.iloc[:, :26]
 
 storage = storage.iloc[:, :26]    # drop global total column and empty (27) column
 
+# J: in high storage scenario the storage demand linearly increases between 2021 and 2050 compared to its original value until it is double by 2050, and then remains constant
 if SENS_ANALYSIS == 'high_stor':
    storage_multiplier = storage
    for year in range(2021,2051):
@@ -1955,9 +1956,9 @@ stor_materials_interpol = pd.DataFrame(index=index, columns=storage_materials.co
 # material intensities for storage
 for cat in list(storage_materials.columns.levels[1]):
    stor_materials_1st   = storage_materials.loc[:,idx[storage_materials.columns[0][0],cat]]
-   stor_materials_interpol.loc[idx[YEAR_FIRST_GRID ,:],cat] = stor_materials_1st.to_numpy()                # set the first year (1926) values to the first available values in the dataset (for the year 2000) 
-   stor_materials_interpol.loc[idx[storage_materials.columns.levels[0].min(),:],cat] = storage_materials.loc[:, idx[storage_materials.columns.levels[0].min(),cat]].to_numpy()                # set the middle year (2000) values to the first available values in the dataset (for the year 2000) 
-   stor_materials_interpol.loc[idx[storage_materials.columns.levels[0].max(),:],cat] = storage_materials.loc[:, idx[storage_materials.columns.levels[0].max(),cat]].to_numpy()                # set the last year (2100) values to the last available values in the dataset (for the year 2050) 
+   stor_materials_interpol.loc[idx[YEAR_FIRST_GRID ,:],cat] = stor_materials_1st.to_numpy()  # set the first year (1926) values to the first available values in the dataset (for the year 2000) 
+   stor_materials_interpol.loc[idx[storage_materials.columns.levels[0].min(),:],cat] = storage_materials.loc[:, idx[storage_materials.columns.levels[0].min(),cat]].to_numpy() # set the middle year (2000) values to the first available values in the dataset (for the year 2000) 
+   stor_materials_interpol.loc[idx[storage_materials.columns.levels[0].max(),:],cat] = storage_materials.loc[:, idx[storage_materials.columns.levels[0].max(),cat]].to_numpy() # set the last year (2100) values to the last available values in the dataset (for the year 2050) 
    stor_materials_interpol.loc[idx[:,:],cat] = stor_materials_interpol.loc[idx[:,:],cat].unstack().astype('float64').interpolate().stack()
 
 #############
@@ -1990,6 +1991,7 @@ storage_lifetime_interpol = storage_lifetime_interpol.drop(columns=['PHS'])
 # determine the annual % decline of the costs based on the 2018-2030 data (original, before applying the malus)
 decline = ((storage_costs_interpol.loc[storage_start,:]-storage_costs_interpol.loc[storage_end,:])/(storage_end-storage_start))/storage_costs_interpol.loc[storage_start,:]
 decline_used = decline*storage_ltdecline #TODO: what is happening here? Why?
+# storage_ltdecline is a single number and should describe the long-term decline after 2030 relative to the 2018-2030 decline
 
 storage_costs_new = storage_costs_interpol * storage_malus_interpol
 # calculate the development from 2030 to 2050 (using annual price decline)
@@ -2006,7 +2008,7 @@ for year in reversed(range(YEAR_START,storage_start)):
     storage_costs_new.loc[year] = row.iloc[0]
 
 storage_costs_new.sort_index(axis=0, inplace=True) 
-storage_costs_new.loc[1971:2017,'Deep-cycle Lead-Acid'] = storage_costs_new.loc[2018,'Deep-cycle Lead-Acid']        # restore the exception (set to constant 2018 values)
+storage_costs_new.loc[1971:2017,'Deep-cycle Lead-Acid'] = storage_costs_new.loc[2018,'Deep-cycle Lead-Acid'] # restore the exception (set to constant 2018 values)
 
 
 # market shares ---
