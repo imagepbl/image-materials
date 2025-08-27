@@ -603,7 +603,7 @@ plt.show()
 
 # Sum over technologies dimension
 
-da_stocks_mat = main_model_factory.stock_materials.copy() #stock_by_cohort_materials
+da_stocks_mat = main_model_factory.stock_by_cohort_materials.copy() #stock_by_cohort_materials
 
 data_all = da_stocks_mat
 data_all = data_all.sel(Type=data_all.Type != '<EMPTY>').sum('Type')
@@ -676,7 +676,7 @@ plt.show()
 #================================================================================
 #%%%% SUM over TECHs - world
 
-da_stocks_mat = main_model_factory.stock_materials.copy() #stock_by_cohort_materials
+da_stocks_mat = main_model_factory.stock_by_cohort_materials.copy() #stock_by_cohort_materials
 data_all = da_stocks_mat
 data_all = data_all.sel(Type=data_all.Type != '<EMPTY>').sum('Type').sum('Region')
 # data_plot = data_all/1_000_000 # convert grams to tonnes
@@ -786,7 +786,7 @@ plt.show()
 # }
 
 
-data_all = main_model_factory.stock_materials.copy() #stock_by_cohort_materials
+data_all = main_model_factory.stock_by_cohort_materials.copy() #stock_by_cohort_materials
 data_all = data_all.sel(Type=data_all.Type != '<EMPTY>', Time=slice(1971, None))/1_000_000 # only from 1971 onwards, convert grams to tonnes
 data_all = data_all.sum('Region')
 
@@ -1299,7 +1299,7 @@ plt.show()
 #================================================================================
 #%%%% Sum over Tech. - per region
 
-data_all = main_model_factory.outflow_materials.to_array().sum('Type')
+data_all = main_model_factory.outflow_by_cohort_materials.to_array().sum('Type')
 
 regions = ['Brazil', 'C.Europe', 'China']  # Brazil and C.Europe
 
@@ -1371,7 +1371,7 @@ plt.show()
 #%%%% Sum over Tech. - World
 
 
-data_all = main_model_factory.outflow_materials.to_array().sum('Type').sum('Region')
+data_all = main_model_factory.outflow_by_cohort_materials.to_array().sum('Type').sum('Region')
 types_level1 = [m for m in data_all.material.values if m in ["Steel", "Concrete"]]
 types_level2 = [m for m in data_all.material.values if m in ["Aluminium", "Cu"]]
 types_level3 = [m for m in data_all.material.values if m not in (types_level1 + types_level2)]
@@ -1444,9 +1444,9 @@ da_stocks = main_model_factory.stocks.sel(Type=type_tech)
 da_inflow = main_model_factory.inflow.to_array().sel(Type=type_tech)
 da_outflow = main_model_factory.outflow_by_cohort.to_array().sel(Type=type_tech).sum('Cohort')
 
-# da_stocks_mat = main_model_factory.stock_materials.sel(Type=type_tech) #stock_by_cohort_materials
+# da_stocks_mat = main_model_factory.stock_by_cohort_materials.sel(Type=type_tech) #stock_by_cohort_materials
 da_inflow_mat = main_model_factory.inflow_materials.to_array().sel(Type=type_tech) 
-da_outflow_mat = main_model_factory.outflow_materials.to_array().sel(Type=type_tech) 
+da_outflow_mat = main_model_factory.outflow_by_cohort_materials.to_array().sel(Type=type_tech) 
 
 da_stocks = da_stocks.sel(Time=slice(1971, None))
 da_inflow = da_inflow.sel(time=slice(1971, None))
@@ -1548,9 +1548,9 @@ da_stocks = main_model_factory.stocks.sel(Type=type_tech)
 da_inflow = main_model_factory.inflow.to_array().sel(Type=type_tech)
 da_outflow = main_model_factory.outflow_by_cohort.to_array().sel(Type=type_tech).sum('Cohort')
 
-# da_stocks_mat = main_model_factory.stock_materials.sel(Type=type_tech) #stock_by_cohort_materials
+# da_stocks_mat = main_model_factory.stock_by_cohort_materials.sel(Type=type_tech) #stock_by_cohort_materials
 da_inflow_mat = main_model_factory.inflow_materials.to_array().sel(Type=type_tech) 
-da_outflow_mat = main_model_factory.outflow_materials.to_array().sel(Type=type_tech) 
+da_outflow_mat = main_model_factory.outflow_by_cohort_materials.to_array().sel(Type=type_tech) 
 
 da_stocks = da_stocks.sel(Time=slice(1971, None))
 da_inflow = da_inflow.sel(time=slice(1971, None))
@@ -1651,9 +1651,9 @@ da_stocks = main_model_factory.stocks.sel(Type=type_tech)
 da_inflow = main_model_factory.inflow.to_array().sel(Type=type_tech)
 da_outflow = main_model_factory.outflow_by_cohort.to_array().sel(Type=type_tech).sum('Cohort')
 
-# da_stocks_mat = main_model_factory.stock_materials.sel(Type=type_tech) #stock_by_cohort_materials
+# da_stocks_mat = main_model_factory.stock_by_cohort_materials.sel(Type=type_tech) #stock_by_cohort_materials
 da_inflow_mat = main_model_factory.inflow_materials.to_array().sel(Type=type_tech) 
-da_outflow_mat = main_model_factory.outflow_materials.to_array().sel(Type=type_tech) 
+da_outflow_mat = main_model_factory.outflow_by_cohort_materials.to_array().sel(Type=type_tech) 
 
 da_stocks = da_stocks.sel(Time=slice(1971, None))
 da_inflow = da_inflow.sel(time=slice(1971, None))
@@ -3198,7 +3198,7 @@ materials = ["Steel", "Concrete", "Aluminium", "Cu"]
 
 # #%%%% 1 model ---------------------------------------------------
 
-# data_all = main_model_factory.stock_materials.copy().sum('Region')
+# data_all = main_model_factory.stock_by_cohort_materials.copy().sum('Region')
 
 # # data_all = main_model_factory.inflow_materials.to_array().sum('Region')
 # data_all = data_all/1_000  # Convert kg -> tonnes
@@ -3253,8 +3253,8 @@ materials = ["Steel", "Concrete", "Aluminium", "Cu"]
 
 #%%%% 2 model ---------------------------------------------------
 
-data_lines  = main_model_factory_lines.stock_materials.copy().sum(dim="Region")/1_000  # Convert kg -> tonnes
-data_add    = main_model_factory_add.stock_materials.copy().sum(dim="Region")/1_000  # Convert kg -> tonnes
+data_lines  = main_model_factory_lines.stock_by_cohort_materials.copy().sum(dim="Region")/1_000  # Convert kg -> tonnes
+data_add    = main_model_factory_add.stock_by_cohort_materials.copy().sum(dim="Region")/1_000  # Convert kg -> tonnes
 
 data        = xr.concat([data_lines, data_add], dim='Type')
 data        = data.sel(Time=slice(1971, None))
@@ -3622,8 +3622,8 @@ plt.show()
 
 #%%%% 2 model ---------------------------------------------------
 
-data_lines  = main_model_factory_lines.outflow_materials.to_array().sum(dim="Region")/1_000  # Convert kg -> tonnes
-data_add    = main_model_factory_add.outflow_materials.to_array().sum(dim="Region")/1_000  # Convert kg -> tonnes
+data_lines  = main_model_factory_lines.outflow_by_cohort_materials.to_array().sum(dim="Region")/1_000  # Convert kg -> tonnes
+data_add    = main_model_factory_add.outflow_by_cohort_materials.to_array().sum(dim="Region")/1_000  # Convert kg -> tonnes
 
 data_lines  = data_lines.sel(time=slice(1971, None))
 data_add    = data_add.sel(time=slice(1971, None))
