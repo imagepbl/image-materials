@@ -30,9 +30,9 @@ COHORTS = 50
 # Scenario settings ---------------------------------------------
 SCEN = "SSP2"
 # CP or 2D (Add "_RE" for Resource Efficiency)
-VARIANT = "2D_RE"
-# PROJECT = "mock_project"
-# FOLDER = SCEN + "_" + VARIANT
+# VARIANT = "2D_RE"
+# VARIANT = "M_CP"
+VARIANT = "VLHO"
 # OUTPUT_FOLDER = base_dir.joinpath("..", "..", "output", PROJECT, FOLDER)
 
 # Sensitivity Analysis - default, high_stor, high_grid
@@ -51,10 +51,59 @@ TONNES_TO_KGS = 1000
 STD_LIFETIMES_ELECTR = 0.214              # standard deviation as a fraction of the mean lifetime applicable to energy equipment (Asset Management for Infrastructure Systems: Energy and Water, Balzer & Schorn 2015)
 # TODO: different std for lines, transformers, generation, storage, etc.? scenario dependent?
 
+# Define the units for each dimension
+unit_mapping = {
+    'time': ureg.year,
+    'year': ureg.year,
+    'Year': ureg.year,
+    'kg': ureg.kilogram,
+    'yr': ureg.year,
+    '%': ureg.percent,
+    't': ureg.tonne,
+    'MW': ureg.megawatt, #added
+    'GW': ureg.gigawatt, #added
+}
 
 # Electricity Generation related constants ---------------------------------------------
 
 TECH_GEN = 34   # number of electricity generation technologies -> 33 technologies + 1 empty row
+
+# Define mapping: technology -> category
+gen_tech_to_category = {
+    "Solar PV": 'Solar', 
+    "Solar PV residential": 'Solar',
+    "CSP": 'Solar', 
+    "Wind onshore": 'Wind',
+    "Wind offshore": 'Wind', 
+    "Wave": 'Other Renewables',
+    "Hydro": 'Other Renewables',
+    "Other Renewables": 'Other Renewables',
+    "Geothermal": 'Other Renewables',
+    'Hydrogen power': 'Hydrogen',
+    "Nuclear": 'Nuclear',
+    "Conv. Coal": 'Fossil',
+    "Conv. Oil": 'Fossil',
+    "Conv. Natural Gas": 'Fossil',
+    "Waste": 'Fossil',
+    "IGCC": 'Fossil',
+    "OGCC": 'Fossil',
+    "NG CC": 'Fossil',
+    "Biomass CC": 'Biomass',
+    "Coal + CCS": 'Fossil + CCS',
+    "Oil/Coal + CCS": 'Fossil + CCS',
+    "Natural Gas + CCS": 'Fossil + CCS',
+    "Biomass + CCS": 'Biomass',
+    "CHP Coal": 'Fossil',
+    "CHP Oil": 'Fossil',
+    "CHP Natural Gas": 'Fossil',
+    "CHP Biomass": 'Biomass',
+    "CHP Geothermal": 'Other Renewables',
+    "CHP Hydrogen": 'Hydrogen',
+    "CHP Coal + CCS": 'Fossil + CCS',
+    "CHP Oil + CCS": 'Fossil + CCS',
+    "CHP Natural Gas + CCS": 'Fossil + CCS',
+    "CHP Biomass + CCS": 'Biomass'
+}
 
 # Vehicle related constants ---------------------------------------------
 
@@ -99,5 +148,87 @@ style_combinations = list(itertools.product(colors, linestyles))
 assert len(technologies) <= len(style_combinations), "Not enough unique combinations for all technologies."
 # Map technologies to (color, linestyle)
 dict_gentech_styles = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
+
+
+dict_gentechcat_colors = {
+    'Solar':             "#FBBF09",
+    'Wind':              "#4BABFF",
+    'Biomass':           "#42DD88",
+    'Other Renewables':  "#B6F795",
+    'Hydrogen':          '#B9FAF8',
+    'Nuclear':           "#B06106",
+    'Fossil':            "#575354",
+    'Fossil + CCS':      "#BBB8B9"
+}
+
+dict_materials_colors = {
+    'Steel':     '#FF9B85',
+    'Aluminium': '#B9FAF8',
+    'Concrete':  '#AAF683',
+    'Plastics':  '#60D394',
+    'Glass':     '#EE6055',
+    'Cu':        '#FB6376',
+    'Nd':        '#B8D0EB',
+    'Ta':        '#B298DC',
+    'Co':        '#F669C0',
+    'Pb':        '#6F2DBD',
+    'Mn':        "#31E7E7",
+    'Ni':        '#FCB1A6',
+    'Other':     '#FFD97D'
+}
+
+dict_grid_colors = {
+    #'Lines Overhead': '#FF9B85',
+    #'Lines Underground': '#FFD97D',
+    'Lines':        '#8cb369', #'#007f5f',
+    'Transformers': '#f4a259', #'#aacc00',
+    'Substations':  '#bc4b51' #'#55a630'
+}
+
+dict_grid_styles = {
+    'HV':                           ('#ef767a', '-'),
+    'HV - Lines - Overhead':        ('#ef767a', '-'),
+    'HV - Lines - Underground':     ('#ef767a', '--'),
+    'HV - Transformers':            ('#ef767a', '-'),
+    'HV - Substations':             ('#ef767a', '--'),
+
+    'MV':                           ('#456990', '-'),
+    'MV - Lines - Overhead':        ('#456990', '-'),
+    'MV - Lines - Underground':     ('#456990', '--'),
+    'MV - Transformers':            ('#456990', '-'),
+    'MV - Substations':             ('#456990', '--'),
+
+    'LV':                           ('#49beaa', '-'),
+    'LV - Lines - Overhead':        ('#49beaa', '-'),
+    'LV - Lines - Underground':     ('#49beaa', '--'),
+    'LV - Transformers':            ('#49beaa', '-'),
+    'LV - Substations':             ('#49beaa', '--')
+}
+
+dict_grid_styles2 = {
+    'HV':                           ('#ef767a', '-'),
+    'HV - Lines - Overhead':        ('#f4845f', '-'),
+    'HV - Lines - Underground':     ('#f4845f', '--'),
+    'HV - Transformers':            ('#f7b267', '-'),
+    'HV - Substations':             ('#f25c54', '--'),
+
+    'MV':                           ('#456990', '-'),
+    'MV - Lines - Overhead':        ('#0077b6', '-'),
+    'MV - Lines - Underground':     ('#0077b6', '--'),
+    'MV - Transformers':            ('#c0fdff', '-'),
+    'MV - Substations':             ('#023e8a', '--'),
+
+    'LV':                           ('#38b000', '-'), ##49beaa
+    'LV - Lines - Overhead':        ('#70e000', '-'),
+    'LV - Lines - Underground':     ('#70e000', '--'),
+    'LV - Transformers':            ('#ccff33', '-'),
+    'LV - Substations':             ('#007200', '--')
+}
+
+dict_electricity_colors = {
+    'Generation':   '#277da1',
+    'Storage':      '#f9844a',
+    'Transmission': '#90be6d'
+}
 
 

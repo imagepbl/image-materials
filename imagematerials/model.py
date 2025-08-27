@@ -139,8 +139,9 @@ class GenericStocks(prism.Model):
 class GenericMaterials(prism.Model):
     """
     A model class for managing materials used in stock cohorts, including 
-    inflows and outflows of materials and the computation of stock-by-cohort 
+    inflows and outflows of materials and the computation of stock 
     material use over time.
+
     Attributes
     ----------
     weights : xr.DataArray
@@ -177,6 +178,7 @@ class GenericMaterials(prism.Model):
                               "stock_by_cohort", "outflow_by_cohort")
     output_data: tuple[str] = ("stock_by_cohort_materials", "inflow_materials",
                                "outflow_by_cohort_materials")
+    # stock_by_cohort_materials & outflow_by_cohort_materials is NOT by cohort as it currently requires too much memory
 
     # Output data
     inflow_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "kg"] = prism.export()
@@ -243,6 +245,7 @@ class MaterialIntensities(prism.Model):
                               "stock_by_cohort", "outflow_by_cohort")
     output_data: tuple[str] = ("stock_by_cohort_materials", "inflow_materials",
                                "outflow_by_cohort_materials")
+    # stock_by_cohort_materials & outflow_by_cohort_materials is NOT by cohort as it currently requires too much memory
 
     # Output data
     inflow_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "kg"] = prism.export()
@@ -426,7 +429,7 @@ class EndOfLife(prism.Model):
     material: prism.Coords[MATERIAL_TYPE]
 
     # Data dependencies
-    input_data: tuple[str] = ("collection", "reuse", "recycling", "outflow_by_cohort_materials")
+    input_data: tuple[str] = ("collection", "reuse", "recycling", "outflow_by_cohort_materials") # outflow_by_cohort_materials currently summed over cohorts
     output_data: tuple[str] = ("sum_outflow","collected_materials","reusable_materials", "recyclable_materials","losses_materials")
 
     # Output data
