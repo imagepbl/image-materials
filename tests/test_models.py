@@ -9,7 +9,7 @@ import xarray as xr
 from pytest import mark
 
 from imagematerials.concepts import knowledge_graph
-from imagematerials.model import GenericMaterials, GenericStocks, MaterialIntensities, RestModel
+from imagematerials.model import GenericMaterials, GenericStocks, MaterialIntensities, RestOf
 from imagematerials.vehicles.battery import Battery
 
 @pytest.fixture(scope="module")
@@ -29,7 +29,7 @@ def timelines():
     return prism.Timeline(2000, 2002, 1), prism.Timeline(2001, 2002, 1)
 
 @mark.parametrize(
-    "model_class", [GenericStocks, GenericMaterials, MaterialIntensities, RestModel,
+    "model_class", [GenericStocks, GenericMaterials, MaterialIntensities, RestOf,
                     Battery]
 )
 def test_basic_model(model_class):
@@ -69,13 +69,15 @@ def _get_xarray(coordinates, *dims):
 def test_generic_stocks(coordinates, timelines):
     """Test the GenericStocks model."""
     stocks = _get_xarray(coordinates, "Time", "Region", "Type")
+    stocks = prism.Q_(stocks, "count")
     lt =  _get_xarray(coordinates, "Time", "Region", "Type", "ScipyParam")
     lt.attrs["loc"] = 0
     lifetimes = {"weibull": lt}
     complete_timeline, simulation_timeline = timelines
     model = GenericStocks(
         complete_timeline, stocks=stocks, lifetimes=lifetimes,
-        knowledge_graph=knowledge_graph, Region=coordinates["Region"], Type=coordinates["Type"],
+        knowledge_graph=knowledge_graph, set_unit_flexible="count",
+        Region=coordinates["Region"], Type=coordinates["Type"],
         Cohort=coordinates["Cohort"], Time=coordinates["Time"])
     model.simulate(complete_timeline)
     for var_name in model.output_data:

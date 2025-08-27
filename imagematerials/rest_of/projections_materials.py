@@ -20,11 +20,12 @@ from imagematerials.rest_of.const import REGION_TO_CLASS_DICT, models_output_dic
 from imagematerials.rest_of.regression_models_classes import (Log_Log_Model, Semi_Log_Model, 
                                        Log_Inverse_Model, Log_Log_Inverse_Model, 
                                        Log_Log_Square_Model, NLI_Model, 
-                                       GOMPERTZ_Model, LG_Model, BW_Model)
+                                       GOMPERTZ_Model, LG_Model, BW_Model, 
+                                       Log_Gauss_Saturate_Model)
 
 #%% Estimate models
 
-def estimate_models(cons_capita: pd.DataFrame, gdp_pc: pd.DataFrame):
+def estimate_models(cons_capita: pd.DataFrame, gdp_pc: pd.DataFrame, bounds:tuple):
     """
     Calcualte regression for every mathematical model and every region(group).
     
@@ -63,33 +64,41 @@ def estimate_models(cons_capita: pd.DataFrame, gdp_pc: pd.DataFrame):
     log_inverse_model = Log_Inverse_Model(cons_capita, gdp_pc)
     log_log_inverse_model = Log_Log_Inverse_Model(cons_capita, gdp_pc)
     log_log_square_model = Log_Log_Square_Model(cons_capita, gdp_pc)
-    non_linerar_inv_model = NLI_Model(cons_capita, gdp_pc)
-    logistic_growth_model = LG_Model(cons_capita, gdp_pc)
-    
+    non_linerar_inv_model = NLI_Model(cons_capita, gdp_pc, bounds = bounds)
+
     # try and except for these models, as they might have a runtime error and not produce results
     # if runtime errer: model is given None as output
+
+    
     try:
-        bw_model = BW_Model(cons_capita, gdp_pc)
+        bw_model = BW_Model(cons_capita, gdp_pc, bounds = bounds)
     except RuntimeError as e:
         print('limited growth model', e)
         bw_model = None
         
     try:
-        gompertz_model = GOMPERTZ_Model(cons_capita, gdp_pc)
+        gompertz_model = GOMPERTZ_Model(cons_capita, gdp_pc, bounds = bounds)
     except RuntimeError as e:
         print('Gompertz model', e)
         gompertz_model = None   
         
     try:
-        logistic_growth_model = LG_Model(cons_capita, gdp_pc)
+        logistic_growth_model = LG_Model(cons_capita, gdp_pc, bounds = bounds)
     except RuntimeError as e:
         print('logistic growth model', e)
         logistic_growth_model = None
 
-    
+    try:
+        log_gauss_saturate_model = Log_Gauss_Saturate_Model(cons_capita, gdp_pc, bounds = bounds)
+    except RuntimeError as e:
+        print('log-gauss-saturate model', e)
+        log_gauss_saturate_model = None
+
+
     return (log_log_model, semi_log_model, log_inverse_model, log_log_inverse_model, 
             log_log_square_model, non_linerar_inv_model, gompertz_model, 
-            logistic_growth_model, bw_model)
+            logistic_growth_model, bw_model, log_gauss_saturate_model)
+
     
 
 #%% Make statistical analysis
@@ -119,7 +128,8 @@ def rmse_r2_models(models_output: tuple) -> pd.DataFrame:
         models_output[5] : 'non-linear inverse model',
         models_output[6] : 'gompertz model',
         models_output[7] : 'logistic growth model',
-        models_output[8] : 'limited growth model' # (beschraenktes Wachstum)
+        models_output[8] : 'limited growth model', # (beschraenktes Wachstum)
+        models_output[9] : 'log gauss saturate model'
         }
     
     #loop over models in dict to calculate RMSE and R2
@@ -139,7 +149,8 @@ def rmse_r2_models(models_output: tuple) -> pd.DataFrame:
 
 def estimate_models_per_region_group(regions_groups_dict: dict, 
                                      cons_pc_groups: dict,
-                                     gdp_pc_groups: dict):
+                                     gdp_pc_groups: dict,
+                                     bounds: dict) -> tuple:
     """
     Estimate all regression models for all groups of regions. Builds on estimate_models and rmse_r2_models
 
@@ -164,12 +175,19 @@ def estimate_models_per_region_group(regions_groups_dict: dict,
     """
     model_groups = {}
     rmse_r2_groups = {}
-    
+
     for region_group in regions_groups_dict.keys():
-        print(region_group)
-        model_groups[region_group] = estimate_models(cons_pc_groups.get(region_group), gdp_pc_groups.get(region_group))
+        if isinstance(bounds, dict):
+            group_bounds = bounds.get(region_group, bounds)
+        else:
+            group_bounds = bounds
+        model_groups[region_group] = estimate_models(
+            cons_pc_groups.get(region_group),
+            gdp_pc_groups.get(region_group),
+            group_bounds
+        )
         rmse_r2_groups[region_group] = rmse_r2_models(model_groups[region_group])
-    
+        
     merged_rmse_r2 = pd.concat(rmse_r2_groups.values(), axis=1, keys=rmse_r2_groups.keys())
     
     return model_groups, rmse_r2_groups, merged_rmse_r2
@@ -263,16 +281,7 @@ def projection_data_region_capita(regions_list: list,
         # numpy array from nd array to 1d array
         region_projected_data = region_projected_data.ravel()
         projection_per_region.append(region_projected_data)
-        
-        # # pathways
-        # TODO moved out for now
-        # if end_year < 2100:
-        #     start = region_projected_data[start_index]
-        #     from scipy.stats import vonmises
-            
-        #     # use path adjustment function with cummulative distribution function to reach final values
-        #     path = path_adjustment(start, limit_dict[region], len(years), 'cdf', dist=vonmises, x_min=-np.pi, x_max=np.pi, dist_kwargs={'kappa': 1})
-        #     path_per_region.append(path)
+
             
     # list of projections of all regions to DataFrame
     projection_per_region = pd.DataFrame(projection_per_region).transpose()

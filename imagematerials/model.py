@@ -1,13 +1,17 @@
+
 from typing import Callable, ClassVar, Optional
+import pint_xarray
+from pint import UnitRegistry
+from pathlib import Path
 
 import prism
 import xarray as xr
+import numpy as np
 
 from imagematerials.concepts import KnowledgeGraph
 from imagematerials.maintenance import Maintenance
 from imagematerials.survival import ScipySurvival, SurvivalMatrix
 from imagematerials.vehicles.battery import Battery
-
 
 REGION = prism.Dimension("Region")
 STOCK_TYPE = prism.Dimension("Type")
@@ -16,7 +20,10 @@ TIME = prism.Dimension("Time")
 MATERIAL_TYPE = prism.Dimension("material")
 BATTERY_TYPE = prism.Dimension("battery")
 EOL_TYPE = prism.Dimension("eoltype")
+UnitFlexibleStock = prism.DynamicUnit("my_unit_stock")
 
+here = Path(__file__).resolve().parent
+prism.unit_registry.load_definitions(here.parent / "units.txt")
 
 @prism.interface
 class GenericStocks(prism.Model):
@@ -56,14 +63,16 @@ class GenericStocks(prism.Model):
     stocks: xr.DataArray #TODO check how to have property that can be both input and output within prism
     # stock_function: Callable    # defines the stock function to use e.g. stock or inflow driven
     knowledge_graph: KnowledgeGraph
+    # set a flexible unit that can be changed depending on type of stock - is passed by preprocessing
+    set_unit_flexible: prism.VarUnit[UnitFlexibleStock]
 
     # For module dependency, ignored by prism
-    input_data: tuple[str] = ("stocks", "lifetimes", "knowledge_graph")
+    input_data: tuple[str] = ("stocks", "lifetimes", "knowledge_graph", "set_unit_flexible")
     output_data: tuple[str] = ("outflow_by_cohort", "inflow", "stock_by_cohort")
 
     # stock_by_cohort: prism.TimeVariable[Region, Mode, Cohort, "count"] = prism.export(initial_value = prism.Array[Region, Mode, Cohort, 'count'](0.0))
-    inflow: prism.TimeVariable[REGION, STOCK_TYPE, "count"] = prism.export()
-    outflow_by_cohort: prism.TimeVariable[REGION, STOCK_TYPE, COHORT, "count"] = prism.export()
+    inflow: prism.TimeVariable[REGION, STOCK_TYPE, UnitFlexibleStock] = prism.export()
+    outflow_by_cohort: prism.TimeVariable[REGION, STOCK_TYPE, COHORT, UnitFlexibleStock] = prism.export()
 
     def compute_initial_values(self, time: prism.Timeline):
         """Compute the initial values for stocks and the survival matrix.
@@ -73,7 +82,8 @@ class GenericStocks(prism.Model):
         time : prism.Timeline
             The simulation timeline.
         """
-
+        # pass unit from stocks
+        unit = str(self.stocks.pint.units)
         survival = ScipySurvival(self.lifetimes, self.stocks.coords["Type"],
                                  knowledge_graph=self.knowledge_graph)
         self.survival_matrix = SurvivalMatrix(survival)
@@ -84,6 +94,7 @@ class GenericStocks(prism.Model):
                     "Cohort": self.Cohort,
                     "Region": self.Region,
                     "Type": self.Type})
+        self.stock_by_cohort = prism.Q_(self.stock_by_cohort, unit)
 
     def compute_values(self, time: prism.Time):
         """
@@ -94,16 +105,21 @@ class GenericStocks(prism.Model):
         time : prism.Time
             The current simulation time step.
         """
-         
+        # pass unit from stocks
+        unit = str(self.stocks.pint.units)
         t, dt = time.t, time.dt
-        self.inflow[t].loc[:] = 0.0
-        self.outflow_by_cohort[t].loc[:] = 0.0
+        self.inflow[t].loc[:] = prism.Q_(0.0, unit)
+        self.outflow_by_cohort[t].loc[:] = prism.Q_(0.0, unit)
 
+        # copy only for readability
         input_stock = self.stocks
+        # calculate missing stock to fulfill demand (input stock)
         stock_diff = input_stock.loc[t] - self.stock_by_cohort.loc[t].sum("Cohort")
-        # Drop dimension cohort
+        # stock_diff cannot be negative (no negative inflow); when positive, divide by survival matrix in case there is a loss in the first year (inflow needs to be larger than input stock)
         stock_diff = xr.where(stock_diff>0, stock_diff/self.survival_matrix[t, t].drop("Cohort"), 0)
+
         self.inflow[t] = stock_diff
+        # calculate future development of the current cohort (inflow at time t; t: = time from current time onwards, t = cohort of time t)
         self.stock_by_cohort.loc[t:, t] = self.inflow[t] * self.survival_matrix[t:, t]
         # for t_future in stock_by_cohort[t].coords["Cohort"].loc[t_str:]:
             # t_future = int(t_future)
@@ -111,9 +127,11 @@ class GenericStocks(prism.Model):
 
         # Prevent out of bounds error, assume first outflow to be 0.
         if t-1 < time.start:
-            self.outflow_by_cohort[t] = 0.0
+            self.outflow_by_cohort[t] = prism.Q_(0.0, unit)
         else:
+            # for previous cohorts: calculate outflow by subtracting stocks of previous - current year
             self.outflow_by_cohort[t].loc[:, :, :t-1] = self.stock_by_cohort.loc[t-1, :t-1] - self.stock_by_cohort.loc[t, :t-1]
+            # for current cohort: calculate outflow by inflow * (1-survival matrix) as stock at t-1 is not existent
             self.outflow_by_cohort[t].loc[:, :, t] = self.inflow[t] * (1-self.survival_matrix[t, t])
 
 
@@ -163,8 +181,8 @@ class GenericMaterials(prism.Model):
     # stock_by_cohort_materials & outflow_by_cohort_materials is NOT by cohort as it currently requires too much memory
 
     # Output data
-    inflow_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
-    outflow_by_cohort_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
+    inflow_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "kg"] = prism.export()
+    outflow_by_cohort_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "kg"] = prism.export()
 
     def compute_initial_values(self, time: prism.Timeline):
         """
@@ -182,6 +200,7 @@ class GenericMaterials(prism.Model):
                     "Region": self.Region,
                     "Type": self.Type,
                     "material": self.material})
+        self.stock_by_cohort_materials = prism.Q_(self.stock_by_cohort_materials, "kg")
 
     def compute_values(self, time: prism.Time, inflow, stock_by_cohort, outflow_by_cohort):
         """
@@ -199,27 +218,14 @@ class GenericMaterials(prism.Model):
         outflow_by_cohort : xr.DataArray
             Outflow data by cohort.
         """
-         
+
+        self.material_fractions = prism.Q_(self.material_fractions, "1")
+        self.weights = prism.Q_(self.weights, "kg/count")
+       
         t, dt = time.t, time.dt
         self.inflow_materials[t] = inflow[t]*self.material_fractions.sel(Cohort=t).drop_vars("Cohort")*self.weights.sel(Cohort=t).drop_vars("Cohort")
         self.outflow_by_cohort_materials[t] = (outflow_by_cohort[t]*self.material_fractions*self.weights).sum("Cohort")
         self.stock_by_cohort_materials.loc[t] = (stock_by_cohort.loc[t]*self.material_fractions*self.weights).sum("Cohort")
-
-@prism.interface
-class RestModel(prism.Model):
-    # Input data
-    gdp_per_capita: xr.DataArray  # Will be a prism time variable probably
-    population: xr.DataArray
-
-    # Output data
-    inflow_materials_rest: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
-
-    input_data: tuple[str] = ("total_inflow_materials_class", "gdp_per_capita", "population")
-    output_data: tuple[str] = ("inflow_materials_rest")
-
-    def compute_values(self, time: prism.Time, total_inflow_materials_class):
-        t = time.t
-        self.total_inflow_materials_rest[t] = self.total_inflow_materials_class.predict(self.gdp_per_capita)*self.population
 
 
 @prism.interface
@@ -242,8 +248,8 @@ class MaterialIntensities(prism.Model):
     # stock_by_cohort_materials & outflow_by_cohort_materials is NOT by cohort as it currently requires too much memory
 
     # Output data
-    inflow_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
-    outflow_by_cohort_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "count"] = prism.export()
+    inflow_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "kg"] = prism.export()
+    outflow_by_cohort_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "kg"] = prism.export()
 
     def compute_initial_values(self, time: prism.Timeline):
         self.stock_by_cohort_materials = xr.DataArray(
@@ -253,8 +259,12 @@ class MaterialIntensities(prism.Model):
                     "Region": self.Region,
                     "Type": self.Type,
                     "material": self.material})
+        self.stock_by_cohort_materials = prism.Q_(self.stock_by_cohort_materials, "kg")
 
     def compute_values(self, time: prism.Time, inflow, stock_by_cohort, outflow_by_cohort):
+
+        self.material_intensities = prism.Q_(self.material_intensities, "kg/m^2")
+
         t, dt = time.t, time.dt
         self.inflow_materials[t] = inflow[t]*self.material_intensities.sel(Cohort=t).drop_vars("Cohort")
         self.outflow_by_cohort_materials[t] = (outflow_by_cohort[t]*self.material_intensities).sum("Cohort")
@@ -423,13 +433,13 @@ class EndOfLife(prism.Model):
     output_data: tuple[str] = ("sum_outflow","collected_materials","reusable_materials", "recyclable_materials","losses_materials")
 
     # Output data
-    sum_outflow: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE,  "count"] = prism.export()
-    collected_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE,  "count"] = prism.export()
-    reusable_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE,  "count"] = prism.export()
-    remaining_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE,  "count"] = prism.export()
-    recyclable_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE,  "count"] = prism.export()
-    losses_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE,  "count"] = prism.export()
-    
+    sum_outflow: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "kg"] = prism.export()
+    collected_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "kg"] = prism.export()
+    reusable_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "kg"] = prism.export()
+    remaining_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "kg"] = prism.export()
+    recyclable_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "kg"] = prism.export()
+    losses_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "kg"] = prism.export()
+
     def compute_initial_values(self, timeline: prism.Timeline):
         pass
 
@@ -467,24 +477,30 @@ class EndOfLife(prism.Model):
                         'Small Ships','Inland Ships','Medium Ships','Large Ships', 'Very Large Ships',
                         'Heavy Freight Trucks - BEV', 'Heavy Freight Trucks - FCV','Heavy Freight Trucks - HEV', 'Heavy Freight Trucks - ICE','Heavy Freight Trucks - PHEV', 'Heavy Freight Trucks - Trolley'
         ],
-            'urban': ["Appartment - Urban","Detached - Urban","High-rise - Urban", "Semi-detached - Urban",
-                        "Office","Retail+","Hotels+","Govt+"
+            'urban': ["Appartment - Urban","Detached - Urban","High-rise - Urban", "Semi-detached - Urban",    
         ],
 
             'rural': ["Appartment - Rural","Detached - Rural","High-rise - Rural", "Semi-detached - Rural",
+        ],
+            
+            'commercial': ["Office","Retail+","Hotels+","Govt+"
         ],
         #   'generation':[], 
         #   'grid':[],
         #   'storage': []
 
         }
-        self.sum_outflow[t].loc[:] = 0
+        self.sum_outflow[t] = prism.Q_(0.0, 'kg')
         for outflow in outflow_by_cohort_materials:
-            for supertype, subtypes in type_dict.items():
-                if subtypes[0] not in outflow[t].coords["Type"]:
-                    continue
 
-                sum_outflow = outflow[t].sel(Type=subtypes).sum("Type")
+            outflow_t = outflow[t] 
+
+            
+            for supertype, subtypes in type_dict.items():
+                if subtypes[0] not in outflow_t.coords["Type"]:
+                    continue
+                sum_outflow = outflow_t.sel(Type=subtypes).sum("Type")
+
                 coords = {"Type": supertype, "material": sum_outflow.coords["material"], "Region": sum_outflow.coords["Region"]}
                 input_coords = {"Time":t, "Type":supertype}
                 
@@ -503,3 +519,54 @@ class EndOfLife(prism.Model):
                 self.remaining_materials[t].loc[coords] = remaining_materials
                 self.recyclable_materials[t].loc[coords] = recyclable_materials
                 self.losses_materials[t].loc[coords] = losses_materials
+
+
+@prism.interface
+class RestOf(prism.Model):
+
+    # Dimensions
+    Region: prism.Coords[REGION]
+    Time: prism.Coords[TIME]
+    material: prism.Coords[MATERIAL_TYPE]
+
+    # Data dependencies
+    input_data: tuple[str] = ("gompertz_coefs", "gdp_per_capita", "population", "historic_diff_consumption")
+    output_data: tuple[str] = ("inflow_materials_rest",)
+
+    # Output data inflow_materials_rest
+    # inflow_materials_rest: prism.TimeVariable[REGION, MATERIAL_TYPE] = prism.export()
+
+    def compute_initial_values(self, time: prism.Timeline):
+        self.inflow_materials_rest = xr.DataArray(
+            0.0, dims=("Time", "Region", "material"),
+            coords={
+                "Time": self.Time,
+                "Region": self.Region,  
+                "material": self.material
+            }
+        )
+        self.inflow_materials_rest = prism.Q_(self.inflow_materials_rest, "t")
+        
+    def compute_values(self, time: prism.Time, gompertz_coefs, gdp_per_capita, population, historic_diff_consumption):
+        t, dt = time.t, time.dt
+        if t > 1970:
+            # Select coefficients for all regions/materials
+            a = gompertz_coefs.sel(coef='a')
+            b = gompertz_coefs.sel(coef='b')
+            c = gompertz_coefs.sel(coef='c')
+            self.inflow_per_capita_rest = (a * np.exp(-b * np.exp(-c * gdp_per_capita.loc[t])))
+            self.inflow_per_capita_rest = prism.Q_(self.inflow_per_capita_rest, "t/person")
+            self.inflow_materials_rest.loc[t] = self.inflow_per_capita_rest * population.loc[t]
+            
+            # Create a mask of where values are nan
+            mask = np.isnan(self.inflow_materials_rest.loc[t])
+            # Use the mask to fill nans with historic_diff_consumption
+            # Align historic_diff_consumption to the same dims/order as inflow_materials_rest
+            self.inflow_materials_rest.loc[t] = xr.where(
+                mask,
+                historic_diff_consumption.transpose(*self.inflow_materials_rest.loc[t].dims),
+                self.inflow_materials_rest.loc[t]
+            )
+        else:
+            pass # No inflow before 1970
+        

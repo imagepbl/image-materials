@@ -3,6 +3,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import xarray as xr
+import prism
+
 
 from imagematerials.buildings.constants import (
     urban_share_1820)
@@ -10,11 +12,13 @@ from imagematerials.buildings.constants import (
 from imagematerials.util import dataset_to_array
 from imagematerials.read_mym import read_mym_df
 
+here = Path(__file__).resolve().parent
+prism.unit_registry.load_definitions(here.parent.parent.parent / "units.txt")
 
 def compute_population(image_directory, base_directory):
     # Compute total/rural/urban populations
     tot_population_xr, _ = compute_total_population(image_directory, base_directory)
-    rurpop_total, urbpop_total = compute_rur_urb_pop(image_directory, base_directory)
+    urbpop_total, rurpop_total = compute_rur_urb_pop(image_directory, base_directory)
 
     #TODO: use function from util if possible? problem: extra_dims?
     rurpop_total_xr = xr.DataArray(
@@ -34,6 +38,8 @@ def compute_population(image_directory, base_directory):
     all_population = xr.concat((tot_population_xr, rurpop_total_xr, urbpop_total_xr), dim="Area")
     all_population = all_population.assign_coords({"Area": ["Total", "Rural", "Urban"]})
     all_population = all_population.transpose("Time", "Region", "Area")
+    all_population = all_population * 1e6 # data from TIMER comes in million persons
+    all_population = prism.Q_(all_population, "person")
 
     return all_population
 

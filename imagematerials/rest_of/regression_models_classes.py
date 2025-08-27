@@ -114,7 +114,8 @@ class OLS_Model:
 #%% NLS class
 
 class NLS_Model:
-    def __init__(self, y: pd.DataFrame, *X: tuple[pd.DataFrame]):
+    def __init__(self, y: pd.DataFrame, *X: tuple[pd.DataFrame], **kwargs):
+        bounds = kwargs.get("bounds")
         # Prepare regression data
         y, X = prepare_regression_data(y, *X)
         self._y = self._transform_y(y)
@@ -124,9 +125,11 @@ class NLS_Model:
         # Fit parameters for NonLinearRegression
         self._y = self._y.reshape(-1)
         self._X = self._X.reshape(-1)  # TODO: Implement for multiple regressors
-        self._coefs, _ = curve_fit(self._model_func, self._X, self._y, maxfev=5000) #bounds=(-100, 100.000), p0=[1, 1000, 1000], method='lm'
-        # Estimate R^2
-        # self._r2 = self._lin_reg.score(self._X, self._y)
+
+        self._coefs, _ = curve_fit(self._model_func, 
+                                   self._X, 
+                                   self._y, maxfev=10_000, 
+                                   bounds=bounds) 
         self._r2 = np.nan
         # Estimate RMSE
         y_pred = self.predict_transformed(self._X)  # y in transformed form
@@ -251,6 +254,14 @@ class Log_Log_Square_Model(OLS_Model):
 #%% Define non-linear inverse model (NLI): C = a × e(B/GDP)
 
 class NLI_Model(NLS_Model):
+    def __init__(self, y: pd.DataFrame, *X: tuple[pd.DataFrame], **kwargs):
+        bounds = kwargs.get("bounds")
+        # check if bound is none or if its has the correct length
+        if bounds is None or (len(bounds) != 2 or len(bounds[0]) != 3 or len(bounds[1]) != 3):
+            bounds = ([-300, -300, -300], [300, 300, 300])
+
+        super().__init__(y, *X, bounds=bounds)
+
     def _transform_X(self, X: np.array):
         return X
     
@@ -260,14 +271,22 @@ class NLI_Model(NLS_Model):
     def _inverse_transform_y(self, y: np.array):
         return y
         
-    def _model_func(self, X: np.ndarray, a: float, b: float):
+    def _model_func(self, X: np.ndarray, a: float, b: float, c: float):
         ''' function of non linear inverse (nli)'''
-        return a * np.exp(b / X)
+        return a * np.exp(b / X) +c*0
 
 
 class GOMPERTZ_Model(NLS_Model):
+    def __init__(self, y: pd.DataFrame, *X: tuple[pd.DataFrame], **kwargs):
+        bounds = kwargs.get("bounds")
+        # check if bound is none or if its has the correct length
+        if bounds is None or (len(bounds) != 2 or len(bounds[0]) != 3 or len(bounds[1]) != 3):
+            bounds = ([0, 0, 0], [10, 10, 10])
+
+        super().__init__(y, *X, bounds=bounds)
+
     def _transform_X(self, X: np.array):
-        X = np.divide(X, 1_000)
+        X = np.divide(X, 10_000)
         return X
     
     def _transform_y(self, y: np.array):
@@ -282,22 +301,14 @@ class GOMPERTZ_Model(NLS_Model):
 
 
 class LG_Model(NLS_Model): #logistic_growth_model
-    def _transform_X(self, X: np.array):
-        X = np.divide(X, 1_000)
-        return X
-    
-    def _transform_y(self, y: np.array):
-        return y
-    
-    def _inverse_transform_y(self, y: np.array):
-        return y
-        
-    def _model_func(self, X: np.ndarray, a: float, b: float, c: float):
-        ''' gompertz function '''
-        return c / (1+ a * np.exp(-b * X))
-    
+    def __init__(self, y: pd.DataFrame, *X: tuple[pd.DataFrame], **kwargs):
+        bounds = kwargs.get("bounds")
+        # check if bound is none or if its has the correct length
+        if bounds is None or (len(bounds) != 2 or len(bounds[0]) != 3 or len(bounds[1]) != 3):
+            bounds = ([-300, -300, -300], [300, 300, 300])
 
-class BW_Model(NLS_Model):
+        super().__init__(y, *X, bounds=bounds)    
+    
     def _transform_X(self, X: np.array):
         X = np.divide(X, 10_000)
         return X
@@ -309,6 +320,56 @@ class BW_Model(NLS_Model):
         return y
         
     def _model_func(self, X: np.ndarray, a: float, b: float, c: float):
-        ''' gompertz function '''
+        ''' lg function '''
+        return c / (1+ a * np.exp(-b * X))
+    
+
+class BW_Model(NLS_Model):
+    def __init__(self, y: pd.DataFrame, *X: tuple[pd.DataFrame], **kwargs):
+        bounds = kwargs.get("bounds")
+        # check if bound is none or if its has the correct length
+        if bounds is None or (len(bounds) != 2 or len(bounds[0]) != 3 or len(bounds[1]) != 3):
+            bounds = ([-300, -300, -300], [300, 300, 300])
+
+        super().__init__(y, *X, bounds=bounds)
+
+    def _transform_X(self, X: np.array):
+        X = np.divide(X, 10_000)
+        return X
+    
+    def _transform_y(self, y: np.array):
+        return y
+    
+    def _inverse_transform_y(self, y: np.array):
+        return y
+        
+    def _model_func(self, X: np.ndarray, a: float, b: float, c: float):
+        ''' bw function '''
         return a - (a - b)*np.exp(-c*X)
 
+
+class Log_Gauss_Saturate_Model(NLS_Model):
+    def __init__(self, y: pd.DataFrame, *X: tuple[pd.DataFrame], **kwargs):
+        bounds = kwargs.get("bounds")
+        # check if bound is none or if its has the correct length
+        if bounds is None or (len(bounds) != 2 or len(bounds[0]) != 4 or len(bounds[1]) != 4):
+            # raise ValueError("Bounds must be a tuple of two lists with 4 elements each.")
+            # Default: 4 parameters
+            bounds = ([-300, -300, -300, -300], [300, 300, 300, 300])
+
+        super().__init__(y, *X, bounds=bounds)
+
+    def _transform_X(self, X: np.array):
+        X = np.asarray(X, dtype=float)
+        X[X <= 0] = np.nan
+        return X
+
+    def _transform_y(self, y: np.array):
+        return y
+
+    def _inverse_transform_y(self, y: np.array):
+        return y
+
+    def _model_func(self, X, a, b, c, d):
+        logX = np.log(X)
+        return a * np.exp(-((logX - b) ** 2) / (2 * c ** 2)) + d

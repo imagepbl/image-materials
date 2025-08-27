@@ -1,4 +1,6 @@
 """Module to dynamically create models."""
+import pickle as pkl
+from pathlib import Path
 from typing import Any, Optional, Union
 
 import prism
@@ -51,14 +53,17 @@ class Sector():
                     coordinates[coord.name] = coord_list
                     coordinate_sources[coord.name] = [input_name]
                 elif self.check_coordinates:
-                    # Coordinate mismatch
-                    if coord_list != coordinates[coord.name]:
-                        raise ValueError(
-                            f"Mismatch in coordinates with dimension '{coord.name}'"
-                            f" with data array '{input_name}' having different coordinates"
-                            f" than previously assumed in '{coordinate_sources[coord.name]}'."
-                            f"New: {coord_list}\n\nOld:{coordinates[coord.name]}")
-                    coordinate_sources[coord.name].append(input_name)
+                            try:
+                                if coord_list != coordinates[coord.name]:
+                                    raise ValueError(
+                                        f"Mismatch in coordinates with dimension '{coord.name}'"
+                                        f" with data array '{input_name}' having different coordinates"
+                                        f" than previously assumed in '{coordinate_sources[coord.name]}'."
+                                        f"New: {coord_list}\n\nOld:{coordinates[coord.name]}")
+                                coordinate_sources[coord.name].append(input_name)
+                            except ValueError as e:
+                                print(e)
+                                continue  # Skip this coordinate and continue with the next
         return coordinates, coordinate_sources
 
 
@@ -99,6 +104,7 @@ class ModelFactory():
         self.sectors = {sec.name: sec for sec in sectors}
         self.models = []
         self.complete_timeline = complete_timeline
+        self.datamap = []
 
     def add(self,
             model_class: prism.Model,
@@ -158,22 +164,31 @@ class ModelFactory():
                 cur_sector = self.sectors[cur_sector_names]
                 if var_name not in cur_sector.all_data:
                     raise KeyError(f"Cannot find '{var_name}' in sector '{cur_sector_names}'")
-                return cur_sector.all_data[var_name]
+                return cur_sector.all_data[var_name], [cur_sector.name]
             # Multiple sectors -> return a list of data for each of the sectors.
             else:
                 data = []
+                sec_sources = []
                 for cur_sec_name in cur_sector_names:
                     cur_sector = self.sectors[cur_sec_name]
                     if var_name not in cur_sector.all_data:
                         raise KeyError(f"Cannot find '{var_name}' in sector '{cur_sector_names}'")
                     data.append(cur_sector.all_data[var_name])
-                return data
+                    sec_sources.append(cur_sec_name)
+                return data, sec_sources
 
+        self.datamap.append({
+            "model_name": model_class.__name__,
+            "input": [],
+            "output": output_data,
+            "sector": sector_name,
+        })
         for var_name in input_data:
             if var_name in model_class.__annotations__:  # Static data
-                init_args[var_name] = _get_data(var_name)
+                init_args[var_name], sec_sources = _get_data(var_name)
             else:  # Dynamic data
-                compute_args[var_name] = _get_data(var_name)
+                compute_args[var_name], sec_sources = _get_data(var_name)
+            self.datamap[-1]["input"].append((var_name, sec_sources))
 
         # Initialize the new submodel.
         new_sub_model = model_class(self.complete_timeline, **init_args)
@@ -235,12 +250,23 @@ class ModelFactory():
                 """
                 try:
                     return super().__getattribute__(attr)
-                except AttributeError:
+                except AttributeError as exc:
                     if len(factory.sectors) == 1:
-                        return list(factory.sectors.values())[0].all_data[attr]
-                    return {sec_name: factory.sectors[sec_name].all_data[attr]
-                            for sec_name in factory.sectors
-                            if attr in factory.sectors[sec_name].all_data}
+                        try:
+                            return list(factory.sectors.values())[0].all_data[attr]
+                        except KeyError:
+                            raise exc
+                    all_data = {sec_name: factory.sectors[sec_name].all_data[attr]
+                                for sec_name in factory.sectors
+                                if attr in factory.sectors[sec_name].all_data}
+                    if len(all_data) == 0:
+                        raise exc
+                    return all_data
+
+            def save_pkl(self, data_fp: Union[Path, str]):
+                all_data = {sec_name: getattr(self, sec_name) for sec_name in factory.sectors}
+                with open(data_fp, "wb") as handle:
+                    pkl.dump(all_data, handle)
 
         main_model = MainModule(self.complete_timeline)
 
@@ -250,4 +276,66 @@ class ModelFactory():
             setattr(main_model, sec_name, sec.all_data)
         return main_model
 
+    def visualize(self, px_x: str = "500px", px_y: str = "500px",
+                  notebook: bool = True):
+        try:
+            import networkx as nx
+            from pyvis.network import Network
+        except ImportError:
+            raise ImportError("Install networkx and pyvis to use visualization: pip install networkx pyvis")
 
+        label_id = 0
+        data_nodes = {}
+        model_nodes = {}
+        prep_nodes = {}
+
+        sec_groups = {sec: i for i, sec in enumerate(self.sectors)}
+        graph = nx.DiGraph()
+        # # Add sector preprocessing node
+        # for sec in self.sectors:
+        #     graph.add_node(label_id, group=sec_groups[sec], label=f"{sec}.preprocessing")
+        #     prep_nodes[f"{sec}.preprocessing"] = label_id
+        #     label_id += 1
+
+        for map in self.datamap:
+            # Add model node
+            sector_name = map["sector"]
+            model_name = map["model_name"]
+            full_model_name = f"{sector_name}.{model_name}"
+            model_nodes[full_model_name] = label_id
+            graph.add_node(label_id, label=model_name, group=sec_groups[sector_name])
+            label_id += 1
+
+            # add inputs
+            for var_name, sectors in map["input"]:
+                if isinstance(sectors, str):
+                    sectors = [sectors]
+                for sec in sectors:
+                    full_var_name = f"{sec}.{var_name}"
+                    if full_var_name not in data_nodes:
+                        if f"{sec}.preprocessing" not in prep_nodes:
+                            graph.add_node(label_id, group=sec_groups[sec], label=f"{sec}.preprocessing")
+                            prep_nodes[f"{sec}.preprocessing"] = label_id
+                            label_id += 1
+                        source_id = prep_nodes[f"{sec}.preprocessing"]
+                        graph.add_node(label_id, label=full_var_name, group=sec_groups[sec])
+                        data_nodes[full_var_name] = label_id
+                        graph.add_edge(source_id, label_id)
+                        source_id = label_id
+                        label_id += 1
+                    else:
+                        source_id = data_nodes[full_var_name]
+                    graph.add_edge(source_id, model_nodes[full_model_name])
+
+            # Add outputs
+            for output in map["output"]:
+                full_output_name = f"{sec}.{output}"
+                assert full_output_name not in data_nodes
+                graph.add_node(label_id, label=full_output_name, group=sec_groups[sector_name])
+                graph.add_edge(model_nodes[full_model_name], label_id, group=sec_groups[sector_name])
+                data_nodes[full_output_name] = label_id
+                label_id += 1
+
+        net = Network(px_y, px_x, notebook=notebook, directed=True, cdn_resources="in_line")
+        net.from_nx(graph)
+        return net

@@ -14,6 +14,7 @@ import pandas as pd
 import pint
 import xarray as xr
 import numpy as np
+import prism
 
 from imagematerials.distribution import ALL_DISTRIBUTIONS, NAME_TO_DIST
 from imagematerials.read_mym import read_mym_df
@@ -500,7 +501,10 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
 
     # demand for freight planes is reduced by 50% because about half of the air freight is transported as cargo on
     # passenger planes
-    air_freight_tkms = tonkms_Mtkms["Freight Planes"].unstack() * market_share["Passenger Planes"].values[0]
+    # TODO: this is clearly off: value of market_share["Passenger Planes"].values[0] == 1
+    # fix for now hardcoded - fix when rewriting this file
+    # air_freight_tkms = tonkms_Mtkms["Freight Planes"].unstack() * market_share["Passenger Planes"].values[0]
+    air_freight_tkms = tonkms_Mtkms["Freight Planes"].unstack() * 0.5
 
     # Buses are adjusted to account for the higher material intensity of
     # mini-buses
@@ -548,7 +552,7 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
         "Heavy Freight Trucks":         (trucks_HFT_tkm, "Heavy Freight Trucks", 'M'),
         "Medium Freight Trucks":        (trucks_MFT_tkm, "Medium Freight Trucks", 'M'),
         "Light Commercial Vehicles":    (trucks_LCV_tkm, "Light Commercial Vehicles", 'M'),
-        "Freight Planes":               (air_freight_tkms, "Light Commercial Vehicles", 'M'),
+        "Freight Planes":               (air_freight_tkms, "Freight Planes", 'M'),
         "Freight Trains":               (tonkms_Mtkms['Freight Trains'].unstack(), "Freight Trains", 'M'),
         "Inland Ships":                 (tonkms_Mtkms['Inland Ships'].unstack(), "Inland Ships", 'M')
     }
@@ -680,13 +684,7 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
         'weight_boats': weight_boats,
         'vehicle_shares_typical': vehicle_shares_typical,
     }
-    
-    
-    # Create a pint UnitRegistry
-    ureg = pint.UnitRegistry(force_ndarray_like=True)
-    pint.set_application_registry(ureg)
-    # preprocessing_results_xarray = preprocessing_results.copy()
-    
+       
     
     # Convert the DataFrames to xarray Datasets and apply units
     preprocessing_results_xarray = {}
@@ -771,14 +769,17 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
     knowledge_graph = create_vehicle_graph()
     prep_data["shares"] = knowledge_graph.rebroadcast_xarray(prep_data["shares"], output_coords=region_coords, dim="Region")
     prep_data["stocks"] = knowledge_graph.rebroadcast_xarray(prep_data["stocks"], output_coords=region_coords, dim="Region")
-    preprocessing_results_xarray["stocks"] = knowledge_graph.rebroadcast_xarray(preprocessing_results_xarray["stocks"],
+    stocks = knowledge_graph.rebroadcast_xarray(preprocessing_results_xarray["stocks"],
                                                                                 output_coords_type,
                                                                                 dim="Type",
                                                                                 shares=prep_data["shares"])
+    stocks = prism.Q_(stocks, "count")
+    preprocessing_results_xarray["stocks"] = stocks
     prep_data["knowledge_graph"] = knowledge_graph
     prep_data.pop("shares")
     
     prep_data["weights"] = prep_data.pop("vehicle_weights")
+    prep_data["set_unit_flexible"] = "count"
     
     return preprocessing_results_xarray
 

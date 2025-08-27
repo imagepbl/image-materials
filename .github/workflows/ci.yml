@@ -10,7 +10,7 @@ on:
 
 env:
   PYM_VERSION: v0.3.2 # check this is compatible with the dependency in pyproject.toml
-  PRISM_VERSION: v0.6.0
+  PRISM_VERSION: v0.7.2
 
 permissions:
   contents: read

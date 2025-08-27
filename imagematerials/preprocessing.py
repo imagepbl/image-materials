@@ -43,7 +43,7 @@ def _get_vehicles_sector(prep_data):
     knowledge_graph = prep_data["knowledge_graph"]
     new_prep_data = rebroadcast_prep_data(prep_data, knowledge_graph, dim="Type",
                                           output_coords=output_coords_type)
-    region_coords = np.sort(prep_data["stocks"].coords["Region"].values.astype(int)).astype(str)[:-2]
+    region_coords = np.sort(prep_data["stocks"].coords["Region"].values.astype(int)).astype(str)
     new_prep_data = rebroadcast_prep_data(new_prep_data, knowledge_graph, dim="Region",
                                           output_coords=region_coords)
 
@@ -55,7 +55,8 @@ def get_preprocessing_data(
         sector, base_dir=None,
         climate_policy_scenario_dir: Union[str, Path, None] = None,
         circular_economy_scenario_dirs: Optional[dict[str, Union[Path, str]]] = None,
-        cache: Union[bool, Path, str] = False):
+        cache: Union[bool, Path, str] = False,
+        standard_scenario:str = "SSP2"):
     """Get preprocessing data with optional caching.
 
     Parameters
@@ -71,6 +72,8 @@ def get_preprocessing_data(
     cache, optional
         Where to cache the preprocessing data, by default False in which case the result won't be
         cached.
+    standard_scenario, optional
+        The standard scenario to use, by default "SSP2". Change if different scenario should be selected
 
     Returns
     -------
@@ -84,11 +87,17 @@ def get_preprocessing_data(
 
     """
     if climate_policy_scenario_dir is None and circular_economy_scenario_dirs is None:
-        climate_policy_scenario_dir = base_dir / 'SSP2'
+        climate_policy_scenario_dir = base_dir / standard_scenario
         circular_economy_scenario_dirs = {}
-    elif climate_policy_scenario_dir is None or circular_economy_scenario_dirs is None:
-            raise ValueError("Provide both climate_policy_scenario_dir and "
-                             "circular_economy_scenario_dirs  or neither as arguments.")
+    elif circular_economy_scenario_dirs is None and climate_policy_scenario_dir is not None:
+        climate_policy_scenario_dir = climate_policy_scenario_dir
+        circular_economy_scenario_dirs = {}
+    elif climate_policy_scenario_dir is not None and circular_economy_scenario_dirs is not None:
+        pass
+    elif climate_policy_scenario_dir is None and circular_economy_scenario_dirs is not None:
+        raise ValueError("if circular_economy_scenario_dirs is set, climate_policy_scenario_dir has to be set too")
+
+
 
     if cache is False or not Path(cache).is_file():
         if sector == "vehicles":

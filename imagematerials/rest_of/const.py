@@ -6,6 +6,7 @@ Created on Thu Jan 18 14:36:58 2024
 """
 
 import pandas as pd
+from pathlib import Path
 
 #%%
 # start year of analysis
@@ -21,21 +22,14 @@ switch_year = 2100
 # INPUT
 SCENARIO = "SSP2_CP"
 
-path_input_data = "../../../data/raw/rest-of"
+path_input_data = Path(f"../../../data/raw/image/")
+path_input_data_cons = "../../../data/raw/rest-of"
 
-path_scenario_data = f"../../../data/raw/image/{SCENARIO}/Biomass/"
 path_scenario_data_fossil = f"../../../data/raw/image/{SCENARIO}/EnergyFlows/"
-path_scenario_data_water = f"../../../data/raw/SSP2/EnergyFlows/"
+path_scenario_data_water = f"../../../data/raw/image/{SCENARIO}/EnergyFlows/"
 
 # Output
 path_figures = "../figures_test"
-
-
-
-#%%
-# Scenario data
-
-scenario = 'SSP2'
 
 
 #%%
@@ -210,18 +204,6 @@ IAI_TO_IMAGE_CLASSES = {
     ]
 }
 
-copper_regions = {
-    'copper_regions': ['Other North America countries',
-                    'USA',
-                    'South America',
-                    'Europe',
-                    'Rest of Asia',
-                    'Africa',
-                    'Oceania',
-                    'India',
-                    'Japan',
-                    'Korea'],
-    'china': ['China']}
 
 aluminium_regions = {
     'all_together' : ['Africa', 'Asia (ex China)', 
@@ -277,7 +259,8 @@ models_output_dict = {
     'non-linear inverse model' : 5,
     'gompertz model' : 6,
     'logistic growth model' : 7,
-    'limited growth model' : 8 # (beschraenktes Wachstum)
+    'limited growth model' : 8,
+    'log gauss saturate model' : 9
     }
 
 #%% parser function to write query function based on variable names of DIM1 and DIM2
@@ -494,7 +477,6 @@ DIM2_sectors_dict = {
     7 : 'bunkers',
     8 : 'total'
     }
-
 
 colors_country = {
       'Canada': 'blue',

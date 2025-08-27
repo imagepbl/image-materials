@@ -8,27 +8,31 @@ Created on Tue Aug 27 13:31:40 2024
 import pandas as pd
 import numpy as np
 
-from imagematerials.rest_of.const import (path_input_data)
+from imagematerials.rest_of.const import (path_input_data_cons, path_input_data)
 
 from imagematerials.rest_of.correlation_materials import (calculate_gdp, summarize_IMAGE_regions, 
                                    calculate_material_consumption_pc_and_gdp_pc_groups, 
                                    sum_total_over_grouped_regions)
 
 from imagematerials.rest_of.projections_materials import estimate_models_per_region_group, match_regions_to_best_model
-from imagematerials.read_mym import read_mym_df
 
 class ResourceModel():
     '''
     initialize basic resource model with resource data and gdp, pop data
     '''
-    def __init__(self, resource_group: str, resource: str, start_year: int, image_mat_available: bool, 
+    def __init__(self, resource_group: str, resource: str, start_year: int, scenario: str, 
+                 image_mat_available: bool, 
                  end_year = 2017, convert_image = False, convert_to_tons = None, trade_data = False, 
-                 path_input_data = path_input_data, adapt_mat_factor = None):
+                 path_input_data = path_input_data_cons, adapt_mat_factor = None,
+                 path_input_data_image = path_input_data):
         
         # Name resource group
         self.resource_group = resource_group
         # Name resource
         self.resource = resource
+        # mat data available    
+        self.image_mat_available = image_mat_available
+
         
         # historic conumpstion data
         if trade_data == False: 
@@ -41,13 +45,15 @@ class ResourceModel():
             self.net_trade = pd.read_csv(f'{path_input_data}/{resource_group}/{self.resource}_net_trade.csv', 
                                                         index_col=0).loc[:end_year]
             self.historic_consumption_data = self.production - self.net_trade
-        
+            # make a copy of historic_consumption_data
+            self.historic_consumption_data_complete = self.historic_consumption_data.copy()
+
         if convert_image == True:
             self.historic_consumption_data = self.historic_consumption_data/convert_to_tons # convert IMAGE output to tons
         
         # data if IMAGE Mat calculations available
-        if image_mat_available == True:
-            self.image_mat_data = pd.read_csv(f'{path_input_data}/{resource_group}/image_mat_{self.resource}.csv', 
+        if self.image_mat_available == True:
+            self.image_mat_data = pd.read_csv(f'{path_input_data}/{resource_group}/image_materials_{self.resource}.csv', 
                                               index_col=0)
             
             if adapt_mat_factor is not None:
@@ -65,7 +71,7 @@ class ResourceModel():
         (self.gdp_original, self.gdp_global_original, 
          self.gdp_pc_original, self.pop_original, 
          self.gdp_pc_100_original, self.pop_100_original,
-         self.gdp_100) = calculate_gdp()
+         self.gdp_100) = calculate_gdp(scenario, path_input_data_image=path_input_data_image)
         
         
     def data_grouped_regions(self, regions_grouping):
@@ -169,20 +175,37 @@ class ResourceModel():
             self.region_groups = {k: v for k, v in self.region_groups.items() if k not in drop_regions}
                
     
-    def fit_models(self, best_rmse_models: dict):
+    def fit_models(self, best_rmse_models: dict, bounds:dict=None):
         # fit all groups of regions to mathematical models and do statistical analysis (RMSE and R2)
+        
         (self.model_groups, 
-         self.rmse_r2_groups, 
-         self.merged_rmse_r2) = estimate_models_per_region_group(self.region_groups, 
-                                                                 self.cons_pc_groups, 
-                                                                 self.gdp_pc_groups)
+        self.rmse_r2_groups, 
+        self.merged_rmse_r2) = estimate_models_per_region_group(self.region_groups, 
+                                                                self.cons_pc_groups, 
+                                                                self.gdp_pc_groups,
+                                                                bounds)
     
+
         # select best fitting model per group of region and match them back to every 26 IMAGE regions
         (self.best_rmse_models, 
          self.region_model_match) = match_regions_to_best_model(self.rmse_r2_groups, 
                                                                 self.model_groups, 
                                                                 self.region_groups, 
-                                                                best_rmse_models)           
+                                                                best_rmse_models)
+
+    def create_region_model_match_per_image(self, regions_dict):
+        '''
+        use to spread fit models to IMAGE classes
+        '''
+        self.region_model_match_per_image = {}
+
+
+        # create dict from class_ 1 to class_ 26 that is empty
+        self.region_model_match_per_image = {f'class_ {i}': None for i in range(1, 27)}
+
+        for key, item in regions_dict.items():
+            for classes in item:
+                self.region_model_match_per_image[classes] = self.region_model_match[key]           
             
               
     def project_on_total(self, regions_list: list, start_year_projection = None):
@@ -201,7 +224,7 @@ class ResourceModel():
            
             # use predict function and model for projection
             if self.region_model_match.get(region) is None:
-                print(region, 'could not be projected')
+                print(region, 'could not be projected, choose global fit')
                 # fill region with NaN if no model is available
                 self.projection_per_region.append(np.full(len(gdp_pc_region), np.nan))
                 # save not projected region to list
@@ -220,7 +243,14 @@ class ResourceModel():
         self.projection_per_region.index = np.arange(start_year_projection, 2101)
         self.projection_per_region_total = self.projection_per_region*self.pop_100
 
-    
+        # if IMAGE Mat data is available, add it to the total projection to get total demand, else projection is total demand
+        if self.image_mat_available == True:
+            self.total_material_demand = self.projection_per_region_total + self.image_mat_data
+        else:
+            self.total_material_demand = self.projection_per_region_total
+
+
+
     def project_on_total_IMAGE_regions(self, REGION_TO_CLASS_DICT, GROUPS_TO_IMAGE_DICT):
         self.projection_per_region_IMAGE = []
 
@@ -253,13 +283,103 @@ class ResourceModel():
      
         
     def smooth_out_interpolation_all(self, nr_years_interpolate: int, start_year = 2012):
-        for region in self.projection_per_region_total.columns:
-            start_interpolate = self.historic_other_fraction_consumption[region].loc[start_year:start_year]
-            end_interpolate = self.projection_per_region_total[region].loc[start_year+nr_years_interpolate:start_year+nr_years_interpolate]
 
-            # interpolate between the two points
-            interpolated = pd.Series(np.linspace(start_interpolate.values[0], end_interpolate.values[0], nr_years_interpolate+1), 
-                                    index = self.projection_per_region_total[region].loc[start_year:start_year+nr_years_interpolate].index)
+        if self.image_mat_available == False:
+            for region in self.projection_per_region_total.columns:
+                start_interpolate = self.historic_consumption_data[region].loc[start_year:start_year]
+                end_interpolate = self.projection_per_region_total[region].loc[start_year+nr_years_interpolate:start_year+nr_years_interpolate]
 
-            # replace the values in the projection with the interpolated values
-            self.projection_per_region_total[region].loc[start_year:start_year+nr_years_interpolate] = interpolated 
+                # interpolate between the two points
+                interpolated = pd.Series(np.linspace(start_interpolate.values[0], end_interpolate.values[0], nr_years_interpolate+1), 
+                                        index = self.projection_per_region_total[region].loc[start_year:start_year+nr_years_interpolate].index)
+
+                # replace the values in the projection with the interpolated values
+                self.projection_per_region_total[region].loc[start_year:start_year+nr_years_interpolate] = interpolated
+        else:
+            for region in self.projection_per_region_total.columns:
+
+                start_interpolate = self.historic_other_fraction_consumption[region].loc[start_year:start_year]
+                end_interpolate = self.projection_per_region_total[region].loc[start_year+nr_years_interpolate:start_year+nr_years_interpolate]
+
+                # interpolate between the two points
+                interpolated = pd.Series(np.linspace(start_interpolate.values[0], end_interpolate.values[0], nr_years_interpolate+1), 
+                                        index = self.projection_per_region_total[region].loc[start_year:start_year+nr_years_interpolate].index)
+
+                # replace the values in the projection with the interpolated values
+                self.projection_per_region_total[region].loc[start_year:start_year+nr_years_interpolate] = interpolated
+
+
+
+    # calculate y for gompertz function
+    def gompertz_function(self, x, a, b, c):
+        return a * np.exp(-b * np.exp(-c * x))
+
+
+    def adjust_alpha_and_project(self, regions_list: list, 
+                                 start_year_adjust = 2050, end_year_adjust = 2100, 
+                                 min_alpha = None, start_year_projection = None):
+        
+        start_year_projection = self.end_year if start_year_projection is None else start_year_projection
+        
+        # get smalles alpha values from all coefs
+        # export coefs to csv file
+        coefs_df = pd.DataFrame.from_dict({region: self.region_model_match.get(region)._coefs for region in self.region_model_match.keys()}, 
+                                        orient='index',
+                                        columns=['a', 'b', 'c'])
+        if min_alpha is None:
+            # get minimum alpha value from coefs
+            min_alpha = coefs_df.min().min()  # minimum alpha 
+        
+        # create dataframe for adjusted alpha values
+        alpha_df = pd.DataFrame()
+
+        for region, model in self.region_model_match.items():
+            # print(region, model._coefs)
+            # extract alpha value and make it same length as gdp/cap
+            alpha = np.array([model._coefs[0]])
+            alpha = np.repeat(alpha, len(self.gdp_pc_100.index)//len(alpha))
+
+            alpha_df[region] = alpha
+            alpha_df.index = self.gdp_pc_100.index
+
+        alpha_df_start = alpha_df.loc[start_year_adjust:start_year_adjust]
+        # set all values after start_year_adjust to np.nan
+        alpha_df.loc[start_year_adjust+1:] = np.nan
+        # set all values in end_year_adjust to min_alpha
+        alpha_df.loc[end_year_adjust] = min_alpha
+
+        # now linearly interpolate between start and end values to reach min_alpha in end_year_adjust
+        alpha_df = alpha_df.interpolate(method='linear')
+
+        # project on total
+
+        self.projection_per_region_adapted_alpha = []
+
+        # loop over every region
+        for region in regions_list:
+            # get gdp_pc as predictor
+            gdp_pc_region = self.gdp_pc_100.loc[start_year_projection:, region]
+
+
+            # fill region with NaN if no model is available
+            projected_data = self.gompertz_function(gdp_pc_region/10_000, 
+                                    alpha_df[region].loc[start_year_projection:].values, 
+                                    *self.region_model_match.get(region)._coefs[1:])
+            
+            self.projection_per_region_adapted_alpha.append(projected_data)
+
+            
+            # list of projections of all regions to DataFrame
+        self.projection_per_region_adapted_alpha = pd.DataFrame(self.projection_per_region_adapted_alpha).transpose()
+        self.projection_per_region_adapted_alpha.columns = self.pop.columns
+    
+        self.projection_per_region_adapted_alpha.index = np.arange(start_year_projection, 2101)
+        self.projection_per_region_adapted_alpha = self.projection_per_region_adapted_alpha*self.pop_100
+
+
+    def remove_regions_with_no_good_fit_from_region_model_match(self, list_remove_regions):
+        self.new_region_model_match = self.region_model_match.copy()
+        # fill with nan instead
+        for region in list_remove_regions:
+            if region in self.new_region_model_match:
+                self.new_region_model_match[region] = None
