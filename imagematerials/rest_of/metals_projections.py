@@ -60,6 +60,10 @@ def copper_projection(scenario: str):
     copper.match_MAT_data_to_regions_year(match_external_regions=False)
     copper.calculate_historic_other_fraction()
 
+    # replace negative values with np.nan
+    copper.historic_other_fraction_consumption[copper.historic_other_fraction_consumption < 0] = np.nan
+    copper.historic_consumption_data[copper.historic_consumption_data < 0] = np.nan
+
     # Fit models 
 
     best_rmse_models= {
@@ -74,7 +78,7 @@ def copper_projection(scenario: str):
 
     bounds = {
         'all' : ([0, 0, 0], [10, 10, 10]),
-        'class_ 1': ([0, 2, 2], [10, 10, 10]),
+        'class_ 1': ([0, 0, 0], [10, 10, 10]),
         'high': ([0, 0, 0], [10, 10, 10]),
         'china': ([0, 0, 0], [10, 10, 10]),
         'low': ([0, 0, 0], [10, 10, 10]),
