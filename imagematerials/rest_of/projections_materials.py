@@ -230,16 +230,18 @@ def match_regions_to_best_model(rmse_r2_groups: dict, model_groups: dict,
     # match all regions to best fitting mathematical model model
     region_model_match = {}
     for group_name, region_list in regions_groups_dict.items():
-        if group_name == 'all_regions':
-            # not directly assigned to regions that are not in the group
-            region_model_match["class_ 27"] = model_groups[group_name][models_output_dict[best_rmse_models[group_name]]]
+
         if isinstance(region_list, str):
             # if only one region is given, make it a list to proceed
             region_list = [region_list]
-
-        for region in region_list:
-            region_model_match[region] = model_groups[group_name][models_output_dict[best_rmse_models[group_name]]]
-    
+        
+        if group_name == 'all_regions':
+            # not directly assigned to regions that are not in the group
+            region_model_match["class_ 27"] = model_groups[group_name][models_output_dict[best_rmse_models[group_name]]]
+        else:
+            for region in region_list:
+                region_model_match[region] = model_groups[group_name][models_output_dict[best_rmse_models[group_name]]]
+        
     return best_rmse_models, region_model_match
 
 

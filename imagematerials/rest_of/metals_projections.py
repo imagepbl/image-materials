@@ -21,30 +21,29 @@ def copper_projection(scenario: str):
 
     class_1 = ['class_ 1'] 
 
-    low_steady = ['class_ 2', 'class_ 3', 'class_ 11', 'class_ 13']
+    low_steady = ['class_ 3', 'class_ 13']
+    high_gdp_low = ['class_ 2', 'class_ 11']
     medium_steady = ['class_ 12', 'class_ 16']
     high_steady = ['class_ 10', 'class_ 15', 'class_ 19', 'class_ 20', 'class_ 23']
 
     # trajectory not to forseen, will be fitted with global regression
     spreaded = ['class_ 6', 'class_ 24']
     no_data = ['class_ 4', 'class_ 5', 'class_ 7', 'class_ 8', 'class_ 9', 'class_ 14', 'class_ 17']
-
-
-    exclude = spreaded
+    exclude = spreaded + no_data + ["class_ 18", "class_ 21", "class_ 22", "class_ 25", "class_ 26"]
 
     # what is in rest will not be fitted because of outliers - will follow global projections       
     rest = all_regions_list_class[:-1]
-    rest = [r for r in rest if r not in (class_1+low_steady+high_steady+medium_steady)]
+    rest = [r for r in rest if r not in (class_1+low_steady+high_steady+medium_steady+high_gdp_low)]
 
     # for these models a regression will be made
     # all reginos that are not in the high, medium, low will be fitted with the global regression
     copper_regions = {'all_regions' : all_regions_list_class[:-1],
                     'class_ 1': class_1,
                     'low_steady': low_steady,
+                    'high_gdp_low': high_gdp_low,
                     'high_steady': high_steady,
                     'medium_steady': medium_steady
                 }
-
 
     copper.data_grouped_regions(regions_grouping = copper_regions) #list(COPPER_AVERAGE_REGIONS_TO_IMAGE.keys()
     copper.sum_IMAGE_drivers_regions(regions_dict=None)
@@ -57,6 +56,7 @@ def copper_projection(scenario: str):
         'all_regions' : 'gompertz model',
         'class_ 1': 'gompertz model', 
         'low_steady': 'gompertz model',
+        'high_gdp_low': 'gompertz model',
         'high_steady': 'gompertz model',
         'medium_steady': 'gompertz model'
     }
@@ -66,6 +66,7 @@ def copper_projection(scenario: str):
         'all_regions' : ([0, 0, 0], [10, 10, 10]),
         'class_ 1': ([0, 2, 2], [10, 10, 10]),
         'low_steady': ([0, 0, 0], [10, 10, 10]),
+        'high_gdp_low': ([0, 2, 2], [10, 10, 10]),
         'high_steady': ([0, 0, 0], [10, 10, 10]),
         'medium_steady': ([0, 0, 0], [10, 10, 10])
     }
@@ -218,7 +219,7 @@ def aluminium_projection(scenario: str):
             'Asia (ex China)']
 
     aluminium_regions = {
-        'all_regions' : all_regions,
+        'all' : all_regions,
         'russia' : russia,
         'north_america' : north_america,
         'china' : china,
@@ -268,14 +269,14 @@ def aluminium_projection(scenario: str):
     aluminium.calculate_regressors(aluminium.historic_other_fraction_consumption)
 
     best_rmse_models= {
-        'all_regions' : 'gompertz model',
+        'all' : 'gompertz model',
         'russia' : 'gompertz model',
         'north_america' : 'gompertz model',
         'china' : 'gompertz model',
         'europe' : 'gompertz model'}
 
     bounds = {
-        'all_regions' : ([0, 0, 0], [10, 10, 10]),
+        'all' : ([0, 0, 0], [10, 10, 10]),
         'russia' : ([0, 1, 1], [10, 10, 10]),
         'north_america' : ([0, 1, 1], [10, 10, 10]),
         'china' : ([0, 0, 0], [0.03, 10, 10]),
