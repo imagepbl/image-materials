@@ -184,14 +184,29 @@ class ResourceModel():
                                                                 self.cons_pc_groups, 
                                                                 self.gdp_pc_groups,
                                                                 bounds)
-    
-
         # select best fitting model per group of region and match them back to every 26 IMAGE regions
         (self.best_rmse_models, 
          self.region_model_match) = match_regions_to_best_model(self.rmse_r2_groups, 
                                                                 self.model_groups, 
                                                                 self.region_groups, 
                                                                 best_rmse_models)
+
+    def assign_fit_to_groups_not_fitted(self, list_regions: list, 
+                                        assign_model: str, model_nr: int):
+            """
+            Assign a model fit to regions that are not yet fitted because of missing data.
+            
+            """
+            for region in list_regions:
+            # check if region is in self.region_model_match
+                if region in self.region_model_match:
+                    pass
+                else:
+                    # assign fit of low steady model
+                    self.region_model_match[region] = self.model_groups[assign_model][model_nr]
+                    print(assign_model, "assigned to", region)
+
+
 
     def create_region_model_match_per_image(self, regions_dict):
         '''

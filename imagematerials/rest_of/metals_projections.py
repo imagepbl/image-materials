@@ -17,7 +17,7 @@ from imagematerials.rest_of.const import (REGION_TO_CLASS_DICT,
 def copper_projection(scenario: str):
     copper = ResourceModel(resource_group = 'metals', resource = 'copper', 
                         image_mat_available = True, start_year = 1990,
-                        scenario= 'SSP2_M_CP', end_year = 2011)
+                        scenario= scenario, end_year = 2011)
 
     class_1 = ['class_ 1'] 
 
@@ -38,7 +38,7 @@ def copper_projection(scenario: str):
 
     # for these models a regression will be made
     # all reginos that are not in the high, medium, low will be fitted with the global regression
-    copper_regions = {'all' : all_regions_list_class[:-1],
+    copper_regions = {'all_regions' : all_regions_list_class[:-1],
                     'class_ 1': class_1,
                     'low_steady': low_steady,
                     'high_steady': high_steady,
@@ -54,7 +54,7 @@ def copper_projection(scenario: str):
 
     # Fit models 
     best_rmse_models= {
-        'all' : 'gompertz model',
+        'all_regions' : 'gompertz model',
         'class_ 1': 'gompertz model', 
         'low_steady': 'gompertz model',
         'high_steady': 'gompertz model',
@@ -63,7 +63,7 @@ def copper_projection(scenario: str):
 
 
     bounds = {
-        'all' : ([0, 0, 0], [10, 10, 10]),
+        'all_regions' : ([0, 0, 0], [10, 10, 10]),
         'class_ 1': ([0, 2, 2], [10, 10, 10]),
         'low_steady': ([0, 0, 0], [10, 10, 10]),
         'high_steady': ([0, 0, 0], [10, 10, 10]),
@@ -72,6 +72,9 @@ def copper_projection(scenario: str):
 
     copper.calculate_regressors(copper.historic_other_fraction_consumption)
     copper.fit_models(best_rmse_models=best_rmse_models, bounds=bounds)
+    copper.assign_fit_to_groups_not_fitted(list_regions=all_regions_list_class[:-1], 
+                                           assign_model='low_steady', 
+                                           model_nr=6)
 
 
     # Projections 
