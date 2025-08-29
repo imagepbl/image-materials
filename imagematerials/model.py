@@ -263,7 +263,7 @@ class MaterialIntensities(prism.Model):
 
     def compute_values(self, time: prism.Time, inflow, stock_by_cohort, outflow_by_cohort):
 
-        self.material_intensities = prism.Q_(self.material_intensities, "kg/m^2")
+        # self.material_intensities = prism.Q_(self.material_intensities, "kg/m^2")
 
         t, dt = time.t, time.dt
         self.inflow_materials[t] = inflow[t]*self.material_intensities.sel(Cohort=t).drop_vars("Cohort")

@@ -60,7 +60,10 @@ path_base = path_current.parent.parent # base path of the project -> image-mater
 #%% Generation
 ####################################################################################################################
 
+
 prep_data = get_preprocessing_data_gen(path_base, SCEN, VARIANT)
+
+
 
 # # Define the complete timeline, including historic tail
 time_start = prep_data["stocks"].coords["Time"].min().values
@@ -137,3 +140,5 @@ list(main_model_factory_add.electr_grid_add)
 
 
 
+
+# %%
