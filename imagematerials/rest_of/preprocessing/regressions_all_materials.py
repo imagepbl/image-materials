@@ -75,10 +75,10 @@ def make_gompertz_coefs_da(results_models, material_order=None, region_order=Non
     rows = []
 
     for material in material_list_complete_fit + material_list_sub_regions_fit:
-        if material in material_list_complete_fit:
-            region_model_match = results_models['SSP2_M_CP'][material].new_region_model_match
-        else:
-            region_model_match = results_models['SSP2_M_CP'][material].region_model_match_per_image
+        # if material in material_list_complete_fit:
+        region_model_match = results_models['SSP2_M_CP'][material].new_region_model_match
+        # else:
+        #     region_model_match = results_models['SSP2_M_CP'][material].region_model_match_per_image
 
         for region, model in region_model_match.items():
             if model != None:
