@@ -18,6 +18,8 @@ from imagematerials.constants import SUBTYPE_SEPARATOR
 from imagematerials.distribution import ALL_DISTRIBUTIONS, NAME_TO_DIST
 
 NONE_SENTINEL = "__NETCDF_NONE_SENTINEL__"
+END_YEAR = 2100
+INTERMEDIATE_YEAR = 2080
 
 def pandas_to_xarray(df, unit_mapping):
     ds = df.to_xarray()
@@ -363,6 +365,40 @@ def convert_life_time_vehicles(life_time_vehicles: xr.Dataset) -> dict[str, xr.D
 
 def scenario_change(arr: xr.DataArray, base_year: int, target_year: int, change: dict,
                     implementation_rate: str, data_type: Optional[str]=None, steepness: float=0.5) -> xr.DataArray:
+
+    """
+    Applies a time-based change to values in a Xarray between a base and target year using a specified implementation method.
+
+    Parameters
+    ----------
+    arr
+        A time-indexed Xarray containing mode-specific values, such as lifetime or mileage.
+    base_year
+        The starting year for the change.
+    target_year
+        The year by which the full change should be achieved.
+    change
+        A dictionary mapping modes to percentage increases (e.g., {'Cars': 20} for +20%).
+    implementation_rate
+        The implementation method; one of 'linear', 'immediate', or 's-curve'.
+    data_type
+        Indicates what kind of data is being modified; one of 'lifetime' or 'mileages'.
+    steepness
+        Steepness parameter for the 's-curve' implementation; default is 0.5.
+
+    Returns
+    -------
+        A new Xarray with updated values for each year between base_year and target_year, and interpolated values where necessary.
+
+    Raises
+    ------
+    ValueError
+        If the implementation method is unsupported or if the specified column is not found in the DataFrame.
+
+    Notes
+    -----
+    For verhicles, this function has an implementation that works on Pandas dataframes.
+    """
     result = arr.copy()
 
     for region, increase in change.items():
@@ -444,7 +480,7 @@ def apply_change_per_region(arr: xr.DataArray, base_year: int, target_year: int,
     """
     results = []
     for region, subarr in arr.groupby('Region'):
-        regional_subarr = subarr.copy()  # Keep as DataFrame for compatibility
+        regional_subarr = subarr.copy()
         result = scenario_change(
             regional_subarr, 
             base_year=base_year, 

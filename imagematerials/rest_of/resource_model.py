@@ -8,7 +8,7 @@ Created on Tue Aug 27 13:31:40 2024
 import pandas as pd
 import numpy as np
 
-from imagematerials.rest_of.const import (path_input_data_cons)
+from imagematerials.rest_of.const import (path_input_data_cons, path_input_data)
 
 from imagematerials.rest_of.correlation_materials import (calculate_gdp, summarize_IMAGE_regions, 
                                    calculate_material_consumption_pc_and_gdp_pc_groups, 
@@ -23,7 +23,8 @@ class ResourceModel():
     def __init__(self, resource_group: str, resource: str, start_year: int, scenario: str, 
                  image_mat_available: bool, 
                  end_year = 2017, convert_image = False, convert_to_tons = None, trade_data = False, 
-                 path_input_data = path_input_data_cons, adapt_mat_factor = None,):
+                 path_input_data = path_input_data_cons, adapt_mat_factor = None,
+                 path_input_data_image = path_input_data):
         
         # Name resource group
         self.resource_group = resource_group
@@ -44,13 +45,15 @@ class ResourceModel():
             self.net_trade = pd.read_csv(f'{path_input_data}/{resource_group}/{self.resource}_net_trade.csv', 
                                                         index_col=0).loc[:end_year]
             self.historic_consumption_data = self.production - self.net_trade
-        
+            # make a copy of historic_consumption_data
+            self.historic_consumption_data_complete = self.historic_consumption_data.copy()
+
         if convert_image == True:
             self.historic_consumption_data = self.historic_consumption_data/convert_to_tons # convert IMAGE output to tons
         
         # data if IMAGE Mat calculations available
         if self.image_mat_available == True:
-            self.image_mat_data = pd.read_csv(f'{path_input_data}/{resource_group}/image_mat_{self.resource}.csv', 
+            self.image_mat_data = pd.read_csv(f'{path_input_data}/{resource_group}/image_materials_{self.resource}.csv', 
                                               index_col=0)
             
             if adapt_mat_factor is not None:
@@ -68,7 +71,7 @@ class ResourceModel():
         (self.gdp_original, self.gdp_global_original, 
          self.gdp_pc_original, self.pop_original, 
          self.gdp_pc_100_original, self.pop_100_original,
-         self.gdp_100) = calculate_gdp(scenario)
+         self.gdp_100) = calculate_gdp(scenario, path_input_data_image=path_input_data_image)
         
         
     def data_grouped_regions(self, regions_grouping):
@@ -188,7 +191,21 @@ class ResourceModel():
          self.region_model_match) = match_regions_to_best_model(self.rmse_r2_groups, 
                                                                 self.model_groups, 
                                                                 self.region_groups, 
-                                                                best_rmse_models)           
+                                                                best_rmse_models)
+
+    def create_region_model_match_per_image(self, regions_dict):
+        '''
+        use to spread fit models to IMAGE classes
+        '''
+        self.region_model_match_per_image = {}
+
+
+        # create dict from class_ 1 to class_ 26 that is empty
+        self.region_model_match_per_image = {f'class_ {i}': None for i in range(1, 27)}
+
+        for key, item in regions_dict.items():
+            for classes in item:
+                self.region_model_match_per_image[classes] = self.region_model_match[key]           
             
               
     def project_on_total(self, regions_list: list, start_year_projection = None):
@@ -359,4 +376,10 @@ class ResourceModel():
         self.projection_per_region_adapted_alpha.index = np.arange(start_year_projection, 2101)
         self.projection_per_region_adapted_alpha = self.projection_per_region_adapted_alpha*self.pop_100
 
-        
+
+    def remove_regions_with_no_good_fit_from_region_model_match(self, list_remove_regions):
+        self.new_region_model_match = self.region_model_match.copy()
+        # fill with nan instead
+        for region in list_remove_regions:
+            if region in self.new_region_model_match:
+                self.new_region_model_match[region] = None

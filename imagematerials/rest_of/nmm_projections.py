@@ -24,24 +24,30 @@ def cement_projection(scenario: str):
     # Historical export per region for Cement (Mtonne), 1970-2000 + 2100 (constant from 2000 on) 
     # (because export and import did not add up to 0, import has been increased by 25%, see Roorda, page 13)
 
-    high = ['class_ 16', 'class_ 20']
+    china = ['class_ 20']
 
-    medium = ['class_ 1', 'class_ 23',
-            'class_ 2',  'class_ 3', 'class_ 11' , 'class_ 24'] 
+    medium = ['class_ 1', 'class_ 2',  'class_ 3', 'class_ 4', 
+              'class_ 5', 'class_ 6', 'class_ 10',
+              'class_ 23', 'class_ 11' , 'class_ 24'] 
 
+    # will get global fit
+    spreaded = ['class_ 12', 'class_ 16']
+
+    # what is in rest will be fitted to global fit      
+    rest = all_regions_list_class[:-1]
+    rest = [r for r in rest if r not in (china+medium)]
+
+    all_regions_list_class_except_china_and_global = [r for r in all_regions_list_class if r not in ['class_ 20', 'class_ 27']]
+    excluded = ['class_ 8', 'class_ 9', 'class_ 14']
 
     # trajectory not to forseen, will be fitted with global regression
 
-    # what is in rset will not be fitted because of outliers - will follow global projections       
-    rest = all_regions_list_class[:-1]
-    rest = [r for r in rest if r not in (high+medium)]
-
     # for these models a regression will be made
     # all reginos that are not in the high, medium, low will be fitted with the global regression
-    cement_grouping = {'all' : all_regions_list_class[:-1],
-                    'high': high,
-                    'medium': medium,
-                    }
+    cement_grouping = {'all' : all_regions_list_class_except_china_and_global,
+                        'china': china,
+                        'medium': medium
+                        }
 
     #cement_grouping = {'all' : all_regions_list_class[:-1]}
     cement.data_grouped_regions(regions_grouping = cement_grouping)
@@ -60,12 +66,12 @@ def cement_projection(scenario: str):
 
     best_rmse_models={
         'all' : 'gompertz model',
-        'high': 'gompertz model',
+        'china': 'gompertz model',
         'medium': 'gompertz model'}
 
     bounds = {
         'all' : ([0, 0, 0], [10, 10, 10]),
-        'high': ([0, 0, 0], [0.8, 10, 10]),
+        'china': ([0, 0, 0], [2, 10, 10]),
         'medium': ([0, 5, 0], [10, 10, 10]),
     }
 
@@ -78,6 +84,8 @@ def cement_projection(scenario: str):
                         start_year_adjust=2025, 
                         end_year_adjust=2100, 
                         min_alpha=None)
+    
+    cement.remove_regions_with_no_good_fit_from_region_model_match(excluded)
 
     return cement
 
@@ -140,6 +148,8 @@ def limestone_projection(scenario: str):
                     end_year_adjust=2100, 
                     min_alpha=None)
 
+    limestone.remove_regions_with_no_good_fit_from_region_model_match(rest)
+
     return limestone
 
 
@@ -149,6 +159,7 @@ def sand_projections(scenario: str):
                         image_mat_available = True, start_year = 1970, scenario=scenario)
 
     # collect these above defined groups in a dictionary
+
     SAND_GROUPING_REGIONS = {
         'all_regions': [k for k in CLASS_TO_REGION_DICT.keys() if k != 'class_ 27'],
         'Canada':  ['class_ 1'],
@@ -161,7 +172,8 @@ def sand_projections(scenario: str):
         'Japan':    ['class_ 23'],
         'High' : ['class_ 2', 'class_ 24', 'class_ 11']
         }
-
+    
+    rest = []
     sand.data_grouped_regions(regions_grouping = SAND_GROUPING_REGIONS) #list(sand_AVERAGE_REGIONS_TO_IMAGE.keys()
     sand.sum_IMAGE_drivers_regions(regions_dict=None)
     sand.match_MAT_data_to_regions_year(match_external_regions=False)
@@ -203,6 +215,8 @@ def sand_projections(scenario: str):
                         start_year_adjust=2025, 
                         end_year_adjust=2100, 
                         min_alpha=None)
+    
+    sand.remove_regions_with_no_good_fit_from_region_model_match(rest)
     return sand
 
 def clay_projections(scenario: str):
@@ -262,4 +276,5 @@ def clay_projections(scenario: str):
                         end_year_adjust=2100, 
                         min_alpha=None)
 
+    clay.remove_regions_with_no_good_fit_from_region_model_match(rest)
     return clay

@@ -6,6 +6,8 @@ import math
 import matplotlib.pyplot as plt
 import scipy.stats
 
+from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_life_time_vehicles
+from imagematerials.concepts import create_electricity_graph
 from imagematerials.electricity.constants import (
     YEAR_START,
     YEAR_FIRST,
@@ -62,37 +64,70 @@ def MNLogit(df, logitpar):
     return new_dataframe    # the retuned dataframe contains the market shares
 
 
-def materials_grid_additions_to_kgperkm(materials_df, additions_df):
-    """
-    Vectorized approach to transform the materials DataFrame by multiplying each row with the corresponding values from the additions DataFrame.
-    materials_df: DataFrame with MultiIndex (year, technology) and columns for materials. - units in kg/unit (unit = 1 substation or transformer)
-    additions_df: DataFrame with index for components (Substations, Transformers) and columns for voltage levels (HV, MV, LV), values are the number of units per km of grid length.
-    """
+def create_prep_data(results_dict, conversion_table, unit_mapping):
+    # Convert the DataFrames to xarray Datasets and apply units
+    prep_data = {}
+    for df_name, df in results_dict.items():
+        if df_name in conversion_table:
+            print(f"{df_name} to xarray Dataset")
+            data_xar_dataset = pandas_to_xarray(df, unit_mapping)
+            data_xarray = dataset_to_array(data_xar_dataset, *conversion_table[df_name])
+        else:
+            print(f"{df_name} not in conversion_table")
+            # lifetimes_vehicles does not need to be converted in the same way.
+            data_xarray = pandas_to_xarray(df, unit_mapping)
+        prep_data[df_name] = data_xarray
+
+    for df_name in list(prep_data.keys()):
+        if "lifetime" in df_name:
+            prep_data["lifetimes"] = convert_life_time_vehicles(prep_data[df_name])
+        elif "stock" in df_name:
+            prep_data["stocks"] = prep_data.pop(df_name)
+        elif "material" in df_name:
+            prep_data["material_intensities"] = prep_data.pop(df_name)
+        elif "share" in df_name:
+            prep_data["shares"] = prep_data.pop(df_name)
+
+    prep_data["knowledge_graph"] = create_electricity_graph()
+    # prep_data["shares"] = None
+
+    return prep_data
+
+
+# def materials_grid_additions_to_kgperkm(materials_df, additions_df):
+#     """
+#     Vectorized approach to transform the materials DataFrame by multiplying each row with the corresponding values from the additions DataFrame.
+#     materials_df: DataFrame with MultiIndex (year, technology) and columns for materials. - units in kg/unit (unit = 1 substation or transformer)
+#     additions_df: DataFrame with index for components (Substations, Transformers) and columns for voltage levels (HV, MV, LV), values are the number of units per km of grid length.
+
+#     NOT USED ANYMORE (?) -> separate stock modeling needed for lines vs substations & transformers
+
+#     """
     
-    # Create mapping series
-    mapping_dict = {}
+#     # Create mapping series
+#     mapping_dict = {}
     
-    for voltage in ['HV', 'MV', 'LV']:
-        for component in ['Substations', 'Transformers']:
-            tech_key = f"{voltage} {component}"
+#     for voltage in ['HV', 'MV', 'LV']:
+#         for component in ['Substations', 'Transformers']:
+#             tech_key = f"{voltage} {component}"
             
-            if voltage in additions_df.columns and component in additions_df.index:
-                mapping_dict[tech_key] = additions_df.loc[component, voltage]
+#             if voltage in additions_df.columns and component in additions_df.index:
+#                 mapping_dict[tech_key] = additions_df.loc[component, voltage]
     
-    # Create a series to map each row to its multiplier
-    multipliers = materials_df.index.get_level_values(1).map(mapping_dict)
+#     # Create a series to map each row to its multiplier
+#     multipliers = materials_df.index.get_level_values(1).map(mapping_dict)
     
-    # Convert to DataFrame for broadcasting
-    multipliers_df = pd.DataFrame(
-        np.outer(multipliers, np.ones(len(materials_df.columns))),
-        index=materials_df.index,
-        columns=materials_df.columns
-    )
+#     # Convert to DataFrame for broadcasting
+#     multipliers_df = pd.DataFrame(
+#         np.outer(multipliers, np.ones(len(materials_df.columns))),
+#         index=materials_df.index,
+#         columns=materials_df.columns
+#     )
     
-    # Multiply
-    result_df = materials_df * multipliers_df
+#     # Multiply
+#     result_df = materials_df * multipliers_df
     
-    return result_df
+#     return result_df
 
 
 def print_df_info(df, name):

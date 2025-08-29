@@ -77,9 +77,8 @@ def compute_mat_intensities_residential(database_dir, circular_economy_config):
 
     return xr_mat_res_intensities
 
-
-def compute_mat_intensities_commercial(database_dir,circular_economy_config):
-    materials_commercial = pd.read_csv(database_dir / 'materials_commercial.csv', index_col = [0,1]) # 7 building materials in 4 commercial building types; unit: kg/m2; meaning: the average material use per square meter (by commercial building type) 
+def compute_mat_intensities_commercial(database_dir):
+    materials_commercial = pd.read_csv(database_dir / 'materials_commercial_rasmi.csv', index_col = [0,1]) # 7 building materials in 4 commercial building types; unit: kg/m2; meaning: the average material use per square meter (by commercial building type) 
 
     #First: interpolate the dynamic material intensity data
     materials_commercial_dynamic = pd.DataFrame(index=pd.MultiIndex.from_product([list(range(HIST_YEAR, END_YEAR + 1)), list(materials_commercial.index.levels[1])]), columns=materials_commercial.columns)
