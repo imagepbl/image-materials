@@ -208,7 +208,7 @@ class ResourceModel():
 
 
 
-    def create_region_model_match_per_image(self, regions_dict):
+    def create_region_model_match_per_image(self, regions_dict, overwrite_region_model_match = True):
         '''
         use to spread fit models to IMAGE classes
         '''
@@ -220,9 +220,12 @@ class ResourceModel():
 
         for key, item in regions_dict.items():
             for classes in item:
-                self.region_model_match_per_image[classes] = self.region_model_match[key]           
-            
-              
+                self.region_model_match_per_image[classes] = self.region_model_match[key]  
+                
+        if overwrite_region_model_match == True:
+            # overwrite old region model match
+            self.region_model_match = self.region_model_match_per_image
+
     def project_on_total(self, regions_list: list, start_year_projection = None):
         start_year_projection = self.end_year if start_year_projection is None else start_year_projection
 

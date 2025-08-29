@@ -79,7 +79,7 @@ def copper_projection(scenario: str):
 
 
     # Projections 
-    copper.project_on_total(all_regions_list_class[:-1])
+    # copper.project_on_total(all_regions_list_class[:-1])
 
     copper.remove_regions_with_no_good_fit_from_region_model_match(exclude)
 
@@ -124,7 +124,7 @@ def steel_projection(scenario: str):
 
     # for these models a regression will be made
     # all reginos that are not in the high, medium, low will be fitted with the global regression
-    steel_grouping = {'all' : all_regions_list_class[:-1],
+    steel_grouping = {'all_regions' : all_regions_list_class[:-1],
                       'class_ 1': class_1,
                       'high': high,
                       'china': china,
@@ -149,7 +149,7 @@ def steel_projection(scenario: str):
     steel.calculate_regressors(steel.historic_other_fraction_consumption)
 
     bounds = {
-    'all': ([0, 0, 0], [10, 10, 10]),
+    'all_regions': ([0, 0, 0], [10, 10, 10]),
     'class_ 1': ([0, 0, 0], [10, 10, 10]),
     'high': ([0, 0, 0], [0.7, 10, 10]),
     'china': ([0, 0, 0], [0.5, 10, 10]),
@@ -158,7 +158,7 @@ def steel_projection(scenario: str):
     'too_low': ([0, 0, 0], [10, 10, 10])}
 
     # enforce that for all groups gompertz model is selected as best fit
-    steel.fit_models(best_rmse_models={'all' : 'gompertz model',
+    steel.fit_models(best_rmse_models={'all_regions' : 'gompertz model',
                                     'class_ 1': 'gompertz model',
                                     'high': 'gompertz model',
                                     'china': 'gompertz model',
@@ -169,12 +169,12 @@ def steel_projection(scenario: str):
 
 
     # project based on best model
-    steel.project_on_total(all_regions_list_class[:-1])
-    steel.smooth_out_interpolation_all(10, 2012)
-    steel.adjust_alpha_and_project(all_regions_list_class[:-1], 
-                               start_year_adjust=2025, 
-                               end_year_adjust=2100, 
-                               min_alpha=None)
+    # steel.project_on_total(all_regions_list_class[:-1])
+    # steel.smooth_out_interpolation_all(10, 2012)
+    # steel.adjust_alpha_and_project(all_regions_list_class[:-1], 
+    #                            start_year_adjust=2025, 
+    #                            end_year_adjust=2100, 
+    #                            min_alpha=None)
     
     steel.remove_regions_with_no_good_fit_from_region_model_match(exclude)
     
@@ -219,7 +219,7 @@ def aluminium_projection(scenario: str):
             'Asia (ex China)']
 
     aluminium_regions = {
-        'all' : all_regions,
+        'all_regions' : all_regions,
         'russia' : russia,
         'north_america' : north_america,
         'china' : china,
@@ -269,14 +269,14 @@ def aluminium_projection(scenario: str):
     aluminium.calculate_regressors(aluminium.historic_other_fraction_consumption)
 
     best_rmse_models= {
-        'all' : 'gompertz model',
+        'all_regions' : 'gompertz model',
         'russia' : 'gompertz model',
         'north_america' : 'gompertz model',
         'china' : 'gompertz model',
         'europe' : 'gompertz model'}
 
     bounds = {
-        'all' : ([0, 0, 0], [10, 10, 10]),
+        'all_regions' : ([0, 0, 0], [10, 10, 10]),
         'russia' : ([0, 1, 1], [10, 10, 10]),
         'north_america' : ([0, 1, 1], [10, 10, 10]),
         'china' : ([0, 0, 0], [0.03, 10, 10]),
@@ -290,19 +290,19 @@ def aluminium_projection(scenario: str):
     # add regions to regions model match that are not in there yet becaused they are fitted to the global average
     for key in IAI_TO_IMAGE_CLASSES.keys():
         if key not in aluminium.region_model_match:
-            aluminium.region_model_match[key] = aluminium.model_groups.get("all_regions")[6]
+            aluminium.region_model_match[key] = aluminium.model_groups.get("north_america")[6]
 
     aluminium.create_region_model_match_per_image(IAI_TO_IMAGE_CLASSES)
 
-    # Projections
-    aluminium.project_on_total(list(IAI_TO_IMAGE_CLASSES.keys()), start_year_projection=2012)
-    aluminium.smooth_out_interpolation_all(10, 2014)
-    aluminium.adjust_alpha_and_project(list(IAI_TO_IMAGE_CLASSES.keys()), 
-                               start_year_adjust=2025, 
-                               end_year_adjust=2100, 
-                               min_alpha=None, start_year_projection=2014)
+    # # Projections
+    # aluminium.project_on_total(list(IAI_TO_IMAGE_CLASSES.keys()), start_year_projection=2012)
+    # aluminium.smooth_out_interpolation_all(10, 2014)
+    # aluminium.adjust_alpha_and_project(list(IAI_TO_IMAGE_CLASSES.keys()), 
+    #                            start_year_adjust=2025, 
+    #                            end_year_adjust=2100, 
+    #                            min_alpha=None, start_year_projection=2014)
     
-    aluminium.remove_regions_with_no_good_fit_from_region_model_match(rest)
+    aluminium.remove_regions_with_no_good_fit_from_region_model_match(['class_ 6', 'class_ 8', 'class_ 10', 'class_ 24', 'class_ 26'])
 
     return aluminium
 
