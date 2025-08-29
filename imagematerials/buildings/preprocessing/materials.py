@@ -1,6 +1,9 @@
 import pandas as pd
+
 import numpy as np
 import xarray as xr
+import prism
+
 
 from imagematerials.concepts import create_region_graph
 
@@ -75,6 +78,8 @@ def compute_mat_intensities_residential(database_dir, circular_economy_config: d
 
         print("implemented 'narrow' for Residential Buildings (lightweighting)")
 
+    xr_mat_res_intensities = prism.Q_(xr_mat_res_intensities, "kg/m^2") # assign unit
+
     return xr_mat_res_intensities
 
 def compute_mat_intensities_commercial(database_dir, circular_economy_config: dict | None=None, **_,):
@@ -94,6 +99,7 @@ def compute_mat_intensities_commercial(database_dir, circular_economy_config: di
 
     xr_mat_comm_intensities = dataset_to_array(materials_commercial_dynamic.to_xarray(), ["Cohort", "material"], ["Type"])
     xr_mat_comm_intensities.coords["Type"] = ["Office", "Retail+", "Hotels+", "Govt+"]
+
 
     # broadcast to Regions and order dims
     model_regions = [str(i) for i in range(1, 27)]
@@ -148,5 +154,7 @@ def compute_mat_intensities_commercial(database_dir, circular_economy_config: di
         xr_mat_comm_intensities = xr_mat_updated.rename({"Time": "Cohort"}) if "Time" in xr_mat_updated.dims else xr_mat_updated
 
         print("implemented 'narrow' for Commercial Buildings (lightweighting)")
+
+    xr_mat_comm_intensities = prism.Q_(xr_mat_comm_intensities, "kg/m^2") # assign unit
 
     return xr_mat_comm_intensities

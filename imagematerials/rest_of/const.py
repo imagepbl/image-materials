@@ -172,7 +172,6 @@ IAI_TO_IMAGE_CLASSES = {
         'class_ 6',   # Rest S.Am.
         'class_ 8',   # W.Africa (e.g. Cape Verde)
         'class_ 10',  # South Africa (e.g. ZA1)
-        'class_ 24',  # Oceania (e.g. Tuvalu, Tokelau)
         'class_ 26',  # Rest S.Africa (e.g. Réunion, Mayotte)
     ],
     'Gulf Cooperation Council': [

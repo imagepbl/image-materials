@@ -216,6 +216,11 @@ def get_preprocessing_data_gen(path_base: str, SCEN, VARIANT): #, climate_policy
 
     prep_data = create_prep_data(results_dict, conversion_table, unit_mapping)
 
+    prep_data["stocks"] = prism.Q_(prep_data["stocks"], "MW")
+    prep_data["material_intensities"] = prism.Q_(prep_data["material_intensities"], "g/MW")
+    prep_data["set_unit_flexible"] = prism.U_(prep_data["stocks"]) # prism.U_ gives the unit back
+    # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
+
     return prep_data
 
 
@@ -252,14 +257,14 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT): #, climate_polic
     # 1. External Data --------------------------------------------- 
 
     grid_length_Hv = pd.read_csv(path_external_data_standard /'grid_length_Hv.csv', index_col=0, names=None).transpose()    # lenght of the High-voltage (Hv) lines in the grid, based on Open Street Map (OSM) analysis (km)
-    ratio_Hv = pd.read_csv(path_external_data_standard / 'Hv_ratio.csv', index_col=0)                                        # Ratio between the length of Medium-voltage (Mv) and Low-voltage (Lv) lines in relation to Hv lines (km Lv /km Hv) & (km Mv/ km Hv)
-    underground_ratio = pd.read_csv(path_external_data_standard / 'underground_ratio.csv', index_col=[0,1])           # these contain the definition of the constants in the linear function used to determine the relation between income & the percentage of underground power-lines (% underground = mult * gdp/cap + add)
-    grid_additions = pd.read_csv(path_external_data_standard / 'grid_additions.csv', index_col=0)                            # Transformers & substations per km of grid (Hv, Mv & Lv, in units/km)
+    ratio_Hv = pd.read_csv(path_external_data_standard / 'Hv_ratio.csv', index_col=0)                                       # Ratio between the length of Medium-voltage (Mv) and Low-voltage (Lv) lines in relation to Hv lines (km Lv /km Hv) & (km Mv/ km Hv)
+    underground_ratio = pd.read_csv(path_external_data_standard / 'underground_ratio.csv', index_col=[0,1])                 # these contain the definition of the constants in the linear function used to determine the relation between income & the percentage of underground power-lines (% underground = mult * gdp/cap + add)
+    grid_additions = pd.read_csv(path_external_data_standard / 'grid_additions.csv', index_col=0)                           # Transformers & substations per km of grid (Hv, Mv & Lv, in units/km)
 
 
     # dynamic or scenario-dependent data (lifetimes & material intensity)
 
-    lifetime_grid_elements = pd.read_csv(path_external_data_scenario  / 'operational_lifetime_grid.csv', index_col=0)         # Average lifetime in years of grid elements
+    lifetime_grid_elements = pd.read_csv(path_external_data_scenario  / 'operational_lifetime_grid.csv', index_col=0)        # Average lifetime in years of grid elements
 
     # dynamic material intensity files (kg/km or kg/unit)
     materials_grid = pd.read_csv(path_external_data_scenario / 'Materials_grid_dynamic.csv', index_col=[0,1])                # Material intensity of grid lines specific material content for Hv, Mv & Lv lines, & specific for underground vs. aboveground lines. (kg/km)
@@ -534,6 +539,15 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT): #, climate_polic
 
     prep_data_lines = create_prep_data(results_dict_lines, conversion_table, unit_mapping)
     prep_data_add = create_prep_data(results_dict_add, conversion_table, unit_mapping)
+
+    prep_data_lines["stocks"] = prism.Q_(prep_data_lines["stocks"], "km")
+    prep_data_lines["material_intensities"] = prism.Q_(prep_data_lines["material_intensities"], "kg/km")
+    prep_data_lines["set_unit_flexible"] = prism.U_(prep_data_lines["stocks"]) # prism.U_ gives the unit back
+    # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
+
+    prep_data_add["stocks"] = prism.Q_(prep_data_add["stocks"], "count")
+    prep_data_add["material_intensities"] = prism.Q_(prep_data_add["material_intensities"], "kg/count")
+    prep_data_add["set_unit_flexible"] = prism.U_(prep_data_add["stocks"]) # prism.U_ gives the unit back
 
     return prep_data_lines, prep_data_add
 
