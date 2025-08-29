@@ -207,24 +207,28 @@ def aluminium_projection(scenario: str):
 
     north_america = ['North America']
 
-    europe = ['Western & Central Europe', 'Japan', 'Oceania']
+    europe = ['Western & Central Europe']
+
+    low = ['Africa', 'Asia (ex China)',]
 
     # own category because fitting otherwise somehow not possible
     china = ['China (Estimated)', 'Gulf Cooperation Council']
 
     # will be fitted to global curve or according to IMAGE Mat with some additions
-    rest = ['Africa',
-            'Estimated Unreported to IAI', 
+    rest = ['Estimated Unreported to IAI', 
             'South America',
-            'Asia (ex China)']
+            'Oceania', 
+            'Japan'
+        ]
 
     aluminium_regions = {
         'all_regions' : all_regions,
         'russia' : russia,
         'north_america' : north_america,
         'china' : china,
-        'europe' : europe
-    }
+        'europe' : europe,
+        'low' : low
+}
 
     aluminium.data_grouped_regions(regions_grouping = aluminium_regions) 
 
@@ -273,24 +277,28 @@ def aluminium_projection(scenario: str):
         'russia' : 'gompertz model',
         'north_america' : 'gompertz model',
         'china' : 'gompertz model',
-        'europe' : 'gompertz model'}
+        'europe' : 'gompertz model', 
+        'low' : 'gompertz model'
+    }
 
     bounds = {
         'all_regions' : ([0, 0, 0], [10, 10, 10]),
         'russia' : ([0, 1, 1], [10, 10, 10]),
         'north_america' : ([0, 1, 1], [10, 10, 10]),
         'china' : ([0, 0, 0], [0.03, 10, 10]),
-        'europe' : ([0, 0, 0], [10, 10, 10])
+        'europe' : ([0, 0, 0], [0.01, 10, 10]),
+        'low' : ([0, 1, 1], [0.01, 10, 10])
     }
 
     aluminium.fit_models(best_rmse_models, bounds)
 
 
 
+
     # add regions to regions model match that are not in there yet becaused they are fitted to the global average
     for key in IAI_TO_IMAGE_CLASSES.keys():
         if key not in aluminium.region_model_match:
-            aluminium.region_model_match[key] = aluminium.model_groups.get("north_america")[6]
+            aluminium.region_model_match[key] = None
 
     aluminium.create_region_model_match_per_image(IAI_TO_IMAGE_CLASSES)
 
@@ -301,8 +309,20 @@ def aluminium_projection(scenario: str):
     #                            start_year_adjust=2025, 
     #                            end_year_adjust=2100, 
     #                            min_alpha=None, start_year_projection=2014)
+
+    aluminium.assign_fit_to_groups_not_fitted(IAI_TO_IMAGE_CLASSES.get("Estimated Unreported to IAI"), 
+                                        assign_model='low', 
+                                        model_nr=6)
+
+    aluminium.assign_fit_to_groups_not_fitted(IAI_TO_IMAGE_CLASSES.get("Oceania") +  
+                                              IAI_TO_IMAGE_CLASSES.get("Japan"),
+                                           assign_model='all_regions', 
+                                           model_nr=6)
     
-    aluminium.remove_regions_with_no_good_fit_from_region_model_match(['class_ 6', 'class_ 8', 'class_ 10', 'class_ 24', 'class_ 26'])
+
+    
+    aluminium.remove_regions_with_no_good_fit_from_region_model_match(['class_ 6', 'class_ 8', 
+                                                                       'class_ 10', 'class_ 26'])
 
     return aluminium
 

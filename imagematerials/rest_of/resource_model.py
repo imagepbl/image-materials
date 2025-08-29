@@ -199,7 +199,7 @@ class ResourceModel():
             """
             for region in list_regions:
             # check if region is in self.region_model_match
-                if region in self.region_model_match:
+                if region in self.region_model_match and self.region_model_match[region] is not None:
                     pass
                 else:
                     # assign fit of low steady model
