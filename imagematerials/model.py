@@ -20,6 +20,7 @@ COHORT = prism.Dimension("Cohort")
 TIME = prism.Dimension("Time")
 MATERIAL_TYPE = prism.Dimension("material")
 BATTERY_TYPE = prism.Dimension("battery")
+TECH_TYPE = prism.Dimension("Technology")
 EOL_TYPE = prism.Dimension("eoltype")
 UnitFlexibleStock = prism.DynamicUnit("my_unit_stock")
 
@@ -133,6 +134,123 @@ class GenericStocks(prism.Model):
             self.outflow_by_cohort[t].loc[:, :, :t-1] = self.stock_by_cohort.loc[t-1, :t-1] - self.stock_by_cohort.loc[t, :t-1]
             # for current cohort: calculate outflow by inflow * (1-survival matrix) as stock at t-1 is not existent
             self.outflow_by_cohort[t].loc[:, :, t] = self.inflow[t] * (1-self.survival_matrix[t, t])
+
+
+@prism.interface
+class SharesInInflowStocks(prism.Model):
+    """Stock class in case that different sub-technologies with different lifetimes are 
+    present for which the market shares are known for the inflow.
+    A model class for managing stocks and their inflows and outflows over time, 
+    including the computation of initial and dynamic stock values based on input data.
+    Attributes
+    ----------
+    Region : prism.Coords[REGION]
+        Defines the regions for the stock.
+    Type : prism.Coords[STOCK_TYPE]
+        Defines the stock types (e.g., vehicles, buildings).
+    Cohort : prism.Coords[COHORT]
+        Defines the cohorts (e.g., different age groups of stock).
+    Time : prism.Coords[TIME]
+        Defines the time steps for the stock simulation.
+    lifetimes : xr.DataArray
+        Expected lifetimes for each stock type.
+    stocks : xr.DataArray
+        Initial stock values.
+    shares_inflow : xr.DataArray
+        Share data for the inflow subtypes.
+    input_data : tuple of str
+        Tuple of input data variable names.
+    output_data : tuple of str
+        Tuple of output data variable names.
+    """
+     
+    # Dimensions
+    Region:     prism.Coords[REGION]
+    Type:       prism.Coords[STOCK_TYPE]
+    Cohort:     prism.Coords[COHORT]
+    Time:       prism.Coords[TIME]
+    Technology: prism.Coords[TECH_TYPE]
+
+    # Inputs
+    lifetimes:          xr.DataArray
+    stocks:             xr.DataArray #TODO check how to have property that can be both input and output within prism
+    shares_inflow:      xr.DataArray
+    knowledge_graph:    KnowledgeGraph
+    set_unit_flexible:  prism.VarUnit[UnitFlexibleStock] # set a flexible unit that can be changed depending on type of stock - is passed by preprocessing
+
+    # For module dependency, ignored by prism
+    input_data:  tuple[str] = ("stocks", "lifetimes", "knowledge_graph","shares_inflow", "set_unit_flexible")
+    output_data: tuple[str] = ("outflow_by_cohort", "inflow_by_tech", "stock_by_cohort") # stock_by_cohort & outflow_by_cohort also by technology
+
+    # stock_by_cohort: prism.TimeVariable[Region, Mode, Cohort, "count"] = prism.export(initial_value = prism.Array[Region, Mode, Cohort, 'count'](0.0))
+    inflow_by_tech:     prism.TimeVariable[REGION, STOCK_TYPE, TECH_TYPE, UnitFlexibleStock] = prism.export()
+    outflow_by_cohort:  prism.TimeVariable[REGION, STOCK_TYPE, TECH_TYPE, COHORT, UnitFlexibleStock] = prism.export()
+
+    def compute_initial_values(self, time: prism.Timeline):
+        """Compute the initial values for stocks and the survival matrix.
+        
+        Parameters
+        ----------
+        time : prism.Timeline
+            The simulation timeline.
+        """
+        # pass unit from stocks
+        unit = str(self.stocks.pint.units)
+        survival = ScipySurvival(self.lifetimes, self.stocks.coords["Type"],
+                                 knowledge_graph=self.knowledge_graph)
+        self.survival_matrix = SurvivalMatrix(survival)
+        self.stock_by_cohort = xr.DataArray(
+            0.0,
+            dims=("Time", "Cohort", "Region", "Type", "Technology"),
+            coords={"Time": self.Time,
+                    "Cohort": self.Cohort,
+                    "Region": self.Region,
+                    "Type": self.Type,
+                    "Technology": self.Technology})
+        self.stock_by_cohort = prism.Q_(self.stock_by_cohort, unit)
+
+    def compute_values(self, time: prism.Time):
+        """
+        Computes the stock values at each time step, including inflow and outflow by cohort.
+        
+        Parameters
+        ----------
+        time : prism.Time
+            The current simulation time step.
+        """
+        # pass unit from stocks
+        unit = str(self.stocks.pint.units)
+        t, dt = time.t, time.dt
+        # self.inflow[t].loc[:] = prism.Q_(0.0, unit)
+        self.inflow_by_tech[t].loc[:] = prism.Q_(0.0, unit)
+        self.outflow_by_cohort[t].loc[:] = prism.Q_(0.0, unit)
+
+        # copy only for readability
+        input_stock = self.stocks
+        # calculate missing stock to fulfill demand (input stock)
+        # stock_diff = input_stock.loc[t] - self.stock_by_cohort.loc[t].sum("Cohort")
+        stock_diff = input_stock.loc[t] - self.stock_by_cohort.loc[t].sum("Technology").sum("Cohort")
+        # stock_diff cannot be negative (no negative inflow); when positive, divide by survival matrix in case there is a loss in the first year (inflow needs to be larger than input stock)
+        # stock_diff = xr.where(stock_diff>0, stock_diff/self.survival_matrix[t, t].drop("Cohort"), 0)
+
+        # self.inflow[t] = stock_diff
+        # distribute inflow to technologies according to shares
+        inflow_tech = stock_diff*self.shares_inflow.sel(Cohort=t)
+        inflow_tech = xr.where(inflow_tech>0, inflow_tech/self.survival_matrix[t, t].drop("Cohort"), 0) # TODO: why .drop("Cohort")? do I need to do .drop("Technology")as well?
+        self.inflow_by_tech[t] = inflow_tech
+
+        # calculate future development of the current cohort (inflow at time t; t: = time from current time onwards, t = cohort of time t)
+        self.stock_by_cohort.loc[t:, t] = self.inflow_by_tech[t] * self.survival_matrix[t:, t]
+
+        # Prevent out of bounds error, assume first outflow to be 0.
+        if t-1 < time.start:
+            self.outflow_by_cohort[t] = prism.Q_(0.0, unit)
+        else:
+            # for previous cohorts: calculate outflow by subtracting stocks of previous - current year
+            self.outflow_by_cohort[t].loc[:, :, :t-1] = self.stock_by_cohort.loc[t-1, :t-1] - self.stock_by_cohort.loc[t, :t-1]
+            # for current cohort: calculate outflow by inflow * (1-survival matrix) as stock at t-1 is not existent
+            self.outflow_by_cohort[t].loc[:, :, t] = self.inflow[t] * (1-self.survival_matrix[t, t])
+
 
 
 @prism.interface
