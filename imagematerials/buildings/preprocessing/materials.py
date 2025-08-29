@@ -1,4 +1,5 @@
 import pandas as pd
+import prism
 
 from imagematerials.buildings.constants import END_YEAR, HIST_YEAR
 from imagematerials.util import dataset_to_array
@@ -24,6 +25,8 @@ def compute_mat_intensities_residential(database_dir):
     xr_mat_res_intensities.coords["Type"] = ["Detached", "Semi-detached", "Appartment", "High-rise"]
     xr_mat_res_intensities.coords["Region"] = [str(x) for x in xr_mat_res_intensities.coords["Region"].values]
 
+    xr_mat_res_intensities = prism.Q_(xr_mat_res_intensities, "kg/m^2") # assign unit
+
     return xr_mat_res_intensities
 
 
@@ -45,5 +48,6 @@ def compute_mat_intensities_commercial(database_dir):
     xr_mat_comm_intensities = dataset_to_array(materials_commercial_dynamic.to_xarray(), ["Cohort", "material"], ["Type"])
     xr_mat_comm_intensities.coords["Type"] = ["Office", "Retail+", "Hotels+", "Govt+"]
 
+    xr_mat_comm_intensities = prism.Q_(xr_mat_comm_intensities, "kg/m^2") # assign unit
 
     return xr_mat_comm_intensities
