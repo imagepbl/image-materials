@@ -40,8 +40,12 @@ def interpolate_eol_rates(
     return ds.clip(min=min_value, max=max_value)
 
 
-def eol_preprocessing(base_dir, circular_economy_scenario_dirs):
-    circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
+def eol_preprocessing(base_dir, circular_economy_scenario_dirs=None):
+    # Only read config if dirs are provided
+    if circular_economy_scenario_dirs is not None:
+        circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
+    else:
+        circular_economy_config = {}
 
     collection_in = pd.read_csv(Path(base_dir, "end_of_life","SSP2_2D_RE", "collection.csv"))
     reuse_in = pd.read_csv(Path(base_dir, "end_of_life", "SSP2_CP", "reuse.csv"))
