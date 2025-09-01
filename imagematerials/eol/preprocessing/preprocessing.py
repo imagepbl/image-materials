@@ -111,9 +111,9 @@ def eol_preprocessing(base_dir, circular_economy_scenario_dirs):
     xr_recycling = xr_recycling.reindex(material=outflows_materials, fill_value=0)
     
     # set targets for 2060 instead of 2050
-    xr_collection = xr_collection.assign_coords(Time = [2060 if t == 2050 else t for t in xr_reuse.Time.values])
+    xr_collection = xr_collection.assign_coords(Time = [2060 if t == 2050 else t for t in xr_collection.Time.values])
     xr_reuse = xr_reuse.assign_coords(Time = [2060 if t == 2050 else t for t in xr_reuse.Time.values])
-    xr_recycling = xr_recycling.assign_coords(Time = [2060 if t == 2050 else t for t in xr_reuse.Time.values])
+    xr_recycling = xr_recycling.assign_coords(Time = [2060 if t == 2050 else t for t in xr_recycling.Time.values])
 
     # scenario implementation
     building_supertypes = ["urban", "rural", "commercial"]
@@ -124,18 +124,18 @@ def eol_preprocessing(base_dir, circular_economy_scenario_dirs):
         reuse_rate_vehicles = circular_economy_config["slow"]["vehicles"]["eol_reuse_rate_2060"]
 
         xr_reuse = overwrite_future_rates(xr_reuse,2060,building_supertypes,reuse_rate_buildings)
-        print("implemented 'slow' for buildings eol")
+        print("implemented 'slow' for Buildings EoL")
         xr_reuse = overwrite_future_rates(xr_reuse,2060,vehicles_supertypes,reuse_rate_vehicles)
-        print("implemented 'slow' for vehicles eol")
+        print("implemented 'slow' for Vehicles EoL")
 
     if "close" in circular_economy_config.keys():
         recycling_rate_buildings = circular_economy_config["close"]["buildings"]["eol_recycling_rate_2060"]
         recycling_rate_vehicles = circular_economy_config["close"]["vehicles"]["eol_recycling_rate_2060"]
         
         xr_recycling = overwrite_future_rates(xr_recycling,2060,building_supertypes,recycling_rate_buildings)
-        print("implemented 'close' for buildings eol")    
+        print("implemented 'close' for Buildings EoL")    
         xr_recycling = overwrite_future_rates(xr_recycling,2060,vehicles_supertypes,recycling_rate_vehicles)
-        print("implemented 'close' for vehicles eol")    
+        print("implemented 'close' for Vehicles EoL")    
 
     # inter and extrapolated collection, reuse and recycling xr 
     collection = interpolate_eol_rates(xr_collection, anchor_year=2020, target_year=2060, min_value=0, max_value=1, full_time=full_time)
