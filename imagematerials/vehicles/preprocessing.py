@@ -382,7 +382,35 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
     vehicle_weights_typical = vehicle_weight_kg_typical.rename_axis('mode', axis=1).stack().unstack(['mode', 'type'])
     vehicle_weights_typical = interpolate(
         pd.DataFrame(vehicle_weights_typical))
+    
+    # Apply lightweighting in narrow scenario
+    if "narrow" in circular_economy_config.keys():
+        target_year = circular_economy_config['narrow']['vehicles']['target_year']
+        base_year = circular_economy_config['narrow']['vehicles']['base_year']
+        non_road_weight_change_pc = circular_economy_config['narrow']['vehicles']['non-road']['weight_change_pc']
+        road_weight_change_pc = circular_economy_config['narrow']['vehicles']['road']['weight_change_pc']
+        implementation_rate = circular_economy_config['narrow']['vehicles']['implementation_rate']
+        
+        vehicle_weights_simple = scenario_change(
+            vehicle_weights_simple, base_year, target_year, 
+            non_road_weight_change_pc, implementation_rate)
+        
+        if isinstance(vehicle_weights_typical.columns, pd.MultiIndex):
+            weight_change_pc_expanded = {}
+            for mode, pct in road_weight_change_pc.items():
+                # all (mode, drivetrain) columns
+                subcols = [c for c in vehicle_weights_typical.columns if c[0] == mode]
+                for c in subcols:
+                    weight_change_pc_expanded[c] = pct
+        else:
+            weight_change_pc_expanded = road_weight_change_pc
 
+        vehicle_weights_typical = scenario_change(
+            vehicle_weights_typical, base_year, target_year,
+            weight_change_pc_expanded, implementation_rate
+        )
+        print("implemented 'narrow' for Vehicles (lightweighting)")
+            
     # complete & interpolate the vehicle composition data (simple first)
     material_fractions_simple = material_fractions.rename_axis('mode', 
                                                                axis=1).rename_axis(['year', 'material'], 
@@ -423,7 +451,7 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
             lifetimes_vehicles, base_year, target_year, 
             lifetime_increase, implementation_rate, "lifetime")
         
-        print("implemented 'slow' for Vehicles")
+        print("implemented 'slow' for Vehicles (extend lifetimes)")
 
     
     # increase mileages\kilometrages
@@ -452,7 +480,7 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
             mileage_increase['Regular Buses'], implementation_rate
         )
 
-        print("implemented 'narrow' for Vehicles")
+        print("implemented 'narrow' for Vehicles (increase mileage)")
     
 
     # Calculate maintenace material need in kg material per kg vehicle
