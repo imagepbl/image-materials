@@ -365,6 +365,7 @@ def convert_life_time_vehicles(life_time_vehicles: xr.Dataset) -> dict[str, xr.D
 
 def scenario_change(arr: xr.DataArray, base_year: int, target_year: int, change: dict,
                     implementation_rate: str, data_type: Optional[str]=None, steepness: float=0.5) -> xr.DataArray:
+
     """
     Applies a time-based change to values in a Xarray between a base and target year using a specified implementation method.
 
