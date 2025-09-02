@@ -170,7 +170,8 @@ class KnowledgeGraph():
             relations = self.find_relations(input_coords, [cur_coord])[cur_coord]
             if len(relations) > 1:
                 raise ValueError("Cannot rebroadcast DataArray, because multiple input relations "
-                                 f"exist ({relations}) for output coordinate {cur_coord}")
+                                 f"exist ({relations}) for output coordinate {cur_coord}. For "
+                                 "aggregation use the aggregate_sum method instead.")
             parent = relations[0]
             if shares is not None and cur_coord in shares.coords["Type"]:
                 new_array.loc[{dim: cur_coord}] = (input_array.loc[{dim: parent}]
