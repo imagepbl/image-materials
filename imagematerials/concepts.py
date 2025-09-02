@@ -161,6 +161,8 @@ class KnowledgeGraph():
 
         keep_coords = []
         new_array = xr.DataArray(0.0, dims=input_array.dims, coords=new_coords)
+        if input_array.pint.units:
+            new_array = prism.Q_(new_array, input_array.pint.units)
         for cur_coord in list(output_coords):
             if cur_coord in input_coords:
                 keep_coords.append(cur_coord)
@@ -173,8 +175,7 @@ class KnowledgeGraph():
                 new_array.loc[{dim: cur_coord}] = input_array.loc[{dim: parent}]
         new_array.loc[{dim: keep_coords}] = input_array.loc[{dim: keep_coords}]
         # check if input array had a unit and if so, reapply this unit to new array
-        if input_array.pint.units:
-            new_array = prism.Q_(new_array, input_array.pint.units)    
+
         return new_array
 
     def aggregate_sum(self, input_array, output_coords, dim="Type"):
