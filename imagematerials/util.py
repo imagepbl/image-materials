@@ -130,14 +130,14 @@ def merge_dims(xr_array, dim_one, dim_two):
         0.0, dims=new_dims,
         coords = new_coords
     )
+    # function strips unit, reattach unit, first check if unit exists
+    if prism.U_(xr_array) is not None:
+        new_array = prism.Q_(new_array, prism.U_(xr_array))
     for cur_coor_one in xr_array.coords[dim_one].values:
         for cur_coor_two in xr_array.coords[dim_two].values:
             new_coor_one = SUBTYPE_SEPARATOR.join((cur_coor_one, cur_coor_two))
             new_array.loc[{dim_one: new_coor_one}] = xr_array.loc[{dim_one: cur_coor_one, dim_two: cur_coor_two}]
 
-    # function strips unit, reattach unit, first check if unit exists
-    if prism.U_(xr_array) is not None:
-        new_array = prism.Q_(new_array, prism.U_(xr_array))
     return new_array
 
 
