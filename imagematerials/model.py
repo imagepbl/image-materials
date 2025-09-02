@@ -3,6 +3,7 @@ from typing import Callable, ClassVar, Optional
 import pint_xarray
 from pint import UnitRegistry
 from pathlib import Path
+from importlib.resources import files
 
 import prism
 import xarray as xr
@@ -22,8 +23,7 @@ BATTERY_TYPE = prism.Dimension("battery")
 EOL_TYPE = prism.Dimension("eoltype")
 UnitFlexibleStock = prism.DynamicUnit("my_unit_stock")
 
-here = Path(__file__).resolve().parent
-prism.unit_registry.load_definitions(here.parent / "units.txt")
+prism.unit_registry.load_definitions(files(__package__) / "units.txt")
 
 @prism.interface
 class GenericStocks(prism.Model):
