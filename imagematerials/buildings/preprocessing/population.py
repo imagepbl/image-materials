@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import prism
-from importlib import files
+from importlib.resources import files
 
 
 from imagematerials.buildings.constants import (
@@ -13,9 +13,7 @@ from imagematerials.buildings.constants import (
 from imagematerials.util import dataset_to_array
 from imagematerials.read_mym import read_mym_df
 
-here = Path(__file__).resolve().parent
-prism.unit_registry.load_definitions(files(__package__) / "units.txt")
-
+prism.unit_registry.load_definitions(files("imagematerials") / "units.txt")
 
 def compute_population(image_directory, base_directory):
     # Compute total/rural/urban populations
