@@ -168,4 +168,19 @@ USA = -14.3
 "Western Africa" = -14.3
 "Western Europe" = -14.3
 
+[vehicles.non-road.weight_change_pc]
+'Passenger Planes' = -4.2
+'Freight Planes' = -4.2
+'Trains' = -4.2
+'High Speed Trains' = -4.2
+'Freight Trains' = -4.2
+'Inland Ships' = -4.2
+'Bikes' = -4.2
 
+[vehicles.road.weight_change_pc]
+'Light Commercial Vehicles' = -8.2
+'Medium Freight Trucks' = -8.2
+'Heavy Freight Trucks' = -8.2
+'Midi Buses' = -8.2
+'Regular Buses' = -8.2
+'Cars' = -8.2
