@@ -35,8 +35,7 @@ def compute_mat_intensities_residential(database_dir, circular_economy_config: d
     if 'narrow' in circular_economy_config.keys():
         
         # rename Cohort to Time for compatibility with apply_change_per_region function
-        if "Cohort" in xr_mat_res_intensities.dims:
-            xr_mat_res_intensities = xr_mat_res_intensities.rename({"Cohort": "Time"}) if "Cohort" in xr_mat_res_intensities.dims else xr_mat_res_intensities
+        xr_mat_res_intensities = xr_mat_res_intensities.rename({"Cohort": "Time"}) if "Cohort" in xr_mat_res_intensities.dims else xr_mat_res_intensities
         
         # import parameters from config file 
         target_year = circular_economy_config['narrow']['buildings']['target_year']
@@ -113,7 +112,7 @@ def compute_mat_intensities_commercial(database_dir, circular_economy_config: di
 
         base_year = circular_economy_config['narrow']['buildings']['base_year']
         target_year = circular_economy_config['narrow']['buildings']['target_year']
-        impl_rate = circular_economy_config['narrow']['buildings']['implementation_rate']
+        implementation_rate = circular_economy_config['narrow']['buildings']['implementation_rate']
         mat_changes = circular_economy_config['narrow']['buildings']['material_intensity_change'] 
 
         region_graph = create_region_graph()
@@ -139,14 +138,14 @@ def compute_mat_intensities_commercial(database_dir, circular_economy_config: di
                 changes_mapped = changes_mapped.sel(Region=model_regions).astype(float)
 
                 # apply once per material
-                upd = apply_change_per_region(cur, base_year, target_year, changes_mapped, impl_rate)
+                updated = apply_change_per_region(cur, base_year, target_year, changes_mapped, implementation_rate)
                 # keep Region order & dim order identical to cur
-                upd = upd.reindex(Region=cur.coords["Region"]).transpose(*cur.dims)
+                updated = updated.reindex(Region=cur.coords["Region"]).transpose(*cur.dims)
             else:
-                upd = cur
+                updated = cur
 
             # attach the material coord and collect
-            updated_slices.append(upd.expand_dims(material=[mat]))
+            updated_slices.append(updated.expand_dims(material=[mat]))
 
         xr_mat_updated = xr.concat(updated_slices, dim="material")
 
