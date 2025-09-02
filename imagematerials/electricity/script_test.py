@@ -23,7 +23,7 @@ from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_life
 from imagematerials.model import GenericMainModel, GenericMaterials, GenericStocks, Maintenance, MaterialIntensities
 from imagematerials.factory import ModelFactory, Sector
 from imagematerials.concepts import create_electricity_graph
-from imagematerials.electricity.utils import MNLogit, stock_tail, create_prep_data, print_df_info
+from imagematerials.electricity.utils import MNLogit, stock_tail, create_prep_data, stock_share_calc
 
 
 from imagematerials.electricity.constants import (
@@ -1848,7 +1848,7 @@ storage_lifetime = pd.read_csv(path_external_data_standard / 'storage_lifetime.c
 
 kilometrage = pd.read_csv(path_external_data_scenario / 'kilometrage.csv', index_col='t')   #annual car mileage in kms/yr, based  mostly  on  Pauliuk  et  al.  (2012a)
 
-# material compositions (storage)
+# material compositions (storage) in wt%
 storage_materials = pd.read_csv(path_external_data_standard / 'storage_materials_dynamic.csv',index_col=[0,1]).transpose()  # wt% of total battery weight for various materials, total battery weight is given by the density file above
 
 # Hydro-dam power capacity (also MW) within 5 regions reported by the IHA (international Hydropwer Association)
@@ -2164,15 +2164,166 @@ preprocessing_results_xarray["material_intensities"] = preprocessing_results_xar
 #%%% 2.3.2) Stock Modelling
 ###########################################################################################################
 # TODO: move this to electricity.py
+import scipy
+
+def stock_share_calc(stock, market_share, init_tech, techlist, storage_lifetime_interpol):
+
+    # Here, we define the market share of the stock based on a pre-calculation with several steps: 
+    # 1) use Global total stock development, the market shares of the inflow and technology specific lifetimes to derive 
+    # the shares in the stock, assuming that pre-1990 100% of the stock was determined by Lead-acid batteries. 
+    # 2) Then, apply the global stock-related market shares to disaggregate the stock to technologies in all regions 
+    # (assuming that battery markets are global markets)
+    # As the development of the total stock of dedicated electricity storage is known, but we don't know the inflow, 
+    # and only the market share related to the inflow we need to calculate the inflow first. 
+
+    # first we define the survival of the 1990 stock (assumed 100% Lead-acid, for each cohort in 1990)
+    pre_time = 20                           # the years required for the pre-calculation of the Lead-acid stock
+    cohorts = YEAR_OUT-YEAR_SWITCH            # nr. of cohorts in the stock calculations (after YEAR_SWITCH)
+    timeframe = np.arange(0,cohorts+1)      # timeframe for the pre-calcluation
+    pre_year_list = list(range(YEAR_SWITCH-pre_time,YEAR_SWITCH+1))   # list of years to pre-calculate the Lead-acid stock for
+
+    #define new dataframes
+    stock_cohorts = pd.DataFrame(index=pd.MultiIndex.from_product([stock.columns,range(YEAR_SWITCH,YEAR_OUT+1)]), columns=pd.MultiIndex.from_product([techlist, range(YEAR_SWITCH-pre_time,YEAR_END+1)])) # year, by year, by tech
+    inflow_by_tech = pd.DataFrame(index=pd.MultiIndex.from_product([stock.columns,range(YEAR_SWITCH,YEAR_OUT+1)]), columns=techlist)
+    outflow_cohorts = pd.DataFrame(index=pd.MultiIndex.from_product([stock.columns,range(YEAR_SWITCH,YEAR_OUT+1)]), columns=pd.MultiIndex.from_product([techlist, range(YEAR_SWITCH-pre_time,YEAR_END+1)])) # year by year by tech
+    
+    #specify lifetime & other settings
+    stdev_mult = 0.214
+    mean = storage_lifetime_interpol.loc[YEAR_SWITCH,init_tech] # select the mean lifetime for Lead-acid batteries in 1990
+    stdev = mean * stdev_mult               # we use thesame standard-deviation as for generation technologies, given that these apply to 'energy systems' more generally
+    survival_init = scipy.stats.foldnorm.sf(timeframe, mean/stdev, 0, scale=stdev)
+    techlist_new = techlist
+    techlist_new.remove(init_tech)          # techlist without Lead-acid (or other init_tech)
+    
+    # actual inflow & outflow calculations, this bit takes long!
+    # loop over regions, technologies and years to calculate the inflow, stock & outflow of storage technologies, given their share of the inflow.
+    for region in stock.columns:
+        
+        # pre-calculate the stock by cohort of the initial stock of Lead-acid
+        multiplier_pre = stock.loc[YEAR_SWITCH,region]/survival_init.sum()   # the stock is subdivided by the previous cohorts according to the survival function (only allowed when assuming steady stock inflow) 
+        
+        #pre-calculate the stock as lists (for efficiency)
+        initial_stock_years = [np.flip(survival_init[0:pre_time+1]) * multiplier_pre]
+            
+        for year in range(1, (YEAR_OUT-YEAR_SWITCH)+1):      # then fill the columns with the remaining fractions
+            initial_stock_years.append(initial_stock_years[0] * survival_init[year])
+    
+        stock_cohorts.loc[idx[region,:],idx[init_tech, list(range(YEAR_SWITCH-pre_time,YEAR_SWITCH+1))]] = initial_stock_years       # fill the stock dataframe according to the pre-calculated stock 
+        outflow_cohorts.loc[idx[region,:],idx[init_tech, list(range(YEAR_SWITCH-pre_time,YEAR_SWITCH+1))]] = stock_cohorts.loc[idx[region,:],idx[init_tech, list(range(YEAR_SWITCH-pre_time,YEAR_SWITCH+1))]].shift(1, axis=0) - stock_cohorts.loc[idx[region,:],idx[init_tech, list(range(YEAR_SWITCH-pre_time,YEAR_SWITCH+1))]]
+    
+        # set the other stock cohorts to zero
+        stock_cohorts.loc[idx[region,:],idx[techlist_new, pre_year_list]] = 0
+        outflow_cohorts.loc[idx[region,:],idx[techlist_new, pre_year_list]] = 0
+        inflow_by_tech.loc[idx[region, YEAR_SWITCH], techlist_new] = 0                                                   # inflow of other technologies in 1990 = 0
+        
+        # except for outflow and inflow in 1990 (YEAR_SWITCH), which can be pre-calculated for Deep-cycle Lead Acid (@ steady state inflow, inflow = outflow = stock/lifetime)
+        outflow_cohorts.loc[idx[region, YEAR_SWITCH], idx[init_tech,:]] = outflow_cohorts.loc[idx[region, YEAR_SWITCH+1], idx[init_tech,:]]     # given the assumption of steady state inflow (pre YEAR_SWITCH), we can determine that the outflow is the same in switchyear as in switchyear+1                                        
+        inflow_by_tech.loc[idx[region, YEAR_SWITCH], init_tech] =   stock.loc[YEAR_SWITCH,region]/mean                                          # given the assumption of steady state inflow (pre YEAR_SWITCH), we can determine the inflow to be the same as the outflow at a value of stock/avg. lifetime                                                          
+        
+        # From YEAR_SWITCH onwards, define a stock-driven model with a known market share (by tech) of the new inflow 
+        for year in range(YEAR_SWITCH+1,YEAR_OUT+1):
+            
+            # calculate the remaining stock as the sum of all cohorts in a year, for each technology
+            remaining_stock = 0 # reset remaining stock
+            for tech in inflow_by_tech.columns:
+                remaining_stock += stock_cohorts.loc[idx[region,year],idx[tech,:]].sum()
+               
+            # total inflow required (= required stock - remaining stock);    
+            inflow = max(0, stock.loc[year, region] - remaining_stock)   # max 0 avoids negative inflow, but allows for idle stock surplus in case the size of the required stock is declining more rapidly than it's natural decay
+            
+            stock_cohorts_list = []
+                   
+            # enter the new inflow & apply the survival rate, which is different for each technology, so calculate the surviving fraction in stock for each technology  
+            for tech in inflow_by_tech.columns:
+                # apply the known market share to the inflow
+                inflow_by_tech.loc[idx[region,year],tech] = inflow * market_share.loc[year,tech]
+                # first calculate the  (based on lifetimes specific to the year of inflow)
+                survival = scipy.stats.foldnorm.sf(np.arange(0,(YEAR_OUT+1)-year), storage_lifetime_interpol.loc[year,tech]/(storage_lifetime_interpol.loc[year,tech]*0.2), 0, scale=storage_lifetime_interpol.loc[year,tech]*0.2)           
+                # then apply the survival to the inflow in current cohort, both the inflow & the survival are entered into the stock_cohort dataframe in 1 step
+                stock_cohorts_list.append(inflow_by_tech.loc[idx[region,year],tech]  *  survival)
+                
+            stock_cohorts.loc[idx[region,list(range(year,YEAR_OUT+1))],idx[:,year]] = list(map(list, zip(*stock_cohorts_list)))        
+        
+    # separate the outflow (by cohort) calculation (separate shift calculation for each region & tech is MUCH more efficient than including it in additional loop over years)
+    # calculate the outflow by cohort based on the stock by cohort that was just calculated
+    for region in stock.columns:
+        for tech in inflow_by_tech.columns:
+            outflow_cohorts.loc[idx[region,:],idx[tech,:]] = stock_cohorts.loc[idx[region,:],idx[tech,:]].shift(1,axis=0) - stock_cohorts.loc[idx[region,:],idx[tech,:]]
+
+    return inflow_by_tech, stock_cohorts, outflow_cohorts
+
+import time
+
+start_time = time.time()
 
 # then we use that market share in combination with the stock developments to derive the stock share 
 # Here we use the vehcile stock (number of cars) as a proxy for the development of the battery stock (given that we're calculating the actual battery stock still, and just need to account for the dynamics of purchases to derive te stock share here) 
-EV_inflow_by_tech, EV_stock_cohorts, EV_outflow_cohorts = stock_share_calc(vehicles_EV, market_share_EVs, 'NiMH', ['NiMH', 'LMO', 'NMC', 'NCA', 'LFP', 'Lithium Sulfur', 'Lithium Ceramic ', 'Lithium-air'])
+EV_inflow_by_tech, EV_stock_cohorts, EV_outflow_cohorts = stock_share_calc(vehicles_EV, market_share_EVs, 'NiMH', ['NiMH', 'LMO', 'NMC', 'NCA', 'LFP', 'Lithium Sulfur', 'Lithium Ceramic ', 'Lithium-air'], storage_lifetime_interpol)
+# takes ~ 1 min to run
+end_time = time.time()
+print(f"Execution time: {end_time - start_time:.4f} seconds")
 
 
+###########################################################################################################
+#%%% 2.3.3) Postprocess EV
+###########################################################################################################
+#
 
+EV_stock =  EV_stock_cohorts.T.groupby(level=0).sum().T # sum(level) is and groupby(axis) will be deprecated -> transose first with .T (instead of specifying axis), then groupby level, then sum. To get intial shape back, transpose again with .T
+EV_storage_stock_abs  = EV_stock.groupby(level=1).sum()                           # sum over all regions to get the global share of the stock
+EV_storage_inflow_abs = EV_inflow_by_tech.groupby(level=1).sum()                   # sum over all regions to get the global share of the inflow
 
+# Calc. global share of different battery technologies (stock & inflow)
+EV_storage_stock_share  = pd.DataFrame(index=EV_storage_stock_abs.index,  columns=EV_storage_stock_abs.columns)
+EV_storage_inflow_share = pd.DataFrame(index=EV_storage_inflow_abs.index, columns=EV_storage_inflow_abs.columns)
+for tech in EV_storage_stock_abs.columns:
+    EV_storage_stock_share.loc[:,tech]  = EV_storage_stock_abs.loc[:,tech].div(EV_storage_stock_abs.sum(axis=1))
+    EV_storage_inflow_share.loc[:,tech] = EV_storage_inflow_abs.loc[:,tech].div(EV_storage_inflow_abs.sum(axis=1))
 
+# EV_storage_stock_share.to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test'  / 'battery_share_stock.csv') # Average global car battery share (in stock) is exported to be used in paper on vehicles
+# EV_storage_inflow_share.to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test'  / 'battery_share_inflow.csv') # Average global car battery share (in inflow) is exported to be used in paper on vehicles
+  
+#The global share of the battery technologies in stock is then used to derive the (weihgted) average density (kg/kWh)
+weighted_average_density_stock  = EV_storage_stock_share.mul(storage_density_interpol[EV_battery_list]).sum(axis=1)
+weighted_average_density_inflow = EV_storage_inflow_share.mul(storage_density_interpol[EV_battery_list]).sum(axis=1)
+
+# weighted_average_density_stock.loc[:YEAR_OUT].to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test'  / 'ev_battery_density_stock.csv')        # Average car battery density (in stock) is exported to be used in paper on vehicles
+# weighted_average_density_inflow.loc[:YEAR_OUT].to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test'  / 'ev_battery_density_inflow.csv')      # Average car battery density (in inflow) is exported to be used in paper on vehicles
+
+# assumed fixed energy densities before 1990 (=NiMH)
+add = pd.Series(weighted_average_density_stock[weighted_average_density_stock.first_valid_index()], index=list(range(YEAR_START,1990)))
+weighted_average_density = pd.concat([weighted_average_density_stock, add]).sort_index(axis=0)
+
+# With a pre-determined battery capacity in 2018, we assume an increasing capacity (as an effect of an increased density) based on a fixed weight assumption
+BEV_dynamic_capacity = (weighted_average_density[2018] * BEV_CAPACITY_CURRENT) / weighted_average_density
+PHEV_dynamic_capacity = (weighted_average_density[2018] * PHEV_CAPACITY_CURRENT) / weighted_average_density
+
+# Define the V2G settings over time (assuming slow adoption to the maximum usable capacity)
+year_v2g_start = 2025-1 # -1 leads to usable capacity in 2025
+year_full_capacity = 2040
+v2g_usable = pd.Series(index=list(range(YEAR_START,YEAR_OUT+1)), name='years')    #fraction of the cars ready and willing to use v2g
+for year in list(range(YEAR_START,YEAR_OUT+1)):
+    if (year <= year_v2g_start):
+        v2g_usable[year] = 0
+    elif (year >= year_full_capacity):
+        v2g_usable[year] = 1
+v2g_usable = v2g_usable.interpolate()
+
+#total capacity per car connected to v2g (in kWh)
+max_capacity_BEV = v2g_usable * capacity_usable_BEV  
+max_capacity_PHEV = v2g_usable * capacity_usable_PHEV   
+
+#usable capacity per car connected to v2g (in kWh)
+usable_capacity_BEV = max_capacity_BEV.mul(BEV_dynamic_capacity[:YEAR_OUT])     
+usable_capacity_PHEV = max_capacity_PHEV.mul(PHEV_dynamic_capacity[:YEAR_OUT])  
+
+# Vehicle storage in MWh
+storage_BEV = storage_PHEV = pd.DataFrame().reindex_like(vehicles_BEV)
+for region in region_list:
+    storage_PHEV[region] = vehicles_PHEV[region].mul(usable_capacity_PHEV) /1000
+    storage_BEV[region] = vehicles_BEV[region].mul(usable_capacity_BEV) /1000
+
+storage_vehicles = storage_BEV + storage_PHEV
 
 
 ###########################################################################################################
@@ -2187,7 +2338,8 @@ Gcap_hydro.columns = region_list
 Gcap_hydro = Gcap_hydro.loc[:YEAR_OUT]
 
 #storage capacity in MW (power capacity), to compare it to Pumped hydro storage projections (also given in MW, power capacity)              
-storage_power.drop(storage_power.iloc[:, -2:], inplace = True, axis = 1)    
+# storage_power.drop(storage_power.iloc[:, -2:], inplace = True, axis = 1) # error prone
+storage_power = storage_power.iloc[:, :26]  
 storage_power.columns = region_list
 storage_power = storage_power.loc[:YEAR_OUT]
 
@@ -2248,25 +2400,263 @@ storage_lifetime_PHS = storage_lifetime['PHS'].reindex(list(range(YEAR_FIRST_GRI
 #%%% 2.4.1) Prep_data File
 ###########################################################################################################
 
+phs_stock = phs_storage_stock_tail.copy()
 
+# Bring dataframes into correct shape for the results_dict
+
+# stocks: (years, regions) index and technologies as columns -> years as index and (technology, region) as columns
+# Current columns are regions
+regions = phs_stock.columns.tolist()
+# Create a MultiIndex with technology "PHS" for all columns
+multi_cols = pd.MultiIndex.from_tuples([("PHS", r) for r in regions], names=["technology", "region"])
+# Assign to the DataFrame
+phs_stock.columns = multi_cols
+
+
+# lifetimes
+df_mean = storage_lifetime_PHS.copy().to_frame()
+df_stdev = df_mean * STD_LIFETIMES_ELECTR
+df_mean.columns = [(col, 'mean') for col in df_mean.columns] # Rename columns to multi-level tuples
+df_stdev.columns = [(col, 'stdev') for col in df_stdev.columns]
+phs_lifetime_distr = pd.concat([df_mean, df_stdev], axis=1) # Concatenate along columns
+phs_lifetime_distr.index.name = 'Year'
+
+# MIs: (years, material) index and technologies as columns -> years as index and (technology, Material) as columns
+phs_materials = stor_materials_interpol.loc[idx[:,:],'PHS'].unstack() * PHS_kg_perkWh * 1000 # wt% * kg/kWh * 1000 kWh/MWh = kg/MWh
+# Current columns are materials
+materials = phs_materials.columns.tolist()
+# Create a MultiIndex with technology "PHS" for all columns
+multi_cols = pd.MultiIndex.from_tuples([("PHS", m) for m in materials], names=["technology", "material"])
+# Assign to the DataFrame
+phs_materials.columns = multi_cols
+
+
+# Conversion table for all coordinates, to be removed/adapted after input tables are fixed.
+conversion_table = {
+    "phs_stock": (["Time"], ["Type", "Region"],),
+    "phs_materials": (["Cohort"], ["Type", "material"],)
+    # "gcap_materials_interpol": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]})
+}
+
+results_dict = {
+        'phs_stock': phs_stock,
+        'phs_materials': phs_materials,
+        'phs_lifetime_distr': phs_lifetime_distr,
+}
+
+
+prep_data_phs = create_prep_data(results_dict, conversion_table, unit_mapping)
+prep_data_phs["stocks"] = prism.Q_(prep_data_phs["stocks"], "MWh")
+prep_data_phs["material_intensities"] = prism.Q_(prep_data_phs["material_intensities"], "kg/MWh")
+prep_data_phs["set_unit_flexible"] = prism.U_(prep_data_phs["stocks"]) # prism.U_ gives the unit back
+    
 
 ###########################################################################################################
 #%%% 2.4.2) Stock Modelling
 ###########################################################################################################
 # TODO: move this to electricity.py
 
-
+# OLD OLD OLD ==========================================================================
 # Next step: stock modelling
 phs_storage_inflow, phs_storage_outflow, phs_storage_stock  = inflow_outflow(phs_storage_stock_tail, storage_lifetime_PHS, stor_materials_interpol.loc[idx[:,:],'PHS'].unstack() * PHS_kg_perkWh * 1000, 'PHS')    # PHS lifetime is fixed at 60 yrs anyway so, we simply select 1 value
 
 inflow_by_tech, stock_cohorts, outflow_cohorts = stock_share_calc(oth_storage, storage_market_share, 'Deep-cycle Lead-Acid', list(storage_lifetime_interpol.columns)) # run the function that calculates stock shares from total stock & inflow shares
 
+# =======================================================================================
+
+
+
+
+# # Define the complete timeline, including historic tail
+time_start = prep_data_phs["stocks"].coords["Time"].min().values
+time_end = 2060
+complete_timeline = prism.Timeline(time_start, time_end, 1)
+simulation_timeline = prism.Timeline(1970, time_end, 1)
+
+sec_electr_stor_phs = Sector("electr_stor_phs", prep_data_phs)
+
+main_model_factory_phs = ModelFactory(
+    sec_electr_stor_phs, complete_timeline
+    ).add(GenericStocks
+    ).add(MaterialIntensities
+    ).finish()
+
+main_model_factory_phs.simulate(simulation_timeline)
+list(main_model_factory_phs.electr_stor_phs)
 
 
 
 
 
+###########################################################################################################
+#%%% 2.4.3) Visulalization
+###########################################################################################################
 
+#%%%% Sum & Per TECH - World
+
+# da_x = main_model_factory.inflow.to_array().sum('Type')
+da_stocks = main_model_factory_phs.stocks#.to_array()
+
+data_all = da_stocks.sel(Type=da_stocks.Type != '<EMPTY>')
+data_all_1 = data_all.sum('Region')
+
+data_all_1 = data_all_1.sel(Time=slice(1971, None))
+
+fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(8, 6))
+linewidth = 2
+s_legend = 12
+s_label = 14
+
+# Second subplot: data_all_2 (summed over Region and Type, likely only time and material left)
+data_all_1.plot(ax=axes, color='black', linewidth=linewidth)
+axes.grid(alpha=0.3, linestyle='--')
+axes.tick_params(axis='both', which='major', labelsize=s_legend)
+axes.set_xlabel(" ", fontsize=s_label)
+axes.set_ylabel("Pumped Hydro Storage (MWh)", fontsize=s_label)
+axes.set_title('Sum over Region')
+
+# # First subplot: data_all_1 (summed over Region, still over Type and time likely)
+# for t in data_all_1.Type.values:
+#     data_plot = data_all_1.sel(Type=t)
+#     color, ls = dict_gentech_styles.get(t, ('black', '-'))
+#     axes[1].plot(data_plot.Time, data_plot.values, label=t, color=color, linestyle=ls, linewidth=linewidth)
+#     axes[1].grid(alpha=0.3, linestyle='--')
+#     axes[1].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+#     axes[1].tick_params(axis='both', which='major', labelsize=s_legend)
+#     axes[1].set_xlabel("Time", fontsize=s_label)
+#     axes[1].set_ylabel("Peak Capacity (MW)", fontsize=s_label)
+#     axes[1].legend(fontsize='small', ncol=5, loc='upper center', bbox_to_anchor=(0.5, -0.2))
+#     axes[1].set_title('Sum over Region')
+
+plt.suptitle(f"{scen_folder}: Generation - Stocks: Peak Capacity (MW)", fontsize=16)
+plt.tight_layout(rect=[0, 0, 1, 0.98])  # Adjust layout to make room for the suptitle
+# fig.savefig(path_test_plots / f"Gen_inflow_world.png", dpi=300, bbox_inches='tight')
+# fig.savefig(path_test_plots / f"Gen_stocks_world_1971.png", dpi=300, bbox_inches='tight')
+plt.show()
+
+
+#================================================================================
+#%%%% SUM over TECHs - world
+
+
+da_stocks_mat = main_model_factory_phs.stock_by_cohort_materials.copy() #stock_by_cohort_materials
+
+data_all = da_stocks_mat
+# data_all = data_all.sel(Type=data_all.Type != '<EMPTY>').sum('Type')
+# data_all = data_all.sel(Type=data_all.Type != '<EMPTY>').sum('Region')
+
+# Pick desired regions by name
+regions = ["Brazil", "C.Europe", "China"] 
+
+types_level1 = [m for m in data_all.material.values if m in ["Steel", "Concrete"]]
+types_level2 = [m for m in data_all.material.values if m in ["Aluminium", "Cu"]]
+types_level3 = [m for m in data_all.material.values if m not in (types_level1 + types_level2)]
+
+fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(18, 12), sharex=True)
+linewidth = 2
+s_legend = 12
+s_label = 14
+
+data_plot = data_all.sel(Time=slice(1971, None))/1_000_000 # convert grams to tonnes
+
+for i, region in enumerate(regions):
+    # Top row: Level 1 materials
+    for mat in types_level1:
+        if (region in data_plot.Region.values) and (mat in data_plot.material.values):
+            data_plot.sel(material=mat, Region=region).plot(ax=axes[0, i], label=mat, color=dict_materials_colors[mat], linewidth=linewidth)
+    axes[0, i].set_title(f"{region}")
+    axes[0, i].set_xlabel(" ")
+    axes[0, i].set_ylabel(" ")
+    axes[0, i].grid(alpha=0.3, linestyle='--')
+    axes[0, i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+    axes[0, i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+    axes[0, 2].legend(loc='upper left', fontsize=s_legend)
+
+    # Middle row: Level 2 materials
+    for mat in types_level2:
+        if (region in data_plot.Region.values) and (mat in data_plot.material.values):
+            data_plot.sel(material=mat, Region=region).plot(ax=axes[1, i], label=mat, color=dict_materials_colors[mat], linewidth=linewidth)
+    axes[1, i].set_title(f" ")
+    axes[1, i].set_xlabel(" ")
+    axes[1, i].set_ylabel(" ")
+    axes[1, i].grid(alpha=0.3, linestyle='--')
+    axes[1, i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+    axes[1, i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+    axes[1, 2].legend(loc='upper left', fontsize=s_legend)
+
+    # Bottom row: Level 3 materials
+    for mat in types_level3:
+        if (region in data_plot.Region.values) and (mat in data_plot.material.values):
+            data_plot.sel(material=mat, Region=region).plot(ax=axes[2, i], label=mat, color=dict_materials_colors[mat], linewidth=linewidth)
+    axes[2, i].set_title(f" ")
+    axes[2, i].set_xlabel("Time", fontsize=s_label)
+    axes[2, i].set_ylabel(" ")
+    axes[2, i].grid(alpha=0.3, linestyle='--')
+    axes[2, i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+    axes[2, i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+    axes[2, 2].legend(loc='upper left', fontsize=s_legend)
+    
+
+axes[0, 0].set_ylabel("Material inflow (t)", fontsize=s_label)
+axes[1, 0].set_ylabel("Material inflow (t)", fontsize=s_label)
+axes[2, 0].set_ylabel("Material inflow (t)", fontsize=s_label)
+
+plt.suptitle(f"{scen_folder}: Generation - Stocks Materials", fontsize=16)
+plt.tight_layout(rect=[0, 0, 1, 0.98])  # Adjust layout to make room for the suptitle
+region_str = "_".join(regions)
+# fig.savefig(path_test_plots / f"Gen_stocks-materials_{region_str}_1971.png", dpi=300)
+# fig.savefig(path_test_plots / f"Gen_stocks-materials_{region_str}_1971.svg", dpi=300)
+plt.show()
+
+
+#================================================================================
+#%%%% SUM over TECHs - world
+
+da_stocks_mat = main_model_factory_phs.stock_by_cohort_materials.copy()
+data_all = da_stocks_mat.sel(Type=da_stocks_mat.Type != '<EMPTY>').sum('Type').sum('Region')
+data_plot = data_all.sel(Time=slice(1971, None)) / 1_000_000  # grams → tonnes
+
+fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(10, 8))
+linewidth = 2
+s_legend = 12
+s_label = 14
+
+# Upper row: Copper
+for mat in ["Cu"]:
+    if mat in data_plot.material.values:
+        data_plot.sel(material=mat).plot(ax=axes[0], label=mat, color=dict_materials_colors.get(mat, None), linewidth=linewidth)
+# axes[0].set_title("Copper stocks", fontsize=s_label)
+axes[0].set_ylabel("Material stocks (t)", fontsize=s_label)
+axes[0].grid(alpha=0.3, linestyle='--')
+axes[0].ticklabel_format(style='sci', axis='y', scilimits=(0, 0))
+axes[0].tick_params(axis='both', which='major', labelsize=s_legend)
+axes[0].legend(loc='upper left', fontsize=s_legend)
+
+# Lower row: Aluminium and Steel
+for mat in ["Steel"]:
+    if mat in data_plot.material.values:
+        data_plot.sel(material=mat).plot(ax=axes[1], label=mat, color=dict_materials_colors.get(mat, None), linewidth=linewidth)
+# axes[1].set_title("Aluminium & Steel stocks", fontsize=s_label)
+axes[1].set_xlabel("Time", fontsize=s_label)
+axes[1].set_ylabel("Material stocks (t)", fontsize=s_label)
+axes[1].grid(alpha=0.3, linestyle='--')
+axes[1].ticklabel_format(style='sci', axis='y', scilimits=(0, 0))
+axes[1].tick_params(axis='both', which='major', labelsize=s_legend)
+axes[1].legend(loc='upper left', fontsize=s_legend)
+
+for mat in ["Aluminium"]:
+    if mat in data_plot.material.values:
+        data_plot.sel(material=mat).plot(ax=axes[2], label=mat, color=dict_materials_colors.get(mat, None), linewidth=linewidth)
+# axes[2].set_title("Aluminium & Steel stocks", fontsize=s_label)
+axes[2].set_xlabel("Time", fontsize=s_label)
+axes[2].set_ylabel("Material stocks (t)", fontsize=s_label)
+axes[2].grid(alpha=0.3, linestyle='--')
+axes[2].ticklabel_format(style='sci', axis='y', scilimits=(0, 0))
+axes[2].tick_params(axis='both', which='major', labelsize=s_legend)
+axes[2].legend(loc='upper left', fontsize=s_legend)
+
+plt.tight_layout()
+plt.show()
 
 
 
