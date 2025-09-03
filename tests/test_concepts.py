@@ -1,6 +1,8 @@
 
 import pytest
 
+import xarray as xr
+
 from imagematerials.concepts import KnowledgeGraph, Node
 
 multiple_inheritance = KnowledgeGraph(
@@ -46,3 +48,10 @@ def test_non_unique_error():
         KnowledgeGraph(
             Node("a", synonyms=["a"])
         )
+
+def test_rebroadcast_error():
+    array = xr.DataArray(0.0, dims=("Type",), coords={"Type": ["a1", "a2", "b1", "b2"]})
+    with pytest.raises(ValueError):
+        multiple_inheritance.rebroadcast_xarray(array, ["1", "2"])
+    with pytest.raises(ValueError):
+        multiple_inheritance.rebroadcast_xarray(array, ["a", "b"])
