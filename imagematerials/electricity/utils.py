@@ -264,6 +264,9 @@ def print_df_info(df, name):
 
 # calculate inflow & outflow with market shares in inflow (generation, storage other)
 def stock_share_calc(stock, market_share, init_tech, techlist):
+    YEAR_START = 1971  # start year of the simulation period
+    YEAR_END = 2060    # end year of the calculations
+    YEAR_OUT = 2060    # year of output generation = last year of reporting
 
     # Here, we define the market share of the stock based on a pre-calculation with several steps: 
     # 1) use Global total stock development, the market shares of the inflow and technology specific lifetimes to derive 
@@ -351,6 +354,10 @@ def stock_share_calc(stock, market_share, init_tech, techlist):
 # calculate inflow & outflow
 # first define a Function in which the stock-driven DSM is applied to return (the moving average of the) inflow & outflow for all regions
 def inflow_outflow(stock, lifetime, material_intensity, key):
+
+    YEAR_START = 1971  # start year of the simulation period
+    YEAR_END = 2060    # end year of the calculations
+    YEAR_OUT = 2060    # year of output generation = last year of reporting
 
     initial_year = stock.first_valid_index()
     outflow_mat  = pd.DataFrame(index=pd.MultiIndex.from_product([range(startyear,YEAR_OUT+1), material_intensity.columns]), columns=stock.columns)

@@ -61,7 +61,6 @@ path_base = path_current.parent.parent # base path of the project -> image-mater
 ####################################################################################################################
 
 
-
 YEAR_START = 1971   # start year of the simulation period
 YEAR_END = 2100     # end year of the calculations
 YEAR_OUT = 2100     # year of output generation = last year of reporting

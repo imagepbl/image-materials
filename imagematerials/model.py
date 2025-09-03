@@ -36,7 +36,7 @@ class GenericStocks(prism.Model):
     Region : prism.Coords[REGION]
         Defines the regions for the stock.
     Type : prism.Coords[STOCK_TYPE]
-        Defines the stock types (e.g., vehicles, buildings).
+        Defines the stock types (e.g., vehicle types, buildings).
     Cohort : prism.Coords[COHORT]
         Defines the cohorts (e.g., different age groups of stock).
     Time : prism.Coords[TIME]
@@ -142,6 +142,7 @@ class SharesInInflowStocks(prism.Model):
     present for which the market shares are known for the inflow.
     A model class for managing stocks and their inflows and outflows over time, 
     including the computation of initial and dynamic stock values based on input data.
+    
     Attributes
     ----------
     Region : prism.Coords[REGION]
@@ -170,6 +171,8 @@ class SharesInInflowStocks(prism.Model):
     Cohort:     prism.Coords[COHORT]
     Time:       prism.Coords[TIME]
     Technology: prism.Coords[TECH_TYPE]
+    # generation: Type: wind, solar PV, ... | Technology: wind-direct drive, wind-geared, solar PV-crystalline, solar PV-thin film, ...
+    # storage:    Type: Other storage       | Technology: battery 1, battery 2, hydrogen, ...
 
     # Inputs
     lifetimes:          xr.DataArray

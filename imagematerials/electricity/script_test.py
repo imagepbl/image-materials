@@ -67,7 +67,7 @@ VARIANT = "M_CP"
 scen_folder = SCEN + "_" + VARIANT
 # path_base = Path().resolve() # TODO absolute path of file "preprocessing.py" ? current solution can differ depending on IDE used (?) 
 path_current = Path().resolve()
-path_base = path_current #.parent #.parent # base path of the project -> image-materials
+path_base = path_current.parent.parent # base path of the project -> image-materials
 
 path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
 path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
