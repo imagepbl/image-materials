@@ -61,7 +61,7 @@ def sum_inflows_for_output(model_name, materials_dict, resource_group, save = Tr
 
         # from total_material create a csv that has the years as rows and regions as columns, mae sure that region names are no just '1' but 'class_ 1'
         # also drop material dimension
-        if key not in ['Copper', 'Cement', 'Sand']:
+        if key not in ['Copper']:
             total_material = total_material.drop_vars('material')
         # change the region coordinate so that it is class_ 1 instead of 1 , ...
         # Get the current region values
