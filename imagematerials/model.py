@@ -156,9 +156,9 @@ class SharesInInflowStocks(prism.Model):
     lifetimes : xr.DataArray
         Expected lifetimes for each stock type.
     stocks : xr.DataArray
-        Initial stock values.
+        Prescribed stock values of supertype (e.g. how many MWh "Other storage" capacity per year is needed).
     shares_inflow : xr.DataArray
-        Share data for the inflow subtypes.
+        Percentage shares of the inflow subtypes (e.g. shares of NIMH, Hydrogen, Lithium Sulfur etc. of "Other storage" technologies).
     input_data : tuple of str
         Tuple of input data variable names.
     output_data : tuple of str
@@ -170,9 +170,8 @@ class SharesInInflowStocks(prism.Model):
     Type:       prism.Coords[STOCK_TYPE]
     Cohort:     prism.Coords[COHORT]
     Time:       prism.Coords[TIME]
-    Technology: prism.Coords[TECH_TYPE]
-    # generation: Type: wind, solar PV, ... | Technology: wind-direct drive, wind-geared, solar PV-crystalline, solar PV-thin film, ...
-    # storage:    Type: Other storage       | Technology: battery 1, battery 2, hydrogen, ...
+    # generation: Super-Type: wind, solar PV, ... | Sub-Type: wind-direct drive, wind-geared, solar PV-crystalline, solar PV-thin film, ...
+    # storage:    Super-Type: Other storage       | Sub-Type: NiMH, Lithium-Sulfur, hydrogen, ...
 
     # Inputs
     lifetimes:          xr.DataArray
@@ -183,11 +182,13 @@ class SharesInInflowStocks(prism.Model):
 
     # For module dependency, ignored by prism
     input_data:  tuple[str] = ("stocks", "lifetimes", "knowledge_graph","shares_inflow", "set_unit_flexible")
-    output_data: tuple[str] = ("outflow_by_cohort", "inflow_by_tech", "stock_by_cohort") # stock_by_cohort & outflow_by_cohort also by technology
+    # "stocks" is by supertype, "lifetimes" & "shares_inflow" by subtype
+    output_data: tuple[str] = ("outflow_by_cohort", "inflow_by_tech", "stock_by_cohort") 
+    # stock_by_cohort, inflow_by_tech & outflow_by_cohort by subtype
 
     # stock_by_cohort: prism.TimeVariable[Region, Mode, Cohort, "count"] = prism.export(initial_value = prism.Array[Region, Mode, Cohort, 'count'](0.0))
-    inflow_by_tech:     prism.TimeVariable[REGION, STOCK_TYPE, TECH_TYPE, UnitFlexibleStock] = prism.export()
-    outflow_by_cohort:  prism.TimeVariable[REGION, STOCK_TYPE, TECH_TYPE, COHORT, UnitFlexibleStock] = prism.export()
+    inflow_by_tech:     prism.TimeVariable[REGION, STOCK_TYPE, UnitFlexibleStock] = prism.export()
+    outflow_by_cohort:  prism.TimeVariable[REGION, STOCK_TYPE, COHORT, UnitFlexibleStock] = prism.export()
 
     def compute_initial_values(self, time: prism.Timeline):
         """Compute the initial values for stocks and the survival matrix.
@@ -204,12 +205,11 @@ class SharesInInflowStocks(prism.Model):
         self.survival_matrix = SurvivalMatrix(survival)
         self.stock_by_cohort = xr.DataArray(
             0.0,
-            dims=("Time", "Cohort", "Region", "Type", "Technology"),
+            dims=("Time", "Cohort", "Region", "Type"),
             coords={"Time": self.Time,
                     "Cohort": self.Cohort,
                     "Region": self.Region,
-                    "Type": self.Type,
-                    "Technology": self.Technology})
+                    "Type": self.Type})
         self.stock_by_cohort = prism.Q_(self.stock_by_cohort, unit)
 
     def compute_values(self, time: prism.Time):
@@ -224,22 +224,18 @@ class SharesInInflowStocks(prism.Model):
         # pass unit from stocks
         unit = str(self.stocks.pint.units)
         t, dt = time.t, time.dt
-        # self.inflow[t].loc[:] = prism.Q_(0.0, unit)
         self.inflow_by_tech[t].loc[:] = prism.Q_(0.0, unit)
         self.outflow_by_cohort[t].loc[:] = prism.Q_(0.0, unit)
 
         # copy only for readability
         input_stock = self.stocks
         # calculate missing stock to fulfill demand (input stock)
-        # stock_diff = input_stock.loc[t] - self.stock_by_cohort.loc[t].sum("Cohort")
-        stock_diff = input_stock.loc[t] - self.stock_by_cohort.loc[t].sum("Technology").sum("Cohort")
+        # for this aggregate over sub-technologies in stock_by_cohort to compare to input_stock which is by super-type
+        stock_diff = input_stock.loc[t] - self.knowledge_graph.aggregate_sum(self.stock_by_cohort.loc[t].sum("Cohort"), self.stocks.coords["Type"], dim="Type")
+        
+        inflow_tech = self.knowledge_graph.rebroadcast_xarray(stock_diff, self.stock_by_cohort.coords["Type"], self.shares_inflow.sel(Cohort=t))
         # stock_diff cannot be negative (no negative inflow); when positive, divide by survival matrix in case there is a loss in the first year (inflow needs to be larger than input stock)
-        # stock_diff = xr.where(stock_diff>0, stock_diff/self.survival_matrix[t, t].drop("Cohort"), 0)
-
-        # self.inflow[t] = stock_diff
-        # distribute inflow to technologies according to shares
-        inflow_tech = stock_diff*self.shares_inflow.sel(Cohort=t)
-        inflow_tech = xr.where(inflow_tech>0, inflow_tech/self.survival_matrix[t, t].drop("Cohort"), 0) # TODO: why .drop("Cohort")? do I need to do .drop("Technology")as well?
+        inflow_tech = xr.where(inflow_tech>0, inflow_tech/self.survival_matrix[t, t].drop("Cohort"), 0)
         self.inflow_by_tech[t] = inflow_tech
 
         # calculate future development of the current cohort (inflow at time t; t: = time from current time onwards, t = cohort of time t)

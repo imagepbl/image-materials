@@ -20,7 +20,7 @@ import prism
 from imagematerials.distribution import ALL_DISTRIBUTIONS, NAME_TO_DIST
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_life_time_vehicles
-from imagematerials.model import GenericMainModel, GenericMaterials, GenericStocks, Maintenance, MaterialIntensities
+from imagematerials.model import GenericMainModel, GenericStocks, SharesInInflowStocks, Maintenance, GenericMaterials, MaterialIntensities
 from imagematerials.factory import ModelFactory, Sector
 from imagematerials.concepts import create_electricity_graph
 from imagematerials.electricity.utils import MNLogit, stock_tail, create_prep_data, stock_share_calc
@@ -1889,7 +1889,10 @@ gcap_data = gcap_data.iloc[:, :26]
 #----------------------------------------------------------------------------------------------------------
 
 # Calculations used in both 'vehicle battery storage' and 'other storage'
-
+YEAR_FIRST = 1907 # first use of pumped storage was in 1907 at the Engeweiher pumped storage facility near Schaffhausen, Switzerland (Mitali et al. 2022)
+YEAR_START = 1971
+YEAR_END = 2060
+YEAR_OUT = 2060
 
 ##################
 # Interpolations #
@@ -1935,7 +1938,7 @@ for year in range(2030+1,YEAR_OUT+1):
     row.index = [year]
     storage_density_interpol = pd.concat([storage_density_interpol, row])
 # assumed fixed energy densities before 2018
-for year in reversed(range(YEAR_SWITCH,storage_start)):
+for year in reversed(range(YEAR_FIRST_GRID,storage_start)): # was YEAR_SWITCH, storage_start
     # storage_density_interpol = storage_density_interpol.append(pd.Series(storage_density_interpol.loc[storage_density_interpol.first_valid_index()], name=year)).sort_index(axis=0)
     row = storage_density_interpol.loc[[storage_density_interpol.first_valid_index()]]
     row.index = [year]
@@ -2013,6 +2016,9 @@ for year in range(2050+1,YEAR_OUT+1):
     row = pd.DataFrame([storage_market_share.loc[storage_market_share.last_valid_index()]])
     storage_market_share.loc[year] = row.iloc[0]
 
+# total = storage_market_share.sum(axis=1)
+region_list = list(kilometrage.columns.values)   
+storage.columns = region_list
 
 #----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
@@ -2050,7 +2056,6 @@ PHEV_share.columns = region_list
 BEV_share.columns = region_list
 passengerkms.columns = region_list
 loadfactor.columns = region_list
-storage.columns = region_list
 
 
 
@@ -2093,69 +2098,69 @@ test = market_share_EVs.sum(axis=1) # -> market share sums to 1 for each year
 ###########################################################################################################
 
 
-ureg = pint.UnitRegistry(force_ndarray_like=True)
-# Define the units for each dimension
-unit_mapping = {
-    'time': ureg.year,
-    'year': ureg.year,
-    'Year': ureg.year,
-    'kg': ureg.kilogram,
-    'yr': ureg.year,
-    '%': ureg.percent,
-    't': ureg.tonne,
-    'MW': ureg.megawatt, #added
-    'GW': ureg.gigawatt, #added
-}
+# ureg = pint.UnitRegistry(force_ndarray_like=True)
+# # Define the units for each dimension
+# unit_mapping = {
+#     'time': ureg.year,
+#     'year': ureg.year,
+#     'Year': ureg.year,
+#     'kg': ureg.kilogram,
+#     'yr': ureg.year,
+#     '%': ureg.percent,
+#     't': ureg.tonne,
+#     'MW': ureg.megawatt, #added
+#     'GW': ureg.gigawatt, #added
+# }
 
-# Conversion table for all coordinates, to be removed/adapted after input tables are fixed.
-conversion_table = {
-    "gcap_stock": (["Time"], ["Type", "Region"],),
-    "gcap_types_materials": (["Cohort"], ["Type", "material"],)
-    # "gcap_materials_interpol": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]})
-}
+# # Conversion table for all coordinates, to be removed/adapted after input tables are fixed.
+# conversion_table = {
+#     "gcap_stock": (["Time"], ["Type", "Region"],),
+#     "gcap_types_materials": (["Cohort"], ["Type", "material"],)
+#     # "gcap_materials_interpol": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]})
+# }
+
+# # results_dict = {
+# #         'total_nr_vehicles_simple': total_nr_vehicles_simple,
+# #         'material_fractions_simple': material_fractions_simple,
+# #         'material_fractions_typical': material_fractions_typical,
+# #         'vehicle_weights_simple': vehicle_weights_simple,
+# #         'vehicle_weights_typical': vehicle_weights_typical,
+# #         'lifetimes': lifetimes_vehicles,
+# #         'battery_weights_typical': battery_weights_typical,
+# #         'battery_materials': battery_materials,
+# #         'battery_shares': battery_shares,
+# #         'weight_boats': weight_boats,
+# #         'vehicle_shares_typical': vehicle_shares_typical
+# #     }
 
 # results_dict = {
-#         'total_nr_vehicles_simple': total_nr_vehicles_simple,
-#         'material_fractions_simple': material_fractions_simple,
-#         'material_fractions_typical': material_fractions_typical,
-#         'vehicle_weights_simple': vehicle_weights_simple,
-#         'vehicle_weights_typical': vehicle_weights_typical,
-#         'lifetimes': lifetimes_vehicles,
-#         'battery_weights_typical': battery_weights_typical,
-#         'battery_materials': battery_materials,
-#         'battery_shares': battery_shares,
-#         'weight_boats': weight_boats,
-#         'vehicle_shares_typical': vehicle_shares_typical
-#     }
+#         'gcap_stock': gcap_stock,
+#         'gcap_types_materials': gcap_types_materials,
+#         'gcap_lifetime_distr': gcap_lifetime_distr,
+# }
 
-results_dict = {
-        'gcap_stock': gcap_stock,
-        'gcap_types_materials': gcap_types_materials,
-        'gcap_lifetime_distr': gcap_lifetime_distr,
-}
-
-# df = gcap_materials_interpol.copy()
+# # df = gcap_materials_interpol.copy()
 
 
-# Convert the DataFrames to xarray Datasets and apply units
-preprocessing_results_xarray = {}
+# # Convert the DataFrames to xarray Datasets and apply units
+# preprocessing_results_xarray = {}
 
 
-for df_name, df in results_dict.items():
-    if df_name in conversion_table:
-        data_xar_dataset = pandas_to_xarray(df, unit_mapping)
-        data_xarray = dataset_to_array(data_xar_dataset, *conversion_table[df_name])
-    else:
-        # lifetimes_vehicles does not need to be converted in the same way.
-        data_xarray = pandas_to_xarray(df, unit_mapping)
-    preprocessing_results_xarray[df_name] = data_xarray
+# for df_name, df in results_dict.items():
+#     if df_name in conversion_table:
+#         data_xar_dataset = pandas_to_xarray(df, unit_mapping)
+#         data_xarray = dataset_to_array(data_xar_dataset, *conversion_table[df_name])
+#     else:
+#         # lifetimes_vehicles does not need to be converted in the same way.
+#         data_xarray = pandas_to_xarray(df, unit_mapping)
+#     preprocessing_results_xarray[df_name] = data_xarray
 
 
 
-preprocessing_results_xarray["lifetimes"] = convert_life_time_vehicles(preprocessing_results_xarray["gcap_lifetime_distr"])
-preprocessing_results_xarray["stocks"] = preprocessing_results_xarray.pop("gcap_stock")
-preprocessing_results_xarray["material_intensities"] = preprocessing_results_xarray.pop("gcap_types_materials")
-# preprocessing_results_xarray["shares"] = preprocessing_results_xarray.pop("vehicle_shares")
+# preprocessing_results_xarray["lifetimes"] = convert_life_time_vehicles(preprocessing_results_xarray["gcap_lifetime_distr"])
+# preprocessing_results_xarray["stocks"] = preprocessing_results_xarray.pop("gcap_stock")
+# preprocessing_results_xarray["material_intensities"] = preprocessing_results_xarray.pop("gcap_types_materials")
+# # preprocessing_results_xarray["shares"] = preprocessing_results_xarray.pop("vehicle_shares")
 
 
 
@@ -2259,7 +2264,7 @@ start_time = time.time()
 # then we use that market share in combination with the stock developments to derive the stock share 
 # Here we use the vehcile stock (number of cars) as a proxy for the development of the battery stock (given that we're calculating the actual battery stock still, and just need to account for the dynamics of purchases to derive te stock share here) 
 EV_inflow_by_tech, EV_stock_cohorts, EV_outflow_cohorts = stock_share_calc(vehicles_EV, market_share_EVs, 'NiMH', ['NiMH', 'LMO', 'NMC', 'NCA', 'LFP', 'Lithium Sulfur', 'Lithium Ceramic ', 'Lithium-air'], storage_lifetime_interpol)
-# takes ~ 1 min to run
+# takes ~ 1-2 min to run
 end_time = time.time()
 print(f"Execution time: {end_time - start_time:.4f} seconds")
 
@@ -2269,9 +2274,9 @@ print(f"Execution time: {end_time - start_time:.4f} seconds")
 ###########################################################################################################
 #
 
-EV_stock =  EV_stock_cohorts.T.groupby(level=0).sum().T # sum(level) is and groupby(axis) will be deprecated -> transose first with .T (instead of specifying axis), then groupby level, then sum. To get intial shape back, transpose again with .T
-EV_storage_stock_abs  = EV_stock.groupby(level=1).sum()                           # sum over all regions to get the global share of the stock
-EV_storage_inflow_abs = EV_inflow_by_tech.groupby(level=1).sum()                   # sum over all regions to get the global share of the inflow
+EV_stock =  EV_stock_cohorts.T.groupby(level=0).sum().T   # sum(level) is and groupby(axis) will be deprecated -> transose first with .T (instead of specifying axis), then groupby level, then sum. To get intial shape back, transpose again with .T
+EV_storage_stock_abs  = EV_stock.groupby(level=1).sum()   # sum over all regions to get the global share of the stock
+EV_storage_inflow_abs = EV_inflow_by_tech.groupby(level=1).sum()  # sum over all regions to get the global share of the inflow
 
 # Calc. global share of different battery technologies (stock & inflow)
 EV_storage_stock_share  = pd.DataFrame(index=EV_storage_stock_abs.index,  columns=EV_storage_stock_abs.columns)
@@ -2330,10 +2335,16 @@ storage_vehicles = storage_BEV + storage_PHEV
 #%% 2.4) Hydro Power & Other Storage
 ###########################################################################################################
 
+# OPTION: NO V2G ---------------------------------------------------------------
+storage_vehicles = pd.DataFrame(0, index=storage.index, columns=storage.columns)  # set vehicle storage to zero when not using V2G
+storage_vehicles = storage_vehicles.loc[:YEAR_OUT]
+#-------------------------------------------------------------------------------
+
 # Take the TIMER Hydro-dam capacity (MW) & compare it to Pumped hydro capacity (MW) projections from the International Hydropower Association
 
 Gcap_hydro = gcap_data[['time','DIM_1', 7]].pivot_table(index='time', columns='DIM_1')   # IMAGE-TIMER Hydro dam capacity (power, in MW)
 Gcap_hydro = Gcap_hydro.iloc[:, :26]
+region_list = list(kilometrage.columns.values)                          # get a list with region names
 Gcap_hydro.columns = region_list
 Gcap_hydro = Gcap_hydro.loc[:YEAR_OUT]
 
@@ -2388,25 +2399,116 @@ storage_out_phs = pd.concat([phs_storage], keys=['phs'], names=['type'])
 storage_out_evs = pd.concat([evs_storage], keys=['evs'], names=['type']) 
 storage_out_oth = pd.concat([oth_storage], keys=['oth'], names=['type']) 
 storage_out = pd.concat([storage_out_phs, storage_out_evs, storage_out_oth])
-storage_out.to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test'  / 'storage_by_type_MWh.csv')        # in MWh
+# storage_out.to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test'  / 'storage_by_type_MWh.csv')        # in MWh
 
 # derive inflow & outflow (in MWh) for PHS, for later use in the material calculations 
 PHS_kg_perkWh = 26.8   # kg per kWh storage capacity (as weight addition to existing hydro plants to make them pumped) 
 phs_storage_stock_tail   = stock_tail(phs_storage.astype(float), YEAR_OUT)
 storage_lifetime_PHS = storage_lifetime['PHS'].reindex(list(range(YEAR_FIRST_GRID,YEAR_OUT+1)), axis=0).interpolate(limit_direction='both')
 
+# TESTS TESTS --------------------------------------------------------
+
+# Test PHS interpolation pre-1971
+regions_to_plot = ["China", "Brazil", "US"]  # adjust to your available columns
+df = phs_storage_stock_tail.loc[:1980,:]  # replace with your actual variable
+fig, ax = plt.subplots(figsize=(10, 6))
+for region in regions_to_plot:
+    if region in df.columns:
+        ax.plot(df.index[:-1], df[region].iloc[:-1], label=region)  # up to before last timestep
+        # ax.plot(phs_storage.index[:-1], phs_storage[region].iloc[:-1], label=region)
+ax.set_xlabel("Year")
+ax.set_ylabel("Value")
+ax.set_title("Comparison of Regions")
+ax.legend()
+ax.grid(alpha=0.3, linestyle="--")
+plt.show()
+
+
+# Storage tier comparisons
+region_colors = {
+    "China": "blue",
+    "Brazil": "green",
+    "Mexico": "orange"
+}
+scenario_linestyles = {
+    "PHS": "-",
+    "V2G": "--",
+    "other storage": ":"
+}
+
+# Plot 1 absolute----------------------------
+dfs = [phs_storage, evs_storage, oth_storage]
+names = ["PHS", "V2G", "other storage"]  # labels for legend
+
+regions_to_plot = ["China", "Brazil", "Mexico"]
+
+fig, ax = plt.subplots(figsize=(10, 6))
+for df, name in zip(dfs, names):
+    # Ensure numeric (your data is object type)
+    df = df.apply(pd.to_numeric, errors="coerce")
+    df = df.iloc[:-1]  # drop last timestep
+    
+    for region in regions_to_plot:
+        if region in df.columns:
+            ax.plot(df.index, df[region],
+                    label=f"{region} - {name}",
+                    color=region_colors[region],
+                    linestyle=scenario_linestyles[name])
+
+ax.set_xlabel("Year")
+ax.set_ylabel("Value")
+ax.set_title("Comparison of Regions Across Scenarios")
+ax.legend()
+ax.grid(alpha=0.3, linestyle="--")
+plt.legend()
+plt.show()
+
+
+# Plot 1 relative----------------------------
+dfs = [phs_storage_fraction, evs_storage_fraction, oth_storage_fraction]
+names = ["PHS", "V2G", "other storage"]  # labels for legend
+
+regions_to_plot = ["China", "Brazil", "Mexico"]
+
+fig, ax = plt.subplots(figsize=(10, 6))
+for df, name in zip(dfs, names):
+    # Ensure numeric (your data is object type)
+    df = df.apply(pd.to_numeric, errors="coerce")
+    df = df.iloc[:-1]  # drop last timestep
+    
+    for region in regions_to_plot:
+        if region in df.columns:
+            ax.plot(df.index, df[region],
+                    label=f"{region} - {name}",
+                    color=region_colors[region],
+                    linestyle=scenario_linestyles[name])
+
+ax.set_xlabel("Year")
+ax.set_ylabel("Value")
+ax.set_title("Comparison of Regions Across Scenarios")
+ax.legend()
+ax.grid(alpha=0.3, linestyle="--")
+plt.legend()
+plt.show()
+
+
+
 
 ###########################################################################################################
 #%%% 2.4.1) Prep_data File
 ###########################################################################################################
 
-phs_stock = phs_storage_stock_tail.copy()
+
+# PHS -----------------------------------------------------------------------------------------------------
+
+phs_stock = phs_storage_stock_tail.copy() #it was oth_storage.copy() Hä?
 
 # Bring dataframes into correct shape for the results_dict
 
-# stocks: (years, regions) index and technologies as columns -> years as index and (technology, region) as columns
+# stocks: years as index and regions as columns -> years as index and (technology, region) as columns
 # Current columns are regions
 regions = phs_stock.columns.tolist()
+
 # Create a MultiIndex with technology "PHS" for all columns
 multi_cols = pd.MultiIndex.from_tuples([("PHS", r) for r in regions], names=["technology", "region"])
 # Assign to the DataFrame
@@ -2449,7 +2551,86 @@ prep_data_phs = create_prep_data(results_dict, conversion_table, unit_mapping)
 prep_data_phs["stocks"] = prism.Q_(prep_data_phs["stocks"], "MWh")
 prep_data_phs["material_intensities"] = prism.Q_(prep_data_phs["material_intensities"], "kg/MWh")
 prep_data_phs["set_unit_flexible"] = prism.U_(prep_data_phs["stocks"]) # prism.U_ gives the unit back
-    
+
+
+# Other storage--------------------------------------------------------------------------------------------
+
+oth_storage_stock = oth_storage.copy()
+
+# Bring dataframes into correct shape for the results_dict
+
+# stocks: (years, regions) index and technologies as columns -> years as index and (technology, region) as columns
+# Current columns are regions
+regions = oth_storage.columns.tolist()
+# stor_tech = list(storage_lifetime_interpol.columns)
+# Create a MultiIndex with technology "Other Storage" for all columns
+multi_cols = pd.MultiIndex.from_tuples([("Other Storage", r) for r in regions], names=["technology", "region"])
+# multi_cols = pd.MultiIndex.from_product([stor_tech, regions], names=["technology", "region"])
+# Assign to the DataFrame
+oth_storage_stock.columns = multi_cols
+
+
+# lifetimes
+df_mean = storage_lifetime_interpol.copy() #.to_frame()
+df_stdev = df_mean * STD_LIFETIMES_ELECTR
+df_mean.columns = [(col, 'mean') for col in df_mean.columns] # Rename columns to multi-level tuples
+df_stdev.columns = [(col, 'stdev') for col in df_stdev.columns]
+oth_storage_lifetime_distr = pd.concat([df_mean, df_stdev], axis=1) # Concatenate along columns
+oth_storage_lifetime_distr.index.name = 'Year'
+
+# MIs: (years, material) index and technologies as columns -> years as index and (technology, Material) as columns
+stor_tech = list(storage_lifetime_interpol.columns)
+# 2nd level of the MultiIndex are materials (1971,'Aluminium')
+oth_storage_materials = stor_materials_interpol.copy()
+oth_storage_materials.index.names = ["year", "material"]  # assign names
+oth_storage_materials = oth_storage_materials.reset_index(level=["year", "material"])
+# Pivot so we get (technology, material) as columns, years as index
+oth_storage_materials = oth_storage_materials.melt(id_vars=["year", "material"], var_name="technology", value_name="value")
+oth_storage_materials = oth_storage_materials.pivot_table(index="year", columns=["technology", "material"], values="value")
+# Ensure proper MultiIndex column names
+oth_storage_materials.columns = pd.MultiIndex.from_tuples(oth_storage_materials.columns, names=["technology", "material"])
+xr_oth_storage_materials = dataset_to_array(pandas_to_xarray(oth_storage_materials, unit_mapping), *(["Cohort"], ["Type", "material"],))
+xr_storage_density_interpol = dataset_to_array(pandas_to_xarray(storage_density_interpol, unit_mapping), *(["Cohort"], ["Type"],))
+oth_storage_materialintens = xr_oth_storage_materials * xr_storage_density_interpol
+
+
+
+# Conversion table for all coordinates, to be removed/adapted after input tables are fixed.
+conversion_table = {
+    "oth_storage_stock": (["Time"], ["Type", "Region"],),
+    "oth_storage_materials": (["Cohort"], ["SubType", "material"],),
+    "oth_storage_shares": (["Cohort"], ["SubType",])
+}
+## "gcap_materials_interpol": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]})
+
+results_dict = {
+        'oth_storage_stock': oth_storage_stock,
+        'oth_storage_materials': oth_storage_materialintens.sel(Cohort=slice(1971, None)),
+        'oth_storage_lifetime_distr': oth_storage_lifetime_distr,
+        'oth_storage_shares': storage_market_share
+}
+
+
+prep_data_oth_storage = create_prep_data(results_dict, conversion_table, unit_mapping)
+prep_data_oth_storage["stocks"] = prism.Q_(prep_data_oth_storage["stocks"], "MWh")
+prep_data_oth_storage["material_intensities"] = prism.Q_(prep_data_oth_storage["material_intensities"], "kg/kWh")
+prep_data_oth_storage["set_unit_flexible"] = prism.U_(prep_data_oth_storage["stocks"]) # prism.U_ gives the unit back
+
+
+# TESTS TESTS --------------------------------------------------------
+total = storage_market_share.sum(axis=1)
+df = storage_market_share
+plt.figure(figsize=(12, 8))
+for column in df.columns:
+    plt.plot(df.index, df[column], label=column, linewidth=2)
+plt.xlabel('Year', fontsize=12)
+plt.ylabel('Values', fontsize=12)
+plt.title('Technology Trends Over Time', fontsize=14, fontweight='bold')
+plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()
+
 
 ###########################################################################################################
 #%%% 2.4.2) Stock Modelling
@@ -2466,12 +2647,12 @@ inflow_by_tech, stock_cohorts, outflow_cohorts = stock_share_calc(oth_storage, s
 
 
 
+# PHS =======================================================================================
 
 # # Define the complete timeline, including historic tail
 time_start = prep_data_phs["stocks"].coords["Time"].min().values
-time_end = 2060
-complete_timeline = prism.Timeline(time_start, time_end, 1)
-simulation_timeline = prism.Timeline(1970, time_end, 1)
+complete_timeline = prism.Timeline(time_start, YEAR_END, 1)
+simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
 
 sec_electr_stor_phs = Sector("electr_stor_phs", prep_data_phs)
 
@@ -2484,6 +2665,110 @@ main_model_factory_phs = ModelFactory(
 main_model_factory_phs.simulate(simulation_timeline)
 list(main_model_factory_phs.electr_stor_phs)
 
+
+
+# Other Storage ==============================================================================
+
+time_start = prep_data_oth_storage["stocks"].coords["Time"].min().values
+complete_timeline = prism.Timeline(time_start, YEAR_END, 1)
+simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
+
+sec_electr_stor_oth = Sector("electr_stor_oth", prep_data_oth_storage)
+
+main_model_factory_oth = ModelFactory(
+    electr_stor_oth, complete_timeline
+    ).add(SharesInInflowStocks
+    ).add(MaterialIntensities
+    ).finish()
+
+main_model_factory_oth.simulate(simulation_timeline)
+list(main_model_factory_oth.electr_stor_oth)
+
+
+
+
+
+###########################################################################################################
+#%%% 2.4.3) Material calculations
+###########################################################################################################
+
+
+# apply the dedicated electricity storage market shares to the demand for dedicated (other) storage to find storage by type and by region
+# stock = stock_cohorts.loc[idx[:,:],idx[:,:]].sum(axis=1, level=0)
+# storage_stock_abs = stock.sum(axis=0, level=1) 
+stock =  stock_cohorts.T.groupby(level=0).sum().T # sum(level) is and groupby(axis) will be deprecated -> transose first with .T (instead of specifying axis), then groupby level, then sum. To get intial shape back, transpose again with .T
+storage_stock_abs  = stock.groupby(level=1).sum()                             # sum over all regions to get the global share of the stock
+stock_total = stock.sum(axis=1).unstack(level=0)                            # total stock by region
+storage_stock_share = pd.DataFrame(index=storage_stock_abs.index, columns=storage_stock_abs.columns)
+
+for tech in storage_stock_abs.columns:
+    storage_stock_share.loc[:,tech] = storage_stock_abs.loc[:,tech].div(storage_stock_abs.sum(axis=1))
+
+# then, the sum of the global inflow & outflow is calculated for comparison in the figures below
+# outflow = outflow_cohorts.loc[idx[:,:],idx[:,:]].sum(axis=1, level=0)
+outflow =  outflow_cohorts.T.groupby(level=0).sum().T # sum(level) is and groupby(axis) will be deprecated -> transose first with .T (instead of specifying axis), then groupby level, then sum. To get intial shape back, transpose again with .T
+outflow_total = outflow.sum(axis=1).unstack(level=0)                        # total by regions
+
+inflow_total = inflow_by_tech.sum(axis=1).unstack(level=0)
+
+
+# define empty dataframe for the weight of storage technolgies (in kg)
+i_storage_weight = pd.DataFrame().reindex_like(stock)            
+o_storage_weight = pd.DataFrame().reindex_like(stock)           
+s_storage_weight = pd.DataFrame().reindex_like(stock)      
+
+index  = i_storage_weight.index
+column = pd.MultiIndex.from_product([i_storage_weight.columns, storage_materials.index], names=['technologies', 'materials'])
+i_storage_materials = pd.DataFrame(index=index.set_names(['regions', 'years']), columns=column)            
+o_storage_materials= []
+s_storage_materials= []
+
+# calculate the total weight of the inflow of storage technologies in kg based on the (CHANGING!) energy density (kg/kWh) and storage demand (MWh)
+for region in oth_storage.columns:
+   for material in storage_materials.index:
+      inflow_multiplier = inflow_by_tech.loc[idx[region,:],:]
+      inflow_multiplier.index = inflow_multiplier.index.droplevel(0)
+      i_storage_weight.loc[idx[region,:],:] = storage_density_interpol.mul(inflow_multiplier).values * 1000  # * 1000 because density is in kg/kWh and storage is in MWh
+      for tech in storage_density_interpol.columns:
+         i_storage_materials.loc[idx[region,:],idx[tech,material]] = i_storage_weight.loc[idx[region,:],tech].mul(stor_materials_interpol.loc[idx[list(range(1990,endyear+1)),material],tech].to_numpy()) / 1000000 # kg to kt
+
+# calculate the weight of the stock and the outflow (in kg)
+# this one's tricky, the outflow and stock are calculated by year AND cohort, because the total weight is represented by the sum of the weight of each cohort. 
+# As the density (kg/kWh) is different for every cohort (battery weight changes over time, older batteries are heavier), the total outflow FOR EACH YEAR is the 
+# sumproduct of the density and the outflow by cohort.
+# 'intermediate' variables are use to speed up computing (by avoiding accessing dataframes unnecesarily), still, this loop takes about 25 minutes
+for region in oth_storage.columns: #['India']:
+    for tech in storage_density_interpol.columns: #['Flywheel']: 
+        for year in storage_density_interpol.index:
+            
+            # the first series of the sumproduct (the storage capacity in MWh) has a multi-level index, so the second level needs to be removed before it can be multiplied
+            series_mwh_o = outflow_cohorts.loc[idx[region,year],idx[tech,:]]
+            series_mwh_o.index = series_mwh_o.index.droplevel(0)                
+            o_storage_weight_intermediate               = series_mwh_o.loc[list(range(1990, outyear + 1))].mul(storage_density_interpol[tech] * 1000)       # * 1000 because density is in kg/kWh and storage is in MWh
+            o_storage_weight.loc[idx[region,year],tech] = o_storage_weight_intermediate.sum()
+            o_storage_materials_intermediate = stor_materials_interpol.loc[idx[list(range(1990, outyear + 1)),:],tech].unstack().mul(o_storage_weight_intermediate, axis=0).sum(axis=0)
+            
+            # same for stock
+            series_mwh_s = stock_cohorts.loc[idx[region,year],idx[tech,:]]
+            series_mwh_s.index = series_mwh_s.index.droplevel(0)                
+            s_storage_weight_intermediate               = series_mwh_s.mul(storage_density_interpol[tech] * 1000)       # * 1000 because density is in kg/kWh and storage is in MWh
+            s_storage_weight.loc[idx[region,year],tech] = s_storage_weight_intermediate.sum()  
+            s_storage_materials_intermediate = stor_materials_interpol.loc[idx[list(range(1990, outyear + 1)),:],tech].unstack().mul(s_storage_weight_intermediate, axis=0).sum(axis=0)
+            
+            o_storage_materials.append([region, tech, year, o_storage_materials_intermediate[0], o_storage_materials_intermediate[1], o_storage_materials_intermediate[2], o_storage_materials_intermediate[3], o_storage_materials_intermediate[4], o_storage_materials_intermediate[5], o_storage_materials_intermediate[6], o_storage_materials_intermediate[7], o_storage_materials_intermediate[8]])
+            s_storage_materials.append([region, tech, year, s_storage_materials_intermediate[0], s_storage_materials_intermediate[1], s_storage_materials_intermediate[2], s_storage_materials_intermediate[3], s_storage_materials_intermediate[4], s_storage_materials_intermediate[5], s_storage_materials_intermediate[6], s_storage_materials_intermediate[7], s_storage_materials_intermediate[8]]) 
+            
+order = list(s_storage_materials_intermediate.index)
+
+# restore storage materials to pandas dataframe (unit: kg)
+o_storage_materials = pd.DataFrame(o_storage_materials).set_index([0,1,2]).rename(columns=dict(zip(list(range(3,12)), order))).stack().unstack(level=[1,3]).reindex_like(i_storage_materials) / 1000000
+s_storage_materials = pd.DataFrame(s_storage_materials).set_index([0,1,2]).rename(columns=dict(zip(list(range(3,12)), order))).stack().unstack(level=[1,3]).reindex_like(i_storage_materials) / 1000000
+
+# Insert the materials (in kg) of the PHS storage component, which was calculated before 
+for material in storage_materials.index:
+   i_storage_materials.loc[idx[:,:], idx['PHS', material]] = phs_storage_inflow.reorder_levels([1,0]).loc[:,idx['PHS',material]]  / 1000000
+   s_storage_materials.loc[idx[:,:], idx['PHS', material]] = phs_storage_stock.reorder_levels([1,0]).loc[:,idx['PHS',material]]   / 1000000
+   o_storage_materials.loc[idx[:,:], idx['PHS', material]] = phs_storage_outflow.reorder_levels([1,0]).loc[:,idx['PHS',material]] / 1000000 
 
 
 
@@ -2831,7 +3116,7 @@ def get_preprocessing_data_grid(base_dir: str, SCEN, VARIANT, YEAR_START, YEAR_E
     grid_length_HV_out_a = pd.concat([grid_length_Hv_above], keys=['aboveground'], names=['type']) 
     grid_length_HV_out_u = pd.concat([grid_length_Hv_under], keys=['underground'], names=['type']) 
     grid_length_HV_out   = pd.concat([grid_length_HV_out_a, grid_length_HV_out_u])
-    grid_length_HV_out.to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test' / 'grid_length_HV_km.csv') # in km
+    # grid_length_HV_out.to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test' / 'grid_length_HV_km.csv') # in km
 
     grid_length_Mv_above = grid_length_Mv_time * (1 - function_Mv_under/100)
     grid_length_Mv_under = grid_length_Mv_time * function_Mv_under/100
@@ -3155,7 +3440,7 @@ grid_length_Hv_under = grid_length_Hv_total * function_Hv_under/100
 grid_length_HV_out_a = pd.concat([grid_length_Hv_above], keys=['aboveground'], names=['type']) 
 grid_length_HV_out_u = pd.concat([grid_length_Hv_under], keys=['underground'], names=['type']) 
 grid_length_HV_out   = pd.concat([grid_length_HV_out_a, grid_length_HV_out_u])
-grid_length_HV_out.to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test' / 'grid_length_HV_km.csv') # in km
+# grid_length_HV_out.to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test' / 'grid_length_HV_km.csv') # in km
 
 grid_length_Mv_above = grid_length_Mv_time * (1 - function_Mv_under/100)
 grid_length_Mv_under = grid_length_Mv_time * function_Mv_under/100

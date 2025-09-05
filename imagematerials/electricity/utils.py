@@ -182,10 +182,12 @@ def create_prep_data(results_dict, conversion_table, unit_mapping):
     # Convert the DataFrames to xarray Datasets and apply units
     prep_data = {}
     for df_name, df in results_dict.items():
-        if df_name in conversion_table:
+        if df_name in conversion_table and isinstance(df, pd.DataFrame): # convert to xarray
             print(f"{df_name} to xarray Dataset")
             data_xar_dataset = pandas_to_xarray(df, unit_mapping)
             data_xarray = dataset_to_array(data_xar_dataset, *conversion_table[df_name])
+        elif df_name in conversion_table and isinstance(df, xr.DataArray): # already xarray
+            data_xarray = df 
         else:
             print(f"{df_name} not in conversion_table")
             # lifetimes_vehicles does not need to be converted in the same way.
