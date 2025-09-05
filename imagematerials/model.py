@@ -528,7 +528,7 @@ class RestOf(prism.Model):
     material: prism.Coords[MATERIAL_TYPE]
 
     # Data dependencies
-    input_data: tuple[str] = ("gompertz_coefs", "gdp_per_capita", "population", "historic_diff_consumption")
+    input_data: tuple[str] = ("gompertz_coefs", "gdp_per_capita", "population", "historic_diff_consumption_mean")
     output_data: tuple[str] = ("inflow_materials_rest",)
 
     # Output data inflow_materials_rest
@@ -545,7 +545,7 @@ class RestOf(prism.Model):
         )
         self.inflow_materials_rest = prism.Q_(self.inflow_materials_rest, "t")
         
-    def compute_values(self, time: prism.Time, gompertz_coefs, gdp_per_capita, population, historic_diff_consumption):
+    def compute_values(self, time: prism.Time, gompertz_coefs, gdp_per_capita, population, historic_diff_consumption_mean):
         t, dt = time.t, time.dt
         if t > 1970:
             # Select coefficients for all regions/materials
@@ -562,7 +562,7 @@ class RestOf(prism.Model):
             # Align historic_diff_consumption to the same dims/order as inflow_materials_rest
             self.inflow_materials_rest.loc[t] = xr.where(
                 mask,
-                historic_diff_consumption.transpose(*self.inflow_materials_rest.loc[t].dims),
+                historic_diff_consumption_mean.transpose(*self.inflow_materials_rest.loc[t].dims),
                 self.inflow_materials_rest.loc[t]
             )
         else:

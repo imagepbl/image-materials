@@ -21,20 +21,38 @@ from imagematerials.rest_of.nmm_projections import (cement_projection,
 
 from pathlib import Path
 
-def fit_models_all_materials(scenarios_list: list = ["SSP2_M_CP"]):
+def fit_models_all_materials(scenarios_list: list = ["SSP2_M_CP"], path_input_data=None, path_input_data_image=None):
+    if path_input_data is None:
+        path_input_data = Path("../../../data/raw/rest-of/")
+    if path_input_data_image is None:
+        path_input_data_image = Path("../../../data/raw/image/")
 
     results = {}
 
     for scenario in scenarios_list:
         print(scenario)
         # Run all projections for this scenario
-        copper = copper_projection(scenario=scenario)
-        steel = steel_projection(scenario=scenario)
-        aluminium = aluminium_projection(scenario=scenario)
-        cement = cement_projection(scenario=scenario)
-        sand = sand_projections(scenario=scenario)
-        limestone = limestone_projection(scenario=scenario)
-        clay = clay_projections(scenario=scenario)
+        copper = copper_projection(scenario=scenario, 
+                                   path_input_data=path_input_data,
+                                   path_input_data_image=path_input_data_image)
+        steel = steel_projection(scenario=scenario, 
+                                 path_input_data=path_input_data,
+                                 path_input_data_image=path_input_data_image)
+        aluminium = aluminium_projection(scenario=scenario, 
+                                         path_input_data=path_input_data,
+                                         path_input_data_image=path_input_data_image)
+        cement = cement_projection(scenario=scenario, 
+                                   path_input_data=path_input_data,
+                                   path_input_data_image=path_input_data_image)
+        sand = sand_projections(scenario=scenario, 
+                                path_input_data=path_input_data,
+                                path_input_data_image=path_input_data_image)
+        limestone = limestone_projection(scenario=scenario, 
+                                         path_input_data=path_input_data,
+                                         path_input_data_image=path_input_data_image)
+        clay = clay_projections(scenario=scenario, 
+                                path_input_data=path_input_data,
+                                path_input_data_image=path_input_data_image)
         # biomass = biomass_data(scenario=scenario)
         fossil_fuel = fossil_fuel_data(scenario=scenario)
         water = water_consumption(scenario=scenario)
@@ -185,6 +203,7 @@ def historic_other_fraction_consumption_to_xr(results_models):
 
     # save both in one xarray
     for material in material_list_complete_fit + material_list_sub_regions_fit:
+        print(material)
         if material in no_full_data_avaiable_on_region_list:
             # take steel data and replace all values with np.nan for limestone and clay because no diff data available
             diff_cons = results_models['SSP2_M_CP']['steel'].historic_other_fraction_consumption
@@ -195,9 +214,14 @@ def historic_other_fraction_consumption_to_xr(results_models):
             diff_cons = results_models['SSP2_M_CP'][material].historic_other_fraction_consumption
         
         # to xarray
-        diff_cons = diff_cons.to_xarray()
+        diff_cons = diff_cons.to_xarray().to_array()
         # rename coords
-        diff_cons = diff_cons.rename({'index': 'Region'})
+        if material in ['cement', 'sand']:
+            diff_cons = diff_cons.rename({'t': 'Time', 'variable': 'Region'})
+        elif material in ['copper']:
+            diff_cons = diff_cons.rename({'year': 'Time', 'variable': 'Region'})
+        else:
+            diff_cons = diff_cons.rename({'index': 'Time', 'variable': 'Region'})
         # replace dimension of coords Region to '1', '2', 3,... instead of class_ 1, class_ 2, ...
         diff_cons['Region'] = diff_cons['Region'].str.replace('class_ ', '')
         # capitalize material
@@ -210,3 +234,5 @@ def historic_other_fraction_consumption_to_xr(results_models):
     diff_cons_all = diff_cons_all.sortby('material')
     # Save the results to a file
     diff_cons_all.to_netcdf('../../../data/raw/rest-of/gompertz_values/diff_cons_all.nc')
+
+    return diff_cons_all
