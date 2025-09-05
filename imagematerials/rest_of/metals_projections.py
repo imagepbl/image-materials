@@ -14,10 +14,13 @@ from imagematerials.rest_of.const import (REGION_TO_CLASS_DICT,
 
 
 # COPPER
-def copper_projection(scenario: str):
+def copper_projection(scenario: str, path_input_data, path_input_data_image):
     copper = ResourceModel(resource_group = 'metals', resource = 'copper', 
                         image_mat_available = True, start_year = 1990,
-                        scenario= scenario, end_year = 2011)
+                        scenario= scenario, end_year = 2011, 
+                        path_input_data=path_input_data,
+                        path_input_data_image=path_input_data_image
+                        )
 
     class_1 = ['class_ 1'] 
 
@@ -87,13 +90,15 @@ def copper_projection(scenario: str):
 
 
 # Steel projections
-def steel_projection(scenario: str):
+def steel_projection(scenario: str, path_input_data, path_input_data_image):
     # Steel
     steel = ResourceModel(resource_group = 'metals', resource = 'steel', 
                         image_mat_available = True, start_year = 1971,
                         scenario=scenario,
                         convert_image=True, end_year = 2012, convert_to_tons = 1/1000_000, 
-                        trade_data=True)
+                        trade_data=True, 
+                        path_input_data=path_input_data,
+                        path_input_data_image=path_input_data_image)
     
     class_1 = ['class_ 1'] 
 
@@ -182,12 +187,14 @@ def steel_projection(scenario: str):
 
 
 # Aluminium
-def aluminium_projection(scenario: str):
+def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
 
     # Aluminium
     aluminium = ResourceModel(resource_group = 'metals', resource = 'aluminium', 
                         image_mat_available = True, start_year = 1998, 
-                        scenario=scenario, end_year = 2024
+                        scenario=scenario, end_year = 2024,
+                        path_input_data=path_input_data,
+                        path_input_data_image=path_input_data_image
                         )
 
     # removed outlier reginos so they are not represented in the global fit

@@ -129,7 +129,11 @@ def make_gompertz_coefs_da(results_models, material_order=None, region_order=Non
 
 
 
-def historic_other_fraction_comsumption_to_xr(results_models):
+def mean_historic_other_fraction_consumption_to_xr(results_models):
+    """
+    Create a DataArray of mean of last 5 years of historic other fraction consumption for all materials.
+
+    """
     no_full_data_avaiable_on_region_list = ['limestone', 'clay']
     material_list_complete_fit = ['steel', 'cement', 'limestone', 'clay', 'sand', 'copper']
     material_list_sub_regions_fit = ['aluminium']
@@ -164,6 +168,45 @@ def historic_other_fraction_comsumption_to_xr(results_models):
     # sort material alphabetically
     diff_cons_all = diff_cons_all.sortby('material')
     # Save the results to a file
-    diff_cons_all.to_netcdf('../../../data/raw/rest-of/gompertz_values/diff_cons_all.nc')
+    diff_cons_all.to_netcdf('../../../data/raw/rest-of/gompertz_values/diff_cons_all_mean.nc')
 
+
+def historic_other_fraction_consumption_to_xr(results_models):
+    """
+    Create a DataArray of historic other fraction consumption for all materials.
+
+    """
+    no_full_data_avaiable_on_region_list = ['limestone', 'clay']
+    material_list_complete_fit = ['steel', 'cement', 'limestone', 'clay', 'sand', 'copper']
+    material_list_sub_regions_fit = ['aluminium']
+
+    # create an empty xarray dataset
+    diff_cons_all = xr.Dataset()
+
+    # save both in one xarray
+    for material in material_list_complete_fit + material_list_sub_regions_fit:
+        if material in no_full_data_avaiable_on_region_list:
+            # take steel data and replace all values with np.nan for limestone and clay because no diff data available
+            diff_cons = results_models['SSP2_M_CP']['steel'].historic_other_fraction_consumption
+            diff_cons = diff_cons.mask(diff_cons != 0, np.nan)
+
+        else:
+            # take acutal material data
+            diff_cons = results_models['SSP2_M_CP'][material].historic_other_fraction_consumption
         
+        # to xarray
+        diff_cons = diff_cons.to_xarray()
+        # rename coords
+        diff_cons = diff_cons.rename({'index': 'Region'})
+        # replace dimension of coords Region to '1', '2', 3,... instead of class_ 1, class_ 2, ...
+        diff_cons['Region'] = diff_cons['Region'].str.replace('class_ ', '')
+        # capitalize material
+        material = material.capitalize()
+        diff_cons_all[material] = diff_cons
+
+
+    diff_cons_all = diff_cons_all.to_array(dim='material')
+    # sort material alphabetically
+    diff_cons_all = diff_cons_all.sortby('material')
+    # Save the results to a file
+    diff_cons_all.to_netcdf('../../../data/raw/rest-of/gompertz_values/diff_cons_all.nc')
