@@ -28,6 +28,7 @@ COHORTS = 50
 
 
 # Scenario settings ---------------------------------------------
+STANDARD_SCEN_EXTERNAL_DATA = "SSP2_M_CP"
 SCEN = "SSP2"
 # CP or 2D (Add "_RE" for Resource Efficiency)
 # VARIANT = "2D_RE"
