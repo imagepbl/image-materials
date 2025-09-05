@@ -528,7 +528,8 @@ class RestOf(prism.Model):
     material: prism.Coords[MATERIAL_TYPE]
 
     # Data dependencies
-    input_data: tuple[str] = ("gompertz_coefs", "gdp_per_capita", "population", "historic_diff_consumption_mean")
+    input_data: tuple[str] = ("gompertz_coefs", "gdp_per_capita", "population", 
+                              "historic_diff_consumption_mean", "historic_diff_consumption_total")
     output_data: tuple[str] = ("inflow_materials_rest",)
 
     # Output data inflow_materials_rest
@@ -545,8 +546,13 @@ class RestOf(prism.Model):
         )
         self.inflow_materials_rest = prism.Q_(self.inflow_materials_rest, "t")
         
-    def compute_values(self, time: prism.Time, gompertz_coefs, gdp_per_capita, population, historic_diff_consumption_mean):
+    def compute_values(self, time: prism.Time, gompertz_coefs, gdp_per_capita, population, 
+                       historic_diff_consumption_mean, historic_diff_consumption_total):
         t, dt = time.t, time.dt
+        
+        
+        # print("historic_diff_consumption_total.material:", historic_diff_consumption_total.coords['material'].values)
+       
         if t > 1970:
             # Select coefficients for all regions/materials
             a = gompertz_coefs.sel(coef='a')
@@ -560,11 +566,21 @@ class RestOf(prism.Model):
             mask = np.isnan(self.inflow_materials_rest.loc[t])
             # Use the mask to fill nans with historic_diff_consumption
             # Align historic_diff_consumption to the same dims/order as inflow_materials_rest
+
             self.inflow_materials_rest.loc[t] = xr.where(
                 mask,
                 historic_diff_consumption_mean.transpose(*self.inflow_materials_rest.loc[t].dims),
                 self.inflow_materials_rest.loc[t]
             )
+            
+            # check if real historic data is available (not nan)
+            real_historic_data_mask = ~np.isnan(historic_diff_consumption_total.sel(Time=t))
+            self.inflow_materials_rest.loc[t] = xr.where(
+                real_historic_data_mask,
+                historic_diff_consumption_total.sel(Time=t),
+                self.inflow_materials_rest.loc[t]
+            )
+
         else:
             pass # No inflow before 1970
         

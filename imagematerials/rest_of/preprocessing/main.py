@@ -24,7 +24,7 @@ def read_historic_diff_cons_data_mean(base_directory):
 
     diff_consumption_mean = xr.open_dataset(base_directory / "rest-of" / "gompertz_values" / "diff_cons_all_mean.nc", engine="netcdf4")
     diff_consumption_mean = diff_consumption_mean.to_array().isel(variable=0).drop_vars("variable")
-    diff_consumption_mean = prism.Q_(diff_consumption_mean, 'tons')
+    diff_consumption_mean = prism.Q_(diff_consumption_mean, 't')
 
     return diff_consumption_mean
 
@@ -33,7 +33,7 @@ def read_historic_diff_cons_data(base_directory):
 
     diff_consumption = xr.open_dataset(base_directory / "rest-of" / "gompertz_values" / "diff_cons_all.nc", engine="netcdf4")
     diff_consumption = diff_consumption.to_array().isel(variable=0).drop_vars("variable")
-    diff_consumption = prism.Q_(diff_consumption, 'tons')
+    diff_consumption = prism.Q_(diff_consumption, 't')
 
     return diff_consumption
 
@@ -79,4 +79,5 @@ def rest_of_preprocessing(base_directory, image_scenario_directory):
         "historic_diff_consumption_mean": historic_diff_consumption_mean,
         "historic_diff_consumption_total": historic_diff_consumption_total
     }
+    
     return preprocessing_dict
