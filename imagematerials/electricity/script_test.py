@@ -437,12 +437,12 @@ for i, region in enumerate(regions):  # regions now has length 3
     axes[1, col].set_xlabel("Time", fontsize=s_label)
 
 # Y-axis number formatting and hiding right y-axis ticks
-for ax in axes.flat:
-    ax.yaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}'))
+# for ax in axes.flat:
+#     ax.yaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}'))
+# for row in range(2):
+#     for col in [1, 2]:  # Hide y-tick labels for middle and right columns
+#         axes[row, col].tick_params(labelleft=False)
 
-for row in range(2):
-    for col in [1, 2]:  # Hide y-tick labels for middle and right columns
-        axes[row, col].tick_params(labelleft=False)
 axes[0, 2].legend(fontsize=s_legend, ncol=2, loc='upper center', bbox_to_anchor=(-1.7, -1.41))
 axes[1, 2].legend(fontsize=s_legend, ncol=3, loc='upper center', bbox_to_anchor=(-0.2, -0.21))
 
