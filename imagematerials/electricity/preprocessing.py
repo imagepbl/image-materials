@@ -28,13 +28,13 @@ from imagematerials.electricity.utils import MNLogit, stock_tail, create_prep_da
 
 from imagematerials.electricity.constants import (
     STANDARD_SCEN_EXTERNAL_DATA,
-    YEAR_START,
+    # YEAR_START,
     YEAR_FIRST,
     YEAR_FIRST_GRID,
-    YEAR_END,
-    YEAR_OUT,
+    # YEAR_END,
+    # YEAR_OUT,
     YEAR_SWITCH,
-    YEAR_LAST,
+    # YEAR_LAST,
     # COHORTS, # necessary?
     SCEN,
     VARIANT,
@@ -88,9 +88,6 @@ VARIANT = "VLHO"
 
 
 
-years = YEAR_END - YEAR_START  + 1
-
-
 # from past.builtins import execfile
 # execfile('read_mym.py')
 idx = pd.IndexSlice             # needed for slicing multi-index
@@ -108,7 +105,7 @@ idx = pd.IndexSlice             # needed for slicing multi-index
 
 
 
-def get_preprocessing_data_gen(path_base: str, SCEN, VARIANT): #, climate_policy_config: dict, circular_economy_config: dict
+def get_preprocessing_data_gen(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_END, YEAR_OUT): #, climate_policy_config: dict, circular_economy_config: dict
 
     scen_folder = SCEN + "_" + VARIANT
     path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
@@ -177,7 +174,7 @@ def get_preprocessing_data_gen(path_base: str, SCEN, VARIANT): #, climate_policy
     # Calculate the historic tail to the Gcap (stock) 
     gcap_new = pd.DataFrame(index=pd.MultiIndex.from_product([range(YEAR_FIRST_GRID,YEAR_OUT+1), region_list], names=['years', 'regions']), columns=gcap.columns)
     for tech in gcap_tech_list:
-        gcap_new.loc[idx[:,:],tech] = stock_tail(gcap.loc[idx[:,:],tech].unstack(level=1)).stack()
+        gcap_new.loc[idx[:,:],tech] = stock_tail(gcap.loc[idx[:,:],tech].unstack(level=1), YEAR_OUT).stack()
 
 
     # Bring dataframes into correct shape for the results_dict
@@ -427,18 +424,18 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT): #, climate_polic
         materials_grid_additions_interpol.loc[idx[:,cat],:] = materials_grid_additions_interpol.loc[idx[:,cat],:].astype('float32').reindex(list(range(YEAR_FIRST_GRID,YEAR_END+1)), level=0).interpolate()
 
     # call the stock_tail function on all lines, substations & transformers, to add historic stock tail between 1926 & 1971
-    grid_length_Hv_above_new = stock_tail(grid_length_Hv_above) # km
-    grid_length_Mv_above_new = stock_tail(grid_length_Mv_above) # km
-    grid_length_Lv_above_new = stock_tail(grid_length_Lv_above) # km
-    grid_length_Hv_under_new = stock_tail(grid_length_Hv_under) # km 
-    grid_length_Mv_under_new = stock_tail(grid_length_Mv_under) # km
-    grid_length_Lv_under_new = stock_tail(grid_length_Lv_under) # km
-    grid_subst_Hv_new = stock_tail(grid_subst_Hv)               # units
-    grid_subst_Mv_new = stock_tail(grid_subst_Mv)               # units
-    grid_subst_Lv_new = stock_tail(grid_subst_Lv)               # units
-    grid_trans_Hv_new = stock_tail(grid_trans_Hv)               # units
-    grid_trans_Mv_new = stock_tail(grid_trans_Mv)               # units
-    grid_trans_Lv_new = stock_tail(grid_trans_Lv)               # units
+    grid_length_Hv_above_new = stock_tail(grid_length_Hv_above, YEAR_OUT) # km
+    grid_length_Mv_above_new = stock_tail(grid_length_Mv_above, YEAR_OUT) # km
+    grid_length_Lv_above_new = stock_tail(grid_length_Lv_above, YEAR_OUT) # km
+    grid_length_Hv_under_new = stock_tail(grid_length_Hv_under, YEAR_OUT) # km 
+    grid_length_Mv_under_new = stock_tail(grid_length_Mv_under, YEAR_OUT) # km
+    grid_length_Lv_under_new = stock_tail(grid_length_Lv_under, YEAR_OUT) # km
+    grid_subst_Hv_new = stock_tail(grid_subst_Hv, YEAR_OUT)               # units
+    grid_subst_Mv_new = stock_tail(grid_subst_Mv, YEAR_OUT)               # units
+    grid_subst_Lv_new = stock_tail(grid_subst_Lv, YEAR_OUT)               # units
+    grid_trans_Hv_new = stock_tail(grid_trans_Hv, YEAR_OUT)               # units
+    grid_trans_Mv_new = stock_tail(grid_trans_Mv, YEAR_OUT)               # units
+    grid_trans_Lv_new = stock_tail(grid_trans_Lv, YEAR_OUT)               # units
 
 
     #############

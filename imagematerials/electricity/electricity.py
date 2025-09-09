@@ -61,15 +61,17 @@ path_base = path_current.parent.parent # base path of the project -> image-mater
 ####################################################################################################################
 
 
-prep_data = get_preprocessing_data_gen(path_base, SCEN, VARIANT)
+YEAR_START = 1971   # start year of the simulation period
+YEAR_END = 2100     # end year of the calculations
+YEAR_OUT = 2100     # year of output generation = last year of reporting
 
+prep_data = get_preprocessing_data_gen(path_base, SCEN, VARIANT, YEAR_START, YEAR_END, YEAR_OUT)
 
-
-# # Define the complete timeline, including historic tail
+# Define the complete timeline, including historic tail
 time_start = prep_data["stocks"].coords["Time"].min().values
-time_end = 2060
-complete_timeline = prism.Timeline(time_start, time_end, 1)
-simulation_timeline = prism.Timeline(1970, time_end, 1)
+complete_timeline = prism.Timeline(time_start, YEAR_END, 1)
+simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
+
 
 sec_electr_gen = Sector("electr_gen", prep_data)
 

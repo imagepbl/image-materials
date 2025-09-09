@@ -27,16 +27,17 @@ from imagematerials.electricity.utils import MNLogit, stock_tail, create_prep_da
 
 
 from imagematerials.electricity.constants import (
-    YEAR_START,
+    # YEAR_START,
     YEAR_FIRST,
     YEAR_FIRST_GRID,
-    YEAR_END,
-    YEAR_OUT,
+    # YEAR_END,
+    # YEAR_OUT,
     YEAR_SWITCH,
-    YEAR_LAST,
+    # YEAR_LAST,
     # COHORTS, # necessary?
     SCEN,
     VARIANT,
+    STANDARD_SCEN_EXTERNAL_DATA,
     SENS_ANALYSIS,
     REGIONS,
     TECH_GEN,
@@ -74,10 +75,13 @@ scen_folder = SCEN + "_" + VARIANT
 path_current = Path().resolve()
 path_base = path_current.parent.parent # base path of the project -> image-materials
 
-# path_image_output = Path(path_base, "data", "raw", SCEN, "EnergyServices")
-path_image_output = Path(path_base, "data", "raw", scen_folder, "EnergyServices")
+path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
 path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
 path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scen_folder)
+# test if path_external_data_scenario exists and if not set to standard scenario
+if not path_external_data_scenario.exists():
+    path_external_data_scenario = Path(path_base, "data", "raw", "electricity", STANDARD_SCEN_EXTERNAL_DATA)
+print(f"Path to image output: {path_image_output}")
 
 assert path_image_output.is_dir()
 assert path_external_data_standard.is_dir()
@@ -87,9 +91,6 @@ assert path_external_data_scenario.is_dir()
 if not (path_base / 'imagematerials' / 'electricity' / 'out_test').is_dir():
     (path_base / 'imagematerials' / 'electricity' / 'out_test').mkdir(parents=True)
 
-
-
-years = YEAR_END - YEAR_START  + 1
 
 
 # from past.builtins import execfile
@@ -109,12 +110,16 @@ idx = pd.IndexSlice             # needed for slicing multi-index
 
 
 
-def get_preprocessing_data_gen(base_dir: str, SCEN, VARIANT): #, climate_policy_config: dict, circular_economy_config: dict
+def get_preprocessing_data_gen(base_dir: str, SCEN, VARIANT, YEAR_START, YEAR_END, YEAR_OUT): #, climate_policy_config: dict, circular_economy_config: dict
 
     scen_folder = SCEN + "_" + VARIANT
-    path_image_output = Path(path_base, "data", "raw", scen_folder, "EnergyServices")
+    path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
     path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
     path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scen_folder)
+    # test if path_external_data_scenario exists and if not set to standard scenario
+    if not path_external_data_scenario.exists():
+        path_external_data_scenario = Path(path_base, "data", "raw", "electricity", STANDARD_SCEN_EXTERNAL_DATA)
+    print(f"Path to image output: {path_image_output}")
 
     assert path_image_output.is_dir()
     assert path_external_data_standard.is_dir()
@@ -175,7 +180,7 @@ def get_preprocessing_data_gen(base_dir: str, SCEN, VARIANT): #, climate_policy_
     # Calculate the historic tail to the Gcap (stock) 
     gcap_new = pd.DataFrame(index=pd.MultiIndex.from_product([range(YEAR_FIRST_GRID,YEAR_OUT+1), region_list], names=['years', 'regions']), columns=gcap.columns)
     for tech in gcap_tech_list:
-        gcap_new.loc[idx[:,:],tech] = stock_tail(gcap.loc[idx[:,:],tech].unstack(level=1)).stack()
+        gcap_new.loc[idx[:,:],tech] = stock_tail(gcap.loc[idx[:,:],tech].unstack(level=1), YEAR_OUT).stack()
 
 
     # Bring dataframes into correct shape for the results_dict
@@ -235,6 +240,9 @@ def get_preprocessing_data_gen(base_dir: str, SCEN, VARIANT): #, climate_policy_
 ###########################################################################################################
 #----------------------------------------------------------------------------------------------------------
 
+YEAR_START = 1971   # start year of the simulation period
+YEAR_END = 2100     # end year of the calculations
+YEAR_OUT = 2100     # year of output generation = last year of reporting
 
 # 1. External Data ======================================================================================== 
 
@@ -291,7 +299,7 @@ gcap_lifetime = gcap_lifetime.reindex(list(range(YEAR_FIRST_GRID,YEAR_OUT+1)), a
 # Calculate the historic tail to the Gcap (stock) 
 gcap_new = pd.DataFrame(index=pd.MultiIndex.from_product([range(YEAR_FIRST_GRID,YEAR_OUT+1), region_list], names=['years', 'regions']), columns=gcap.columns)
 for tech in gcap_tech_list:
-    gcap_new.loc[idx[:,:],tech] = stock_tail(gcap.loc[idx[:,:],tech].unstack(level=1)).stack()
+    gcap_new.loc[idx[:,:],tech] = stock_tail(gcap.loc[idx[:,:],tech].unstack(level=1), YEAR_OUT).stack()
 
 
 # Bring dataframes into correct shape for the results_dict
@@ -338,27 +346,11 @@ results_dict = {
 
 
 prep_data = create_prep_data(results_dict, conversion_table, unit_mapping)
+prep_data["stocks"] = prism.Q_(prep_data["stocks"], "MW")
+prep_data["material_intensities"] = prism.Q_(prep_data["material_intensities"], "g/MW")
+prep_data["set_unit_flexible"] = prism.U_(prep_data["stocks"]) # prism.U_ gives the unit back
+# set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
 
-# df = gcap_materials_interpol.copy()
-
-
-# Convert the DataFrames to xarray Datasets and apply units
-# preprocessing_results_xarray = {}
-# for df_name, df in results_dict.items():
-#     if df_name in conversion_table:
-#         data_xar_dataset = pandas_to_xarray(df, unit_mapping)
-#         data_xarray = dataset_to_array(data_xar_dataset, *conversion_table[df_name])
-#     else:
-#         # lifetimes_vehicles does not need to be converted in the same way.
-#         data_xarray = pandas_to_xarray(df, unit_mapping)
-#     preprocessing_results_xarray[df_name] = data_xarray
-
-
-
-# preprocessing_results_xarray["lifetimes"] = convert_life_time_vehicles(preprocessing_results_xarray["gcap_lifetime_distr"])
-# preprocessing_results_xarray["stocks"] = preprocessing_results_xarray.pop("gcap_stock")
-# preprocessing_results_xarray["material_intensities"] = preprocessing_results_xarray.pop("gcap_types_materials")
-# preprocessing_results_xarray["shares"] = preprocessing_results_xarray.pop("vehicle_shares")
 
 #----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
@@ -367,18 +359,14 @@ prep_data = create_prep_data(results_dict, conversion_table, unit_mapping)
 # TODO: move this to electricity.py
 #----------------------------------------------------------------------------------------------------------
 
-prep_data = get_preprocessing_data_gen(path_base, scen_folder)
+prep_data = get_preprocessing_data_gen(path_base, scen_folder, YEAR_START, YEAR_END, YEAR_OUT)
 
 # # Define the complete timeline, including historic tail
 time_start = prep_data["stocks"].coords["Time"].min().values
-time_end = 2060
-complete_timeline = prism.Timeline(time_start, time_end, 1)
-simulation_timeline = prism.Timeline(1970, time_end, 1)
-
+complete_timeline = prism.Timeline(time_start, YEAR_END, 1)
+simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
 
 sec_electr_gen = Sector("electr_gen", prep_data)
-
-
 
 main_model_factory = ModelFactory(
     sec_electr_gen, complete_timeline
@@ -2248,7 +2236,7 @@ storage_out.to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test'  / 
 
 # derive inflow & outflow (in MWh) for PHS, for later use in the material calculations 
 PHS_kg_perkWh = 26.8   # kg per kWh storage capacity (as weight addition to existing hydro plants to make them pumped) 
-phs_storage_stock_tail   = stock_tail(phs_storage.astype(float))
+phs_storage_stock_tail   = stock_tail(phs_storage.astype(float), YEAR_OUT)
 storage_lifetime_PHS = storage_lifetime['PHS'].reindex(list(range(YEAR_FIRST_GRID,YEAR_OUT+1)), axis=0).interpolate(limit_direction='both')
 
 
@@ -2299,15 +2287,19 @@ inflow_by_tech, stock_cohorts, outflow_cohorts = stock_share_calc(oth_storage, s
 
 
 
-def get_preprocessing_data_grid(base_dir: str, SCEN, VARIANT): #, climate_policy_config: dict, circular_economy_config: dict
+def get_preprocessing_data_grid(base_dir: str, SCEN, VARIANT, YEAR_START, YEAR_END, YEAR_OUT): #, climate_policy_config: dict, circular_economy_config: dict
 
     scen_folder = SCEN + "_" + VARIANT
-    path_image_output = Path(path_base, "data", "raw", scen_folder, "EnergyServices")
+    path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
     path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
     path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scen_folder)
+    
+    # test if path_external_data_scenario exists and if not set to standard scenario
+    if not path_external_data_scenario.exists():
+        path_external_data_scenario = Path(path_base, "data", "raw", "electricity", STANDARD_SCEN_EXTERNAL_DATA)
 
     scen_BL_folder = SCEN + "_M_CP"  # baseline scenario
-    path_image_output_BL = Path(path_base, "data", "raw", scen_BL_folder, "EnergyServices")
+    path_image_output_BL = Path(path_base, "data", "raw", "image", scen_BL_folder, "EnergyServices")
     # TODO: check if this is necessary (shouldn't historical periode anyway be the same for all scenarios?)
     # + if it is, should the baseline scenario be given as a parameter or can it be inferred from the scenario name?
 
@@ -2487,18 +2479,18 @@ def get_preprocessing_data_grid(base_dir: str, SCEN, VARIANT): #, climate_policy
         materials_grid_additions_interpol.loc[idx[:,cat],:] = materials_grid_additions_interpol.loc[idx[:,cat],:].astype('float32').reindex(list(range(YEAR_FIRST_GRID,YEAR_END+1)), level=0).interpolate()
 
     # call the stock_tail function on all lines, substations & transformers, to add historic stock tail between 1926 & 1971
-    grid_length_Hv_above_new = stock_tail(grid_length_Hv_above) # km
-    grid_length_Mv_above_new = stock_tail(grid_length_Mv_above) # km
-    grid_length_Lv_above_new = stock_tail(grid_length_Lv_above) # km
-    grid_length_Hv_under_new = stock_tail(grid_length_Hv_under) # km 
-    grid_length_Mv_under_new = stock_tail(grid_length_Mv_under) # km
-    grid_length_Lv_under_new = stock_tail(grid_length_Lv_under) # km
-    grid_subst_Hv_new = stock_tail(grid_subst_Hv)               # units
-    grid_subst_Mv_new = stock_tail(grid_subst_Mv)               # units
-    grid_subst_Lv_new = stock_tail(grid_subst_Lv)               # units
-    grid_trans_Hv_new = stock_tail(grid_trans_Hv)               # units
-    grid_trans_Mv_new = stock_tail(grid_trans_Mv)               # units
-    grid_trans_Lv_new = stock_tail(grid_trans_Lv)               # units
+    grid_length_Hv_above_new = stock_tail(grid_length_Hv_above, YEAR_OUT) # km
+    grid_length_Mv_above_new = stock_tail(grid_length_Mv_above, YEAR_OUT) # km
+    grid_length_Lv_above_new = stock_tail(grid_length_Lv_above, YEAR_OUT) # km
+    grid_length_Hv_under_new = stock_tail(grid_length_Hv_under, YEAR_OUT) # km 
+    grid_length_Mv_under_new = stock_tail(grid_length_Mv_under, YEAR_OUT) # km
+    grid_length_Lv_under_new = stock_tail(grid_length_Lv_under, YEAR_OUT) # km
+    grid_subst_Hv_new = stock_tail(grid_subst_Hv, YEAR_OUT)               # units
+    grid_subst_Mv_new = stock_tail(grid_subst_Mv, YEAR_OUT)               # units
+    grid_subst_Lv_new = stock_tail(grid_subst_Lv, YEAR_OUT)               # units
+    grid_trans_Hv_new = stock_tail(grid_trans_Hv, YEAR_OUT)               # units
+    grid_trans_Mv_new = stock_tail(grid_trans_Mv, YEAR_OUT)               # units
+    grid_trans_Lv_new = stock_tail(grid_trans_Lv, YEAR_OUT)               # units
 
 
     #############
@@ -2636,6 +2628,10 @@ def get_preprocessing_data_grid(base_dir: str, SCEN, VARIANT): #, climate_policy
 #%%% 3.1) Read in files
 ###########################################################################################################
 #----------------------------------------------------------------------------------------------------------
+
+YEAR_START = 1971   # start year of the simulation period
+YEAR_END = 2100     # end year of the calculations
+YEAR_OUT = 2100     # year of output generation = last year of reporting
 
 
 # 1. External Data ======================================================================================== 
@@ -2810,18 +2806,18 @@ for cat in list(materials_grid_additions.index.levels[1]):
 
 
 # call the stock_tail function on all lines, substations & transformers, to add historic stock tail between 1926 & 1971
-grid_length_Hv_above_new = stock_tail(grid_length_Hv_above) # km
-grid_length_Mv_above_new = stock_tail(grid_length_Mv_above) # km
-grid_length_Lv_above_new = stock_tail(grid_length_Lv_above) # km
-grid_length_Hv_under_new = stock_tail(grid_length_Hv_under) # km 
-grid_length_Mv_under_new = stock_tail(grid_length_Mv_under) # km
-grid_length_Lv_under_new = stock_tail(grid_length_Lv_under) # km
-grid_subst_Hv_new = stock_tail(grid_subst_Hv)               # units
-grid_subst_Mv_new = stock_tail(grid_subst_Mv)               # units
-grid_subst_Lv_new = stock_tail(grid_subst_Lv)               # units
-grid_trans_Hv_new = stock_tail(grid_trans_Hv)               # units
-grid_trans_Mv_new = stock_tail(grid_trans_Mv)               # units
-grid_trans_Lv_new = stock_tail(grid_trans_Lv)               # units
+grid_length_Hv_above_new = stock_tail(grid_length_Hv_above, YEAR_OUT) # km
+grid_length_Mv_above_new = stock_tail(grid_length_Mv_above, YEAR_OUT) # km
+grid_length_Lv_above_new = stock_tail(grid_length_Lv_above, YEAR_OUT) # km
+grid_length_Hv_under_new = stock_tail(grid_length_Hv_under, YEAR_OUT) # km 
+grid_length_Mv_under_new = stock_tail(grid_length_Mv_under, YEAR_OUT) # km
+grid_length_Lv_under_new = stock_tail(grid_length_Lv_under, YEAR_OUT) # km
+grid_subst_Hv_new = stock_tail(grid_subst_Hv, YEAR_OUT)               # units
+grid_subst_Mv_new = stock_tail(grid_subst_Mv, YEAR_OUT)               # units
+grid_subst_Lv_new = stock_tail(grid_subst_Lv, YEAR_OUT)               # units
+grid_trans_Hv_new = stock_tail(grid_trans_Hv, YEAR_OUT)               # units
+grid_trans_Mv_new = stock_tail(grid_trans_Mv, YEAR_OUT)               # units
+grid_trans_Lv_new = stock_tail(grid_trans_Lv, YEAR_OUT)               # units
 
 
 #############
@@ -3009,24 +3005,19 @@ results_dict_add = {
 }
 
 
+prep_data_lines = create_prep_data(results_dict_lines, conversion_table, unit_mapping)
+prep_data_add = create_prep_data(results_dict_add, conversion_table, unit_mapping)
+
+prep_data_lines["stocks"] = prism.Q_(prep_data_lines["stocks"], "km")
+prep_data_lines["material_intensities"] = prism.Q_(prep_data_lines["material_intensities"], "kg/km")
+prep_data_lines["set_unit_flexible"] = prism.U_(prep_data_lines["stocks"]) # prism.U_ gives the unit back
+# set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
+
+prep_data_add["stocks"] = prism.Q_(prep_data_add["stocks"], "count")
+prep_data_add["material_intensities"] = prism.Q_(prep_data_add["material_intensities"], "kg/count")
+prep_data_add["set_unit_flexible"] = prism.U_(prep_data_add["stocks"]) # prism.U_ gives the unit back
 
 
-
-# Convert the DataFrames to xarray Datasets and apply units
-# preprocessing_results_xarray = {}
-# for df_name, df in results_dict.items():
-#     if df_name in conversion_table:
-#         data_xar_dataset = pandas_to_xarray(df, unit_mapping)
-#         data_xarray = dataset_to_array(data_xar_dataset, *conversion_table[df_name])
-#     else:
-#         # lifetimes_vehicles does not need to be converted in the same way.
-#         data_xarray = pandas_to_xarray(df, unit_mapping)
-#     preprocessing_results_xarray[df_name] = data_xarray
-
-# preprocessing_results_xarray["lifetimes"] = convert_life_time_vehicles(preprocessing_results_xarray["lifetime_grid_distr"])
-# preprocessing_results_xarray["stocks"] = preprocessing_results_xarray.pop("grid_stock")
-# preprocessing_results_xarray["material_intensities"] = preprocessing_results_xarray.pop("materials_grid_combined_kgperkm")
-# # preprocessing_results_xarray["shares"] = preprocessing_results_xarray.pop("vehicle_shares")
 
 #----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
@@ -3036,7 +3027,7 @@ results_dict_add = {
 #----------------------------------------------------------------------------------------------------------
 
 
-prep_data_lines, prep_data_add = get_preprocessing_data_grid(path_base, SCEN, VARIANT)
+prep_data_lines, prep_data_add = get_preprocessing_data_grid(path_base, SCEN, VARIANT, YEAR_START, YEAR_END, YEAR_OUT)
 
 # LINES ----------------------------------------------------
 # prep_data = create_prep_data(results_dict_lines, conversion_table, unit_mapping)

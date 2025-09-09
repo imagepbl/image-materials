@@ -10,7 +10,7 @@ ureg = pint.UnitRegistry(force_ndarray_like=True)
 # --- Settings & constants
 
 # start year of historic IMAGE data
-YEAR_START = 1971
+# YEAR_START = 1971
 # start year of the full model period (including stock-development from
 # scratch, which needs to be the oldest year of any vehicle, all stock
 # calculations are initiated in this year, so this has an effect on
@@ -18,9 +18,9 @@ YEAR_START = 1971
 # TODO: set FIRST_YEAR based on minimum value in data-files
 YEAR_FIRST_GRID = 1926   # UK Electricity supply act - https://www.bbc.com/news/uk-politics-11619751   
 YEAR_FIRST = 1807  # first_year_vehicle.values.min()
-YEAR_END = 2060    # end year of the calculations
-YEAR_OUT = 2060    # year of output generation = last year of reporting (in the output files) 
-YEAR_LAST = 2060   # last year available in the IMAGE data-files (which are input to ELMA)
+# YEAR_END = 2060    # end year of the calculations
+# YEAR_OUT = 2060    # year of output generation = last year of reporting (in the output files) 
+# YEAR_LAST = 2060   # last year available in the IMAGE data-files (which are input to ELMA)
 YEAR_SWITCH = 1990 # year after which other batteries than lead-acid are allowed
 REGIONS = 26
 
