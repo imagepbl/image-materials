@@ -232,7 +232,7 @@ def get_preprocessing_data_gen(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_E
 ###########################################################################################################
 ###########################################################################################################
 
-def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT): #, climate_policy_config: dict, circular_economy_config: dict
+def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_END, YEAR_OUT): #, climate_policy_config: dict, circular_economy_config: dict
 
     scen_folder = SCEN + "_" + VARIANT
     path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
