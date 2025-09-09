@@ -2598,8 +2598,8 @@ oth_storage_materialintens = xr_oth_storage_materials * xr_storage_density_inter
 # Conversion table for all coordinates, to be removed/adapted after input tables are fixed.
 conversion_table = {
     "oth_storage_stock": (["Time"], ["Type", "Region"],),
-    "oth_storage_materials": (["Cohort"], ["SubType", "material"],),
-    "oth_storage_shares": (["Cohort"], ["SubType",])
+    "oth_storage_materials": (["Cohort"], ["Type", "material"],), #SubType
+    "oth_storage_shares": (["Cohort"], ["Type",]) #SubType
 }
 ## "gcap_materials_interpol": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]})
 
@@ -2614,6 +2614,7 @@ results_dict = {
 prep_data_oth_storage = create_prep_data(results_dict, conversion_table, unit_mapping)
 prep_data_oth_storage["stocks"] = prism.Q_(prep_data_oth_storage["stocks"], "MWh")
 prep_data_oth_storage["material_intensities"] = prism.Q_(prep_data_oth_storage["material_intensities"], "kg/kWh")
+prep_data_oth_storage["shares"] = prism.Q_(prep_data_oth_storage["shares"], "share")
 prep_data_oth_storage["set_unit_flexible"] = prism.U_(prep_data_oth_storage["stocks"]) # prism.U_ gives the unit back
 
 
@@ -2673,10 +2674,10 @@ time_start = prep_data_oth_storage["stocks"].coords["Time"].min().values
 complete_timeline = prism.Timeline(time_start, YEAR_END, 1)
 simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
 
-sec_electr_stor_oth = Sector("electr_stor_oth", prep_data_oth_storage)
+sec_electr_stor_oth = Sector("electr_stor_oth", prep_data_oth_storage, check_coordinates=False)
 
 main_model_factory_oth = ModelFactory(
-    electr_stor_oth, complete_timeline
+    sec_electr_stor_oth, complete_timeline
     ).add(SharesInInflowStocks
     ).add(MaterialIntensities
     ).finish()

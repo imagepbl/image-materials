@@ -157,8 +157,8 @@ class SharesInInflowStocks(prism.Model):
         Expected lifetimes for each stock type.
     stocks : xr.DataArray
         Prescribed stock values of supertype (e.g. how many MWh "Other storage" capacity per year is needed).
-    shares_inflow : xr.DataArray
-        Percentage shares of the inflow subtypes (e.g. shares of NIMH, Hydrogen, Lithium Sulfur etc. of "Other storage" technologies).
+    shares : xr.DataArray
+        Percentage shares of the INFLOW subtypes (e.g. shares of NIMH, Hydrogen, Lithium Sulfur etc. of "Other storage" technologies).
     input_data : tuple of str
         Tuple of input data variable names.
     output_data : tuple of str
@@ -176,18 +176,18 @@ class SharesInInflowStocks(prism.Model):
     # Inputs
     lifetimes:          xr.DataArray
     stocks:             xr.DataArray #TODO check how to have property that can be both input and output within prism
-    shares_inflow:      xr.DataArray
+    shares:             xr.DataArray
     knowledge_graph:    KnowledgeGraph
     set_unit_flexible:  prism.VarUnit[UnitFlexibleStock] # set a flexible unit that can be changed depending on type of stock - is passed by preprocessing
 
     # For module dependency, ignored by prism
-    input_data:  tuple[str] = ("stocks", "lifetimes", "knowledge_graph","shares_inflow", "set_unit_flexible")
-    # "stocks" is by supertype, "lifetimes" & "shares_inflow" by subtype
-    output_data: tuple[str] = ("outflow_by_cohort", "inflow_by_tech", "stock_by_cohort") 
-    # stock_by_cohort, inflow_by_tech & outflow_by_cohort by subtype
+    input_data:  tuple[str] = ("stocks", "lifetimes", "knowledge_graph","shares", "set_unit_flexible")
+    # "stocks" is by supertype, "lifetimes" & "shares" by subtype
+    output_data: tuple[str] = ("outflow_by_cohort", "inflow", "stock_by_cohort") 
+    # stock_by_cohort, inflow & outflow_by_cohort by subtype
 
     # stock_by_cohort: prism.TimeVariable[Region, Mode, Cohort, "count"] = prism.export(initial_value = prism.Array[Region, Mode, Cohort, 'count'](0.0))
-    inflow_by_tech:     prism.TimeVariable[REGION, STOCK_TYPE, UnitFlexibleStock] = prism.export()
+    inflow:     prism.TimeVariable[REGION, STOCK_TYPE, UnitFlexibleStock] = prism.export()
     outflow_by_cohort:  prism.TimeVariable[REGION, STOCK_TYPE, COHORT, UnitFlexibleStock] = prism.export()
 
     def compute_initial_values(self, time: prism.Timeline):
@@ -224,7 +224,7 @@ class SharesInInflowStocks(prism.Model):
         # pass unit from stocks
         unit = str(self.stocks.pint.units)
         t, dt = time.t, time.dt
-        self.inflow_by_tech[t].loc[:] = prism.Q_(0.0, unit)
+        self.inflow[t].loc[:] = prism.Q_(0.0, unit)
         self.outflow_by_cohort[t].loc[:] = prism.Q_(0.0, unit)
 
         # copy only for readability
@@ -233,13 +233,13 @@ class SharesInInflowStocks(prism.Model):
         # for this aggregate over sub-technologies in stock_by_cohort to compare to input_stock which is by super-type
         stock_diff = input_stock.loc[t] - self.knowledge_graph.aggregate_sum(self.stock_by_cohort.loc[t].sum("Cohort"), self.stocks.coords["Type"], dim="Type")
         
-        inflow_tech = self.knowledge_graph.rebroadcast_xarray(stock_diff, self.stock_by_cohort.coords["Type"], self.shares_inflow.sel(Cohort=t))
+        inflow_tech = self.knowledge_graph.rebroadcast_xarray(stock_diff, self.stock_by_cohort.coords["Type"], self.shares.sel(Cohort=t))
         # stock_diff cannot be negative (no negative inflow); when positive, divide by survival matrix in case there is a loss in the first year (inflow needs to be larger than input stock)
         inflow_tech = xr.where(inflow_tech>0, inflow_tech/self.survival_matrix[t, t].drop("Cohort"), 0)
-        self.inflow_by_tech[t] = inflow_tech
+        self.inflow[t] = inflow_tech
 
         # calculate future development of the current cohort (inflow at time t; t: = time from current time onwards, t = cohort of time t)
-        self.stock_by_cohort.loc[t:, t] = self.inflow_by_tech[t] * self.survival_matrix[t:, t]
+        self.stock_by_cohort.loc[t:, t] = self.inflow[t] * self.survival_matrix[t:, t]
 
         # Prevent out of bounds error, assume first outflow to be 0.
         if t-1 < time.start:
