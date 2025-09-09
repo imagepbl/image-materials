@@ -609,7 +609,7 @@ linewidth = 2
 s_legend = 12
 s_label = 14
 
-data_plot = data_all.sel(Time=slice(1971, None))/1_000_000 # convert grams to tonnes
+data_plot = data_all.sel(Time=slice(1971, None)).pint.to("t") # convert grams to tonnes
 
 for i, region in enumerate(regions):
     # Top row: Level 1 materials
@@ -667,8 +667,8 @@ plt.show()
 da_stocks_mat = main_model_factory.stock_by_cohort_materials.copy() #stock_by_cohort_materials
 data_all = da_stocks_mat
 data_all = data_all.sel(Type=data_all.Type != '<EMPTY>').sum('Type').sum('Region')
-# data_plot = data_all/1_000_000 # convert grams to tonnes
-data_plot = data_all.sel(Time=slice(1971, None))/1_000_000 # only from 1971 onwards, convert grams to tonnes
+# data_plot = data_all.pint.to("t") # convert grams to tonnes
+data_plot = data_all.sel(Time=slice(1971, None)).pint.to("t") # only from 1971 onwards, convert grams to tonnes
 
 fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(8, 10))
 linewidth = 2
@@ -775,7 +775,7 @@ plt.show()
 
 
 data_all = main_model_factory.stock_by_cohort_materials.copy() #stock_by_cohort_materials
-data_all = data_all.sel(Type=data_all.Type != '<EMPTY>', Time=slice(1971, None))/1_000_000 # only from 1971 onwards, convert grams to tonnes
+data_all = data_all.sel(Type=data_all.Type != '<EMPTY>', Time=slice(1971, None)).pint.to("t") # only from 1971 onwards, convert grams to tonnes
 data_all = data_all.sum('Region')
 
 # Step 1: Get technology level from index
@@ -1000,7 +1000,7 @@ linewidth = 2
 s_legend = 12
 s_label = 14
 
-data_plot = data_all.sel(time=slice(1971, None))/1_000_000 # convert grams to tonnes
+data_plot = data_all.sel(time=slice(1971, None)).pint.to("t") # convert grams to tonnes
 
 for i, region in enumerate(regions):
     # Top row: Level 1 materials
@@ -1108,8 +1108,8 @@ types_level3 = [m for m in data_all.material.values if m not in (types_level1 + 
 
 fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(12, 10))
 
-# data_plot = data_all/1_000_000  # convert grams to tonnes
-data_plot = data_all.sel(time=slice(1971, None))/1_000_000 # only from 1971 onwards
+# data_plot = data_all.pint.to("t")  # convert grams to tonnes
+data_plot = data_all.sel(time=slice(1971, None)).pint.to("t") # only from 1971 onwards
 
 # Top row: Level 1 materials
 for mat in types_level1:
@@ -1300,8 +1300,8 @@ linewidth = 2
 s_legend = 12
 s_label = 14
 
-# data_plot = data_all/1_000_000 # convert grams to tonnes
-data_plot = data_all.sel(time=slice(1971, None))/1_000_000 
+# data_plot = data_all.pint.to("t") # convert grams to tonnes
+data_plot = data_all.sel(time=slice(1971, None)).pint.to("t") 
 
 for i, region in enumerate(regions):
     # Top row: Level 1 materials
@@ -1367,8 +1367,8 @@ types_level3 = [m for m in data_all.material.values if m not in (types_level1 + 
 
 fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(12, 10))
 
-# data_plot = data_all/1_000_000  # convert grams to tonnes
-data_plot = data_all.sel(time=slice(1971, None))/1_000_000 # only from 1971 onwards
+# data_plot = data_all.pint.to("t")  # convert grams to tonnes
+data_plot = data_all.sel(time=slice(1971, None)).pint.to("t") # only from 1971 onwards
 
 # Top row: Level 1 materials
 for mat in types_level1:
@@ -1439,8 +1439,8 @@ da_outflow_mat = main_model_factory.outflow_by_cohort_materials.to_array().sel(T
 da_stocks = da_stocks.sel(Time=slice(1971, None))
 da_inflow = da_inflow.sel(time=slice(1971, None))
 da_outflow = da_outflow.sel(time=slice(1971, None))
-da_inflow_mat = da_inflow_mat.sel(time=slice(1971, None))/1_000_000 # convert grams to tonnes
-da_outflow_mat = da_outflow_mat.sel(time=slice(1971, None))/1_000_000
+da_inflow_mat = da_inflow_mat.sel(time=slice(1971, None)).pint.to("t") # convert grams to tonnes
+da_outflow_mat = da_outflow_mat.sel(time=slice(1971, None)).pint.to("t")
 
 
 types_level1 = ["Concrete"] # PV: "Aluminium", Hydro: Concrete
@@ -1543,8 +1543,8 @@ da_outflow_mat = main_model_factory.outflow_by_cohort_materials.to_array().sel(T
 da_stocks = da_stocks.sel(Time=slice(1971, None))
 da_inflow = da_inflow.sel(time=slice(1971, None))
 da_outflow = da_outflow.sel(time=slice(1971, None))
-da_inflow_mat = da_inflow_mat.sel(time=slice(1971, None))/1_000_000 # convert grams to tonnes
-da_outflow_mat = da_outflow_mat.sel(time=slice(1971, None))/1_000_000
+da_inflow_mat = da_inflow_mat.sel(time=slice(1971, None)).pint.to("t") # convert grams to tonnes
+da_outflow_mat = da_outflow_mat.sel(time=slice(1971, None)).pint.to("t")
 
 
 types_level1 = ["Concrete"] # PV: "Aluminium", Hydro: Concrete
@@ -1646,8 +1646,8 @@ da_outflow_mat = main_model_factory.outflow_by_cohort_materials.to_array().sel(T
 da_stocks = da_stocks.sel(Time=slice(1971, None))
 da_inflow = da_inflow.sel(time=slice(1971, None))
 da_outflow = da_outflow.sel(time=slice(1971, None))
-da_inflow_mat = da_inflow_mat.sel(time=slice(1971, None))/1_000_000 # convert grams to tonnes
-da_outflow_mat = da_outflow_mat.sel(time=slice(1971, None))/1_000_000
+da_inflow_mat = da_inflow_mat.sel(time=slice(1971, None)).pint.to("t") # convert grams to tonnes
+da_outflow_mat = da_outflow_mat.sel(time=slice(1971, None)).pint.to("t")
 
 
 types_level1 = ["Concrete"] # PV: "Aluminium", Hydro: Concrete
@@ -3033,10 +3033,10 @@ prep_data_lines, prep_data_add = get_preprocessing_data_grid(path_base, SCEN, VA
 # prep_data = create_prep_data(results_dict_lines, conversion_table, unit_mapping)
 
 # # Define the complete timeline, including historic tail
-time_start = prep_data_lines["stocks"].coords["Time"].min().values
-time_end = 2060
-complete_timeline = prism.Timeline(time_start, time_end, 1)
-simulation_timeline = prism.Timeline(1970, time_end, 1)
+time_start = prep_data["stocks"].coords["Time"].min().values
+complete_timeline = prism.Timeline(time_start, YEAR_END, 1)
+simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
+
 
 sec_electr_grid_lines = Sector("electr_grid_lines", prep_data_lines)
 
@@ -3053,10 +3053,10 @@ list(main_model_factory_lines.electr_grid_lines)
 # prep_data = create_prep_data(results_dict_add, conversion_table, unit_mapping)
 
 # # Define the complete timeline, including historic tail
-time_start = prep_data_add["stocks"].coords["Time"].min().values
-time_end = 2060
-complete_timeline = prism.Timeline(time_start, time_end, 1)
-simulation_timeline = prism.Timeline(1970, time_end, 1)
+time_start = prep_data["stocks"].coords["Time"].min().values
+complete_timeline = prism.Timeline(time_start, YEAR_END, 1)
+simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
+
 
 sec_electr_grid_add = Sector("electr_grid_add", prep_data_add)
 
@@ -3140,14 +3140,14 @@ plt.show()
 #%%%% 2 models ---------------------------------------------------
 
 
-data_lines  = main_model_factory_lines.stocks.copy()
-data_add    = main_model_factory_add.stocks.copy()
+data_lines  = main_model_factory_lines.stocks.copy().sum(dim="Region")
+data_add    = main_model_factory_add.stocks.copy().sum(dim="Region")
 
-data        = xr.concat([data_lines, data_add], dim='Type')
-data_plot   = data.sum(dim="Region")
+# data        = xr.concat([data_lines, data_add], dim='Type')
+# data_plot   = data.sum(dim="Region")
 
 types_top    = ['HV - Lines - Overhead', 'HV - Lines - Underground', 'MV - Lines - Overhead', 'MV - Lines - Underground', 
-                'LV - Lines - Overhead', 'LV - Lines - Underground', 'LV - Transformers', 'LV - Substations',]
+                'LV - Lines - Overhead', 'LV - Lines - Underground'] #, 'LV - Transformers', 'LV - Substations',
 types_bottom = ['HV - Substations', 'HV - Transformers', 'MV - Substations', 'MV - Transformers']
 
 
@@ -3159,9 +3159,9 @@ s_label = 14
 
 # Top row:
 for t in types_top:
-    line, = axes[0].plot(data_plot.Time, data_plot.sel(Type=t), label=t, color=dict_grid_styles2[t][0], linestyle=dict_grid_styles2[t][1], linewidth=linewidth)
+    line, = axes[0].plot(data_lines.Time, data_lines.sel(Type=t), label=t, color=dict_grid_styles2[t][0], linestyle=dict_grid_styles2[t][1], linewidth=linewidth)
 
-axes[0].set_ylabel("Stocks (# units/km)", fontsize=s_label)
+axes[0].set_ylabel("Stocks (# counts/km)", fontsize=s_label)
 axes[0].grid(alpha=0.3, linestyle='--')
 axes[0].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
 axes[0].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
@@ -3169,10 +3169,10 @@ axes[0].legend(loc='upper left', fontsize=s_legend) #handles=handles, labels=lab
 
 # Bottom row:
 for t in types_bottom:
-    axes[1].plot(data_plot.Time, data_plot.sel(Type=t), label=t, color=dict_grid_styles2[t][0], linestyle=dict_grid_styles2[t][1], linewidth=linewidth)
+    axes[1].plot(data_add.Time, data_add.sel(Type=t), label=t, color=dict_grid_styles2[t][0], linestyle=dict_grid_styles2[t][1], linewidth=linewidth)
 
 axes[1].set_xlabel("Time", fontsize=s_label)
-axes[1].set_ylabel("Stocks (# units)", fontsize=s_label)
+axes[1].set_ylabel("Stocks (# counts)", fontsize=s_label)
 axes[1].grid(alpha=0.3, linestyle='--')
 axes[1].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
 axes[1].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
@@ -3181,7 +3181,7 @@ axes[1].legend(loc='upper left', fontsize=s_legend)
 plt.suptitle(f"{scen_folder}: Electricity Grid - Stocks", fontsize=16)
 
 plt.tight_layout()
-fig.savefig(path_test_plots / "Grid_stocks_world.png", dpi=300)
+# fig.savefig(path_test_plots / "Grid_stocks_world.png", dpi=300)
 plt.show()
 
 
@@ -3197,7 +3197,7 @@ materials = ["Steel", "Concrete", "Aluminium", "Cu"]
 # data_all = main_model_factory.stock_by_cohort_materials.copy().sum('Region')
 
 # # data_all = main_model_factory.inflow_materials.to_array().sum('Region')
-# data_all = data_all/1_000  # Convert kg -> tonnes
+# data_all = data_all.pint.to("t")  # Convert kg -> tonnes
 # data_all = data_all.sel(Time=slice(1971, None))
 # data_plot = data_all.sum(dim='Type')
 
@@ -3249,8 +3249,8 @@ materials = ["Steel", "Concrete", "Aluminium", "Cu"]
 
 #%%%% 2 model ---------------------------------------------------
 
-data_lines  = main_model_factory_lines.stock_by_cohort_materials.copy().sum(dim="Region")/1_000  # Convert kg -> tonnes
-data_add    = main_model_factory_add.stock_by_cohort_materials.copy().sum(dim="Region")/1_000  # Convert kg -> tonnes
+data_lines  = main_model_factory_lines.stock_by_cohort_materials.copy().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
+data_add    = main_model_factory_add.stock_by_cohort_materials.copy().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
 
 data        = xr.concat([data_lines, data_add], dim='Type')
 data        = data.sel(Time=slice(1971, None))
@@ -3318,16 +3318,26 @@ plt.show()
 regions = ['Brazil', 'C.Europe', 'China'] 
 threshold = 100_000
 
-data_lines  = main_model_factory_lines.inflow.to_array()
-data_add    = main_model_factory_add.inflow.to_array()
+data_lines = main_model_factory_lines.inflow.to_array().sel(
+    time=slice(1971, None), 
+    Type=main_model_factory_lines.inflow.to_array().Type != '<EMPTY>', 
+    Region=regions
+)
 
-data        = xr.concat([data_lines, data_add], dim='Type')
-data        = data.sel(time=slice(1971, None), Type=data.Type != '<EMPTY>', Region=regions)
+data_add = main_model_factory_add.inflow.to_array().sel(
+    time=slice(1971, None), 
+    Type=main_model_factory_add.inflow.to_array().Type != '<EMPTY>', 
+    Region=regions
+)
+# data        = xr.concat([data_lines, data_add], dim='Type')
+# data        = data.sel(time=slice(1971, None), Type=data.Type != '<EMPTY>', Region=regions)
+# techs_upper = [coord_name.item() for coord_name in data.coords['Type']  
+#                if data.sel(Type = coord_name).values.max() > threshold]
+# techs_lower = [coord_name.item() for coord_name in data.coords['Type']  
+#                if data.sel(Type = coord_name).values.max() <= threshold]
 
-techs_upper = [coord_name.item() for coord_name in data.coords['Type']  
-               if data.sel(Type = coord_name).values.max() > threshold]
-techs_lower = [coord_name.item() for coord_name in data.coords['Type']  
-               if data.sel(Type = coord_name).values.max() <= threshold]
+techs_upper = data_lines.Type.values
+techs_lower = data_add.Type.values
 
 
 fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(18, 8))  # Now 3 columns for 3 regions
@@ -3340,22 +3350,22 @@ for i, region in enumerate(regions):  # regions now has length 3
 
     # Top row: Types 1–15
     for t in techs_upper:
-        data_plot = data.sel(Type=t, Region=region)
+        data_plot = data_lines.sel(Type=t, Region=region)
         color, ls = dict_gentech_styles.get(t, ('black', '-'))
         axes[0, col].plot(data_plot.time, data_plot.values, label=t, color=dict_grid_styles2[t][0], linestyle=dict_grid_styles2[t][1], linewidth=linewidth)
     axes[0, col].set_title(f"{region}", fontsize=15)
     axes[0, col].grid(alpha=0.3, linestyle='--')
     axes[0, col].tick_params(axis='both', which='major', labelsize=s_legend)
-    axes[0, 0].set_ylabel("Inflow (# units/km)", fontsize=s_label)
+    axes[0, 0].set_ylabel("Inflow (km)", fontsize=s_label)
 
     # Bottom row: Types 16–30
     for t in techs_lower:
-        data_plot = data.sel(Type=t, Region=region)
+        data_plot = data_add.sel(Type=t, Region=region)
         color, ls = dict_gentech_styles.get(t, ('black', '-'))
         axes[1, col].plot(data_plot.time, data_plot.values, label=t, color=dict_grid_styles2[t][0], linestyle=dict_grid_styles2[t][1], linewidth=linewidth)
     axes[1, col].grid(alpha=0.3, linestyle='--')
     axes[1, col].tick_params(axis='both', which='major', labelsize=s_legend)
-    axes[1, 0].set_ylabel("Inflow (# units)", fontsize=s_label)
+    axes[1, 0].set_ylabel("Inflow (# counts)", fontsize=s_label)
     axes[1, col].set_xlabel("Time", fontsize=s_label)
 
 # Y-axis number formatting and hiding right y-axis ticks
@@ -3380,11 +3390,18 @@ plt.show()
 #================================================================================
 #%%%% Sum & Per TECH - World
 
-data_lines  = main_model_factory_lines.inflow.to_array()
-data_add    = main_model_factory_add.inflow.to_array()
+data_lines = main_model_factory_lines.inflow.to_array().sel(
+    time=slice(1971, None), 
+    Type=main_model_factory_lines.inflow.to_array().Type != '<EMPTY>'
+).sum('Region')
 
-data        = xr.concat([data_lines, data_add], dim='Type')
-data        = data.sel(time=slice(1971, None), Type=data.Type != '<EMPTY>').sum('Region')
+data_add = main_model_factory_add.inflow.to_array().sel(
+    time=slice(1971, None), 
+    Type=main_model_factory_add.inflow.to_array().Type != '<EMPTY>'
+).sum('Region')
+
+# data        = xr.concat([data_lines, data_add], dim='Type')
+# data        = data.sel(time=slice(1971, None), Type=data.Type != '<EMPTY>').sum('Region')
 
 types_top    = ['HV - Lines - Overhead', 'HV - Lines - Underground', 'MV - Lines - Overhead', 'MV - Lines - Underground', 
                 'LV - Lines - Overhead', 'LV - Lines - Underground']
@@ -3397,7 +3414,7 @@ s_label = 14
 
 # Second subplot: data_all_2 (summed over Region and Type, likely only time and material left)
 for t in types_top:
-    data_plot = data.sel(Type=t)
+    data_plot = data_lines.sel(Type=t)
     data_plot.plot(ax=axes[0], label=t, color=dict_grid_styles2[t][0], linestyle=dict_grid_styles2[t][1], linewidth=linewidth)
     axes[0].grid(alpha=0.3, linestyle='--')
     axes[0].tick_params(axis='both', which='major', labelsize=s_legend)
@@ -3408,13 +3425,13 @@ for t in types_top:
 
 # First subplot: data_all_1 (summed over Region, still over Type and time likely)
 for t in types_bottom:
-    data_plot = data.sel(Type=t)
+    data_plot = data_add.sel(Type=t)
     axes[1].plot(data_plot.time, data_plot.values, label=t, color=dict_grid_styles2[t][0], linestyle=dict_grid_styles2[t][1], linewidth=linewidth)
     axes[1].grid(alpha=0.3, linestyle='--')
     axes[1].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
     axes[1].tick_params(axis='both', which='major', labelsize=s_legend)
     axes[1].set_xlabel("Time", fontsize=s_label)
-    axes[1].set_ylabel("Inflow (# units)", fontsize=s_label)
+    axes[1].set_ylabel("Inflow (# counts)", fontsize=s_label)
     axes[1].set_title('Grid Additions')
     # axes[1].legend(ncol=2, loc='upper center', bbox_to_anchor=(0.9, -0.2), fontsize=s_legend)
 
@@ -3468,7 +3485,7 @@ df_iea_lt_cu = pd.DataFrame({ # lines & transformers, copper
     'Cu': values
 })
 df_iea_lt_cu.set_index('Year', inplace=True)
-df_iea_lt_cu = df_iea_lt_cu /1_000  # Convert kg -> t
+df_iea_lt_cu = df_iea_lt_cu.pint.to("t")  # Convert kg -> t
 
 # Alu -------------
 years = np.arange(2012, 2051)
@@ -3483,7 +3500,7 @@ df_iea_lt_alu = pd.DataFrame({ # lines & transformers, aluminium
     'Aluminium': values
 })
 df_iea_lt_alu.set_index('Year', inplace=True)
-df_iea_lt_alu = df_iea_lt_alu /1_000  # Convert kg -> t
+df_iea_lt_alu = df_iea_lt_alu.pint.to("t")  # Convert kg -> t
 
 # Steel -------------
 years = np.arange(2012, 2051)
@@ -3498,14 +3515,14 @@ df_iea_t_steel = pd.DataFrame({ # transformers, steel
     'Steel': values
 })
 df_iea_t_steel.set_index('Year', inplace=True)
-df_iea_t_steel = df_iea_t_steel /1_000  # Convert kg -> t
+df_iea_t_steel = df_iea_t_steel.pint.to("t")  # Convert kg -> t
 # ----------------------------------------------------------------------------------
 
 
 #%%%% 1 model ---------------------------------------------------
 
 # data_all = main_model_factory.inflow_materials.to_array().sum('Region')
-# data_all = data_all/1_000  # Convert kg -> tonnes
+# data_all = data_all.pint.to("t")  # Convert kg -> tonnes
 # data_all = data_all.sel(time=slice(1971, None))
 # data_plot = data_all.sum(dim='Type')
 
@@ -3557,8 +3574,8 @@ df_iea_t_steel = df_iea_t_steel /1_000  # Convert kg -> t
 
 #%%%% 2 model ---------------------------------------------------
 
-data_lines  = main_model_factory_lines.inflow_materials.to_array().sum(dim="Region")/1_000  # Convert kg -> tonnes
-data_add    = main_model_factory_add.inflow_materials.to_array().sum(dim="Region")/1_000  # Convert kg -> tonnes
+data_lines  = main_model_factory_lines.inflow_materials.to_array().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
+data_add    = main_model_factory_add.inflow_materials.to_array().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
 
 data_lines  = data_lines.sel(time=slice(1971, None))
 data_add    = data_add.sel(time=slice(1971, None))
@@ -3618,8 +3635,8 @@ plt.show()
 
 #%%%% 2 model ---------------------------------------------------
 
-data_lines  = main_model_factory_lines.outflow_by_cohort_materials.to_array().sum(dim="Region")/1_000  # Convert kg -> tonnes
-data_add    = main_model_factory_add.outflow_by_cohort_materials.to_array().sum(dim="Region")/1_000  # Convert kg -> tonnes
+data_lines  = main_model_factory_lines.outflow_by_cohort_materials.to_array().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
+data_add    = main_model_factory_add.outflow_by_cohort_materials.to_array().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
 
 data_lines  = data_lines.sel(time=slice(1971, None))
 data_add    = data_add.sel(time=slice(1971, None))
