@@ -9,11 +9,8 @@ import scipy.stats
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_life_time_vehicles
 from imagematerials.concepts import create_electricity_graph
 from imagematerials.electricity.constants import (
-    # YEAR_START,
     YEAR_FIRST,
     YEAR_FIRST_GRID,
-    # YEAR_END,
-    # YEAR_OUT,
     YEAR_SWITCH,
     REGIONS,
     MEGA_TO_TERA,

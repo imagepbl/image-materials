@@ -7,16 +7,25 @@ constants.py
 contains important constants used
 
 preprocessing.py
-preprocessing functions - one for each electricity sub-sector. Currently implemented: generation
+preprocessing functions - one for each electricity sub-sector. Currently implemented: generation, grid and storage
+
+electricity.py
+Script in which the stock modelling should take place. Imports preprocessed data by calling the functions from preprocessing.py
+
+examples/electricity.ipynb
+Same as electricity.py, but as a jupyter notebook
 
 script_test.py
 (was previously - before 29.07 - named preprocessing.py)
-Separation of preprocessing and main modelling. Currently, main modelling is still happening within this file, as I first want to make it run and then make a function out of preprocessing that I can call in electricity.py. Like this it is easier to access the variables and understand what is going on.
-Generation & Grid are running and checked.
+For testing purposes. Preprocessing and stock modelling in one file, preprocessing not inside a function so that variables are accessible
+and can be checked more easily.
 
-electricity.py
-Script in which the stock modelling should take place. Currently it still contains part of storage preprocessing, as the process of splitting this up is not finished yet nor does it contain the actual stock modelling, as the preprocessing function is not created yet.
 
+# Other ----------------------------------------------
+
+electr_external_data.py
+Contains data from the IEA and stores them as dictionaries. Data should be moved to an external file and creating the 
+dictionary to a function maybe?
 
 # Old ones -------------------------------------------
 
