@@ -199,7 +199,6 @@ IAI_TO_IMAGE_CLASSES = {
         'class_ 20'  # China
     ],
     'Estimated Unreported to IAI': [
-        'class_ 6',   # Rest S.Am.
         'class_ 8',   # W.Africa (e.g. Cape Verde)
         'class_ 10',  # South Africa (e.g. ZA1)
         'class_ 26',  # Rest S.Africa (e.g. Réunion, Mayotte)
@@ -216,7 +215,6 @@ IAI_TO_IMAGE_CLASSES = {
         'class_ 24'  # Oceania
     ],
     'Russia & Eastern Europe': [
-        'class_ 12',  # C.Europe
         'class_ 14',  # Ukraine
         'class_ 15',  # Stan
         'class_ 16'   # Russia

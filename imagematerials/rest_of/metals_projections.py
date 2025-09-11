@@ -192,7 +192,7 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
     # Aluminium
     aluminium = ResourceModel(resource_group = 'metals', resource = 'aluminium', 
                         image_mat_available = True, start_year = 1998, 
-                        scenario=scenario, end_year = 2024,
+                        scenario=scenario, end_year = 2014,
                         path_input_data=path_input_data,
                         path_input_data_image=path_input_data_image
                         )
@@ -247,22 +247,22 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
     # Deal with negative values in other fraction BEFORE recalculation of other fraction consumption
     # 1) Africa: for all negative values: assumption that apparent MAT is 60% of total consumption (mean until 2017)
     # Share of IAMGE MAT data to total consumption
-    share = (aluminium.image_mat_material_regions.loc[:2017]/aluminium.historic_consumption_data.loc[:2017]*100).mean()
+    # share = (aluminium.image_mat_material_regions.loc[:2017]/aluminium.historic_consumption_data.loc[:2017]*100).mean()
     # starting at 2017 (when negative values start):
-    aluminium.image_mat_material_regions.loc[2017:, 'Africa'] = aluminium.historic_consumption_data.loc[2017:, 'Africa'] * share['Africa'] / 100
+    # aluminium.image_mat_material_regions.loc[2017:, 'Africa'] = aluminium.historic_consumption_data.loc[2017:, 'Africa'] * share['Africa'] / 100
 
     # 4) North America
     # problem starts at 2015, so take share mean of IMAGE Mat data before that and apply it to 2015-2024
-    share_na = (aluminium.image_mat_material_regions.loc[:2015]/aluminium.historic_consumption_data.loc[:2015]*100).mean()
-    aluminium.image_mat_material_regions.loc[:, 'North America'] = aluminium.historic_consumption_data.loc[:, 'North America'] * share_na['North America'] / 100
+    # share_na = (aluminium.image_mat_material_regions.loc[:2015]/aluminium.historic_consumption_data.loc[:2015]*100).mean()
+    # aluminium.image_mat_material_regions.loc[:, 'North America'] = aluminium.historic_consumption_data.loc[:, 'North America'] * share_na['North America'] / 100
 
     # 6) South America: assume that share of Mat until 2010 is correct and that apparent consumption needs to be adjusted accordingly 
-    share_sa = (aluminium.image_mat_material_regions.loc[:2010, 'South America'] / aluminium.historic_consumption_data.loc[:2010, 'South America']).mean()
-    aluminium.historic_consumption_data.loc[:, 'South America'] = aluminium.image_mat_material_regions.loc[:, 'South America'] / share_sa
+    # share_sa = (aluminium.image_mat_material_regions.loc[:2010, 'South America'] / aluminium.historic_consumption_data.loc[:2010, 'South America']).mean()
+    # aluminium.historic_consumption_data.loc[:, 'South America'] = aluminium.image_mat_material_regions.loc[:, 'South America'] / share_sa
 
     # Deal with negative values in other fraction AFTER recalculation of other fraction consumption
     # redo calculation of historic other fraction consumption 
-    aluminium.calculate_historic_other_fraction()
+    # aluminium.calculate_historic_other_fraction()
 
     # 2) rest of Asia: 
     # per capita consmption of total data is too low compared to other regions, so we assume that IMAGE Mat is correct
@@ -309,17 +309,13 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
 
     aluminium.create_region_model_match_per_image(IAI_TO_IMAGE_CLASSES)
 
-    # # Projections
-    # aluminium.project_on_total(list(IAI_TO_IMAGE_CLASSES.keys()), start_year_projection=2012)
-    # aluminium.smooth_out_interpolation_all(10, 2014)
-    # aluminium.adjust_alpha_and_project(list(IAI_TO_IMAGE_CLASSES.keys()), 
-    #                            start_year_adjust=2025, 
-    #                            end_year_adjust=2100, 
-    #                            min_alpha=None, start_year_projection=2014)
-
     aluminium.assign_fit_to_groups_not_fitted(IAI_TO_IMAGE_CLASSES.get("Estimated Unreported to IAI"), 
                                         assign_model='low', 
                                         model_nr=6)
+    aluminium.assign_fit_to_groups_not_fitted(IAI_TO_IMAGE_CLASSES.get("South America"), 
+                                    assign_model='low', 
+                                    model_nr=6)
+
 
     aluminium.assign_fit_to_groups_not_fitted(IAI_TO_IMAGE_CLASSES.get("Oceania") +  
                                               IAI_TO_IMAGE_CLASSES.get("Japan"),
