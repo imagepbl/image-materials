@@ -555,9 +555,9 @@ class RestOf(prism.Model):
        
         if t > 1970:
             # Select coefficients for all regions/materials
-            a = gompertz_coefs.sel(coef='a')
-            b = gompertz_coefs.sel(coef='b')
-            c = gompertz_coefs.sel(coef='c')
+            a = gompertz_coefs.sel(coef='a', Time = t)
+            b = gompertz_coefs.sel(coef='b', Time = t)
+            c = gompertz_coefs.sel(coef='c', Time = t)
             self.inflow_per_capita_rest = (a * np.exp(-b * np.exp(-c * gdp_per_capita.loc[t])))
             self.inflow_per_capita_rest = prism.Q_(self.inflow_per_capita_rest, "t/person")
             self.inflow_materials_rest.loc[t] = self.inflow_per_capita_rest * population.loc[t]
