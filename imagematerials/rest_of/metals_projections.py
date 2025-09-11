@@ -192,7 +192,7 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
     # Aluminium
     aluminium = ResourceModel(resource_group = 'metals', resource = 'aluminium', 
                         image_mat_available = True, start_year = 1998, 
-                        scenario=scenario, end_year = 2024,
+                        scenario=scenario, end_year = 2014,
                         path_input_data=path_input_data,
                         path_input_data_image=path_input_data_image
                         )
