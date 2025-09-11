@@ -22,6 +22,62 @@ def cement_via_concrete_in_sectors(model_name):
 
     return inflow_buildings, inflow_el_grid, inflow_el_gen
 
+def sand_in_all_sectors(model_name):
+    sand_in_cement_conversion = 0.17 #(silica)
+    sand_gravel_in_concrete_conversion = 0.7
+    sand_in_glass_conversion = 0.7
+
+    # regions electricity and generation
+    inflow_materials_grid = model_name.grid["inflow_materials"].to_array()
+    inflow_materials_generation = model_name.generation["inflow_materials"].to_array()
+
+     # replace region names to numbers
+    # replace region names to numbers in the 'Region' coordinate
+    inflow_materials_grid = inflow_materials_grid.assign_coords(
+        Region = inflow_materials_grid.coords["Region"].to_series().map(REGION_TO_CLASS_DICT_IMAGE_MAT_NR)
+    )
+
+    inflow_materials_generation = inflow_materials_generation.assign_coords(
+        Region = inflow_materials_generation.coords["Region"].to_series().map(REGION_TO_CLASS_DICT_IMAGE_MAT_NR)
+    )
+
+    # sand in cement
+    inflow_buildings_cement = model_name.buildings.get('inflow_materials').to_array().sum(['Type']).sel(material='Cement').loc[1971:]*sand_in_cement_conversion
+    # sand in concrete
+    inflow_buildings_concrete, inflow_el_grid_concrete, inflow_el_gen_concrete = cement_via_concrete_in_sectors(model_name)
+    inflow_buildings_concrete = inflow_buildings_concrete * sand_gravel_in_concrete_conversion
+    inflow_el_grid_concrete = inflow_el_grid_concrete * sand_gravel_in_concrete_conversion
+    inflow_el_gen_concrete = inflow_el_gen_concrete * sand_gravel_in_concrete_conversion
+
+
+    # sand in glass
+    inflow_vehicles_sand_glass = model_name.vehicles.get('inflow_materials').to_array().sel(material = "Glass").sum(["Type"]).loc[1971:]*sand_in_glass_conversion
+    inflow_buildings_sand_glass = model_name.buildings.get('inflow_materials').to_array().sel(material = "Glass").sum(["Type"]).loc[1971:]*sand_in_glass_conversion
+    inflow_el_grid_sand_glass = model_name.grid.get('inflow_materials').to_array().sel(material = "Glass").sum(["Type"]).loc[1971:]*sand_in_glass_conversion
+    inflow_el_gen_sand_glass = model_name.generation.get('inflow_materials').to_array().sel(material = "Glass").sum(["Type"]).loc[1971:]*sand_in_glass_conversion
+
+    inflow_el_grid_sand_glass = inflow_el_grid_sand_glass.assign_coords(
+        Region = inflow_el_grid_sand_glass.coords["Region"].to_series().map(REGION_TO_CLASS_DICT_IMAGE_MAT_NR)
+    )
+    inflow_el_gen_sand_glass = inflow_el_gen_sand_glass.assign_coords(
+        Region = inflow_el_gen_sand_glass.coords["Region"].to_series().map(REGION_TO_CLASS_DICT_IMAGE_MAT_NR)
+    )
+
+    # add up all sand
+    total_material = (inflow_buildings_cement + inflow_buildings_concrete + inflow_el_grid_concrete + inflow_el_gen_concrete +
+                        inflow_vehicles_sand_glass + inflow_buildings_sand_glass + inflow_el_grid_sand_glass + inflow_el_gen_sand_glass)
+    
+    return_dict = {
+        'buildings': inflow_buildings_cement + inflow_buildings_concrete + inflow_buildings_sand_glass,
+        'grid': inflow_el_grid_concrete + inflow_el_grid_sand_glass,
+        'generation': inflow_el_gen_concrete + inflow_el_gen_sand_glass,
+        'vehicles': inflow_vehicles_sand_glass,
+        'total': total_material
+
+    }
+    
+    return return_dict
+
 def sum_inflows_for_output(model_name, materials_dict, resource_group, save = True):
     sand_in_cement_conversion = 0.17 #(silica)
     sand_gravel_in_concrete_conversion = 0.7
@@ -137,5 +193,5 @@ def sum_inflows_for_output(model_name, materials_dict, resource_group, save = Tr
 
         total_material_dict[key] = total_material
 
-    return total_material_dict, 
+    return total_material_dict
 
