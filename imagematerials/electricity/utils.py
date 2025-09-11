@@ -9,11 +9,11 @@ import scipy.stats
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_life_time_vehicles
 from imagematerials.concepts import create_electricity_graph
 from imagematerials.electricity.constants import (
-    YEAR_START,
+    # YEAR_START,
     YEAR_FIRST,
     YEAR_FIRST_GRID,
-    YEAR_END,
-    YEAR_OUT,
+    # YEAR_END,
+    # YEAR_OUT,
     YEAR_SWITCH,
     SCEN,
     REGIONS,
@@ -32,7 +32,7 @@ idx = pd.IndexSlice
 
 # In order to calculate inflow & outflow smoothly (without peaks for the initial years), we calculate a historic tail to the stock, 
 # by adding a 0 value for first year of operation (=1926), then interpolate values towards 1971
-def stock_tail(stock):
+def stock_tail(stock, YEAR_OUT):
     zero_value = [0 for i in range(0,REGIONS)]
     stock_used = pd.DataFrame(stock).reindex_like(stock)
     stock_used.loc[YEAR_FIRST_GRID] = zero_value  # set all regions to 0 in the year of initial operation

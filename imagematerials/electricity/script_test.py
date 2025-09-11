@@ -27,16 +27,10 @@ from imagematerials.electricity.utils import MNLogit, stock_tail, create_prep_da
 
 
 from imagematerials.electricity.constants import (
-    YEAR_START,
     YEAR_FIRST,
     YEAR_FIRST_GRID,
-    YEAR_END,
-    YEAR_OUT,
     YEAR_SWITCH,
-    YEAR_LAST,
-    # COHORTS, # necessary?
-    SCEN,
-    VARIANT,
+    STANDARD_SCEN_EXTERNAL_DATA,
     SENS_ANALYSIS,
     REGIONS,
     TECH_GEN,
@@ -64,6 +58,7 @@ from imagematerials.electricity.electr_external_data import (
     df_iea_mn_aps,
     df_iea_ni_aps
 )
+SCEN = "SSP2"
 # VARIANT = "VLHO"
 VARIANT = "M_CP"
 # Define paths ----------------------------------------------------------------------
@@ -74,10 +69,13 @@ scen_folder = SCEN + "_" + VARIANT
 path_current = Path().resolve()
 path_base = path_current.parent.parent # base path of the project -> image-materials
 
-# path_image_output = Path(path_base, "data", "raw", SCEN, "EnergyServices")
-path_image_output = Path(path_base, "data", "raw", scen_folder, "EnergyServices")
+path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
 path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
 path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scen_folder)
+# test if path_external_data_scenario exists and if not set to standard scenario
+if not path_external_data_scenario.exists():
+    path_external_data_scenario = Path(path_base, "data", "raw", "electricity", STANDARD_SCEN_EXTERNAL_DATA)
+print(f"Path to image output: {path_image_output}")
 
 assert path_image_output.is_dir()
 assert path_external_data_standard.is_dir()
@@ -88,8 +86,15 @@ if not (path_base / 'imagematerials' / 'electricity' / 'out_test').is_dir():
     (path_base / 'imagematerials' / 'electricity' / 'out_test').mkdir(parents=True)
 
 
-
-years = YEAR_END - YEAR_START  + 1
+# for dependencies (this is how Sebastiaan had it):
+# YEAR_START = 1971 # start year of historic IMAGE data = start of model period (including stock-development from scratch, which needs to be the oldest year of any vehicle, all stock
+# calculations are initiated in this year, so this has an effect on runtime)
+# YEAR_FIRST_GRID = 1926   # UK Electricity supply act - https://www.bbc.com/news/uk-politics-11619751   
+# YEAR_FIRST = 1807  # first_year_vehicle.values.min()
+# YEAR_END = 2060    # end year of the calculations
+# YEAR_OUT = 2060    # year of output generation = last year of reporting (in the output files) 
+# YEAR_LAST = 2060   # last year available in the IMAGE data-files (which are input to ELMA)
+# YEAR_SWITCH = 1990 # year after which other batteries than lead-acid are allowed
 
 
 # from past.builtins import execfile
@@ -109,12 +114,16 @@ idx = pd.IndexSlice             # needed for slicing multi-index
 
 
 
-def get_preprocessing_data_gen(base_dir: str, SCEN, VARIANT): #, climate_policy_config: dict, circular_economy_config: dict
+def get_preprocessing_data_gen(base_dir: str, SCEN, VARIANT, YEAR_START, YEAR_END, YEAR_OUT): #, climate_policy_config: dict, circular_economy_config: dict
 
     scen_folder = SCEN + "_" + VARIANT
-    path_image_output = Path(path_base, "data", "raw", scen_folder, "EnergyServices")
+    path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
     path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
     path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scen_folder)
+    # test if path_external_data_scenario exists and if not set to standard scenario
+    if not path_external_data_scenario.exists():
+        path_external_data_scenario = Path(path_base, "data", "raw", "electricity", STANDARD_SCEN_EXTERNAL_DATA)
+    print(f"Path to image output: {path_image_output}")
 
     assert path_image_output.is_dir()
     assert path_external_data_standard.is_dir()
@@ -175,7 +184,7 @@ def get_preprocessing_data_gen(base_dir: str, SCEN, VARIANT): #, climate_policy_
     # Calculate the historic tail to the Gcap (stock) 
     gcap_new = pd.DataFrame(index=pd.MultiIndex.from_product([range(YEAR_FIRST_GRID,YEAR_OUT+1), region_list], names=['years', 'regions']), columns=gcap.columns)
     for tech in gcap_tech_list:
-        gcap_new.loc[idx[:,:],tech] = stock_tail(gcap.loc[idx[:,:],tech].unstack(level=1)).stack()
+        gcap_new.loc[idx[:,:],tech] = stock_tail(gcap.loc[idx[:,:],tech].unstack(level=1), YEAR_OUT).stack()
 
 
     # Bring dataframes into correct shape for the results_dict
@@ -235,6 +244,9 @@ def get_preprocessing_data_gen(base_dir: str, SCEN, VARIANT): #, climate_policy_
 ###########################################################################################################
 #----------------------------------------------------------------------------------------------------------
 
+YEAR_START = 1971   # start year of the simulation period
+YEAR_END = 2100     # end year of the calculations
+YEAR_OUT = 2100     # year of output generation = last year of reporting
 
 # 1. External Data ======================================================================================== 
 
@@ -291,7 +303,7 @@ gcap_lifetime = gcap_lifetime.reindex(list(range(YEAR_FIRST_GRID,YEAR_OUT+1)), a
 # Calculate the historic tail to the Gcap (stock) 
 gcap_new = pd.DataFrame(index=pd.MultiIndex.from_product([range(YEAR_FIRST_GRID,YEAR_OUT+1), region_list], names=['years', 'regions']), columns=gcap.columns)
 for tech in gcap_tech_list:
-    gcap_new.loc[idx[:,:],tech] = stock_tail(gcap.loc[idx[:,:],tech].unstack(level=1)).stack()
+    gcap_new.loc[idx[:,:],tech] = stock_tail(gcap.loc[idx[:,:],tech].unstack(level=1), YEAR_OUT).stack()
 
 
 # Bring dataframes into correct shape for the results_dict
@@ -338,27 +350,11 @@ results_dict = {
 
 
 prep_data = create_prep_data(results_dict, conversion_table, unit_mapping)
+prep_data["stocks"] = prism.Q_(prep_data["stocks"], "MW")
+prep_data["material_intensities"] = prism.Q_(prep_data["material_intensities"], "g/MW")
+prep_data["set_unit_flexible"] = prism.U_(prep_data["stocks"]) # prism.U_ gives the unit back
+# set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
 
-# df = gcap_materials_interpol.copy()
-
-
-# Convert the DataFrames to xarray Datasets and apply units
-# preprocessing_results_xarray = {}
-# for df_name, df in results_dict.items():
-#     if df_name in conversion_table:
-#         data_xar_dataset = pandas_to_xarray(df, unit_mapping)
-#         data_xarray = dataset_to_array(data_xar_dataset, *conversion_table[df_name])
-#     else:
-#         # lifetimes_vehicles does not need to be converted in the same way.
-#         data_xarray = pandas_to_xarray(df, unit_mapping)
-#     preprocessing_results_xarray[df_name] = data_xarray
-
-
-
-# preprocessing_results_xarray["lifetimes"] = convert_life_time_vehicles(preprocessing_results_xarray["gcap_lifetime_distr"])
-# preprocessing_results_xarray["stocks"] = preprocessing_results_xarray.pop("gcap_stock")
-# preprocessing_results_xarray["material_intensities"] = preprocessing_results_xarray.pop("gcap_types_materials")
-# preprocessing_results_xarray["shares"] = preprocessing_results_xarray.pop("vehicle_shares")
 
 #----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
@@ -367,18 +363,14 @@ prep_data = create_prep_data(results_dict, conversion_table, unit_mapping)
 # TODO: move this to electricity.py
 #----------------------------------------------------------------------------------------------------------
 
-prep_data = get_preprocessing_data_gen(path_base, scen_folder)
+prep_data = get_preprocessing_data_gen(path_base, scen_folder, YEAR_START, YEAR_END, YEAR_OUT)
 
 # # Define the complete timeline, including historic tail
 time_start = prep_data["stocks"].coords["Time"].min().values
-time_end = 2060
-complete_timeline = prism.Timeline(time_start, time_end, 1)
-simulation_timeline = prism.Timeline(1970, time_end, 1)
-
+complete_timeline = prism.Timeline(time_start, YEAR_END, 1)
+simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
 
 sec_electr_gen = Sector("electr_gen", prep_data)
-
-
 
 main_model_factory = ModelFactory(
     sec_electr_gen, complete_timeline
@@ -449,12 +441,12 @@ for i, region in enumerate(regions):  # regions now has length 3
     axes[1, col].set_xlabel("Time", fontsize=s_label)
 
 # Y-axis number formatting and hiding right y-axis ticks
-for ax in axes.flat:
-    ax.yaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}'))
+# for ax in axes.flat:
+#     ax.yaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}'))
+# for row in range(2):
+#     for col in [1, 2]:  # Hide y-tick labels for middle and right columns
+#         axes[row, col].tick_params(labelleft=False)
 
-for row in range(2):
-    for col in [1, 2]:  # Hide y-tick labels for middle and right columns
-        axes[row, col].tick_params(labelleft=False)
 axes[0, 2].legend(fontsize=s_legend, ncol=2, loc='upper center', bbox_to_anchor=(-1.7, -1.41))
 axes[1, 2].legend(fontsize=s_legend, ncol=3, loc='upper center', bbox_to_anchor=(-0.2, -0.21))
 
@@ -621,7 +613,7 @@ linewidth = 2
 s_legend = 12
 s_label = 14
 
-data_plot = data_all.sel(Time=slice(1971, None))/1_000_000 # convert grams to tonnes
+data_plot = data_all.sel(Time=slice(1971, None)).pint.to("t") # convert grams to tonnes
 
 for i, region in enumerate(regions):
     # Top row: Level 1 materials
@@ -679,8 +671,8 @@ plt.show()
 da_stocks_mat = main_model_factory.stock_by_cohort_materials.copy() #stock_by_cohort_materials
 data_all = da_stocks_mat
 data_all = data_all.sel(Type=data_all.Type != '<EMPTY>').sum('Type').sum('Region')
-# data_plot = data_all/1_000_000 # convert grams to tonnes
-data_plot = data_all.sel(Time=slice(1971, None))/1_000_000 # only from 1971 onwards, convert grams to tonnes
+# data_plot = data_all.pint.to("t") # convert grams to tonnes
+data_plot = data_all.sel(Time=slice(1971, None)).pint.to("t") # only from 1971 onwards, convert grams to tonnes
 
 fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(8, 10))
 linewidth = 2
@@ -787,7 +779,7 @@ plt.show()
 
 
 data_all = main_model_factory.stock_by_cohort_materials.copy() #stock_by_cohort_materials
-data_all = data_all.sel(Type=data_all.Type != '<EMPTY>', Time=slice(1971, None))/1_000_000 # only from 1971 onwards, convert grams to tonnes
+data_all = data_all.sel(Type=data_all.Type != '<EMPTY>', Time=slice(1971, None)).pint.to("t") # only from 1971 onwards, convert grams to tonnes
 data_all = data_all.sum('Region')
 
 # Step 1: Get technology level from index
@@ -1012,7 +1004,7 @@ linewidth = 2
 s_legend = 12
 s_label = 14
 
-data_plot = data_all.sel(time=slice(1971, None))/1_000_000 # convert grams to tonnes
+data_plot = data_all.sel(time=slice(1971, None)).pint.to("t") # convert grams to tonnes
 
 for i, region in enumerate(regions):
     # Top row: Level 1 materials
@@ -1120,8 +1112,8 @@ types_level3 = [m for m in data_all.material.values if m not in (types_level1 + 
 
 fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(12, 10))
 
-# data_plot = data_all/1_000_000  # convert grams to tonnes
-data_plot = data_all.sel(time=slice(1971, None))/1_000_000 # only from 1971 onwards
+# data_plot = data_all.pint.to("t")  # convert grams to tonnes
+data_plot = data_all.sel(time=slice(1971, None)).pint.to("t") # only from 1971 onwards
 
 # Top row: Level 1 materials
 for mat in types_level1:
@@ -1312,8 +1304,8 @@ linewidth = 2
 s_legend = 12
 s_label = 14
 
-# data_plot = data_all/1_000_000 # convert grams to tonnes
-data_plot = data_all.sel(time=slice(1971, None))/1_000_000 
+# data_plot = data_all.pint.to("t") # convert grams to tonnes
+data_plot = data_all.sel(time=slice(1971, None)).pint.to("t") 
 
 for i, region in enumerate(regions):
     # Top row: Level 1 materials
@@ -1379,8 +1371,8 @@ types_level3 = [m for m in data_all.material.values if m not in (types_level1 + 
 
 fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(12, 10))
 
-# data_plot = data_all/1_000_000  # convert grams to tonnes
-data_plot = data_all.sel(time=slice(1971, None))/1_000_000 # only from 1971 onwards
+# data_plot = data_all.pint.to("t")  # convert grams to tonnes
+data_plot = data_all.sel(time=slice(1971, None)).pint.to("t") # only from 1971 onwards
 
 # Top row: Level 1 materials
 for mat in types_level1:
@@ -1451,8 +1443,8 @@ da_outflow_mat = main_model_factory.outflow_by_cohort_materials.to_array().sel(T
 da_stocks = da_stocks.sel(Time=slice(1971, None))
 da_inflow = da_inflow.sel(time=slice(1971, None))
 da_outflow = da_outflow.sel(time=slice(1971, None))
-da_inflow_mat = da_inflow_mat.sel(time=slice(1971, None))/1_000_000 # convert grams to tonnes
-da_outflow_mat = da_outflow_mat.sel(time=slice(1971, None))/1_000_000
+da_inflow_mat = da_inflow_mat.sel(time=slice(1971, None)).pint.to("t") # convert grams to tonnes
+da_outflow_mat = da_outflow_mat.sel(time=slice(1971, None)).pint.to("t")
 
 
 types_level1 = ["Concrete"] # PV: "Aluminium", Hydro: Concrete
@@ -1555,8 +1547,8 @@ da_outflow_mat = main_model_factory.outflow_by_cohort_materials.to_array().sel(T
 da_stocks = da_stocks.sel(Time=slice(1971, None))
 da_inflow = da_inflow.sel(time=slice(1971, None))
 da_outflow = da_outflow.sel(time=slice(1971, None))
-da_inflow_mat = da_inflow_mat.sel(time=slice(1971, None))/1_000_000 # convert grams to tonnes
-da_outflow_mat = da_outflow_mat.sel(time=slice(1971, None))/1_000_000
+da_inflow_mat = da_inflow_mat.sel(time=slice(1971, None)).pint.to("t") # convert grams to tonnes
+da_outflow_mat = da_outflow_mat.sel(time=slice(1971, None)).pint.to("t")
 
 
 types_level1 = ["Concrete"] # PV: "Aluminium", Hydro: Concrete
@@ -1658,8 +1650,8 @@ da_outflow_mat = main_model_factory.outflow_by_cohort_materials.to_array().sel(T
 da_stocks = da_stocks.sel(Time=slice(1971, None))
 da_inflow = da_inflow.sel(time=slice(1971, None))
 da_outflow = da_outflow.sel(time=slice(1971, None))
-da_inflow_mat = da_inflow_mat.sel(time=slice(1971, None))/1_000_000 # convert grams to tonnes
-da_outflow_mat = da_outflow_mat.sel(time=slice(1971, None))/1_000_000
+da_inflow_mat = da_inflow_mat.sel(time=slice(1971, None)).pint.to("t") # convert grams to tonnes
+da_outflow_mat = da_outflow_mat.sel(time=slice(1971, None)).pint.to("t")
 
 
 types_level1 = ["Concrete"] # PV: "Aluminium", Hydro: Concrete
@@ -2248,7 +2240,7 @@ storage_out.to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test'  / 
 
 # derive inflow & outflow (in MWh) for PHS, for later use in the material calculations 
 PHS_kg_perkWh = 26.8   # kg per kWh storage capacity (as weight addition to existing hydro plants to make them pumped) 
-phs_storage_stock_tail   = stock_tail(phs_storage.astype(float))
+phs_storage_stock_tail   = stock_tail(phs_storage.astype(float), YEAR_OUT)
 storage_lifetime_PHS = storage_lifetime['PHS'].reindex(list(range(YEAR_FIRST_GRID,YEAR_OUT+1)), axis=0).interpolate(limit_direction='both')
 
 
@@ -2299,15 +2291,19 @@ inflow_by_tech, stock_cohorts, outflow_cohorts = stock_share_calc(oth_storage, s
 
 
 
-def get_preprocessing_data_grid(base_dir: str, SCEN, VARIANT): #, climate_policy_config: dict, circular_economy_config: dict
+def get_preprocessing_data_grid(base_dir: str, SCEN, VARIANT, YEAR_START, YEAR_END, YEAR_OUT): #, climate_policy_config: dict, circular_economy_config: dict
 
     scen_folder = SCEN + "_" + VARIANT
-    path_image_output = Path(path_base, "data", "raw", scen_folder, "EnergyServices")
+    path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
     path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
     path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scen_folder)
+    
+    # test if path_external_data_scenario exists and if not set to standard scenario
+    if not path_external_data_scenario.exists():
+        path_external_data_scenario = Path(path_base, "data", "raw", "electricity", STANDARD_SCEN_EXTERNAL_DATA)
 
     scen_BL_folder = SCEN + "_M_CP"  # baseline scenario
-    path_image_output_BL = Path(path_base, "data", "raw", scen_BL_folder, "EnergyServices")
+    path_image_output_BL = Path(path_base, "data", "raw", "image", scen_BL_folder, "EnergyServices")
     # TODO: check if this is necessary (shouldn't historical periode anyway be the same for all scenarios?)
     # + if it is, should the baseline scenario be given as a parameter or can it be inferred from the scenario name?
 
@@ -2487,18 +2483,18 @@ def get_preprocessing_data_grid(base_dir: str, SCEN, VARIANT): #, climate_policy
         materials_grid_additions_interpol.loc[idx[:,cat],:] = materials_grid_additions_interpol.loc[idx[:,cat],:].astype('float32').reindex(list(range(YEAR_FIRST_GRID,YEAR_END+1)), level=0).interpolate()
 
     # call the stock_tail function on all lines, substations & transformers, to add historic stock tail between 1926 & 1971
-    grid_length_Hv_above_new = stock_tail(grid_length_Hv_above) # km
-    grid_length_Mv_above_new = stock_tail(grid_length_Mv_above) # km
-    grid_length_Lv_above_new = stock_tail(grid_length_Lv_above) # km
-    grid_length_Hv_under_new = stock_tail(grid_length_Hv_under) # km 
-    grid_length_Mv_under_new = stock_tail(grid_length_Mv_under) # km
-    grid_length_Lv_under_new = stock_tail(grid_length_Lv_under) # km
-    grid_subst_Hv_new = stock_tail(grid_subst_Hv)               # units
-    grid_subst_Mv_new = stock_tail(grid_subst_Mv)               # units
-    grid_subst_Lv_new = stock_tail(grid_subst_Lv)               # units
-    grid_trans_Hv_new = stock_tail(grid_trans_Hv)               # units
-    grid_trans_Mv_new = stock_tail(grid_trans_Mv)               # units
-    grid_trans_Lv_new = stock_tail(grid_trans_Lv)               # units
+    grid_length_Hv_above_new = stock_tail(grid_length_Hv_above, YEAR_OUT) # km
+    grid_length_Mv_above_new = stock_tail(grid_length_Mv_above, YEAR_OUT) # km
+    grid_length_Lv_above_new = stock_tail(grid_length_Lv_above, YEAR_OUT) # km
+    grid_length_Hv_under_new = stock_tail(grid_length_Hv_under, YEAR_OUT) # km 
+    grid_length_Mv_under_new = stock_tail(grid_length_Mv_under, YEAR_OUT) # km
+    grid_length_Lv_under_new = stock_tail(grid_length_Lv_under, YEAR_OUT) # km
+    grid_subst_Hv_new = stock_tail(grid_subst_Hv, YEAR_OUT)               # units
+    grid_subst_Mv_new = stock_tail(grid_subst_Mv, YEAR_OUT)               # units
+    grid_subst_Lv_new = stock_tail(grid_subst_Lv, YEAR_OUT)               # units
+    grid_trans_Hv_new = stock_tail(grid_trans_Hv, YEAR_OUT)               # units
+    grid_trans_Mv_new = stock_tail(grid_trans_Mv, YEAR_OUT)               # units
+    grid_trans_Lv_new = stock_tail(grid_trans_Lv, YEAR_OUT)               # units
 
 
     #############
@@ -2636,6 +2632,10 @@ def get_preprocessing_data_grid(base_dir: str, SCEN, VARIANT): #, climate_policy
 #%%% 3.1) Read in files
 ###########################################################################################################
 #----------------------------------------------------------------------------------------------------------
+
+YEAR_START = 1971   # start year of the simulation period
+YEAR_END = 2100     # end year of the calculations
+YEAR_OUT = 2100     # year of output generation = last year of reporting
 
 
 # 1. External Data ======================================================================================== 
@@ -2810,18 +2810,18 @@ for cat in list(materials_grid_additions.index.levels[1]):
 
 
 # call the stock_tail function on all lines, substations & transformers, to add historic stock tail between 1926 & 1971
-grid_length_Hv_above_new = stock_tail(grid_length_Hv_above) # km
-grid_length_Mv_above_new = stock_tail(grid_length_Mv_above) # km
-grid_length_Lv_above_new = stock_tail(grid_length_Lv_above) # km
-grid_length_Hv_under_new = stock_tail(grid_length_Hv_under) # km 
-grid_length_Mv_under_new = stock_tail(grid_length_Mv_under) # km
-grid_length_Lv_under_new = stock_tail(grid_length_Lv_under) # km
-grid_subst_Hv_new = stock_tail(grid_subst_Hv)               # units
-grid_subst_Mv_new = stock_tail(grid_subst_Mv)               # units
-grid_subst_Lv_new = stock_tail(grid_subst_Lv)               # units
-grid_trans_Hv_new = stock_tail(grid_trans_Hv)               # units
-grid_trans_Mv_new = stock_tail(grid_trans_Mv)               # units
-grid_trans_Lv_new = stock_tail(grid_trans_Lv)               # units
+grid_length_Hv_above_new = stock_tail(grid_length_Hv_above, YEAR_OUT) # km
+grid_length_Mv_above_new = stock_tail(grid_length_Mv_above, YEAR_OUT) # km
+grid_length_Lv_above_new = stock_tail(grid_length_Lv_above, YEAR_OUT) # km
+grid_length_Hv_under_new = stock_tail(grid_length_Hv_under, YEAR_OUT) # km 
+grid_length_Mv_under_new = stock_tail(grid_length_Mv_under, YEAR_OUT) # km
+grid_length_Lv_under_new = stock_tail(grid_length_Lv_under, YEAR_OUT) # km
+grid_subst_Hv_new = stock_tail(grid_subst_Hv, YEAR_OUT)               # units
+grid_subst_Mv_new = stock_tail(grid_subst_Mv, YEAR_OUT)               # units
+grid_subst_Lv_new = stock_tail(grid_subst_Lv, YEAR_OUT)               # units
+grid_trans_Hv_new = stock_tail(grid_trans_Hv, YEAR_OUT)               # units
+grid_trans_Mv_new = stock_tail(grid_trans_Mv, YEAR_OUT)               # units
+grid_trans_Lv_new = stock_tail(grid_trans_Lv, YEAR_OUT)               # units
 
 
 #############
@@ -3009,24 +3009,19 @@ results_dict_add = {
 }
 
 
+prep_data_lines = create_prep_data(results_dict_lines, conversion_table, unit_mapping)
+prep_data_add = create_prep_data(results_dict_add, conversion_table, unit_mapping)
+
+prep_data_lines["stocks"] = prism.Q_(prep_data_lines["stocks"], "km")
+prep_data_lines["material_intensities"] = prism.Q_(prep_data_lines["material_intensities"], "kg/km")
+prep_data_lines["set_unit_flexible"] = prism.U_(prep_data_lines["stocks"]) # prism.U_ gives the unit back
+# set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
+
+prep_data_add["stocks"] = prism.Q_(prep_data_add["stocks"], "count")
+prep_data_add["material_intensities"] = prism.Q_(prep_data_add["material_intensities"], "kg/count")
+prep_data_add["set_unit_flexible"] = prism.U_(prep_data_add["stocks"]) # prism.U_ gives the unit back
 
 
-
-# Convert the DataFrames to xarray Datasets and apply units
-# preprocessing_results_xarray = {}
-# for df_name, df in results_dict.items():
-#     if df_name in conversion_table:
-#         data_xar_dataset = pandas_to_xarray(df, unit_mapping)
-#         data_xarray = dataset_to_array(data_xar_dataset, *conversion_table[df_name])
-#     else:
-#         # lifetimes_vehicles does not need to be converted in the same way.
-#         data_xarray = pandas_to_xarray(df, unit_mapping)
-#     preprocessing_results_xarray[df_name] = data_xarray
-
-# preprocessing_results_xarray["lifetimes"] = convert_life_time_vehicles(preprocessing_results_xarray["lifetime_grid_distr"])
-# preprocessing_results_xarray["stocks"] = preprocessing_results_xarray.pop("grid_stock")
-# preprocessing_results_xarray["material_intensities"] = preprocessing_results_xarray.pop("materials_grid_combined_kgperkm")
-# # preprocessing_results_xarray["shares"] = preprocessing_results_xarray.pop("vehicle_shares")
 
 #----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
@@ -3036,16 +3031,16 @@ results_dict_add = {
 #----------------------------------------------------------------------------------------------------------
 
 
-prep_data_lines, prep_data_add = get_preprocessing_data_grid(path_base, SCEN, VARIANT)
+prep_data_lines, prep_data_add = get_preprocessing_data_grid(path_base, SCEN, VARIANT, YEAR_START, YEAR_END, YEAR_OUT)
 
 # LINES ----------------------------------------------------
 # prep_data = create_prep_data(results_dict_lines, conversion_table, unit_mapping)
 
 # # Define the complete timeline, including historic tail
-time_start = prep_data_lines["stocks"].coords["Time"].min().values
-time_end = 2060
-complete_timeline = prism.Timeline(time_start, time_end, 1)
-simulation_timeline = prism.Timeline(1970, time_end, 1)
+time_start = prep_data["stocks"].coords["Time"].min().values
+complete_timeline = prism.Timeline(time_start, YEAR_END, 1)
+simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
+
 
 sec_electr_grid_lines = Sector("electr_grid_lines", prep_data_lines)
 
@@ -3062,10 +3057,10 @@ list(main_model_factory_lines.electr_grid_lines)
 # prep_data = create_prep_data(results_dict_add, conversion_table, unit_mapping)
 
 # # Define the complete timeline, including historic tail
-time_start = prep_data_add["stocks"].coords["Time"].min().values
-time_end = 2060
-complete_timeline = prism.Timeline(time_start, time_end, 1)
-simulation_timeline = prism.Timeline(1970, time_end, 1)
+time_start = prep_data["stocks"].coords["Time"].min().values
+complete_timeline = prism.Timeline(time_start, YEAR_END, 1)
+simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
+
 
 sec_electr_grid_add = Sector("electr_grid_add", prep_data_add)
 
@@ -3149,14 +3144,14 @@ plt.show()
 #%%%% 2 models ---------------------------------------------------
 
 
-data_lines  = main_model_factory_lines.stocks.copy()
-data_add    = main_model_factory_add.stocks.copy()
+data_lines  = main_model_factory_lines.stocks.copy().sum(dim="Region")
+data_add    = main_model_factory_add.stocks.copy().sum(dim="Region")
 
-data        = xr.concat([data_lines, data_add], dim='Type')
-data_plot   = data.sum(dim="Region")
+# data        = xr.concat([data_lines, data_add], dim='Type')
+# data_plot   = data.sum(dim="Region")
 
 types_top    = ['HV - Lines - Overhead', 'HV - Lines - Underground', 'MV - Lines - Overhead', 'MV - Lines - Underground', 
-                'LV - Lines - Overhead', 'LV - Lines - Underground', 'LV - Transformers', 'LV - Substations',]
+                'LV - Lines - Overhead', 'LV - Lines - Underground'] #, 'LV - Transformers', 'LV - Substations',
 types_bottom = ['HV - Substations', 'HV - Transformers', 'MV - Substations', 'MV - Transformers']
 
 
@@ -3168,9 +3163,9 @@ s_label = 14
 
 # Top row:
 for t in types_top:
-    line, = axes[0].plot(data_plot.Time, data_plot.sel(Type=t), label=t, color=dict_grid_styles2[t][0], linestyle=dict_grid_styles2[t][1], linewidth=linewidth)
+    line, = axes[0].plot(data_lines.Time, data_lines.sel(Type=t), label=t, color=dict_grid_styles2[t][0], linestyle=dict_grid_styles2[t][1], linewidth=linewidth)
 
-axes[0].set_ylabel("Stocks (# units/km)", fontsize=s_label)
+axes[0].set_ylabel("Stocks (# counts/km)", fontsize=s_label)
 axes[0].grid(alpha=0.3, linestyle='--')
 axes[0].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
 axes[0].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
@@ -3178,10 +3173,10 @@ axes[0].legend(loc='upper left', fontsize=s_legend) #handles=handles, labels=lab
 
 # Bottom row:
 for t in types_bottom:
-    axes[1].plot(data_plot.Time, data_plot.sel(Type=t), label=t, color=dict_grid_styles2[t][0], linestyle=dict_grid_styles2[t][1], linewidth=linewidth)
+    axes[1].plot(data_add.Time, data_add.sel(Type=t), label=t, color=dict_grid_styles2[t][0], linestyle=dict_grid_styles2[t][1], linewidth=linewidth)
 
 axes[1].set_xlabel("Time", fontsize=s_label)
-axes[1].set_ylabel("Stocks (# units)", fontsize=s_label)
+axes[1].set_ylabel("Stocks (# counts)", fontsize=s_label)
 axes[1].grid(alpha=0.3, linestyle='--')
 axes[1].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
 axes[1].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
@@ -3190,7 +3185,7 @@ axes[1].legend(loc='upper left', fontsize=s_legend)
 plt.suptitle(f"{scen_folder}: Electricity Grid - Stocks", fontsize=16)
 
 plt.tight_layout()
-fig.savefig(path_test_plots / "Grid_stocks_world.png", dpi=300)
+# fig.savefig(path_test_plots / "Grid_stocks_world.png", dpi=300)
 plt.show()
 
 
@@ -3206,7 +3201,7 @@ materials = ["Steel", "Concrete", "Aluminium", "Cu"]
 # data_all = main_model_factory.stock_by_cohort_materials.copy().sum('Region')
 
 # # data_all = main_model_factory.inflow_materials.to_array().sum('Region')
-# data_all = data_all/1_000  # Convert kg -> tonnes
+# data_all = data_all.pint.to("t")  # Convert kg -> tonnes
 # data_all = data_all.sel(Time=slice(1971, None))
 # data_plot = data_all.sum(dim='Type')
 
@@ -3258,8 +3253,8 @@ materials = ["Steel", "Concrete", "Aluminium", "Cu"]
 
 #%%%% 2 model ---------------------------------------------------
 
-data_lines  = main_model_factory_lines.stock_by_cohort_materials.copy().sum(dim="Region")/1_000  # Convert kg -> tonnes
-data_add    = main_model_factory_add.stock_by_cohort_materials.copy().sum(dim="Region")/1_000  # Convert kg -> tonnes
+data_lines  = main_model_factory_lines.stock_by_cohort_materials.copy().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
+data_add    = main_model_factory_add.stock_by_cohort_materials.copy().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
 
 data        = xr.concat([data_lines, data_add], dim='Type')
 data        = data.sel(Time=slice(1971, None))
@@ -3327,16 +3322,26 @@ plt.show()
 regions = ['Brazil', 'C.Europe', 'China'] 
 threshold = 100_000
 
-data_lines  = main_model_factory_lines.inflow.to_array()
-data_add    = main_model_factory_add.inflow.to_array()
+data_lines = main_model_factory_lines.inflow.to_array().sel(
+    time=slice(1971, None), 
+    Type=main_model_factory_lines.inflow.to_array().Type != '<EMPTY>', 
+    Region=regions
+)
 
-data        = xr.concat([data_lines, data_add], dim='Type')
-data        = data.sel(time=slice(1971, None), Type=data.Type != '<EMPTY>', Region=regions)
+data_add = main_model_factory_add.inflow.to_array().sel(
+    time=slice(1971, None), 
+    Type=main_model_factory_add.inflow.to_array().Type != '<EMPTY>', 
+    Region=regions
+)
+# data        = xr.concat([data_lines, data_add], dim='Type')
+# data        = data.sel(time=slice(1971, None), Type=data.Type != '<EMPTY>', Region=regions)
+# techs_upper = [coord_name.item() for coord_name in data.coords['Type']  
+#                if data.sel(Type = coord_name).values.max() > threshold]
+# techs_lower = [coord_name.item() for coord_name in data.coords['Type']  
+#                if data.sel(Type = coord_name).values.max() <= threshold]
 
-techs_upper = [coord_name.item() for coord_name in data.coords['Type']  
-               if data.sel(Type = coord_name).values.max() > threshold]
-techs_lower = [coord_name.item() for coord_name in data.coords['Type']  
-               if data.sel(Type = coord_name).values.max() <= threshold]
+techs_upper = data_lines.Type.values
+techs_lower = data_add.Type.values
 
 
 fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(18, 8))  # Now 3 columns for 3 regions
@@ -3349,22 +3354,22 @@ for i, region in enumerate(regions):  # regions now has length 3
 
     # Top row: Types 1–15
     for t in techs_upper:
-        data_plot = data.sel(Type=t, Region=region)
+        data_plot = data_lines.sel(Type=t, Region=region)
         color, ls = dict_gentech_styles.get(t, ('black', '-'))
         axes[0, col].plot(data_plot.time, data_plot.values, label=t, color=dict_grid_styles2[t][0], linestyle=dict_grid_styles2[t][1], linewidth=linewidth)
     axes[0, col].set_title(f"{region}", fontsize=15)
     axes[0, col].grid(alpha=0.3, linestyle='--')
     axes[0, col].tick_params(axis='both', which='major', labelsize=s_legend)
-    axes[0, 0].set_ylabel("Inflow (# units/km)", fontsize=s_label)
+    axes[0, 0].set_ylabel("Inflow (km)", fontsize=s_label)
 
     # Bottom row: Types 16–30
     for t in techs_lower:
-        data_plot = data.sel(Type=t, Region=region)
+        data_plot = data_add.sel(Type=t, Region=region)
         color, ls = dict_gentech_styles.get(t, ('black', '-'))
         axes[1, col].plot(data_plot.time, data_plot.values, label=t, color=dict_grid_styles2[t][0], linestyle=dict_grid_styles2[t][1], linewidth=linewidth)
     axes[1, col].grid(alpha=0.3, linestyle='--')
     axes[1, col].tick_params(axis='both', which='major', labelsize=s_legend)
-    axes[1, 0].set_ylabel("Inflow (# units)", fontsize=s_label)
+    axes[1, 0].set_ylabel("Inflow (# counts)", fontsize=s_label)
     axes[1, col].set_xlabel("Time", fontsize=s_label)
 
 # Y-axis number formatting and hiding right y-axis ticks
@@ -3389,11 +3394,18 @@ plt.show()
 #================================================================================
 #%%%% Sum & Per TECH - World
 
-data_lines  = main_model_factory_lines.inflow.to_array()
-data_add    = main_model_factory_add.inflow.to_array()
+data_lines = main_model_factory_lines.inflow.to_array().sel(
+    time=slice(1971, None), 
+    Type=main_model_factory_lines.inflow.to_array().Type != '<EMPTY>'
+).sum('Region')
 
-data        = xr.concat([data_lines, data_add], dim='Type')
-data        = data.sel(time=slice(1971, None), Type=data.Type != '<EMPTY>').sum('Region')
+data_add = main_model_factory_add.inflow.to_array().sel(
+    time=slice(1971, None), 
+    Type=main_model_factory_add.inflow.to_array().Type != '<EMPTY>'
+).sum('Region')
+
+# data        = xr.concat([data_lines, data_add], dim='Type')
+# data        = data.sel(time=slice(1971, None), Type=data.Type != '<EMPTY>').sum('Region')
 
 types_top    = ['HV - Lines - Overhead', 'HV - Lines - Underground', 'MV - Lines - Overhead', 'MV - Lines - Underground', 
                 'LV - Lines - Overhead', 'LV - Lines - Underground']
@@ -3406,7 +3418,7 @@ s_label = 14
 
 # Second subplot: data_all_2 (summed over Region and Type, likely only time and material left)
 for t in types_top:
-    data_plot = data.sel(Type=t)
+    data_plot = data_lines.sel(Type=t)
     data_plot.plot(ax=axes[0], label=t, color=dict_grid_styles2[t][0], linestyle=dict_grid_styles2[t][1], linewidth=linewidth)
     axes[0].grid(alpha=0.3, linestyle='--')
     axes[0].tick_params(axis='both', which='major', labelsize=s_legend)
@@ -3417,13 +3429,13 @@ for t in types_top:
 
 # First subplot: data_all_1 (summed over Region, still over Type and time likely)
 for t in types_bottom:
-    data_plot = data.sel(Type=t)
+    data_plot = data_add.sel(Type=t)
     axes[1].plot(data_plot.time, data_plot.values, label=t, color=dict_grid_styles2[t][0], linestyle=dict_grid_styles2[t][1], linewidth=linewidth)
     axes[1].grid(alpha=0.3, linestyle='--')
     axes[1].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
     axes[1].tick_params(axis='both', which='major', labelsize=s_legend)
     axes[1].set_xlabel("Time", fontsize=s_label)
-    axes[1].set_ylabel("Inflow (# units)", fontsize=s_label)
+    axes[1].set_ylabel("Inflow (# counts)", fontsize=s_label)
     axes[1].set_title('Grid Additions')
     # axes[1].legend(ncol=2, loc='upper center', bbox_to_anchor=(0.9, -0.2), fontsize=s_legend)
 
@@ -3477,7 +3489,7 @@ df_iea_lt_cu = pd.DataFrame({ # lines & transformers, copper
     'Cu': values
 })
 df_iea_lt_cu.set_index('Year', inplace=True)
-df_iea_lt_cu = df_iea_lt_cu /1_000  # Convert kg -> t
+df_iea_lt_cu = df_iea_lt_cu.pint.to("t")  # Convert kg -> t
 
 # Alu -------------
 years = np.arange(2012, 2051)
@@ -3492,7 +3504,7 @@ df_iea_lt_alu = pd.DataFrame({ # lines & transformers, aluminium
     'Aluminium': values
 })
 df_iea_lt_alu.set_index('Year', inplace=True)
-df_iea_lt_alu = df_iea_lt_alu /1_000  # Convert kg -> t
+df_iea_lt_alu = df_iea_lt_alu.pint.to("t")  # Convert kg -> t
 
 # Steel -------------
 years = np.arange(2012, 2051)
@@ -3507,14 +3519,14 @@ df_iea_t_steel = pd.DataFrame({ # transformers, steel
     'Steel': values
 })
 df_iea_t_steel.set_index('Year', inplace=True)
-df_iea_t_steel = df_iea_t_steel /1_000  # Convert kg -> t
+df_iea_t_steel = df_iea_t_steel.pint.to("t")  # Convert kg -> t
 # ----------------------------------------------------------------------------------
 
 
 #%%%% 1 model ---------------------------------------------------
 
 # data_all = main_model_factory.inflow_materials.to_array().sum('Region')
-# data_all = data_all/1_000  # Convert kg -> tonnes
+# data_all = data_all.pint.to("t")  # Convert kg -> tonnes
 # data_all = data_all.sel(time=slice(1971, None))
 # data_plot = data_all.sum(dim='Type')
 
@@ -3566,8 +3578,8 @@ df_iea_t_steel = df_iea_t_steel /1_000  # Convert kg -> t
 
 #%%%% 2 model ---------------------------------------------------
 
-data_lines  = main_model_factory_lines.inflow_materials.to_array().sum(dim="Region")/1_000  # Convert kg -> tonnes
-data_add    = main_model_factory_add.inflow_materials.to_array().sum(dim="Region")/1_000  # Convert kg -> tonnes
+data_lines  = main_model_factory_lines.inflow_materials.to_array().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
+data_add    = main_model_factory_add.inflow_materials.to_array().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
 
 data_lines  = data_lines.sel(time=slice(1971, None))
 data_add    = data_add.sel(time=slice(1971, None))
@@ -3627,8 +3639,8 @@ plt.show()
 
 #%%%% 2 model ---------------------------------------------------
 
-data_lines  = main_model_factory_lines.outflow_by_cohort_materials.to_array().sum(dim="Region")/1_000  # Convert kg -> tonnes
-data_add    = main_model_factory_add.outflow_by_cohort_materials.to_array().sum(dim="Region")/1_000  # Convert kg -> tonnes
+data_lines  = main_model_factory_lines.outflow_by_cohort_materials.to_array().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
+data_add    = main_model_factory_add.outflow_by_cohort_materials.to_array().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
 
 data_lines  = data_lines.sel(time=slice(1971, None))
 data_add    = data_add.sel(time=slice(1971, None))

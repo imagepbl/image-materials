@@ -9,32 +9,15 @@ ureg = pint.UnitRegistry(force_ndarray_like=True)
 
 # --- Settings & constants
 
-# start year of historic IMAGE data
-YEAR_START = 1971
-# start year of the full model period (including stock-development from
-# scratch, which needs to be the oldest year of any vehicle, all stock
-# calculations are initiated in this year, so this has an effect on
-# runtime)
-# TODO: set FIRST_YEAR based on minimum value in data-files
-YEAR_FIRST_GRID = 1926   # UK Electricity supply act - https://www.bbc.com/news/uk-politics-11619751   
-YEAR_FIRST = 1807  # first_year_vehicle.values.min()
-YEAR_END = 2060    # end year of the calculations
-YEAR_OUT = 2060    # year of output generation = last year of reporting (in the output files) 
-YEAR_LAST = 2060   # last year available in the IMAGE data-files (which are input to ELMA)
-YEAR_SWITCH = 1990 # year after which other batteries than lead-acid are allowed
+YEAR_FIRST_GRID = 1926  # UK Electricity supply act - https://www.bbc.com/news/uk-politics-11619751   
+YEAR_FIRST = 1807       # first_year_vehicle.values.min()
+YEAR_SWITCH = 1990      # year after which other batteries than lead-acid are allowed
 REGIONS = 26
-
 COHORTS = 50
 
 
 # Scenario settings ---------------------------------------------
 STANDARD_SCEN_EXTERNAL_DATA = "SSP2_M_CP"
-SCEN = "SSP2"
-# CP or 2D (Add "_RE" for Resource Efficiency)
-# VARIANT = "2D_RE"
-# VARIANT = "M_CP"
-VARIANT = "VLHO"
-# OUTPUT_FOLDER = base_dir.joinpath("..", "..", "output", PROJECT, FOLDER)
 
 # Sensitivity Analysis - default, high_stor, high_grid
 SENS_ANALYSIS = "default" 
@@ -49,7 +32,7 @@ TONNES_TO_KGS = 1000
 
 # General constants ---------------------------------------------
 
-STD_LIFETIMES_ELECTR = 0.214              # standard deviation as a fraction of the mean lifetime applicable to energy equipment (Asset Management for Infrastructure Systems: Energy and Water, Balzer & Schorn 2015)
+STD_LIFETIMES_ELECTR = 0.214  # standard deviation as a fraction of the mean lifetime applicable to energy equipment (Asset Management for Infrastructure Systems: Energy and Water, Balzer & Schorn 2015)
 # TODO: different std for lines, transformers, generation, storage, etc.? scenario dependent?
 
 # Define the units for each dimension
