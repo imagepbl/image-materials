@@ -36,8 +36,6 @@ from imagematerials.electricity.constants import (
     YEAR_SWITCH,
     # YEAR_LAST,
     # COHORTS, # necessary?
-    SCEN,
-    VARIANT,
     SENS_ANALYSIS,
     REGIONS,
     TECH_GEN,

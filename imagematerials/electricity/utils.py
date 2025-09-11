@@ -15,7 +15,6 @@ from imagematerials.electricity.constants import (
     # YEAR_END,
     # YEAR_OUT,
     YEAR_SWITCH,
-    SCEN,
     REGIONS,
     MEGA_TO_TERA,
     PKMS_TO_VKMS,
