@@ -75,7 +75,8 @@ def fit_models_all_materials(scenarios_list: list = ["SSP2_M_CP"], path_input_da
 
 
 
-def make_gompertz_coefs_da(results_models, material_order=None, region_order=None):
+def make_gompertz_coefs_da(results_models, material_order=None, region_order=None, 
+                           start_year=1971, end_year=2100):
     """
     Create a DataArray of Gompertz coefficients with desired material and region order.
 
@@ -138,6 +139,11 @@ def make_gompertz_coefs_da(results_models, material_order=None, region_order=Non
         [coefs_xr['a'], coefs_xr['b'], coefs_xr['c']],
         dim='coef'
     ).assign_coords(coef=['a', 'b', 'c'])
+
+    # Expand to include 'Time' dimension 
+    years = np.arange(start_year, end_year + 1)
+    coefs_da = coefs_da.expand_dims(Time=years)
+    coefs_da = xr.ones_like(coefs_da) * coefs_da
 
     coefs_da = coefs_da.rename("gompertz_coefs")  # <-- Set a descriptive name
 
