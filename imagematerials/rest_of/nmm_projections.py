@@ -210,19 +210,9 @@ def sand_projections(scenario: str, path_input_data, path_input_data_image):
     }
 
 
-
     sand.fit_models(best_rmse_models=rmse_models, bounds=bounds)
-
-    # project based on best model
-    sand.project_on_total(all_regions_list_class[:-1])
-    sand.smooth_out_interpolation_all(10, 2017)
-
-    sand.adjust_alpha_and_project(all_regions_list_class[:-1], 
-                        start_year_adjust=2025, 
-                        end_year_adjust=2100, 
-                        min_alpha=None)
-    
     sand.remove_regions_with_no_good_fit_from_region_model_match(rest)
+
     return sand
 
 def clay_projections(scenario: str, path_input_data, path_input_data_image):
