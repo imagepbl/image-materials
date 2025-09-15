@@ -2,7 +2,7 @@
 base_year = 2025
 target_year = 2060
 # possibilities for implementation rate are: linear, immediate, s-curve
-implementation_rate = 'immediate'
+implementation_rate = 'linear'
 
 [buildings]
 base_year = 2020
