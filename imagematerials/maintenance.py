@@ -154,9 +154,6 @@ class MaintenanceLinear(prism.Model):
         
         # Cache maintenance types for performance
         self.maintenance_types = set(self.maintenance_material_fractions.coords["Type"].values)
-
-        print(f"Initialized MaintenanceLinear with {len(self.maintenance_types)} maintenance types")
-        #print(f"Capping lifetime is set to {cap_at_lifetime}")
     
     def compute_values(self, time: prism.Time, stock_by_cohort, cap_at_lifetime):
         """Compute maintenance with age-dependent linear factors (vectorized)."""
