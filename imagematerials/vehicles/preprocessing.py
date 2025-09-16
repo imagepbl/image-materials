@@ -385,12 +385,16 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
     
     # Apply lightweighting in narrow scenario
     if "narrow" in circular_economy_config.keys():
-        target_year = circular_economy_config['narrow']['vehicles']['target_year']
-        base_year = circular_economy_config['narrow']['vehicles']['base_year']
-        non_road_weight_change_pc = circular_economy_config['narrow']['vehicles']['non-road']['weight_change_pc']
-        road_weight_change_pc = circular_economy_config['narrow']['vehicles']['road']['weight_change_pc']
-        implementation_rate = circular_economy_config['narrow']['vehicles']['implementation_rate']
-        
+        ce_scen = "narrow"
+    if "resource_efficient" in circular_economy_config.keys():
+        ce_scen = "resource_efficient"
+    
+        target_year = circular_economy_config[ce_scen]['vehicles']['target_year']
+        base_year = circular_economy_config[ce_scen]['vehicles']['base_year']
+        non_road_weight_change_pc = circular_economy_config[ce_scen]['vehicles']['non-road']['weight_change_pc']
+        road_weight_change_pc = circular_economy_config[ce_scen]['vehicles']['road']['weight_change_pc']
+        implementation_rate = circular_economy_config[ce_scen]['vehicles']['implementation_rate']
+
         vehicle_weights_simple = scenario_change(
             vehicle_weights_simple, base_year, target_year, 
             non_road_weight_change_pc, implementation_rate)
