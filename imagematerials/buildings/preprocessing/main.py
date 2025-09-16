@@ -10,8 +10,7 @@ from imagematerials.buildings.preprocessing.floorspace import (
     compute_housing_residential,
     compute_housing_type,
     extrapolate_floorspace,
-    get_image_floorspace,
-    apply_circular_economy_commercial_floorspace
+    get_image_floorspace
 )
 from imagematerials.buildings.preprocessing.lifetimes import compute_lifetimes
 from imagematerials.buildings.preprocessing.materials import (
@@ -20,6 +19,8 @@ from imagematerials.buildings.preprocessing.materials import (
 )
 from imagematerials.buildings.preprocessing.population import compute_population
 from imagematerials.concepts import create_building_graph
+
+from imagematerials.buildings.preprocessing.circular_economy_measures import apply_circular_economy_commercial_floorspace
 
 
 def buildings_preprocessing(base_directory, climate_policy_config: dict, 
