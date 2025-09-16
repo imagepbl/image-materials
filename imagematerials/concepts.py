@@ -265,15 +265,21 @@ def create_vehicle_graph():
 
 
 def create_building_graph():
-    building_nodes = []
+    building_nodes = [
+    Node("Buildings"),
+
+]
     for super_type in ["Detached", "Semi-detached", "Appartment", "High-rise"]:
-        building_nodes.append(Node(super_type))
+        building_nodes.append(Node(super_type, inherits_from="Buildings"))
 
         for sub_type in ["Urban", "Rural"]:
             building_nodes.append(Node(f"{super_type} - {sub_type}", inherits_from=super_type))
 
+    for c in ["Retail+", "Hotels+", "Office", "Govt+"]:
+        building_nodes.append(Node(c, inherits_from="Buildings"))
 
-    building_knowledge_graph = KnowledgeGraph(*building_nodes)
+    building_knowledge_graph = KnowledgeGraph(*building_nodes)  
+
     # knowledge_graph = KnowledgeGraph(*building_nodes)
 
 
