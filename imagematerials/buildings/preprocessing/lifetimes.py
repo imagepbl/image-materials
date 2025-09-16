@@ -5,7 +5,6 @@ from imagematerials.buildings.constants import FLAG_NORMAL, SCENARIO_SELECT, ALL
 from imagematerials.util import dataset_to_array, merge_dims
 
 
-
 def compute_lifetimes(base_directory, commercial_types, circular_economy_config, distribution_type="weibull"):
 
     if 'slow' in circular_economy_config.keys():
