@@ -1,0 +1,9 @@
+- Capacity|Industry|Non-Metallic Minerals|Cement|{Cement Production Technology}:
+    description: Production capacity of cement according to technology
+    unit: Mt/yr
+- Capacity|Industry|Iron and Steel|Steel|{Steel Production Technology}:
+    description: Production capacity of steel according to technology
+    unit: Mt/yr
+- Capacity|Industry|Non-Ferrous Metals|Aluminum|{Aluminum Production Technology}:
+    description: Production capacity of aluminum according to technology
+    unit: Mt/yr
