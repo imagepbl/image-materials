@@ -4,7 +4,6 @@ import prism
 import xarray as xr
 import numpy as np
 
-from imagematerials.constants import modes
 from imagematerials.vehicles.constants import maintenance_lifetime_per_mode
 from imagematerials.concepts import create_vehicle_graph
 
