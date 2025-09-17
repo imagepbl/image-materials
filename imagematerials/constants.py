@@ -174,3 +174,4 @@ _MODE_FRGT = [
     "Pipeline"
 ]
 FreightModes = prism.Dimension('mode', _MODE_FRGT)  # Freight
+
