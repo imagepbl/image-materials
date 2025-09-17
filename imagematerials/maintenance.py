@@ -12,8 +12,6 @@ from imagematerials.vehicles.constants import maintenance_modes
 from imagematerials.vehicles.constants import maintenance_lifetime_per_mode
 from imagematerials.concepts import create_vehicle_graph
 
-
-from imagematerials.constants import modes
 from imagematerials.vehicles.constants import maintenance_lifetime_per_mode
 from imagematerials.concepts import create_vehicle_graph
 
@@ -153,7 +151,7 @@ class MaintenanceLinear(prism.Model):
         )
         
         self.vehicle_lifetime_maintenance = create_vehicle_graph().rebroadcast_xarray(
-            expected_lifetimes, output_coords=modes, dim="Type"
+            expected_lifetimes, output_coords=maintenance_modes, dim="Type"
         )
         
         # Cache maintenance types for performance
