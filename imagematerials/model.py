@@ -549,10 +549,7 @@ class RestOf(prism.Model):
     def compute_values(self, time: prism.Time, gompertz_coefs, gdp_per_capita, population, 
                        historic_diff_consumption_mean, historic_diff_consumption_total):
         t, dt = time.t, time.dt
-        
-        
-        # print("historic_diff_consumption_total.material:", historic_diff_consumption_total.coords['material'].values)
-       
+
         if t > 1970:
             # Select coefficients for all regions/materials
             a = gompertz_coefs.sel(coef='a', Time = t)
