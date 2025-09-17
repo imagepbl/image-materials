@@ -38,7 +38,7 @@ from imagematerials.electricity.preprocessing import (
     get_preprocessing_data_stor
 )
 # from imagematerials.util import import_from_netcdf, export_to_netcdf
-from imagematerials.model import GenericMainModel, GenericMaterials, GenericStocks, Maintenance, MaterialIntensities, MaterialIntensitiesTEST, SharesInInflowStocks
+from imagematerials.model import GenericMainModel, GenericMaterials, GenericStocks, Maintenance, MaterialIntensities, SharesInflowStocks
 from imagematerials.factory import ModelFactory, Sector
 import prism
 
@@ -185,15 +185,10 @@ sec_electr_stor_oth = Sector("electr_stor_oth", prep_data_oth_storage, check_coo
 
 main_model_factory_oth = ModelFactory(
     sec_electr_stor_oth, complete_timeline
-    ).add(SharesInInflowStocks
-    ).add(MaterialIntensitiesTEST
+    ).add(SharesInflowStocks
+    ).add(MaterialIntensities
     ).finish()
 
 main_model_factory_oth.simulate(simulation_timeline)
 list(main_model_factory_oth.electr_stor_oth)
 
-
-
-
-
-# %%

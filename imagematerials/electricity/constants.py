@@ -146,7 +146,7 @@ linestyles = ['-', '--', ':'] #'-.'
 # Create a cycle of (color, linestyle) combinations
 style_combinations = list(itertools.product(colors, linestyles))
 # Map technologies to (color, linestyle)
-DICT_GRIDTECH_STYLES = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
+DICT_STOR_STYLES = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
 
 
 DICT_GENTECHCAT_COLORS = {

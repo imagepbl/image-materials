@@ -20,7 +20,7 @@ import prism
 from imagematerials.distribution import ALL_DISTRIBUTIONS, NAME_TO_DIST
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_life_time_vehicles
-from imagematerials.model import GenericMainModel, GenericStocks, SharesInInflowStocks, Maintenance, GenericMaterials, MaterialIntensities
+from imagematerials.model import GenericMainModel, GenericStocks, SharesInflowStocks, Maintenance, GenericMaterials, MaterialIntensities
 from imagematerials.factory import ModelFactory, Sector
 from imagematerials.concepts import create_electricity_graph
 from imagematerials.electricity.utils import MNLogit, stock_tail, create_prep_data, stock_share_calc
@@ -44,7 +44,7 @@ from imagematerials.electricity.constants import (
     unit_mapping,
     DICT_GENTECH_TO_CATEGORY,
     DICT_GENTECH_STYLES,
-    DICT_GRIDTECH_STYLES,
+    DICT_STOR_STYLES,
     DICT_GENTECHCAT_COLORS,
     DICT_MATERIALS_COLORS,
     DICT_GRID_COLORS,
@@ -2404,10 +2404,10 @@ storage_out = pd.concat([storage_out_phs, storage_out_evs, storage_out_oth])
 
 # derive inflow & outflow (in MWh) for PHS, for later use in the material calculations 
 PHS_kg_perkWh = 26.8   # kg per kWh storage capacity (as weight addition to existing hydro plants to make them pumped) 
-phs_storage_stock_tail   = stock_tail(phs_storage.astype(float), YEAR_OUT)
+phs_storage_stock_tail = stock_tail(phs_storage.astype(float), YEAR_OUT)
 storage_lifetime_PHS = storage_lifetime['PHS'].reindex(list(range(YEAR_FIRST_GRID,YEAR_OUT+1)), axis=0).interpolate(limit_direction='both')
 
-# TESTS TESTS --------------------------------------------------------
+#%%%% TESTS TESTS --------------------------------------------------------
 
 # Test PHS interpolation pre-1971
 regions_to_plot = ["China", "Brazil", "US"]  # adjust to your available columns
@@ -2593,8 +2593,13 @@ oth_storage_materialintens = xr_oth_storage_materials * xr_storage_density_inter
 
 
 # Conversion table for all coordinates, to be removed/adapted after input tables are fixed.
+# conversion_table = {
+#     "oth_storage_stock": (["Time"], ["Type", "Region"],),
+#     "oth_storage_materials": (["Cohort"], ["Type", "material"],), #SubType
+#     "oth_storage_shares": (["Cohort"], ["Type",]) #SubType
+# }
 conversion_table = {
-    "oth_storage_stock": (["Time"], ["Type", "Region"],),
+    "oth_storage_stock": (["Time"], ["SuperType", "Region"],),
     "oth_storage_materials": (["Cohort"], ["Type", "material"],), #SubType
     "oth_storage_shares": (["Cohort"], ["Type",]) #SubType
 }
@@ -2644,15 +2649,15 @@ phs_storage_inflow, phs_storage_outflow, phs_storage_stock  = inflow_outflow(phs
 inflow_by_tech, stock_cohorts, outflow_cohorts = stock_share_calc(oth_storage, storage_market_share, 'Deep-cycle Lead-Acid', list(storage_lifetime_interpol.columns),storage_lifetime_interpol) # run the function that calculates stock shares from total stock & inflow shares
 # stock, market_share, init_tech, techlist, storage_lifetime_interpol
 
+
+# TESTS TESTS --------------------------------------------------------
+
 stock_cohorts.index.names = ["Region", "Time"]
 stock_cohorts.columns.names = ["Type", "Cohort"]
 df_stacked = stock_cohorts.stack([0, 1])  # stack the columns levels
 da = xr.DataArray(df_stacked) #convert to xarray
 da = da.unstack()  
 da = da.transpose("Time", "Region", "Type", "Cohort")
-
-
-# TESTS TESTS --------------------------------------------------------7
 
 c = 1992
 t=2000
@@ -2661,7 +2666,7 @@ a_shares = prep_data_oth_storage["shares"]
 knowledge_graph = create_electricity_graph()
 a_stock_diff = knowledge_graph.aggregate_sum(da.loc[t].sum("Cohort"), a_stocks.coords["Type"].values, dim="Type")
 a_inflow_tech = knowledge_graph.rebroadcast_xarray(a_stock_diff, da.coords["Type"].values, dim="Type", shares=a_shares.sel(Cohort=t))
-# this is working -> theoretically the SharesInInflowStocks model should work as well?
+# this is working -> theoretically the SharesInflowStocks model should work as well?
 
 
 from imagematerials.survival import ScipySurvival, SurvivalMatrix
@@ -2701,7 +2706,7 @@ list(main_model_factory_phs.electr_stor_phs)
 
 
 # Other Storage ==============================================================================
-from imagematerials.model import GenericMainModel, GenericStocks, SharesInInflowStocks, Maintenance, GenericMaterials, MaterialIntensities, MaterialIntensitiesTEST
+from imagematerials.model import GenericMainModel, GenericStocks, SharesInflowStocks, Maintenance, GenericMaterials, MaterialIntensities #, MaterialIntensitiesTEST
 
 time_start = prep_data_oth_storage["stocks"].coords["Time"].min().values
 complete_timeline = prism.Timeline(time_start, YEAR_END, 1)
@@ -2711,8 +2716,8 @@ sec_electr_stor_oth = Sector("electr_stor_oth", prep_data_oth_storage, check_coo
 
 main_model_factory_oth = ModelFactory(
     sec_electr_stor_oth, complete_timeline
-    ).add(SharesInInflowStocks
-    ).add(MaterialIntensitiesTEST
+    ).add(SharesInflowStocks
+    ).add(MaterialIntensities
     ).finish()
 
 main_model_factory_oth.simulate(simulation_timeline)
@@ -2995,9 +3000,8 @@ colors = plt.get_cmap('tab20').colors  # 20 distinct colors
 linestyles = ['-', '--', ':'] #'-.'
 # Create a cycle of (color, linestyle) combinations
 style_combinations = list(itertools.product(colors, linestyles))
-assert len(technologies) <= len(style_combinations), "Not enough unique combinations for all technologies."
 # Map technologies to (color, linestyle)
-DICT_GRIDTECH_STYLES = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
+DICT_STOR_STYLES = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
 
 
 #================================================================================
@@ -3029,7 +3033,7 @@ for i, region in enumerate(regions):  # regions now has length 3
     # Top row: Types 1–15
     for t in techs_upper:
         data_plot = data_all.sel(Type=t, Region=region)
-        color, ls = DICT_GRIDTECH_STYLES.get(t, ('black', '-'))
+        color, ls = DICT_STOR_STYLES.get(t, ('black', '-'))
         axes[0, col].plot(data_plot.Time, data_plot.values, label=t, color=color, linestyle=ls, linewidth=linewidth)
     axes[0, col].set_title(f"{region}", fontsize=15)
     axes[0, col].grid(alpha=0.3, linestyle='--')
@@ -3039,7 +3043,7 @@ for i, region in enumerate(regions):  # regions now has length 3
     # Bottom row: Types 16–30
     for t in techs_lower:
         data_plot = data_all.sel(Type=t, Region=region)
-        color, ls = DICT_GRIDTECH_STYLES.get(t, ('black', '-'))
+        color, ls = DICT_STOR_STYLES.get(t, ('black', '-'))
         axes[1, col].plot(data_plot.Time, data_plot.values, label=t, color=color, linestyle=ls, linewidth=linewidth)
     axes[1, col].grid(alpha=0.3, linestyle='--')
     axes[1, col].tick_params(axis='both', which='major', labelsize=s_legend)
@@ -3056,7 +3060,7 @@ axes[1, 2].legend(fontsize=s_legend, ncol=3, loc='upper center', bbox_to_anchor=
 plt.suptitle(f"{scen_folder}: Grid Storage - Stocks: Capacity (MWh)", fontsize=16)
 plt.tight_layout(rect=[0, 0, 1, 0.98])  # Adjust layout to make room for the suptitle
 region_str = "_".join(regions)
-fig.savefig(path_test_plots / f"Grid_othstor_stocks_{region_str}.png", dpi=300, bbox_inches='tight')
+# fig.savefig(path_test_plots / f"Grid_othstor_stocks_{region_str}.png", dpi=300, bbox_inches='tight')
 # fig.savefig(path_test_plots / f"Gen_inflow_{region_str}_1971.png", dpi=300, bbox_inches='tight')
 plt.show()
 
@@ -3270,7 +3274,7 @@ for i, region in enumerate(regions):  # regions now has length 3
     # Top row: Types 1–15
     for t in techs_upper:
         data_plot = data_all.sel(Type=t, Region=region)
-        color, ls = DICT_GRIDTECH_STYLES.get(t, ('black', '-'))
+        color, ls = DICT_STOR_STYLES.get(t, ('black', '-'))
         axes[0, col].plot(data_plot.Time, data_plot.values, label=t, color=color, linestyle=ls, linewidth=linewidth)
     axes[0, col].set_title(f"{region}", fontsize=15)
     axes[0, col].grid(alpha=0.3, linestyle='--')
@@ -3280,7 +3284,7 @@ for i, region in enumerate(regions):  # regions now has length 3
     # Bottom row: Types 16–30
     for t in techs_lower:
         data_plot = data_all.sel(Type=t, Region=region)
-        color, ls = DICT_GRIDTECH_STYLES.get(t, ('black', '-'))
+        color, ls = DICT_STOR_STYLES.get(t, ('black', '-'))
         axes[1, col].plot(data_plot.Time, data_plot.values, label=t, color=color, linestyle=ls, linewidth=linewidth)
     axes[1, col].grid(alpha=0.3, linestyle='--')
     axes[1, col].tick_params(axis='both', which='major', labelsize=s_legend)

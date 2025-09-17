@@ -152,7 +152,34 @@ class KnowledgeGraph():
                 all_descendants.extend(self._find_descendants(input_coords, item))
         return all_descendants
 
-    def rebroadcast_xarray(self, input_array, output_coords, dim="Type", shares=None):
+    def rebroadcast_xarray(self, input_array, output_coords, dim="Type", shares=None, dim_shares=None):
+        """Disaggregates supertypes into subtypes. If shares for the subtypes are provided,
+        the values of the input_array data is adjusted accordingly (value of supertype * shares = values of subtypes).
+        If no shares are provided, the value of the supertype is taken for all subtypes.
+
+        Parameters
+        ----------
+        input_array
+            The xr.DataArray to be disaggregated.
+        output_coords
+            The output coordinates (subtypes).
+        dim, optional
+            Dimension of the input_array to disaggregate over, by default "Type"
+        shares, optional
+            Shares to be used for rebroadcasting, by default None. Must have the dimension "Type".
+        dim_shares, optional
+            Dimension of the shares DataArray. By default None. If shares is defined and dim_shares not, dim is used.
+            In case the shares have a different dimension name than the input_array, it can be specified here.
+
+        Returns
+        -------
+            Disaggregated xr.DataArray.
+
+        """
+
+        if shares is not None and dim_shares is None:
+            dim_shares = dim
+
         input_coords = input_array.coords[dim].values
         if list(input_coords) == list(output_coords):
             return input_array
@@ -175,7 +202,7 @@ class KnowledgeGraph():
             parent = relations[0]
             if shares is not None and cur_coord in shares.coords["Type"]:
                 new_array.loc[{dim: cur_coord}] = (input_array.loc[{dim: parent}]
-                                                   * shares.loc[{dim: cur_coord}])
+                                                   * shares.loc[{"Type": cur_coord}]) #used to be: * shares.loc[{dim: cur_coord}]
             else:
                 new_array.loc[{dim: cur_coord}] = input_array.loc[{dim: parent}]
         new_array.loc[{dim: keep_coords}] = input_array.loc[{dim: keep_coords}]

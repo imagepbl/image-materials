@@ -909,7 +909,7 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
 
     # Conversion table for all coordinates, to be removed/adapted after input tables are fixed.
     conversion_table = {
-        "oth_storage_stock": (["Time"], ["Type", "Region"],),
+        "oth_storage_stock": (["Time"], ["SuperType", "Region"],),
         "oth_storage_materials": (["Cohort"], ["Type", "material"],), #SubType
         "oth_storage_shares": (["Cohort"], ["Type",]) #SubType
     }
