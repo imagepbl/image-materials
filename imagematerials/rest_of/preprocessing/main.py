@@ -19,16 +19,58 @@ def read_gompertz_values(base_directory, scenario: str):
 
     if scenario in ["SSP2_VLLO_LifeTech"]:
         print("gompertz scaling applied for scenario:", scenario)
-        years = np.arange(1971, 2101)
-        # Create scaling factor
-        scaling = xr.DataArray(
-            np.where(years < 2030, 1.0, 1.0 - 0.1 * (years - 2030) / (2100 - 2030)),
-            dims="Time",
-            coords={"Time": years}
-        )
-        scaling = scaling.clip(min=0.9)  # Ensure minimum is 0.9
-        # Apply scaling to the alpha coefficient (per capita demand) 
-        xr_gompertz.loc[dict(coef='a')] = xr_gompertz.sel(coef='a') * scaling
+        # years = np.arange(1971, 2101)
+        # # Create scaling factor
+        # scaling = xr.DataArray(
+        #     np.where(years < 2030, 1.0, 1.0 - 0.1 * (years - 2030) / (2100 - 2030)),
+        #     dims="Time",
+        #     coords={"Time": years}
+        # )
+        # scaling = scaling.clip(min=0.9)  # Ensure minimum is 0.9
+        # # Apply scaling to the alpha coefficient (per capita demand) 
+        # xr_gompertz.loc[dict(coef='a')] = xr_gompertz.sel(coef='a') * scaling
+        
+        years = xr_gompertz.coords['Time'].values
+        for material in xr_gompertz.coords['material'].values:
+            a_2030 = xr_gompertz.sel(coef='a', material=material, Time=2030).values
+            regions = xr_gompertz.coords['Region'].values
+            valid = ~np.isnan(a_2030)
+            sorted_a = np.sort(a_2030[valid])
+            lowest_a = sorted_a[0]
+            target_a = 2 * lowest_a
+
+            for i, region in enumerate(regions):
+                current_a_2030 = a_2030[i]
+                if np.isnan(current_a_2030):
+                    continue
+                # Lowest region stays at its value
+                if current_a_2030 == lowest_a:
+                    continue
+                # If current value is lower than 2x lowest, reduce by 20%, but not below lowest_a
+                if current_a_2030 < target_a:
+                    reduce_target = max(current_a_2030 * 0.8, lowest_a)
+                    for year in years:
+                        if year < 2030:
+                            continue
+                        elif year >= 2030 and year <= 2100:
+                            frac = (year - 2030) / (2100 - 2030)
+                            new_a = current_a_2030 + frac * (reduce_target - current_a_2030)
+                            new_a = max(new_a, lowest_a)
+                            xr_gompertz.loc[dict(coef='a', material=material, Region=region, Time=year)] = new_a
+                        elif year > 2100:
+                            xr_gompertz.loc[dict(coef='a', material=material, Region=region, Time=year)] = reduce_target
+                # Otherwise, reduce to 2x lowest value, but not below lowest_a
+                else:
+                    for year in years:
+                        if year < 2030:
+                            continue
+                        elif year >= 2030 and year <= 2100:
+                            frac = (year - 2030) / (2100 - 2030)
+                            new_a = current_a_2030 + frac * (target_a - current_a_2030)
+                            new_a = max(new_a, lowest_a)
+                            xr_gompertz.loc[dict(coef='a', material=material, Region=region, Time=year)] = new_a
+                        elif year > 2100:
+                            xr_gompertz.loc[dict(coef='a', material=material, Region=region, Time=year)] = max(target_a, lowest_a)
 
     return xr_gompertz
 
