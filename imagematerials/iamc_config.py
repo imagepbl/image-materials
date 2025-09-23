@@ -163,15 +163,19 @@ kgraph_v.add(Node("Rail", inherits_from="Vehicles"))
 kgraph_v.add(Node("Rail|Passenger", inherits_from="Rail"))
 kgraph_v.add(Node("Rail|Cargo", inherits_from="Rail"))
 kgraph_v["Freight Trains"].synonyms.append("Rail|Cargo")
+kgraph_v["Freight Trains"].synonyms.append("Rail|Cargo Trains")
 kgraph_v["Freight Trains"].inherits_from = "Rail"
 for pt in pass_rail_types: kgraph_v[pt].inherits_from = "Rail|Passenger"
+kgraph_v["Rail|Passenger"].synonyms.append("Rail|Passenger Trains")
 
 # air
 kgraph_v.add(Node("Air", inherits_from="Vehicles"))
 kgraph_v.add(Node("Air|Passenger", inherits_from="Air"))
 kgraph_v.add(Node("Air|Cargo", inherits_from="Air"))
 kgraph_v["Freight Planes"].synonyms.append("Air|Cargo")
+kgraph_v["Freight Planes"].synonyms.append("Air|Cargo Planes")
 kgraph_v["Passenger Planes"].synonyms.append("Air|Passenger")
+kgraph_v["Passenger Planes"].synonyms.append("Air|Passenger Planes")
 
 # water
 kgraph_v.add(Node("Water", inherits_from="Vehicles"))
