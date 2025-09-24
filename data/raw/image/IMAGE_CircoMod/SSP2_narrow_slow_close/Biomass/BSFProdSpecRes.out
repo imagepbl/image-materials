@@ -111,6 +111,7 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 <<<<<<< HEAD
+<<<<<<< HEAD
 1.336043e+08,
 1.043951e+08,
 0,
@@ -154,6 +155,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 1.230562e+08,
 1.230562e+08,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.335474e+08,
 1.04441e+08,
 0,
@@ -196,7 +199,10 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 1.230201e+08,
 1.230201e+08,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
@@ -204,6 +210,7 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1519418,
 0,
@@ -214,6 +221,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 4346859,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1514482,
 0,
 0,
@@ -222,11 +231,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 4353149,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.605785e+08,
 0,
@@ -266,6 +279,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 1399215,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.605608e+08,
 0,
 0,
@@ -304,12 +319,16 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 1397403,
 0,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 0,
 4.816894e+08,
@@ -356,6 +375,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 1.201881e+07,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 5.291819e+08,
 1.149085e+09,
 1973, 
@@ -399,7 +420,10 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 1.204018e+07,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 1.756151e+08,
@@ -412,6 +436,7 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 <<<<<<< HEAD
+<<<<<<< HEAD
 1570322,
 0,
 0,
@@ -421,6 +446,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 4560405,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1566606,
 0,
 0,
@@ -429,11 +456,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 4570202,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.616018e+08,
 0,
@@ -473,6 +504,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 1296123,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.615934e+08,
 0,
 0,
@@ -510,13 +543,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 1295968,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 5.519665e+08,
 1.301618e+09,
@@ -566,6 +603,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 1.911586e+08,
 1.911586e+08,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 6.401809e+08,
 1.21324e+09,
 1974, 
@@ -613,7 +652,10 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 1.911587e+08,
 1.911587e+08,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
@@ -621,6 +663,7 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1566163,
 0,
@@ -631,6 +674,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 4695064,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1562200,
 0,
 0,
@@ -639,11 +684,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 4704590,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.617906e+08,
 0,
@@ -683,6 +732,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 1292383,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.617822e+08,
 0,
 0,
@@ -721,12 +772,16 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 1292209,
 0,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 0,
 5.737412e+08,
@@ -778,6 +833,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 1.856954e+08,
 0,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 6.812521e+08,
 1.225479e+09,
 1975, 
@@ -825,13 +882,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 1.856955e+08,
 1.856955e+08,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2258352,
 0,
@@ -883,6 +944,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 1518904,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 2254298,
 0,
@@ -934,12 +997,16 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 1518663,
 0,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 0,
 5.941844e+08,
@@ -991,6 +1058,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 1.920598e+08,
 0,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 7.209758e+08,
 1.256793e+09,
 1976, 
@@ -1038,13 +1107,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 1.920599e+08,
 1.920599e+08,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 3059628,
 0,
@@ -1096,6 +1169,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 1684905,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 3055425,
 0,
@@ -1146,13 +1221,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 1684598,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 6.056047e+08,
 1.401775e+09,
@@ -1203,6 +1282,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 1.906937e+08,
 0,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 7.208756e+08,
 1.286574e+09,
 1977, 
@@ -1250,13 +1331,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 1.906938e+08,
 1.906938e+08,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 3328216,
 0,
@@ -1308,6 +1393,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 1899885,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 3323922,
 0,
@@ -1358,13 +1445,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 1899484,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 6.098842e+08,
 1.459253e+09,
@@ -1415,6 +1506,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 1.972385e+08,
 0,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 7.410624e+08,
 1.327872e+09,
 1978, 
@@ -1462,13 +1555,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 1.972386e+08,
 1.972386e+08,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 3834208,
 0,
@@ -1520,6 +1617,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2126030,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 5172078,
 0,
@@ -1570,13 +1669,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 2125496,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 6.204847e+08,
 1.481078e+09,
@@ -1622,6 +1725,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 1.053264e+07,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 7.504059e+08,
 1.352058e+09,
 1979, 
@@ -1665,7 +1770,10 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 1.052383e+07,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 2.069355e+08,
@@ -1678,6 +1786,7 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 <<<<<<< HEAD
+<<<<<<< HEAD
 3265162,
 0,
 0,
@@ -1687,6 +1796,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 4772859,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 3260835,
 0,
 0,
@@ -1695,11 +1806,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 4778021,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.82519e+08,
 0,
@@ -1739,6 +1854,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2376675,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.825107e+08,
 0,
 0,
@@ -1776,13 +1893,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 2376011,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 6.333792e+08,
 1.503022e+09,
@@ -1815,6 +1936,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2316701,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 7.882936e+08,
 1.34773e+09,
 1980, 
@@ -1845,11 +1968,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 2315933,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2314666,
 0,
@@ -1865,6 +1992,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2.133026e+08,
 2.133026e+08,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2314451,
 0,
 0,
@@ -1878,7 +2007,10 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2.133027e+08,
 2.133027e+08,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
@@ -1886,6 +2018,7 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 3456723,
 0,
@@ -1896,6 +2029,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 4066066,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 8446198,
 0,
 0,
@@ -1904,11 +2039,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 4066619,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.67756e+08,
 0,
@@ -1932,6 +2071,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 7.796199e+07,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.677476e+08,
 0,
 0,
@@ -1953,13 +2094,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 7.796139e+07,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 2.650591e+07,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.056088e+07,
 1.056088e+07,
@@ -1972,6 +2117,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2576377,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.053196e+07,
 1.053196e+07,
 0,
@@ -1982,13 +2129,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 2575539,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 6.461524e+08,
 1.505415e+09,
@@ -2021,6 +2172,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2337661,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 8.235285e+08,
 1.332536e+09,
 1981, 
@@ -2051,11 +2204,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 2336663,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2295031,
 0,
@@ -2067,6 +2224,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 1.038507e+07,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2294896,
 0,
 0,
@@ -2076,7 +2235,10 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 1.034891e+07,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 2.165235e+08,
@@ -2089,6 +2251,7 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 <<<<<<< HEAD
+<<<<<<< HEAD
 3343805,
 0,
 0,
@@ -2098,6 +2261,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 4020277,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 3339014,
 0,
 0,
@@ -2106,11 +2271,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 4018805,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.723211e+08,
 0,
@@ -2150,6 +2319,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2523925,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.723127e+08,
 0,
 0,
@@ -2187,13 +2358,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 2523045,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 6.669275e+08,
 1.533496e+09,
@@ -2226,6 +2401,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2508869,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 8.652887e+08,
 1.334644e+09,
 1982, 
@@ -2256,11 +2433,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 2507167,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2309734,
 0,
@@ -2272,6 +2453,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 9394779,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2309598,
 0,
 0,
@@ -2281,7 +2464,10 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 9361064,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 2.24381e+08,
@@ -2294,6 +2480,7 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 <<<<<<< HEAD
+<<<<<<< HEAD
 3419373,
 0,
 0,
@@ -2303,6 +2490,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 4008880,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 3392430,
 0,
 0,
@@ -2311,11 +2500,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 4003581,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.765554e+08,
 0,
@@ -2355,6 +2548,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2912960,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.765471e+08,
 0,
 0,
@@ -2392,13 +2587,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 2911711,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 7.619737e+08,
 1.645877e+09,
@@ -2431,6 +2630,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2729738,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 9.870378e+08,
 1.420351e+09,
 1983, 
@@ -2461,11 +2662,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 2727059,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2318735,
 0,
@@ -2481,6 +2686,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2.209588e+08,
 2.209588e+08,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2318618,
 0,
 0,
@@ -2494,7 +2701,10 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2.209589e+08,
 2.209589e+08,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
@@ -2502,6 +2712,7 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 3918358,
 0,
@@ -2512,6 +2723,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 3984604,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 3912031,
 0,
 0,
@@ -2520,11 +2733,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 3973977,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.79762e+08,
 0,
@@ -2564,6 +2781,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2918884,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.797537e+08,
 0,
 0,
@@ -2603,11 +2822,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2917519,
 0,
 0,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 0,
 0,
@@ -2642,6 +2865,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2942850,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.036142e+09,
 1.442763e+09,
 1984, 
@@ -2672,11 +2897,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 2939014,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2407453,
 0,
@@ -2707,6 +2936,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 3870236,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2407073,
 0,
 0,
@@ -2735,11 +2966,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 3858568,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.784825e+08,
 0,
@@ -2779,6 +3014,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2980061,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.784742e+08,
 0,
 0,
@@ -2818,11 +3055,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2978533,
 0,
 0,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 0,
 0,
@@ -2857,6 +3098,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 3151808,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.092623e+09,
 1.496054e+09,
 1985, 
@@ -2887,11 +3130,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 3145925,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2494768,
 0,
@@ -2922,6 +3169,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 4048008,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2494065,
 0,
 0,
@@ -2950,11 +3199,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 4034384,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.909909e+08,
 0,
@@ -2994,6 +3247,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 3187027,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.909826e+08,
 0,
 0,
@@ -3033,11 +3288,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 3185241,
 0,
 0,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 0,
 0,
@@ -3072,6 +3331,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 3274366,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.130425e+09,
 1.507323e+09,
 1986, 
@@ -3102,11 +3363,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 3265214,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2610695,
 0,
@@ -3137,6 +3402,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 4161295,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2609530,
 0,
 0,
@@ -3165,11 +3432,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 4146210,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.971987e+08,
 0,
@@ -3209,6 +3480,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 576843.4,
 2989747,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.971908e+08,
 0,
 0,
@@ -3248,11 +3521,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2919828,
 0,
 0,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 0,
 0,
@@ -3287,6 +3564,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 3289334,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.152873e+09,
 1.530787e+09,
 1987, 
@@ -3317,11 +3596,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 3279707,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2676351,
 0,
@@ -3352,6 +3635,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 3707039,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2674903,
 0,
 0,
@@ -3380,11 +3665,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 3693103,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.934465e+08,
 0,
@@ -3424,6 +3713,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 1130403,
 2364205,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.934452e+08,
 0,
 0,
@@ -3463,11 +3754,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2229273,
 0,
 0,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 0,
 0,
@@ -3502,6 +3797,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 3154695,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.213236e+09,
 1.588387e+09,
 1988, 
@@ -3532,11 +3829,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 3144479,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2792494,
 0,
@@ -3567,6 +3868,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 3415769,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2790479,
 0,
 0,
@@ -3595,11 +3898,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 3402629,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.41158e+08,
 0,
@@ -3611,6 +3918,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 4.54602e+08,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.411568e+08,
 0,
 0,
@@ -3621,12 +3930,16 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2.302156e+08,
 2.240197e+08,
 0,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 0,
 2.077247e+07,
@@ -3652,6 +3965,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 1658456,
 1759590,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.127792e+07,
 2420210,
 0,
@@ -3676,11 +3991,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 1562664,
 0,
 0,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 0,
 0,
@@ -3715,6 +4034,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 3055604,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.24854e+09,
 1.567572e+09,
 1989, 
@@ -3745,11 +4066,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 3045421,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2948877,
 0,
@@ -3780,6 +4105,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2920122,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2946088,
 0,
 0,
@@ -3808,11 +4135,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 2908526,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.009038e+08,
 0,
@@ -3824,6 +4155,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 4.726978e+08,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.009027e+08,
 0,
 0,
@@ -3834,12 +4167,16 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2.553494e+08,
 2.171056e+08,
 0,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 0,
 2.097097e+07,
@@ -3865,6 +4202,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2398017,
 1308683,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.694141e+07,
 3036029,
 0,
@@ -3889,11 +4228,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 1024717,
 0,
 0,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 0,
 0,
@@ -3974,6 +4317,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 5.025023e+08,
 0,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.325753e+09,
 1.571983e+09,
 1990, 
@@ -4049,12 +4394,16 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2.926327e+08,
 2.09614e+08,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.199229e+07,
 3339278,
@@ -4079,6 +4428,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2860387,
 676734.9,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 2.254565e+07,
 2516980,
@@ -4102,13 +4453,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 3196126,
 338603.8,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.112296e+09,
 2.097431e+09,
@@ -4141,6 +4496,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2999690,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.530644e+09,
 1.678364e+09,
 1991, 
@@ -4171,11 +4528,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 2989168,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 4246879,
 0,
@@ -4206,6 +4567,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 1051080,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 4241920,
 0,
 0,
@@ -4234,11 +4597,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 1046482,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.806457e+08,
 0,
@@ -4250,6 +4617,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 6.127094e+07,
 4.581484e+08,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.806455e+08,
 0,
 0,
@@ -4259,13 +4628,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 3.26366e+08,
 1.927866e+08,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.270677e+07,
 3363837,
@@ -4290,6 +4663,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2857966,
 661558.9,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.743543e+07,
 2985442,
 0,
@@ -4313,12 +4688,16 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 3187571,
 329539.5,
 0,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 0,
 1.488077e+09,
@@ -4352,6 +4731,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2871894,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.881684e+09,
 2.108115e+09,
 1992, 
@@ -4382,11 +4763,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 2861717,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 4348780,
 0,
@@ -4417,6 +4802,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 991594.1,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 4343167,
 0,
 0,
@@ -4445,11 +4832,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 987165.6,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.555647e+08,
 0,
@@ -4489,6 +4880,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2926762,
 662652.4,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.55565e+08,
 0,
 0,
@@ -4526,13 +4919,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 3258381,
 328559.5,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.589314e+09,
 2.632848e+09,
@@ -4565,6 +4962,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2851046,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.953401e+09,
 2.267926e+09,
 1993, 
@@ -4595,11 +4994,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 2841179,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 4590591,
 0,
@@ -4630,6 +5033,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 883144.9,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 4584300,
 0,
 0,
@@ -4658,11 +5063,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 879158.6,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.104583e+08,
 0,
@@ -4702,6 +5111,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2872840,
 636004.9,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.104594e+08,
 0,
 0,
@@ -4739,13 +5150,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 3192578,
 313828.7,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.612855e+09,
 2.54226e+09,
@@ -4778,6 +5193,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2800494,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.913162e+09,
 2.233312e+09,
 1994, 
@@ -4808,11 +5225,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 2790676,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 4479448,
 0,
@@ -4843,6 +5264,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 805692.9,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 4474391,
 0,
 0,
@@ -4871,11 +5294,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 801974.9,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.684002e+08,
 0,
@@ -4915,6 +5342,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2880476,
 623336.4,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.68402e+08,
 0,
 0,
@@ -4952,13 +5381,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 3195347,
 306035.6,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.851252e+09,
 2.566779e+09,
@@ -4991,6 +5424,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2718896,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.089322e+09,
 2.326823e+09,
 1995, 
@@ -5021,11 +5456,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 2711398,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 4278214,
 0,
@@ -5097,6 +5536,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 3128901,
 661624.9,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 4275024,
 0,
 0,
@@ -5166,13 +5607,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 3464863,
 323143.2,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.108365e+09,
 2.66931e+09,
@@ -5205,6 +5650,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2663076,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.312607e+09,
 2.462265e+09,
 1996, 
@@ -5235,11 +5682,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 2658614,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 4365256,
 0,
@@ -5270,6 +5721,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 789943.1,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 4362368,
 0,
 0,
@@ -5298,11 +5751,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 786095.7,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.451708e+08,
 0,
@@ -5342,6 +5799,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2986808,
 618054.2,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.451721e+08,
 0,
 0,
@@ -5379,13 +5838,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 3304127,
 298354.9,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.178041e+09,
 2.849923e+09,
@@ -5418,6 +5881,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2682266,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.428694e+09,
 2.595383e+09,
 1997, 
@@ -5448,11 +5913,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 2679636,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 4492724,
 0,
@@ -5483,6 +5952,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 867216.8,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 4490405,
 0,
 0,
@@ -5511,11 +5982,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 862871.1,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.369343e+08,
 0,
@@ -5555,6 +6030,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2831853,
 573262.6,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.369357e+08,
 0,
 0,
@@ -5592,13 +6069,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 3129484,
 273355.6,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.150972e+09,
 2.91556e+09,
@@ -5631,6 +6112,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2658501,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.402155e+09,
 2.654923e+09,
 1998, 
@@ -5661,11 +6144,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 2667520,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 4635418,
 0,
@@ -5696,6 +6183,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 695520,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 4633558,
 0,
 0,
@@ -5724,11 +6213,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 691936.3,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.288304e+08,
 0,
@@ -5768,6 +6261,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2770107,
 548405.9,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.288353e+08,
 0,
 0,
@@ -5805,13 +6300,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 3058143,
 258153.6,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.206318e+09,
 3.063332e+09,
@@ -5844,6 +6343,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2590430,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.458824e+09,
 2.808718e+09,
 1999, 
@@ -5874,11 +6375,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 2606531,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 4797302,
 0,
@@ -5909,6 +6414,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 700391.6,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 4795815,
 0,
 0,
@@ -5937,11 +6444,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 696742.6,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.252956e+08,
 0,
@@ -5981,6 +6492,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2689399,
 520519.6,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.253002e+08,
 0,
 0,
@@ -6018,13 +6531,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2966038,
 241725,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.444614e+09,
 3.339602e+09,
@@ -6130,6 +6647,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2577256,
 487486.8,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.684066e+09,
 3.116891e+09,
 2000, 
@@ -6235,11 +6754,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 223172.8,
 0,
 0,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 0,
 0,
@@ -6274,6 +6797,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2346517,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.804194e+09,
 3.360156e+09,
 2001, 
@@ -6304,11 +6829,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 2378783,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 4929362,
 0,
@@ -6339,6 +6868,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 623897.5,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 4928541,
 0,
 0,
@@ -6367,11 +6898,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 620481.4,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.417107e+08,
 0,
@@ -6411,6 +6946,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2511305,
 470338.3,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.416946e+08,
 0,
 0,
@@ -6448,13 +6985,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2767745,
 211881.5,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.61347e+09,
 3.612054e+09,
@@ -6487,6 +7028,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2150331,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.761733e+09,
 3.480823e+09,
 2002, 
@@ -6517,11 +7060,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 2191882,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 5052043,
 0,
@@ -6552,6 +7099,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 536377.4,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 5051433,
 0,
 0,
@@ -6580,11 +7129,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 533227.5,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.534853e+08,
 0,
@@ -6624,6 +7177,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2372944,
 440022.3,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.534724e+08,
 0,
 0,
@@ -6661,13 +7216,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2616114,
 194951.7,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.884992e+09,
 3.669106e+09,
@@ -6700,6 +7259,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2346900,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.943419e+09,
 3.627425e+09,
 2003, 
@@ -6730,11 +7291,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 2435478,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 4507859,
 0,
@@ -6765,6 +7330,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 481308.8,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 4507346,
 0,
 0,
@@ -6793,11 +7360,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 478213.3,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.448639e+08,
 0,
@@ -6837,6 +7408,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2201836,
 404220.9,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.448551e+08,
 0,
 0,
@@ -6874,13 +7447,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2428259,
 176031.8,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 3.014566e+09,
 3.751434e+09,
@@ -6913,6 +7490,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2272585,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.981027e+09,
 3.802085e+09,
 2004, 
@@ -6943,11 +7522,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 2367625,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 6254703,
 0,
@@ -6978,6 +7561,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 544365.9,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 6254236,
 0,
 0,
@@ -7006,11 +7591,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 540441.2,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.501478e+08,
 0,
@@ -7050,6 +7639,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2171418,
 394633,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.501426e+08,
 0,
 0,
@@ -7087,13 +7678,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2395494,
 168820.2,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 3.078832e+09,
 3.728801e+09,
@@ -7126,6 +7721,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2161314,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.930904e+09,
 3.855665e+09,
 2005, 
@@ -7156,11 +7753,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 2265354,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 6346210,
 0,
@@ -7191,6 +7792,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 601288.4,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 6345752,
 0,
 0,
@@ -7219,11 +7822,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 596254.5,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.61732e+08,
 0,
@@ -7263,6 +7870,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2307180,
 415065.7,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.615624e+08,
 0,
 0,
@@ -7300,13 +7909,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2546199,
 174319.8,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 3.186491e+09,
 3.870932e+09,
@@ -7371,6 +7984,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 617052.1,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.980736e+09,
 4.055818e+09,
 2006, 
@@ -7433,11 +8048,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 611975.8,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.798263e+08,
 0,
@@ -7477,6 +8096,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2181409,
 387191.6,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.797184e+08,
 0,
 0,
@@ -7514,13 +8135,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2408144,
 158817.4,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 3.385854e+09,
 4.185116e+09,
@@ -7585,6 +8210,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 635552.6,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 3.201229e+09,
 4.421172e+09,
 2007, 
@@ -7647,11 +8274,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 630554.9,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.875728e+08,
 0,
@@ -7691,6 +8322,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2020701,
 353825.3,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.874681e+08,
 0,
 0,
@@ -7728,13 +8361,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2231397,
 141580.6,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 3.420546e+09,
 4.350545e+09,
@@ -7799,6 +8436,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 601995.2,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 3.294065e+09,
 4.531361e+09,
 2008, 
@@ -7861,11 +8500,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 597594.8,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.936413e+08,
 0,
@@ -7905,6 +8548,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2182628,
 376970.9,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.935397e+08,
 0,
 0,
@@ -7942,13 +8587,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2411146,
 146984,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 3.513532e+09,
 4.508331e+09,
@@ -8013,6 +8662,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 637519.1,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 3.469227e+09,
 4.606376e+09,
 2009, 
@@ -8075,11 +8726,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 633948.5,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.059274e+08,
 0,
@@ -8119,6 +8774,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2655953,
 452409.3,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.058266e+08,
 0,
 0,
@@ -8156,13 +8813,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2935358,
 171667.8,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 3.581191e+09,
 4.63367e+09,
@@ -8227,6 +8888,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 689650.8,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 3.609499e+09,
 4.656815e+09,
 2010, 
@@ -8289,11 +8952,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 688575.9,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.291124e+08,
 0,
@@ -8333,6 +9000,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2731401,
 458796.3,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.290117e+08,
 0,
 0,
@@ -8370,13 +9039,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 3019909,
 169165.6,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 3.961003e+09,
 5.190919e+09,
@@ -8441,6 +9114,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 720092.6,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 4.002505e+09,
 5.124405e+09,
 2011, 
@@ -8503,11 +9178,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 720733.9,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.403331e+08,
 0,
@@ -8547,6 +9226,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2702864,
 453348.7,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.400613e+08,
 0,
 0,
@@ -8584,13 +9265,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2989252,
 166096.8,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 4.07561e+09,
 5.13738e+09,
@@ -8655,6 +9340,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 746381.1,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 4.172537e+09,
 5.039914e+09,
 2012, 
@@ -8717,11 +9404,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 749897.8,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.528294e+08,
 0,
@@ -8761,6 +9452,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2253036,
 377354.3,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.524898e+08,
 0,
 0,
@@ -8798,13 +9491,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2492550,
 137371.8,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 4.334897e+09,
 5.290158e+09,
@@ -8910,6 +9607,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2486064,
 415782.1,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 4.472445e+09,
 5.131007e+09,
 2013, 
@@ -9013,13 +9712,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2752167,
 150437.9,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 4.775548e+09,
 5.410375e+09,
@@ -9084,6 +9787,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 885012.3,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 4.998882e+09,
 5.191259e+09,
 2014, 
@@ -9146,11 +9851,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 872339.1,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.444269e+08,
 0,
@@ -9190,6 +9899,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2902787,
 484775.4,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.44228e+08,
 0,
 0,
@@ -9227,13 +9938,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 3215945,
 174338.5,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 5.060017e+09,
 5.412795e+09,
@@ -9298,6 +10013,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 891470,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 5.330367e+09,
 5.143622e+09,
 2015, 
@@ -9360,11 +10077,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 901684.4,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.254815e+08,
 0,
@@ -9404,6 +10125,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 1.19304e+07,
 1989534,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.25324e+08,
 0,
 0,
@@ -9441,13 +10164,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 1.321512e+07,
 710445.9,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 5.36712e+09,
 5.402598e+09,
@@ -9512,6 +10239,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 947793.3,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 5.638834e+09,
 5.132448e+09,
 2016, 
@@ -9574,11 +10303,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 958665,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.071576e+08,
 0,
@@ -9618,6 +10351,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 1.488753e+07,
 2467151,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.070329e+08,
 0,
 0,
@@ -9655,7 +10390,10 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 1.647036e+07,
 894976.8,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
@@ -9663,12 +10401,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 <<<<<<< HEAD
+<<<<<<< HEAD
 5.845619e+09,
 5.619547e+09,
 =======
 6.121898e+09,
 5.345123e+09,
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+6.121898e+09,
+5.345123e+09,
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2017, 
 0,
 0,
@@ -9676,6 +10419,7 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2.122178e+08,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.145739e+09,
 1.145739e+09,
@@ -9731,6 +10475,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 922002.5,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.145696e+09,
 1.145696e+09,
 0,
@@ -9784,11 +10530,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 932874.3,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.941255e+08,
 0,
@@ -9828,6 +10578,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 1.913739e+07,
 3151520,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.940004e+08,
 0,
 0,
@@ -9865,13 +10617,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2.114088e+07,
 1161010,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 6.086977e+09,
 5.791308e+09,
@@ -9936,6 +10692,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 914204.8,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 6.32886e+09,
 5.550915e+09,
 2018, 
@@ -9998,11 +10756,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 919769.6,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.871563e+08,
 0,
@@ -10042,6 +10804,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 1.820013e+07,
 2978267,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.870284e+08,
 0,
 0,
@@ -10079,13 +10843,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2.007935e+07,
 1114355,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 6.584905e+09,
 5.988858e+09,
@@ -10150,6 +10918,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 1012017,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 6.807047e+09,
 5.767842e+09,
 2019, 
@@ -10212,11 +10982,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 1022687,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.782095e+08,
 0,
@@ -10256,6 +11030,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 1.392417e+07,
 2264111,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.781264e+08,
 0,
 0,
@@ -10293,13 +11069,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 1.534489e+07,
 860511.2,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 6.924195e+09,
 6.030317e+09,
@@ -10364,6 +11144,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 1057123,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 7.112694e+09,
 5.843292e+09,
 2020, 
@@ -10426,11 +11208,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 1067698,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.760127e+08,
 0,
@@ -10470,6 +11256,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 1.577649e+07,
 2548972,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.759041e+08,
 0,
 0,
@@ -10507,11 +11295,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 1.735923e+07,
 983558.3,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.650169e+07,
 2.514672e+07,
@@ -10619,6 +11411,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 1.638094e+07,
 2599269,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 8.000357e+07,
 7.576305e+07,
 7.362044e+09,
@@ -10683,11 +11477,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 1046753,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 6395495,
 5643488,
@@ -10795,6 +11593,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 1.593936e+07,
 2483341,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.790697e+08,
 0,
 0,
@@ -10900,11 +11700,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 1088147,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 7185771,
 8209761,
@@ -11012,6 +11816,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2.58072e+07,
 3946865,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.9626e+08,
 0,
 0,
@@ -11156,11 +11962,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 6.475637e+07,
 1.290076e+07,
 1.657683e+07,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 4.994678e+07,
 6.62191e+07,
@@ -11268,6 +12078,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 4.822086e+07,
 7237367,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 5.61802e+07,
@@ -11373,11 +12185,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 6.604887e+07,
 2.36933e+07,
 3.107751e+07,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 4.020588e+07,
 5.019505e+07,
@@ -11485,6 +12301,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 8.015971e+07,
 1.180378e+07,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 8.445558e+07,
@@ -11592,11 +12410,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 4.780037e+07,
 5176437,
 304391,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.430191e+08,
 2.099401e+08,
@@ -11704,6 +12526,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 1.299133e+08,
 1.862073e+07,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.827832e+08,
 1.968927e+08,
 9.086989e+09,
@@ -11809,11 +12633,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 4.779343e+07,
 4.547648e+07,
 2665785,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.082243e+08,
 1.853482e+08,
@@ -11921,6 +12749,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 1.657866e+08,
 2.311687e+07,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.4454e+08,
 1.625366e+08,
 9.52369e+09,
@@ -12026,11 +12856,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 4.648054e+07,
 8.807995e+07,
 5146940,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.899021e+08,
 1.685051e+08,
@@ -12138,6 +12972,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 1.753168e+08,
 2.376759e+07,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 6.068634e+07,
 7.072867e+07,
 9.485034e+09,
@@ -12243,11 +13079,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 4.458198e+07,
 8.252819e+07,
 4807333,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.673689e+08,
 1.491157e+08,
@@ -12355,6 +13195,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2.196287e+08,
 2.893113e+07,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 3.479365e+07,
 4.458198e+07,
 9.731049e+09,
@@ -12460,11 +13302,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 4.424548e+07,
 1.092123e+08,
 6341607,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.271377e+08,
 1.139878e+08,
@@ -12572,6 +13418,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2.617029e+08,
 3.347479e+07,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 3.488023e+07,
 4.424548e+07,
 1.014238e+10,
@@ -12677,11 +13525,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 8835143,
 1.964646e+08,
 1.137193e+07,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 9.433846e+07,
 8.601969e+07,
@@ -12789,6 +13641,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 2.844449e+08,
 3.585654e+07,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 7028346,
 8835143,
 1.060446e+10,
@@ -12894,11 +13748,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2.167902e+08,
 1.246865e+07,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 7.053133e+07,
 6.53631e+07,
@@ -13006,6 +13864,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 3.056837e+08,
 3.796913e+07,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 1.08864e+10,
@@ -13111,11 +13971,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2.273406e+08,
 1.299185e+07,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 4.803896e+07,
 4.462379e+07,
@@ -13223,6 +14087,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 3.31392e+08,
 4.055216e+07,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 1.121228e+10,
@@ -13328,11 +14194,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2.427093e+08,
 1.378092e+07,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 2.425322e+07,
 2.258136e+07,
@@ -13440,6 +14310,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 3.55228e+08,
 4.281699e+07,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 1.167728e+10,
@@ -13545,13 +14417,17 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 2.572802e+08,
 1.451376e+07,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 0,
 0,
 0,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 1.29278e+10,
 8.189468e+09,
@@ -19579,6 +20455,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 4.490697e+08,
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 1.223874e+10,
 6.334975e+09,
 2035, 
@@ -25604,11 +26482,15 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 0,
 4.309274e+08,
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 2.678904e+08,
 0,
 0,
 0,
+<<<<<<< HEAD
 <<<<<<< HEAD
 4.467397e+09,
 0,
@@ -26778,6 +27660,8 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 8.501464e+09,
 3.979721e+10];
 =======
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
 3.204279e+09,
 0,
 0,
@@ -27945,4 +28829,7 @@ real main.em.bio.BOut.BSFProdSpecRes[27,4](t) = [1971,
 0,
 1.104674e+10,
 3.013395e+10];
+<<<<<<< HEAD
 >>>>>>> 29fc07e (Remove T2MAT folder level)
+=======
+>>>>>>> 4d9e712909650e13193c45904b75652afa554b9e
