@@ -13,13 +13,15 @@ from imagematerials.rest_of.const import (all_regions_list_class,
                                           CLASS_TO_REGION_DICT)
 
 
-def cement_projection(scenario: str):
+def cement_projection(scenario: str, path_input_data, path_input_data_image):
     # cement
     cement = ResourceModel(resource_group = 'nmm', resource = 'cement', 
                         image_mat_available = True, start_year = 1971, 
                         scenario=scenario,
                         convert_image=True, end_year = 2012, convert_to_tons = 1/1000_000, 
-                        trade_data=True)
+                        trade_data=True, 
+                        path_input_data=path_input_data,
+                        path_input_data_image=path_input_data_image)
     # cement net trade
     # Historical export per region for Cement (Mtonne), 1970-2000 + 2100 (constant from 2000 on) 
     # (because export and import did not add up to 0, import has been increased by 25%, see Roorda, page 13)
@@ -90,11 +92,13 @@ def cement_projection(scenario: str):
     return cement
 
 
-def limestone_projection(scenario: str):
+def limestone_projection(scenario: str, path_input_data, path_input_data_image):
 
     # limestone
     limestone = ResourceModel(resource_group = 'nmm', resource = 'limestone', 
-                        image_mat_available = False, start_year = 1970, scenario=scenario)
+                        image_mat_available = False, start_year = 1970, scenario=scenario,
+                        path_input_data=path_input_data,
+                        path_input_data_image=path_input_data_image)
 
     # collect these above defined groups in a dictionary
 
@@ -153,10 +157,12 @@ def limestone_projection(scenario: str):
     return limestone
 
 
-def sand_projections(scenario: str):
+def sand_projections(scenario: str, path_input_data, path_input_data_image):
     # sand
     sand = ResourceModel(resource_group = 'nmm', resource = 'sand_gravel_crushed_rock', 
-                        image_mat_available = True, start_year = 1970, scenario=scenario)
+                        image_mat_available = True, start_year = 1970, scenario=scenario,
+                        path_input_data=path_input_data,
+                        path_input_data_image=path_input_data_image)
 
     # collect these above defined groups in a dictionary
 
@@ -204,26 +210,18 @@ def sand_projections(scenario: str):
     }
 
 
-
     sand.fit_models(best_rmse_models=rmse_models, bounds=bounds)
-
-    # project based on best model
-    sand.project_on_total(all_regions_list_class[:-1])
-    sand.smooth_out_interpolation_all(10, 2017)
-
-    sand.adjust_alpha_and_project(all_regions_list_class[:-1], 
-                        start_year_adjust=2025, 
-                        end_year_adjust=2100, 
-                        min_alpha=None)
-    
     sand.remove_regions_with_no_good_fit_from_region_model_match(rest)
+
     return sand
 
-def clay_projections(scenario: str):
+def clay_projections(scenario: str, path_input_data, path_input_data_image):
     # clay
     clay = ResourceModel(resource_group = 'nmm', resource = 'clays', 
                         image_mat_available = False, start_year = 1970, 
-                        scenario=scenario)
+                        scenario=scenario,
+                        path_input_data=path_input_data,
+                        path_input_data_image=path_input_data_image)
 
     # collect these above defined groups in a dictionary
 

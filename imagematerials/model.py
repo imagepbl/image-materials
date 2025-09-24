@@ -3,6 +3,7 @@ from typing import Callable, ClassVar, Optional
 import pint_xarray
 from pint import UnitRegistry
 from pathlib import Path
+from importlib.resources import files
 
 import prism
 import xarray as xr
@@ -22,8 +23,7 @@ BATTERY_TYPE = prism.Dimension("battery")
 EOL_TYPE = prism.Dimension("eoltype")
 UnitFlexibleStock = prism.DynamicUnit("my_unit_stock")
 
-here = Path(__file__).resolve().parent
-prism.unit_registry.load_definitions(here.parent / "units.txt")
+prism.unit_registry.load_definitions(files(__package__) / "units.txt")
 
 @prism.interface
 class GenericStocks(prism.Model):
@@ -262,8 +262,6 @@ class MaterialIntensities(prism.Model):
         self.stock_by_cohort_materials = prism.Q_(self.stock_by_cohort_materials, "kg")
 
     def compute_values(self, time: prism.Time, inflow, stock_by_cohort, outflow_by_cohort):
-
-        self.material_intensities = prism.Q_(self.material_intensities, "kg/m^2")
 
         t, dt = time.t, time.dt
         self.inflow_materials[t] = inflow[t]*self.material_intensities.sel(Cohort=t).drop_vars("Cohort")
@@ -530,7 +528,8 @@ class RestOf(prism.Model):
     material: prism.Coords[MATERIAL_TYPE]
 
     # Data dependencies
-    input_data: tuple[str] = ("gompertz_coefs", "gdp_per_capita", "population", "historic_diff_consumption")
+    input_data: tuple[str] = ("gompertz_coefs", "gdp_per_capita", "population", 
+                              "historic_diff_consumption_mean", "historic_diff_consumption_total")
     output_data: tuple[str] = ("inflow_materials_rest",)
 
     # Output data inflow_materials_rest
@@ -547,13 +546,18 @@ class RestOf(prism.Model):
         )
         self.inflow_materials_rest = prism.Q_(self.inflow_materials_rest, "t")
         
-    def compute_values(self, time: prism.Time, gompertz_coefs, gdp_per_capita, population, historic_diff_consumption):
+    def compute_values(self, time: prism.Time, gompertz_coefs, gdp_per_capita, population, 
+                       historic_diff_consumption_mean, historic_diff_consumption_total):
         t, dt = time.t, time.dt
+        
+        
+        # print("historic_diff_consumption_total.material:", historic_diff_consumption_total.coords['material'].values)
+       
         if t > 1970:
             # Select coefficients for all regions/materials
-            a = gompertz_coefs.sel(coef='a')
-            b = gompertz_coefs.sel(coef='b')
-            c = gompertz_coefs.sel(coef='c')
+            a = gompertz_coefs.sel(coef='a', Time = t)
+            b = gompertz_coefs.sel(coef='b', Time = t)
+            c = gompertz_coefs.sel(coef='c', Time = t)
             self.inflow_per_capita_rest = (a * np.exp(-b * np.exp(-c * gdp_per_capita.loc[t])))
             self.inflow_per_capita_rest = prism.Q_(self.inflow_per_capita_rest, "t/person")
             self.inflow_materials_rest.loc[t] = self.inflow_per_capita_rest * population.loc[t]
@@ -562,11 +566,21 @@ class RestOf(prism.Model):
             mask = np.isnan(self.inflow_materials_rest.loc[t])
             # Use the mask to fill nans with historic_diff_consumption
             # Align historic_diff_consumption to the same dims/order as inflow_materials_rest
+
             self.inflow_materials_rest.loc[t] = xr.where(
                 mask,
-                historic_diff_consumption.transpose(*self.inflow_materials_rest.loc[t].dims),
+                historic_diff_consumption_mean.transpose(*self.inflow_materials_rest.loc[t].dims),
                 self.inflow_materials_rest.loc[t]
             )
+            
+            # check if real historic data is available (not nan)
+            real_historic_data_mask = ~np.isnan(historic_diff_consumption_total.sel(Time=t))
+            self.inflow_materials_rest.loc[t] = xr.where(
+                real_historic_data_mask,
+                historic_diff_consumption_total.sel(Time=t),
+                self.inflow_materials_rest.loc[t]
+            )
+
         else:
             pass # No inflow before 1970
         

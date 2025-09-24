@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import xarray as xr
 import prism
 
@@ -8,7 +9,7 @@ from imagematerials.read_mym import read_mym_df
 from imagematerials.buildings.preprocessing.population import compute_population
 
 
-def read_gompertz_values(base_directory):
+def read_gompertz_values(base_directory, scenario: str):
 
     xr_gompertz = xr.open_dataset(base_directory / "rest-of" / "gompertz_values" / "coefs_gompertz.nc", engine="netcdf4")
     xr_gompertz = xr_gompertz.to_array().isel(variable=0).drop_vars("variable")
@@ -16,15 +17,36 @@ def read_gompertz_values(base_directory):
     # # Reorder the data to match the sorted regions
     xr_gompertz = xr_gompertz.sel(Region=sorted(xr_gompertz.coords["Region"].values, key=lambda x: int(x)))
 
+    if scenario in ["SSP2_VLLO_LifeTech"]:
+        print("gompertz scaling applied for scenario:", scenario)
+        years = np.arange(1971, 2101)
+        # Create scaling factor
+        scaling = xr.DataArray(
+            np.where(years < 2030, 1.0, 1.0 - 0.1 * (years - 2030) / (2100 - 2030)),
+            dims="Time",
+            coords={"Time": years}
+        )
+        scaling = scaling.clip(min=0.9)  # Ensure minimum is 0.9
+        # Apply scaling to the alpha coefficient (per capita demand) 
+        xr_gompertz.loc[dict(coef='a')] = xr_gompertz.sel(coef='a') * scaling
 
     return xr_gompertz
+
+
+def read_historic_diff_cons_data_mean(base_directory):
+
+    diff_consumption_mean = xr.open_dataset(base_directory / "rest-of" / "gompertz_values" / "diff_cons_all_mean.nc", engine="netcdf4")
+    diff_consumption_mean = diff_consumption_mean.to_array().isel(variable=0).drop_vars("variable")
+    diff_consumption_mean = prism.Q_(diff_consumption_mean, 't')
+
+    return diff_consumption_mean
 
 
 def read_historic_diff_cons_data(base_directory):
 
     diff_consumption = xr.open_dataset(base_directory / "rest-of" / "gompertz_values" / "diff_cons_all.nc", engine="netcdf4")
     diff_consumption = diff_consumption.to_array().isel(variable=0).drop_vars("variable")
-    diff_consumption = prism.Q_(diff_consumption, 'tons')
+    diff_consumption = prism.Q_(diff_consumption, 't')
 
     return diff_consumption
 
@@ -50,10 +72,11 @@ def read_image_gdp_cap_data(image_scenario_directory):
     return gdp_per_capita_xr
 
 
-def rest_of_preprocessing(base_directory, image_scenario_directory):
-    gompertz_values = read_gompertz_values(base_directory)
+def rest_of_preprocessing(base_directory, image_scenario_directory, scenario: str):
+    gompertz_values = read_gompertz_values(base_directory, scenario)
     gdp_per_capita = read_image_gdp_cap_data(image_scenario_directory)
-    historic_diff_consumption = read_historic_diff_cons_data(base_directory)
+    historic_diff_consumption_mean = read_historic_diff_cons_data_mean(base_directory)
+    historic_diff_consumption_total = read_historic_diff_cons_data(base_directory)
     population = compute_population(image_scenario_directory, base_directory)
     # Filter population data to start from 1971 & only total population needed
     population = population.sel(Area = 'Total').loc[1971:]
@@ -66,6 +89,8 @@ def rest_of_preprocessing(base_directory, image_scenario_directory):
         "gompertz_coefs": gompertz_values,
         "gdp_per_capita": gdp_per_capita,
         "population": population,
-        "historic_diff_consumption": historic_diff_consumption
+        "historic_diff_consumption_mean": historic_diff_consumption_mean,
+        "historic_diff_consumption_total": historic_diff_consumption_total
     }
+    
     return preprocessing_dict

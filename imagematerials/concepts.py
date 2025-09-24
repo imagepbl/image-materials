@@ -161,11 +161,18 @@ class KnowledgeGraph():
 
         keep_coords = []
         new_array = xr.DataArray(0.0, dims=input_array.dims, coords=new_coords)
+        if input_array.pint.units:
+            new_array = prism.Q_(new_array, input_array.pint.units)
         for cur_coord in list(output_coords):
             if cur_coord in input_coords:
                 keep_coords.append(cur_coord)
                 continue
-            parent = self.find_relations(input_coords, [cur_coord])[cur_coord][0]
+            relations = self.find_relations(input_coords, [cur_coord])[cur_coord]
+            if len(relations) > 1:
+                raise ValueError("Cannot rebroadcast DataArray, because multiple input relations "
+                                 f"exist ({relations}) for output coordinate {cur_coord}. For "
+                                 "aggregation use the aggregate_sum method instead.")
+            parent = relations[0]
             if shares is not None and cur_coord in shares.coords["Type"]:
                 new_array.loc[{dim: cur_coord}] = (input_array.loc[{dim: parent}]
                                                    * shares.loc[{dim: cur_coord}])
@@ -173,8 +180,7 @@ class KnowledgeGraph():
                 new_array.loc[{dim: cur_coord}] = input_array.loc[{dim: parent}]
         new_array.loc[{dim: keep_coords}] = input_array.loc[{dim: keep_coords}]
         # check if input array had a unit and if so, reapply this unit to new array
-        if input_array.pint.units:
-            new_array = prism.Q_(new_array, input_array.pint.units)    
+
         return new_array
 
     def aggregate_sum(self, input_array, output_coords, dim="Type"):
@@ -259,15 +265,21 @@ def create_vehicle_graph():
 
 
 def create_building_graph():
-    building_nodes = []
+    building_nodes = [
+    Node("Buildings"),
+
+]
     for super_type in ["Detached", "Semi-detached", "Appartment", "High-rise"]:
-        building_nodes.append(Node(super_type))
+        building_nodes.append(Node(super_type, inherits_from="Buildings"))
 
         for sub_type in ["Urban", "Rural"]:
             building_nodes.append(Node(f"{super_type} - {sub_type}", inherits_from=super_type))
 
+    for c in ["Retail+", "Hotels+", "Office", "Govt+"]:
+        building_nodes.append(Node(c, inherits_from="Buildings"))
 
-    building_knowledge_graph = KnowledgeGraph(*building_nodes)
+    building_knowledge_graph = KnowledgeGraph(*building_nodes)  
+
     # knowledge_graph = KnowledgeGraph(*building_nodes)
 
 

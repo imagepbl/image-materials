@@ -85,10 +85,13 @@ def _check_data_same(orig_data, new_data, name=""):
         assert len(orig_data._items) == len(new_data._items)
         return
     if orig_data is None:
-        assert orig_data == new_data
+        assert orig_data == new_data, f"New data is {new_data}, where it used to be None."
         return
     if isinstance(orig_data, str):
-        assert orig_data == new_data, f"Wrong string value: {name}"
+        assert orig_data == new_data, (
+            f"Wrong string value: {name}, "
+            f"Old: {orig_data}, New: {new_data}."
+        )
         return
 
     if isinstance(orig_data, xr.DataArray):

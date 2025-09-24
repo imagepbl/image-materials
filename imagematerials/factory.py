@@ -2,6 +2,7 @@
 import pickle as pkl
 from pathlib import Path
 from typing import Any, Optional, Union
+import types
 
 import prism
 import xarray as xr
@@ -264,9 +265,10 @@ class ModelFactory():
                     return all_data
 
             def save_pkl(self, data_fp: Union[Path, str]):
-                all_data = {sec_name: getattr(self, sec_name) for sec_name in factory.sectors}
                 with open(data_fp, "wb") as handle:
-                    pkl.dump(all_data, handle)
+                    pkl.dump(
+                        (list(factory.sectors.values()), factory.models, factory.complete_timeline),
+                        handle)
 
         main_model = MainModule(self.complete_timeline)
 
@@ -275,6 +277,25 @@ class ModelFactory():
         for sec_name, sec in self.sectors.items():
             setattr(main_model, sec_name, sec.all_data)
         return main_model
+
+    @classmethod
+    def load_pkl(cls, pkl_file):
+        """Load pkl model file.
+
+        Parameters
+        ----------
+        pkl_file
+            File in which the model was stored, including the data.
+
+        Returns
+        -------
+            A model similar to the one that was stored.
+        """
+        with open(pkl_file, "rb") as handle:
+            sectors, models, timeline = pkl.load(handle)
+        factory = cls(sectors, timeline)
+        factory.models = models
+        return factory.finish()
 
     def visualize(self, px_x: str = "500px", px_y: str = "500px",
                   notebook: bool = True):

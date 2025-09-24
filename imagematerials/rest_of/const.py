@@ -131,6 +131,36 @@ REGION_TO_CLASS_DICT_IMAGE_MAT = {
     'Rest S.Africa': 'class_ 26',
     'Global': 'class_ 27'}
 
+REGION_TO_CLASS_DICT_IMAGE_MAT_NR = {
+    'Canada': '1',
+    'US': '2',
+    'Mexico': '3',
+    'Rest C.Am.': '4',
+    'Brazil': '5',
+    'Rest S.Am.': '6',
+    'N.Africa': '7',
+    'W.Africa': '8',
+    'E.Africa': '9',
+    'South Africa': '10',
+    'W.Europe': '11',
+    'C.Europe': '12',
+    'Turkey': '13',
+    'Ukraine': '14',
+    'Stan': '15',
+    'Russia': '16',
+    'M.East': '17',
+    'India': '18',
+    'Korea': '19',
+    'China': '20',
+    'SE.Asia': '21',
+    'Indonesia': '22',
+    'Japan': '23',
+    'Oceania': '24',
+    'Rest S.Asia': '25',
+    'Rest S.Africa': '26',
+    'Global': 'class_ 27'}
+
+
 COPPER_AVERAGE_REGIONS_TO_IMAGE = {
     'Other North America countries' : ['class_ 1', 'class_ 3', 'class_ 4'],
     'USA': ['class_ 2'], 
@@ -169,10 +199,8 @@ IAI_TO_IMAGE_CLASSES = {
         'class_ 20'  # China
     ],
     'Estimated Unreported to IAI': [
-        'class_ 6',   # Rest S.Am.
         'class_ 8',   # W.Africa (e.g. Cape Verde)
         'class_ 10',  # South Africa (e.g. ZA1)
-        'class_ 24',  # Oceania (e.g. Tuvalu, Tokelau)
         'class_ 26',  # Rest S.Africa (e.g. Réunion, Mayotte)
     ],
     'Gulf Cooperation Council': [
@@ -187,7 +215,6 @@ IAI_TO_IMAGE_CLASSES = {
         'class_ 24'  # Oceania
     ],
     'Russia & Eastern Europe': [
-        'class_ 12',  # C.Europe
         'class_ 14',  # Ukraine
         'class_ 15',  # Stan
         'class_ 16'   # Russia

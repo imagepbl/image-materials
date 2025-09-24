@@ -1,0 +1,37 @@
+# Material demand of manufacturing (process 5, CIRCOMOD material cycle system 
+# definition) by engineered material and by material origin
+- Material Demand by Manufacturing|{Engineered Material}|Virgin Input:
+    description: Amount of (Engineered Material) entering domestic manufacturing
+      supplied by virgin raw input, F_4_5(part) - flow of (Engineered Material)
+      from market and transport process 4, Engineering material trade, to
+      transformation process 5, Manufacturing
+    unit: Mt/yr
+    notes: Proxy flow F_3_4, assuming no import/export of virgin raw input into/from
+      process 4
+- Material Demand by Manufacturing|{Engineered Material}|Recycled:
+    description: Amount of (Engineered Material) entering domestic manufacturing
+      supplied by recycled material input, F_4_5(part) - flow of (Engineered
+      Material) from market and transport process 4, Engineering material trade,
+      to transformation process 5, Manufacturing
+    unit: Mt/yr
+    notes: This can be less than the total recyclable fraction of the outflow, Proxy
+      flow F_11_4, assuming no import/export of recycled material into/from process 4
+- Material Demand by Manufacturing|{Engineered Material}|Diverted Scrap:
+    description: Amount of (Engineered Material) entering domestic manufacturing
+      supplied by diverted scrap (no remelting required) from other
+      manufacturing, F_10_5 - flow of (Engineered Material) from market and
+      transport process 10, Scrap trade, to transformation process 5,
+      Manufacturing
+    unit: Mt/yr
+    notes: null
+- Material Demand by Manufacturing|{Engineered Material}|Other (Not Elsewhere Specified):
+    description: Amount of (Engineered Material) entering domestic manufacturing
+      supplied by source not elsewhere specified
+    unit: Mt/yr
+    notes: null
+
+# Total material demand of manufacturing by engineered material
+- Material Demand by Manufacturing|{Engineered Material}:
+    description: Total amount of (Engineered Material) entering domestic
+      manufacturing, sum of flows F_4_5 and F_10_5
+    unit: Mt/yr

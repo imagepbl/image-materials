@@ -27,16 +27,15 @@ from imagematerials.electricity.utils import MNLogit, stock_tail, create_prep_da
 
 
 from imagematerials.electricity.constants import (
-    YEAR_START,
+    STANDARD_SCEN_EXTERNAL_DATA,
+    # YEAR_START,
     YEAR_FIRST,
     YEAR_FIRST_GRID,
-    YEAR_END,
-    YEAR_OUT,
+    # YEAR_END,
+    # YEAR_OUT,
     YEAR_SWITCH,
-    YEAR_LAST,
+    # YEAR_LAST,
     # COHORTS, # necessary?
-    SCEN,
-    VARIANT,
     SENS_ANALYSIS,
     REGIONS,
     TECH_GEN,
@@ -87,9 +86,6 @@ VARIANT = "VLHO"
 
 
 
-years = YEAR_END - YEAR_START  + 1
-
-
 # from past.builtins import execfile
 # execfile('read_mym.py')
 idx = pd.IndexSlice             # needed for slicing multi-index
@@ -107,12 +103,15 @@ idx = pd.IndexSlice             # needed for slicing multi-index
 
 
 
-def get_preprocessing_data_gen(path_base: str, SCEN, VARIANT): #, climate_policy_config: dict, circular_economy_config: dict
+def get_preprocessing_data_gen(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_END, YEAR_OUT): #, climate_policy_config: dict, circular_economy_config: dict
 
     scen_folder = SCEN + "_" + VARIANT
-    path_image_output = Path(path_base, "data", "raw", scen_folder, "EnergyServices")
+    path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
     path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
     path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scen_folder) #test
+        # test if path_external_data_scenario exists and if not set to standard scenario
+    if not path_external_data_scenario.exists():
+        path_external_data_scenario = Path(path_base, "data", "raw", "electricity", STANDARD_SCEN_EXTERNAL_DATA)
     print(f"Path to image output: {path_image_output}")
     assert path_image_output.is_dir()
     assert path_external_data_standard.is_dir()
@@ -173,7 +172,7 @@ def get_preprocessing_data_gen(path_base: str, SCEN, VARIANT): #, climate_policy
     # Calculate the historic tail to the Gcap (stock) 
     gcap_new = pd.DataFrame(index=pd.MultiIndex.from_product([range(YEAR_FIRST_GRID,YEAR_OUT+1), region_list], names=['years', 'regions']), columns=gcap.columns)
     for tech in gcap_tech_list:
-        gcap_new.loc[idx[:,:],tech] = stock_tail(gcap.loc[idx[:,:],tech].unstack(level=1)).stack()
+        gcap_new.loc[idx[:,:],tech] = stock_tail(gcap.loc[idx[:,:],tech].unstack(level=1), YEAR_OUT).stack()
 
 
     # Bring dataframes into correct shape for the results_dict
@@ -216,6 +215,11 @@ def get_preprocessing_data_gen(path_base: str, SCEN, VARIANT): #, climate_policy
 
     prep_data = create_prep_data(results_dict, conversion_table, unit_mapping)
 
+    prep_data["stocks"] = prism.Q_(prep_data["stocks"], "MW")
+    prep_data["material_intensities"] = prism.Q_(prep_data["material_intensities"], "g/MW")
+    prep_data["set_unit_flexible"] = prism.U_(prep_data["stocks"]) # prism.U_ gives the unit back
+    # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
+
     return prep_data
 
 
@@ -226,15 +230,19 @@ def get_preprocessing_data_gen(path_base: str, SCEN, VARIANT): #, climate_policy
 ###########################################################################################################
 ###########################################################################################################
 
-def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT): #, climate_policy_config: dict, circular_economy_config: dict
+def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_END, YEAR_OUT): #, climate_policy_config: dict, circular_economy_config: dict
 
     scen_folder = SCEN + "_" + VARIANT
-    path_image_output = Path(path_base, "data", "raw", scen_folder, "EnergyServices")
+    path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
     path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
     path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scen_folder)
+    
+    # test if path_external_data_scenario exists and if not set to standard scenario
+    if not path_external_data_scenario.exists():
+        path_external_data_scenario = Path(path_base, "data", "raw", "electricity", STANDARD_SCEN_EXTERNAL_DATA)
 
     scen_BL_folder = SCEN + "_M_CP"  # baseline scenario
-    path_image_output_BL = Path(path_base, "data", "raw", scen_BL_folder, "EnergyServices")
+    path_image_output_BL = Path(path_base, "data", "raw", "image", scen_BL_folder, "EnergyServices")
     # TODO: check if this is necessary (shouldn't historical periode anyway be the same for all scenarios?)
     # + if it is, should the baseline scenario be given as a parameter or can it be inferred from the scenario name?
 
@@ -252,14 +260,14 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT): #, climate_polic
     # 1. External Data --------------------------------------------- 
 
     grid_length_Hv = pd.read_csv(path_external_data_standard /'grid_length_Hv.csv', index_col=0, names=None).transpose()    # lenght of the High-voltage (Hv) lines in the grid, based on Open Street Map (OSM) analysis (km)
-    ratio_Hv = pd.read_csv(path_external_data_standard / 'Hv_ratio.csv', index_col=0)                                        # Ratio between the length of Medium-voltage (Mv) and Low-voltage (Lv) lines in relation to Hv lines (km Lv /km Hv) & (km Mv/ km Hv)
-    underground_ratio = pd.read_csv(path_external_data_standard / 'underground_ratio.csv', index_col=[0,1])           # these contain the definition of the constants in the linear function used to determine the relation between income & the percentage of underground power-lines (% underground = mult * gdp/cap + add)
-    grid_additions = pd.read_csv(path_external_data_standard / 'grid_additions.csv', index_col=0)                            # Transformers & substations per km of grid (Hv, Mv & Lv, in units/km)
+    ratio_Hv = pd.read_csv(path_external_data_standard / 'Hv_ratio.csv', index_col=0)                                       # Ratio between the length of Medium-voltage (Mv) and Low-voltage (Lv) lines in relation to Hv lines (km Lv /km Hv) & (km Mv/ km Hv)
+    underground_ratio = pd.read_csv(path_external_data_standard / 'underground_ratio.csv', index_col=[0,1])                 # these contain the definition of the constants in the linear function used to determine the relation between income & the percentage of underground power-lines (% underground = mult * gdp/cap + add)
+    grid_additions = pd.read_csv(path_external_data_standard / 'grid_additions.csv', index_col=0)                           # Transformers & substations per km of grid (Hv, Mv & Lv, in units/km)
 
 
     # dynamic or scenario-dependent data (lifetimes & material intensity)
 
-    lifetime_grid_elements = pd.read_csv(path_external_data_scenario  / 'operational_lifetime_grid.csv', index_col=0)         # Average lifetime in years of grid elements
+    lifetime_grid_elements = pd.read_csv(path_external_data_scenario  / 'operational_lifetime_grid.csv', index_col=0)        # Average lifetime in years of grid elements
 
     # dynamic material intensity files (kg/km or kg/unit)
     materials_grid = pd.read_csv(path_external_data_scenario / 'Materials_grid_dynamic.csv', index_col=[0,1])                # Material intensity of grid lines specific material content for Hv, Mv & Lv lines, & specific for underground vs. aboveground lines. (kg/km)
@@ -414,18 +422,18 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT): #, climate_polic
         materials_grid_additions_interpol.loc[idx[:,cat],:] = materials_grid_additions_interpol.loc[idx[:,cat],:].astype('float32').reindex(list(range(YEAR_FIRST_GRID,YEAR_END+1)), level=0).interpolate()
 
     # call the stock_tail function on all lines, substations & transformers, to add historic stock tail between 1926 & 1971
-    grid_length_Hv_above_new = stock_tail(grid_length_Hv_above) # km
-    grid_length_Mv_above_new = stock_tail(grid_length_Mv_above) # km
-    grid_length_Lv_above_new = stock_tail(grid_length_Lv_above) # km
-    grid_length_Hv_under_new = stock_tail(grid_length_Hv_under) # km 
-    grid_length_Mv_under_new = stock_tail(grid_length_Mv_under) # km
-    grid_length_Lv_under_new = stock_tail(grid_length_Lv_under) # km
-    grid_subst_Hv_new = stock_tail(grid_subst_Hv)               # units
-    grid_subst_Mv_new = stock_tail(grid_subst_Mv)               # units
-    grid_subst_Lv_new = stock_tail(grid_subst_Lv)               # units
-    grid_trans_Hv_new = stock_tail(grid_trans_Hv)               # units
-    grid_trans_Mv_new = stock_tail(grid_trans_Mv)               # units
-    grid_trans_Lv_new = stock_tail(grid_trans_Lv)               # units
+    grid_length_Hv_above_new = stock_tail(grid_length_Hv_above, YEAR_OUT) # km
+    grid_length_Mv_above_new = stock_tail(grid_length_Mv_above, YEAR_OUT) # km
+    grid_length_Lv_above_new = stock_tail(grid_length_Lv_above, YEAR_OUT) # km
+    grid_length_Hv_under_new = stock_tail(grid_length_Hv_under, YEAR_OUT) # km 
+    grid_length_Mv_under_new = stock_tail(grid_length_Mv_under, YEAR_OUT) # km
+    grid_length_Lv_under_new = stock_tail(grid_length_Lv_under, YEAR_OUT) # km
+    grid_subst_Hv_new = stock_tail(grid_subst_Hv, YEAR_OUT)               # units
+    grid_subst_Mv_new = stock_tail(grid_subst_Mv, YEAR_OUT)               # units
+    grid_subst_Lv_new = stock_tail(grid_subst_Lv, YEAR_OUT)               # units
+    grid_trans_Hv_new = stock_tail(grid_trans_Hv, YEAR_OUT)               # units
+    grid_trans_Mv_new = stock_tail(grid_trans_Mv, YEAR_OUT)               # units
+    grid_trans_Lv_new = stock_tail(grid_trans_Lv, YEAR_OUT)               # units
 
 
     #############
@@ -534,6 +542,15 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT): #, climate_polic
 
     prep_data_lines = create_prep_data(results_dict_lines, conversion_table, unit_mapping)
     prep_data_add = create_prep_data(results_dict_add, conversion_table, unit_mapping)
+
+    prep_data_lines["stocks"] = prism.Q_(prep_data_lines["stocks"], "km")
+    prep_data_lines["material_intensities"] = prism.Q_(prep_data_lines["material_intensities"], "kg/km")
+    prep_data_lines["set_unit_flexible"] = prism.U_(prep_data_lines["stocks"]) # prism.U_ gives the unit back
+    # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
+
+    prep_data_add["stocks"] = prism.Q_(prep_data_add["stocks"], "count")
+    prep_data_add["material_intensities"] = prism.Q_(prep_data_add["material_intensities"], "kg/count")
+    prep_data_add["set_unit_flexible"] = prism.U_(prep_data_add["stocks"]) # prism.U_ gives the unit back
 
     return prep_data_lines, prep_data_add
 
