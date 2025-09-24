@@ -26,9 +26,6 @@ from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, merge_dims
 from imagematerials.concepts import create_region_graph
 
-
-prism.unit_registry.load_definitions(files("imagematerials") / "units.txt")
-
 far_start_year = 1721
 start_year = 1820
 end_year = 1970
