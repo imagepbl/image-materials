@@ -427,21 +427,23 @@ class EndOfLife(prism.Model):
     material: prism.Coords[MATERIAL_TYPE]
 
     # Data dependencies
-    input_data: tuple[str] = ("collection", "reuse", "recycling", "outflow_by_cohort_materials") # outflow_by_cohort_materials currently summed over cohorts
-    output_data: tuple[str] = ("sum_outflow","collected_materials","reusable_materials", "recyclable_materials","losses_materials")
+    input_data: tuple[str] = ("collection", "reuse", "recycling", "inflow_materials", "outflow_by_cohort_materials") # outflow_by_cohort_materials currently summed over cohorts
+    output_data: tuple[str] = ("sum_outflow","sum_inflow", "collected_materials","reusable_materials", "recyclable_materials","losses_materials", "virgin_materials")
 
     # Output data
     sum_outflow: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "kg"] = prism.export()
+    sum_inflow: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "kg"] = prism.export()
     collected_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "kg"] = prism.export()
     reusable_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "kg"] = prism.export()
     remaining_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "kg"] = prism.export()
     recyclable_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "kg"] = prism.export()
     losses_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "kg"] = prism.export()
+    virgin_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "kg"] = prism.export()
 
     def compute_initial_values(self, timeline: prism.Timeline):
         pass
 
-    def compute_values(self, time: prism.Time, outflow_by_cohort_materials, collection, reuse, recycling):
+    def compute_values(self, time: prism.Time, inflow_materials, outflow_by_cohort_materials, collection, reuse, recycling):
         """
         Computes reused material within sector and recyclable material from each sector/type, given collection, 
         reuse and recycling rates at each time step 
@@ -450,6 +452,8 @@ class EndOfLife(prism.Model):
         ----------
         time : prism.Time
             The current simulation time step.
+        inflow_materials : xr.DataArray
+            Inflow materials data. 
         outflow_by_cohort_materials : xr.DataArray
             Outflow data after lifetime.
         collection : xr.DataArray
@@ -511,13 +515,30 @@ class EndOfLife(prism.Model):
                 losses_materials = sum_outflow-collected_materials                                  # non-collected waste
                 losses_materials = losses_materials+remaining_materials-recyclable_materials        # non-reused/recycled but collected waste
 
-
                 self.collected_materials[t].loc[coords] = collected_materials
                 self.reusable_materials[t].loc[coords] = reusable_materials
                 self.remaining_materials[t].loc[coords] = remaining_materials
                 self.recyclable_materials[t].loc[coords] = recyclable_materials
                 self.losses_materials[t].loc[coords] = losses_materials
 
+        for inflow in inflow_materials:
+            inflow_t = inflow[t]
+            for supertype, subtypes in type_dict.items():
+                if subtypes[0] not in inflow_t.coords["Type"]:
+                    continue
+                sum_inflow = inflow_t.sel(Type=subtypes).sum("Type")
+
+                coords = {"Type": supertype, "material": sum_inflow.coords["material"], "Region": sum_inflow.coords["Region"]}
+                input_coords = {"Time":t, "Type":supertype}
+
+                self.sum_inflow[t].loc[coords] = sum_inflow
+
+                virgin_materials = xr.where(                                    # quick fix... TODO: redefine this when trade is implemented 
+                    sum_inflow - reusable_materials - recyclable_materials < 0,
+                    0,
+                    sum_inflow - reusable_materials - recyclable_materials
+                )
+                self.virgin_materials[t].loc[coords] = virgin_materials
 
 @prism.interface
 class RestOf(prism.Model):
