@@ -102,22 +102,19 @@ idx = pd.IndexSlice             # needed for slicing multi-index
 ###########################################################################################################
 
 
+def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
-def get_preprocessing_data_gen(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_END, YEAR_OUT): #, climate_policy_config: dict, circular_economy_config: dict
-
-    scen_folder = SCEN + "_" + VARIANT
-    path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
+    path_image_output = Path(path_base, "data", "raw", "image", scenario, "EnergyServices")
     path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
-    path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scen_folder) #test
+    path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scenario)
         # test if path_external_data_scenario exists and if not set to standard scenario
     if not path_external_data_scenario.exists():
         path_external_data_scenario = Path(path_base, "data", "raw", "electricity", STANDARD_SCEN_EXTERNAL_DATA)
-    print(f"Path to image output: {path_image_output}")
     assert path_image_output.is_dir()
     assert path_external_data_standard.is_dir()
     assert path_external_data_scenario.is_dir()
 
-    years = YEAR_END - YEAR_START  + 1
+    #years = year_end - year_start  + 1
 
     idx = pd.IndexSlice   
 
@@ -135,7 +132,11 @@ def get_preprocessing_data_gen(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_E
     # 2. IMAGE/TIMER files -----------------------------------------
 
     # Generation capacity (stock & inflow/new) in MW peak capacity, FILES from TIMER
-    gcap_data = read_mym_df(path_image_output / 'GCap.out')
+    #gcap_data = read_mym_df(path_image_output / 'GCap.out')
+    gcap_data = read_mym_df(
+        climate_policy_config["config_file_path"] /
+        climate_policy_config["data_files"]['GCap']
+    )
 
     ###########################################################################################################
     # Prepare model specific variables #
@@ -146,14 +147,14 @@ def get_preprocessing_data_gen(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_E
     gcap_material_list = list(composition_generation.index.values)  #list of materials the generation technologies
 
     gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
-    gcap = pd.pivot_table(gcap_data[gcap_data['time'].isin(list(range(YEAR_START,YEAR_END+1)))], index=['time','DIM_1'], values=list(range(1,TECH_GEN+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (34));  the last column in gcap_data (= totals) is now removed
+    gcap = pd.pivot_table(gcap_data[gcap_data['time'].isin(list(range(year_start,year_end+1)))], index=['time','DIM_1'], values=list(range(1,TECH_GEN+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (34));  the last column in gcap_data (= totals) is now removed
 
     # renaming multi-index dataframe: generation capacity, based on the regions in grid_length_Hv & technologies as given
-    gcap.index = pd.MultiIndex.from_product([list(range(YEAR_START,YEAR_END+1)), region_list], names=['years', 'regions'])
+    gcap.index = pd.MultiIndex.from_product([list(range(year_start,year_end+1)), region_list], names=['years', 'regions'])
     gcap.columns = gcap_tech_list
 
     # Interpolate material intensities (dynamic content for gcap & storage technologies between 1926 to 2100, based on data files)
-    index = pd.MultiIndex.from_product([list(range(YEAR_FIRST_GRID, YEAR_OUT+1)), list(composition_generation.index)])
+    index = pd.MultiIndex.from_product([list(range(YEAR_FIRST_GRID, year_out+1)), list(composition_generation.index)])
     gcap_materials_interpol = pd.DataFrame(index=index, columns=composition_generation.columns.levels[1])
 
     # material intensities for gcap
@@ -167,12 +168,12 @@ def get_preprocessing_data_gen(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_E
     # interpolate Gcap (technical) lifetime data
     gcap_lifetime.index = gcap_lifetime.index.set_levels(gcap_tech_list, level=1)
     gcap_lifetime = gcap_lifetime.unstack().droplevel(axis=1, level=0)
-    gcap_lifetime = gcap_lifetime.reindex(list(range(YEAR_FIRST_GRID,YEAR_OUT+1)), axis=0).interpolate(limit_direction='both')
+    gcap_lifetime = gcap_lifetime.reindex(list(range(YEAR_FIRST_GRID,year_out+1)), axis=0).interpolate(limit_direction='both')
 
     # Calculate the historic tail to the Gcap (stock) 
-    gcap_new = pd.DataFrame(index=pd.MultiIndex.from_product([range(YEAR_FIRST_GRID,YEAR_OUT+1), region_list], names=['years', 'regions']), columns=gcap.columns)
+    gcap_new = pd.DataFrame(index=pd.MultiIndex.from_product([range(YEAR_FIRST_GRID,year_out+1), region_list], names=['years', 'regions']), columns=gcap.columns)
     for tech in gcap_tech_list:
-        gcap_new.loc[idx[:,:],tech] = stock_tail(gcap.loc[idx[:,:],tech].unstack(level=1), YEAR_OUT).stack()
+        gcap_new.loc[idx[:,:],tech] = stock_tail(gcap.loc[idx[:,:],tech].unstack(level=1), year_out).stack()
 
 
     # Bring dataframes into correct shape for the results_dict
