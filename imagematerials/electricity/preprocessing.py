@@ -528,9 +528,14 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
 def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_END, YEAR_OUT): #, climate_policy_config: dict, circular_economy_config: dict
 
     scen_folder = SCEN + "_" + VARIANT
-    path_image_output = Path(path_base, "data", "raw", scen_folder, "EnergyServices")
+    path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
     path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
     path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scen_folder) #test
+
+    # test if path_external_data_scenario exists and if not set to standard scenario
+    if not path_external_data_scenario.exists():
+        path_external_data_scenario = Path(path_base, "data", "raw", "electricity", STANDARD_SCEN_EXTERNAL_DATA)
+
     print(f"Path to image output: {path_image_output}")
     assert path_image_output.is_dir()
     assert path_external_data_standard.is_dir()
