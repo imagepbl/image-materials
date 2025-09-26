@@ -18,6 +18,7 @@ COHORTS = 50
 
 # Scenario settings ---------------------------------------------
 STANDARD_SCEN_EXTERNAL_DATA = "SSP2_M_CP"
+SCENARIO_DEFAULT = "SSP2_M_CP"
 
 # Sensitivity Analysis - default, high_stor, high_grid
 SENS_ANALYSIS = "default" 
@@ -53,7 +54,7 @@ unit_mapping = {
 TECH_GEN = 34   # number of electricity generation technologies -> 33 technologies + 1 empty row
 
 # Define mapping: technology -> category
-gen_tech_to_category = {
+DICT_GENTECH_TO_CATEGORY = {
     "Solar PV": 'Solar', 
     "Solar PV residential": 'Solar',
     "CSP": 'Solar', 
@@ -129,12 +130,26 @@ colors = plt.get_cmap('tab20').colors  # 20 distinct colors
 linestyles = ['-', '--', ':'] #'-.'
 # Create a cycle of (color, linestyle) combinations
 style_combinations = list(itertools.product(colors, linestyles))
-assert len(technologies) <= len(style_combinations), "Not enough unique combinations for all technologies."
 # Map technologies to (color, linestyle)
-dict_gentech_styles = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
+DICT_GENTECH_STYLES = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
 
 
-dict_gentechcat_colors = {
+# Grid Storage technologies
+technologies = [
+    "Flywheel", "Compressed Air", "Hydrogen FC", "NiMH", "Deep-cycle Lead-Acid", "LMO",
+    "NMC", "NCA", "LFP", "LTO", "Zinc-Bromide", "Vanadium Redox", "Sodium-Sulfur", "ZEBRA",
+    "Lithium Sulfur", "Lithium Ceramic", "Lithium-air"
+]
+# Define color and linestyle pools
+colors = plt.get_cmap('tab20').colors  # 20 distinct colors
+linestyles = ['-', '--', ':'] #'-.'
+# Create a cycle of (color, linestyle) combinations
+style_combinations = list(itertools.product(colors, linestyles))
+# Map technologies to (color, linestyle)
+DICT_STOR_STYLES = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
+
+
+DICT_GENTECHCAT_COLORS = {
     'Solar':             "#FBBF09",
     'Wind':              "#4BABFF",
     'Biomass':           "#42DD88",
@@ -145,7 +160,7 @@ dict_gentechcat_colors = {
     'Fossil + CCS':      "#BBB8B9"
 }
 
-dict_materials_colors = {
+DICT_MATERIALS_COLORS = {
     'Steel':     '#FF9B85',
     'Aluminium': '#B9FAF8',
     'Concrete':  '#AAF683',
@@ -161,7 +176,7 @@ dict_materials_colors = {
     'Other':     '#FFD97D'
 }
 
-dict_grid_colors = {
+DICT_GRID_COLORS = {
     #'Lines Overhead': '#FF9B85',
     #'Lines Underground': '#FFD97D',
     'Lines':        '#8cb369', #'#007f5f',
@@ -169,7 +184,7 @@ dict_grid_colors = {
     'Substations':  '#bc4b51' #'#55a630'
 }
 
-dict_grid_styles = {
+DICT_GRID_STYLES_1 = {
     'HV':                           ('#ef767a', '-'),
     'HV - Lines - Overhead':        ('#ef767a', '-'),
     'HV - Lines - Underground':     ('#ef767a', '--'),
@@ -189,7 +204,7 @@ dict_grid_styles = {
     'LV - Substations':             ('#49beaa', '--')
 }
 
-dict_grid_styles2 = {
+DICT_GRID_STYLES_2 = {
     'HV':                           ('#ef767a', '-'),
     'HV - Lines - Overhead':        ('#f4845f', '-'),
     'HV - Lines - Underground':     ('#f4845f', '--'),
@@ -209,7 +224,7 @@ dict_grid_styles2 = {
     'LV - Substations':             ('#007200', '--')
 }
 
-dict_electricity_colors = {
+DICT_ELECTR_COLORS = {
     'Generation':   '#277da1',
     'Storage':      '#f9844a',
     'Transmission': '#90be6d'
