@@ -152,7 +152,34 @@ class KnowledgeGraph():
                 all_descendants.extend(self._find_descendants(input_coords, item))
         return all_descendants
 
-    def rebroadcast_xarray(self, input_array, output_coords, dim="Type", shares=None):
+    def rebroadcast_xarray(self, input_array, output_coords, dim="Type", shares=None, dim_shares=None):
+        """Disaggregates supertypes into subtypes. If shares for the subtypes are provided,
+        the values of the input_array data is adjusted accordingly (value of supertype * shares = values of subtypes).
+        If no shares are provided, the value of the supertype is taken for all subtypes.
+
+        Parameters
+        ----------
+        input_array
+            The xr.DataArray to be disaggregated.
+        output_coords
+            The output coordinates (subtypes).
+        dim, optional
+            Dimension of the input_array to disaggregate over, by default "Type"
+        shares, optional
+            Shares to be used for rebroadcasting, by default None. Must have the dimension "Type".
+        dim_shares, optional
+            Dimension of the shares DataArray. By default None. If shares is defined and dim_shares not, dim is used.
+            In case the shares have a different dimension name than the input_array, it can be specified here.
+
+        Returns
+        -------
+            Disaggregated xr.DataArray.
+
+        """
+
+        if shares is not None and dim_shares is None:
+            dim_shares = dim
+
         input_coords = input_array.coords[dim].values
         if list(input_coords) == list(output_coords):
             return input_array
@@ -175,7 +202,7 @@ class KnowledgeGraph():
             parent = relations[0]
             if shares is not None and cur_coord in shares.coords["Type"]:
                 new_array.loc[{dim: cur_coord}] = (input_array.loc[{dim: parent}]
-                                                   * shares.loc[{dim: cur_coord}])
+                                                   * shares.loc[{"Type": cur_coord}]) #used to be: * shares.loc[{dim: cur_coord}]
             else:
                 new_array.loc[{dim: cur_coord}] = input_array.loc[{dim: parent}]
         new_array.loc[{dim: keep_coords}] = input_array.loc[{dim: keep_coords}]
@@ -355,30 +382,56 @@ knowledge_graph = KnowledgeGraph(*create_building_graph()._items, *create_vehicl
 
 def create_electricity_graph():
 
-    # Generation -----------
-    generation_types = ["Solar PV", "Solar PV residential", "CSP", "Wind onshore", "Wind offshore", 
+    # Generation ======================================================================================
+    generation_supertypes = ["Solar PV", "Solar PV residential", "CSP", "Wind onshore", "Wind offshore", 
                         "Wave", "Hydro", "Other Renewables", "Geothermal","Hydrogen power", "Nuclear", "Conv. Coal",
                         "Conv. Oil", "Conv. Natural Gas","Waste", "IGCC", "OGCC", "NG CC", "Biomass CC",
                         "Coal + CCS", "Oil/Coal + CCS", "Natural Gas + CCS", "Biomass + CCS",
                         "CHP Coal", "CHP Oil", "CHP Natural Gas", "CHP Biomass","CHP Geothermal", "CHP Hydrogen",
                         "CHP Coal + CCS", "CHP Oil + CCS", "CHP Natural Gas + CCS", "CHP Biomass + CCS"]
-    # generation_types_renew = ["Solar PV", "Solar PV residential", "CSP", "Wind onshore", "Wind offshore", 
-    #                     "Wave", "Other Renewables", "Geothermal", "Biomass CC","Biomass + CCS",
-    #                     "CHP Biomass","CHP Geothermal", "CHP Biomass + CCS"] # "Hydro", "CHP Hydrogen",
-    # generation_subtypes = ["c-Si", "a-Si", "CIGS", "CdTe", "Perovskite", 
-    #                        "Fresnel Reflector", "Central Receiver", "Parabolic Trough", "Parabolic Dish",
-    #                        "Geared - High Speed", "Geared - Medium speed", "Direct Drive"]
-    # generation_supertypes = ["Renewables", "Fossil", "Other"]
-    # generation_supertypes = ["Renewables", "Fossil", "Fossil + CCS"]
 
     electricity_knowledge_graph = KnowledgeGraph(Node("Electricity"))
     electricity_knowledge_graph.add(Node("Generation", inherits_from="Electricity"))
-    for type in generation_types:
-        electricity_knowledge_graph.add(Node(type, inherits_from="Generation"))
+    for supertype in generation_supertypes:
+        electricity_knowledge_graph.add(Node(supertype, inherits_from="Generation"))
+
+    # # Sub-Technologies --------------------------
+
+    # for subtype in ["c-Si", "a-Si", "CIGS", "CdTe", "Perovskite"]:
+    #     electricity_knowledge_graph.add(Node(subtype, inherits_from="Solar PV"))
+    #     electricity_knowledge_graph.add(Node(subtype, inherits_from="Solar PV residential")) # is this possible?
+
+    # for subtype in ["Fresnel Reflector", "Central Receiver", "Parabolic Trough", "Parabolic Dish"]:
+    #     electricity_knowledge_graph.add(Node(subtype, inherits_from="CSP"))
+
+    # for subtype in ["Geared - High Speed", "Geared - Medium speed", "Direct Drive"]:
+    #     electricity_knowledge_graph.add(Node(subtype, inherits_from="Wind onshore"))
+    #     electricity_knowledge_graph.add(Node(subtype, inherits_from="Wind offshore"))
+
+    # # Category Relations -------------------------
+
+    # # Renewables
+    # electricity_knowledge_graph.add(Node("Renewables", inherits_from="Generation"))
+    # for supertype in ["Solar PV", "Solar PV residential", "CSP", "Wind onshore", "Wind offshore",
+    #                   "Wave", "Other Renewables", "Geothermal", "Biomass CC","Biomass + CCS",
+    #                   "CHP Biomass","CHP Geothermal", "CHP Biomass + CCS"]:
+    #     electricity_knowledge_graph.add(Node(supertype, inherits_from="Renewables"))
+
+    # # Climate Neutral
+    # electricity_knowledge_graph.add(Node("Climate Neutral", inherits_from="Generation"))
+    # for supertype in ["Solar PV", "Solar PV residential", "CSP", "Wind onshore", "Wind offshore",
+    #                   "Wave", "Other Renewables", "Geothermal", "Biomass CC","Biomass + CCS",
+    #                   "CHP Biomass","CHP Geothermal", "CHP Biomass + CCS","Coal + CCS", "Oil/Coal + CCS", 
+    #                   "Natural Gas + CCS", "Nuclear"]:
+    #     electricity_knowledge_graph.add(Node(supertype, inherits_from="Climate Neutral"))
+
+    # # Fossil
+    # electricity_knowledge_graph.add(Node("Fossil", inherits_from="Generation"))
+    # for supertype in ["Conv. Coal", "Conv. Oil", "Conv. Natural Gas"]:
+    #     electricity_knowledge_graph.add(Node(supertype, inherits_from="Fossil"))
 
 
-
-    # Transmission -----------
+    # Transmission Grid ============================================================================
     transmission_types = ["HV", "MV", "LV"]
     transmission_subtypes = ["Lines", "Substations", "Transformers"]
     line_subtypes = ["Overhead", "Underground"]
@@ -393,9 +446,22 @@ def create_electricity_graph():
                     electricity_knowledge_graph.add(Node(f"{type} - {sub_type} - {line_subtype}", inherits_from=f"{type} - {sub_type}"))
 
 
-    # Storage -----------
+    # Storage ======================================================================================
+    storage_supertypes = ["PHS", "V2G-Batteries", "Other Storage"] # Pumped Hydro Storage, Vehicle-to-Grid Batteries
+    # Storage calculations follow a 3 tiered structure: Demand is filled first with PHS, then with (anyway available) V2G-Batteries, and 
+    # the residual demand with Other Storage
+    storage_subtypes = ["Flywheel", "Compressed Air", "Hydrogen FC", "NiMH", "Deep-cycle Lead-Acid", "LMO",
+                        "NMC", "NCA", "LFP", "LTO", "Zinc-Bromide", "Vanadium Redox", "Sodium-Sulfur", "ZEBRA",
+                        "Lithium Sulfur", "Lithium Ceramic", "Lithium-air"]
 
-    # electricity_knowledge_graph.add(Node("Storage", inherits_from="Electricity"))
+    electricity_knowledge_graph.add(Node("Storage", inherits_from="Electricity"))
+
+    for supertype in storage_supertypes:
+        electricity_knowledge_graph.add(Node(supertype, inherits_from="Storage"))
+    # TODO: V2G Batteries are also related to Vehicles + Add V2G-Batteries subtypes?
+    for subtype in storage_subtypes:
+        electricity_knowledge_graph.add(Node(subtype, inherits_from="Other Storage"))
+    
 
     return electricity_knowledge_graph
 
