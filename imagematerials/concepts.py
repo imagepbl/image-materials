@@ -200,10 +200,12 @@ class KnowledgeGraph():
                                  f"exist ({relations}) for output coordinate {cur_coord}. For "
                                  "aggregation use the aggregate_sum method instead.")
             parent = relations[0]
-            if shares is not None and cur_coord in shares.coords["Type"]:
+            if shares is not None and cur_coord in shares.coords[dim_shares]:
+                # disaggregate according to shares
                 new_array.loc[{dim: cur_coord}] = (input_array.loc[{dim: parent}]
-                                                   * shares.loc[{"Type": cur_coord}]) #used to be: * shares.loc[{dim: cur_coord}]
+                                                   * shares.loc[{dim_shares: cur_coord}])
             else:
+                # disaggregate, by just taking the value of the parent
                 new_array.loc[{dim: cur_coord}] = input_array.loc[{dim: parent}]
         new_array.loc[{dim: keep_coords}] = input_array.loc[{dim: keep_coords}]
         # check if input array had a unit and if so, reapply this unit to new array
