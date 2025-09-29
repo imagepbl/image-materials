@@ -257,9 +257,22 @@ def _map_placeholder(placeholder: str, da: xr.DataArray, sector_name: str | None
                 mapping.setdefault(full, []).append(t)
                 p2 = _kg_path(CFG.kgraph_b, t, prefer_depth=2)
                 mapping.setdefault(p2, []).append(t)
-                # optional depth=1 same as above
 
+        # Residential/Commercial rollups
+        res_types = [t for t, full in deep_paths.items() if full.startswith("Residential|")]
+        com_types = [t for t, full in deep_paths.items() if full.startswith("Commercial|")]
+
+        if res_types:
+            mapping.setdefault("Residential", []).extend(res_types)
+        if com_types:
+            mapping.setdefault("Commercial", []).extend(com_types)
+
+        # roll up to total Buildings
+        mapping.setdefault("Buildings", []).extend(res_types + com_types)
+
+        # clean and return
         return dim, {k: sorted(set(v)) for k, v in mapping.items()}
+
 
     # ----- Materials -----
     if ph == "Engineered Material":
@@ -288,17 +301,6 @@ def _map_placeholder(placeholder: str, da: xr.DataArray, sector_name: str | None
             return dim, mapping
 
     raise KeyError(f"Unsupported placeholder {placeholder!r}")
-
-
-# ---------------------------------------------------------------------
-# End-of-life helpers
-# ---------------------------------------------------------------------
-
-def _eol_source_key_for_template(template: str) -> str:
-    tl = template.lower()
-    if "final material demand" in tl and "|reused" in tl:
-        return "reusable_materials"
-    raise KeyError(f"Don’t know which EoL key to use for template: {template!r}")
 
 # ---------------------------------------------------------------------
 # Core IAMC reporting
@@ -351,6 +353,19 @@ def create_iamc_reporting(
             # find placeholders in template
             ph_list = re.findall(r"\{([^}]+)\}", tpl)
             if not ph_list:
+                # no placeholders → take whole array, just per region
+                part = da.sel({tkey: years})
+                for reg in regions:
+                    vec = np.asarray(part.sel({rkey: reg}).values, dtype=float).reshape(-1) * factor
+                    row = {
+                        "model": model_name,
+                        "scenario": scen_label,
+                        "region": region_codes[reg],
+                        "variable": tpl,   # use template directly
+                        "unit": unit,
+                    }
+                    row.update({int(y): float(v) for y, v in zip(years, vec)})
+                    all_rows.append(row)
                 continue
             # build placeholder specs (list of dicts with ph, dim, map)
             ph_specs = [ {"ph": ph, "dim": _map_placeholder(ph, da, sector)[0], "map": _map_placeholder(ph, da, sector)[1]} for ph in ph_list ]
@@ -412,60 +427,83 @@ def create_iamc_reporting(
 # ---------------------------------------------------------------------
 # End-of-life reporting
 # ---------------------------------------------------------------------
+def _eol_source_key_for_template(template: str) -> str:
+    tl = template.lower()
+    if "final material demand" in tl:
+        if "|reused" in tl:
+            return "reusable_materials"
+        if "|recycled" in tl:
+            return "recyclable_materials" # assuming that all recyclable will be recycled but this info should come from TIMER
+        if "|virgin input" in tl:
+            return "virgin_materials"
+    if "material losses" in tl:
+        return "losses_materials"
+    if "scrap" in tl:
+        return "collected_materials"
+    raise KeyError(f"Don’t know which EoL key to use for template: {template!r}")
 
 def create_iamc_eol(
-    model,
+    models: Dict[str, object],
     templates: List[str],
+    sector: str,
     model_name: str,
-    scenarios: List[str],
     outfile: str | None = None,
 ) -> pd.DataFrame:
-    eol = getattr(model, "eol")
     all_rows: List[Dict[str, object]] = []
 
-    for tpl in templates:
-        try:
-            family = _family_from_template(tpl)
-        except ValueError:
-            family = None
+    for scen_label, src_model in models.items():
+        eol = getattr(src_model, sector)
 
-        src_key = _eol_source_key_for_template(tpl)
-        if src_key not in eol:
-            continue
+        for tpl in templates:
+            try:
+                family = _family_from_template(tpl)
+            except ValueError:
+                family = None
 
-        da_raw = eol[src_key]
-        da = da_raw if isinstance(da_raw, xr.DataArray) else da_raw.to_array()
-        tkey = _find_time_key(da)
-        rkey = "Region" if "Region" in da.dims or "Region" in da.coords else "region"
-        ysel = _years(da)
-        regions = _labels(da, rkey)
-        region_codes = {r: _region_code(r) for r in regions}
+            try:
+                src_key = _eol_source_key_for_template(tpl)
+            except KeyError:
+                continue
+            if src_key not in eol:
+                continue
 
-        unit = _unit(da, family or "", tpl) if family else (da.attrs.get("unit") or "")
-        try:
-            factor = _conv_for(family, tpl) if family else 1.0
-        except Exception:
-            factor = 1.0
+            da_raw = eol[src_key]
+            da = da_raw if isinstance(da_raw, xr.DataArray) else da_raw.to_array()
+            tkey = _find_time_key(da)
+            print(tkey)
+            rkey = "Region"
+            ysel = _years(da)
+            print(ysel)
+            regions = _labels(da, rkey)
+            print(regions)
+            region_codes = {r: _region_code(r) for r in regions}
 
-        ph_list = re.findall(r"\{([^}]+)\}", tpl)
-        ph_specs = []
-        if "Engineered Material" in ph_list:
-            dim = "material"
-            mat_map = { CFG.MATERIAL_NAME_MAP.get(str(m), str(m)): [m] for m in _labels(da, dim) }
-            ph_specs.append({"ph": "Engineered Material", "dim": dim, "map": mat_map})
-        if "Demand Sector" in ph_list:
-            dim = "Type"
-            types_avail = set(_labels(da, dim))
-            ds_map = {}
-            for iamc_label, source_types in CFG.EOL_DEMAND_SECTOR_GROUPS.items():
-                kept = [t for t in source_types if t in types_avail]
-                if kept:
-                    ds_map[iamc_label] = kept
-            ph_specs.append({"ph": "Demand Sector", "dim": dim, "map": ds_map})
+            unit = _unit(da, family or "", tpl) if family else (da.attrs.get("unit") or "")
+            try:
+                factor = _conv_for(family, tpl) if family else 1.0
+            except Exception:
+                factor = 1.0
 
-        combos = list(itertools.product(*[list(ps["map"].keys()) for ps in ph_specs])) or [()]
+            # placeholders
+            ph_list = re.findall(r"\{([^}]+)\}", tpl) # captures every set of strings between curly brackets
+            ph_specs = []
+            if "Engineered Material" in ph_list:
+                dim = "material"
+                mat_map = {CFG.MATERIAL_NAME_MAP.get(str(m), str(m)): [m] for m in _labels(da, dim)}
+                ph_specs.append({"ph": "Engineered Material", "dim": dim, "map": mat_map})
+            if "Demand Sector" in ph_list:
+                dim = "Type"
+                types_avail = set(_labels(da, dim))
+                ds_map = {}
+                # include top-level + residential + commercial if available
+                for iamc_label, source_types in CFG.EOL_DEMAND_SECTOR_GROUPS.items():
+                    kept = [t for t in source_types if t in types_avail]
+                    if kept:
+                        ds_map[iamc_label] = kept
+                ph_specs.append({"ph": "Demand Sector", "dim": dim, "map": ds_map})
 
-        for scen in scenarios:
+            combos = list(itertools.product(*[list(ps["map"].keys()) for ps in ph_specs])) or [()]
+
             for reg in regions:
                 for combo in combos:
                     sel, sum_dims = {}, []
@@ -474,6 +512,7 @@ def create_iamc_eol(
                         if ps["dim"] not in sum_dims:
                             sum_dims.append(ps["dim"])
                     part = da.sel(sel).sum(sum_dims, keep_attrs=True).sel({tkey: ysel})
+
                     vec = np.asarray(part.sel({rkey: reg}).values, dtype=float).reshape(-1) * factor
 
                     var = tpl
@@ -482,7 +521,7 @@ def create_iamc_eol(
 
                     row = {
                         "model": model_name,
-                        "scenario": scen,
+                        "scenario": scen_label,
                         "region": region_codes[reg],
                         "variable": var,
                         "unit": unit,
@@ -501,5 +540,12 @@ def create_iamc_eol(
     if outfile:
         p = Path(outfile)
         p.parent.mkdir(parents=True, exist_ok=True)
-        (df.to_excel(p, index=False) if p.suffix.lower() in (".xlsx", ".xls") else df.to_csv(p, index=False))
+        if p.suffix.lower() in (".xlsx", ".xls"):
+            df.to_excel(p, index=False)
+        else:
+            df.to_csv(p, index=False)
+
     return df
+
+
+

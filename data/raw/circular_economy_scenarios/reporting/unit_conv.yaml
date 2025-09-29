@@ -39,6 +39,15 @@ UNIT_CONVERSIONS:
     "Final Material Demand|{Engineered Material}|{Demand Sector}":
       factor: 1e-9               
       to: "Mt/yr"
+    "Final Material Demand|{Engineered Material}|{Demand Sector}|Reused":
+      factor: 1e-9               
+      to: "Mt/yr"
+    "Final Material Demand|{Engineered Material}|{Demand Sector}|Recycled":
+      factor: 1e-9               
+      to: "Mt/yr"
+    "Final Material Demand|{Engineered Material}|{Demand Sector}|Virgin Input":
+      factor: 1e-9               
+      to: "Mt/yr"
   # -------------------------------
   # MATERIAL STOCK
   # -------------------------------
@@ -68,5 +77,35 @@ UNIT_CONVERSIONS:
   # -------------------------------
   Scrap:
     "Scrap|{Engineered Material}|{Demand Sector}":
+      factor: 1e-9
+      to: "Mt/yr"
+    "Scrap|Iron and Steel|Steel":
+      factor: 1e-9
+      to: "Mt/yr"
+    "Scrap|Non-ferrous Metals|Aluminum":
+      factor: 1e-9
+      to: "Mt/yr"
+    "Scrap|Iron and Steel|Steel|Transportation":
+      factor: 1e-9
+      to: "Mt/yr"
+    "Scrap|Non-ferrous Metals|Aluminum|Transportation":
+      factor: 1e-9
+      to: "Mt/yr"
+    "Scrap|Iron and Steel|Steel|Buildings":
+      factor: 1e-9
+      to: "Mt/yr"
+    "Scrap|Non-ferrous Metals|Aluminum|Buildings":
+      factor: 1e-9
+      to: "Mt/yr"
+    "Scrap|Iron and Steel|Steel|Buildings|Commercial":
+      factor: 1e-9
+      to: "Mt/yr"
+    "Scrap|Non-ferrous Metals|Aluminum|Buildings|Commercial":
+      factor: 1e-9
+      to: "Mt/yr"
+    "Scrap|Iron and Steel|Steel|Buildings|Residential":
+      factor: 1e-9
+      to: "Mt/yr"
+    "Scrap|Non-ferrous Metals|Aluminum|Buildings|Residential":
       factor: 1e-9
       to: "Mt/yr"

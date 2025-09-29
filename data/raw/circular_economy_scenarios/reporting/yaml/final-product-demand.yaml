@@ -26,3 +26,15 @@
     components:
       - Final Product Demand|Buildings|Residential
       - Final Product Demand|Buildings|Commercial
+
+- Final Product Demand|Buildings|Commercial":
+    description: Total new useful floor space (commercial) built in
+      a year, F_6_7 - flow of total useful floor space from market and transport
+      process 6, Final products trade, to process 7, Use phase
+    unit: m^2/yr
+
+- Final Product Demand|Buildings|Residential":
+    description: Total new useful floor space (residential) built in
+      a year, F_6_7 - flow of total useful floor space from market and transport
+      process 6, Final products trade, to process 7, Use phase
+    unit: m^2/yr

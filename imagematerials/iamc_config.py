@@ -13,8 +13,8 @@ YAML_DIR =  Path("../data/raw/circular_economy_scenarios/reporting/yaml")
 FAMILY_YAML = {
     "Final Material Demand": "final_material_demand.yaml",
     "Final Product Demand":  "final-product-demand.yaml",
-    "Product Stock": "product-stock.yaml",
-    "Stock Retirement": "stock-retirement.yaml",
+    "Product Stock":        "product-stock.yaml",
+    "Stock Retirement":     "stock-retirement.yaml",
     "Material Stock":        "material-stock.yaml",
     "Material Outflow":      "material-outflow.yaml",
     "Material Losses":       "material-losses.yaml",
@@ -86,12 +86,12 @@ IAMC_VAR_SPECS: Dict[str, Dict] = {
         "units_per_template": _load_family_templates("Final Product Demand")[1],
     },
     "Product Stock": {
-        "model_var": "stock_by_cohort",
+        "model_var": "stocks",
         "templates": _load_family_templates("Product Stock")[0],
         "units_per_template": _load_family_templates("Product Stock")[1],
     },
     "Stock Retirement": {
-        "model_var": "outflow_by_cohort",
+        "model_var": "outflow",
         "templates": _load_family_templates("Stock Retirement")[0],
         "units_per_template": _load_family_templates("Stock Retirement")[1],
     },
@@ -110,9 +110,8 @@ IAMC_VAR_SPECS: Dict[str, Dict] = {
         "templates": _load_family_templates("Material Outflow")[0],
         "units_per_template": _load_family_templates("Material Outflow")[1],
     },
-
     "Scrap": {
-        "model_var": "recyclable_materials",
+        "model_var": "sum_outflows",
         "templates": _load_family_templates("Scrap")[0],
         "units_per_template": _load_family_templates("Scrap")[1],
     },
@@ -134,7 +133,7 @@ kgraph_b = create_building_graph()
 
 kgraph_region = create_region_graph()
 
-# ------- expanding knowledge graphs
+# Vehicles knowledge graph
 # road
 
 car_types = ['Cars - BEV', 'Cars - FCV', 'Cars - HEV','Cars - ICE', 'Cars - PHEV', 'Cars - Trolley']
@@ -183,7 +182,7 @@ kgraph_v.add(Node("Water|Ships", inherits_from="Water"))
 for st in ["Small Ships", "Medium Ships", "Large Ships", "Very Large Ships", "Inland Ships"]:
     kgraph_v[st].inherits_from = "Water|Ships"
 
-# ------- Buildings KG enrichments
+# Buildings knowledge graph
 # residential
 kgraph_b.add(Node("Residential", inherits_from="Buildings"))
 kgraph_b.add(Node("Residential|Detached Houses", inherits_from="Residential"))
@@ -212,18 +211,17 @@ kgraph_b["Office"].synonyms.append("Commercial|Offices")
 kgraph_b["Govt+"].synonyms.append("Commercial|Public Buildings")
 
 # -----------------------------------------------------------------------------
-# Simple name canonicalization for materials (no KG yet)
+# Renaming materials
 # -----------------------------------------------------------------------------
 MATERIAL_NAME_MAP: Dict[str, str] = {
     "Aluminium": "Aluminum",
     "Wood": "Construction Wood",
-
 }
 
 # -----------------------------------------------------------------------------
 # Demand sector for eol
 # -----------------------------------------------------------------------------
-# Group Type -> single IAMC label (we'll sum the Types within each group)
+# Group Type -> single IAMC label (Types are summed within each group)
 EOL_DEMAND_SECTOR_GROUPS = {
     "Transportation": ["passenger", "freight"],
     "Buildings|Residential": ["urban", "rural"],
@@ -245,7 +243,7 @@ ROUTE_MODELVAR_TO_IAMC: Dict[str, str] = {
     "outflow_by_cohort_materials": "Material Outflow",
     "outflow_materials": "Material Outflow",
     "losses_materials": "Material Losses",
-    "recyclable_materials": "Scrap",
+    "sum_outflows": "Scrap",
 }
 
 # -----------------------------------------------------------------------------
@@ -258,80 +256,7 @@ SECTOR_MODULES: Dict[str, Dict] = {
 }
 
 # -----------------------------------------------------------------------------
-# Placeholder → DataArray dim + mapping per IAMC family
-# Only keep what you use now; others can be added later.
-# format: "path" (e.g., "Road|Cars") or "leaf" (e.g., "Cars")
-# -----------------------------------------------------------------------------
-# TAG_DIM_SPECS: Dict[str, Dict[str, Dict]] = {
-#     "Final Product Demand": {
-#         "Vehicles": {
-#             "dim": "Type",
-#             "kg": kgraph_v,
-#             "to": "Vehicles",
-#             "format": "path",
-#         },
-#         "Building Types": {
-#             "dim": "Type",
-#             "kg": kgraph_b,
-#             "to": "Building Types",
-#             "format": "path",
-#         },
-#         "Engineered Material": {
-#             "dim": "material",
-#             "kg": None,
-#             "to": "Engineered Material",
-#             "format": "leaf",
-# },
-    
-#     },
-
-#     "Final Material Demand": {},
-#     "Product Stock": {},
-#     "Stock Retirement": {},
-#     "Material Stock": {},
-#     "Material Outflow": {},
-#     "Material Losses": {},
-#     "Scrap": {},
-# }
-
-# -----------------------------------------------------------------------------
-# Optional canonicalization after mapping
-# -----------------------------------------------------------------------------
-#TAG_RENAMES: Dict[str, Dict[str, str]] = {
-    # "Building Types": {"Appartment": "Apartment"},
-    # "Vehicles": {"Bikes": "Road|Bicycles"},
-#}
-
-# -----------------------------------------------------------------------------
-# Optional: lightweight validation (will print NOTES for missing placeholder maps)
-# -----------------------------------------------------------------------------
-# def validate_config() -> None:
-#     if not YAML_DIR.exists():
-#         print(f"[iamc_config] WARNING: YAML_DIR does not exist: {YAML_DIR}")
-
-#     for mv, fam in ROUTE_MODELVAR_TO_IAMC.items():
-#         if fam not in IAMC_VAR_SPECS:
-#             print(f"[iamc_config] WARNING: family {fam!r} (from {mv!r}) missing in IAMC_VAR_SPECS")
-#             continue
-#         if not IAMC_VAR_SPECS[fam].get("model_var"):
-#             print(f"[iamc_config] WARNING: IAMC_VAR_SPECS[{fam!r}] missing model_var")
-
-#     # Check placeholders in templates exist in TAG_DIM_SPECS
-#     for fam, spec in IAMC_VAR_SPECS.items():
-#         fam_tags = TAG_DIM_SPECS.get(fam, {})
-#         for tpl in spec.get("templates", []):
-#             phs = re.findall(r"\{([^}]+)\}", tpl)
-#             for ph in phs:
-#                 if ph not in fam_tags:
-#                     print(f"[iamc_config] NOTE: placeholder {{{ph}}} in family {fam!r} has no TAG_DIM_SPECS entry")
-
-# try:
-#     validate_config()
-# except Exception as _e:
-#     print(f"[iamc_config] Validation error (non-fatal): {_e}")
-
-# -----------------------------------------------------------------------------
-# Public API
+# list f
 # -----------------------------------------------------------------------------
 __all__ = [
     "YAML_DIR",
