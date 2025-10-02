@@ -396,6 +396,43 @@ def create_electricity_graph():
     electricity_knowledge_graph.add(Node("Generation", inherits_from="Electricity"))
     for supertype in generation_supertypes:
         electricity_knowledge_graph.add(Node(supertype, inherits_from="Generation"))
+    
+    numeric_electr_generation_map = {
+    "1":  ["Solar PV"],
+    "2":  ["Solar PV residential"],
+    "3":  ["CSP"],
+    "4":  ["Wind onshore"],
+    "5":  ["Wind offshore"],
+    "6":  ["Wave"],
+    "7":  ["Hydro"],
+    "8":  ["Other Renewables"],
+    "9":  ["Geothermal"],
+    "10": ["Hydrogen power"],
+    "11": ["Nuclear"],
+    "12": ["<EMPTY>"],
+    "13": ["Conv. Coal"],
+    "14": ["Conv. Oil"],
+    "15": ["Conv. Natural Gas"],
+    "16": ["Waste"],
+    "17": ["IGCC"],
+    "18": ["OGCC"],
+    "19": ["NG CC"],
+    "20": ["Biomass CC"],
+    "21": ["Coal + CCS"],
+    "22": ["Oil/Coal + CCS"],
+    "23": ["Natural Gas + CCS"],
+    "24": ["Biomass + CCS"],
+    "25": ["CHP Coal"],
+    "26": ["CHP Oil"],
+    "27": ["CHP Natural Gas"],
+    "28": ["CHP Biomass"],
+    "29": ["CHP Coal + CCS"],
+    "30": ["CHP Oil + CCS"],
+    "31": ["CHP Natural Gas + CCS"],
+    "32": ["CHP Biomass + CCS"],
+    "33": ["CHP Geothermal"],
+    "34": ["CHP Hydrogen"]
+    }
 
     # # Sub-Technologies --------------------------
 

@@ -22,7 +22,7 @@ from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_life_time_vehicles
 from imagematerials.model import GenericMainModel, GenericStocks, SharesInflowStocks, Maintenance, GenericMaterials, MaterialIntensities
 from imagematerials.factory import ModelFactory, Sector
-from imagematerials.concepts import create_electricity_graph
+from imagematerials.concepts import create_electricity_graph, create_region_graph
 from imagematerials.electricity.utils import MNLogit, stock_tail, create_prep_data, stock_share_calc
 
 
@@ -71,6 +71,10 @@ path_current = Path().resolve()
 path_base = path_current.parent.parent # base path of the project -> image-materials
 
 path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
+# TEST---
+path_image_output_SSP2_BL = Path(path_base, "data", "raw", "image", "SSP2_BL")
+path_image_output_SSP2_M_CP = Path(path_base, "data", "raw", "image", "SSP2_M_CP", "EnergyServices")
+#-----------
 path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
 path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scen_folder)
 # test if path_external_data_scenario exists and if not set to standard scenario
@@ -106,6 +110,45 @@ idx = pd.IndexSlice             # needed for slicing multi-index
 # TODO: decide on variable naming convention
 # V1: sector_variableinquestion_additionalinformation (gcap_lifetime_interpolated)
 # V2: variableinquestion_sector_additionalinformation (lifetime_gcap_interpolated)
+
+
+###########################################################################################################
+#%% 0) Compare Sebastiaans scenarios to the new 
+###########################################################################################################
+
+gcap_data_CP = read_mym_df(path_image_output_SSP2_M_CP / 'Gcap.out')
+gcap_data_BL = read_mym_df(path_image_output_SSP2_BL / 'Gcap.out')
+
+# region_list = list(kilometrage.columns.values)   
+# gcap_tech_list = list(composition_generation.loc[:,idx[2020,:]].droplevel(axis=1, level=0).columns)    #list of names of the generation technologies (workaround to retain original order)
+
+gcap_data_CP = gcap_data_CP.loc[~gcap_data_CP['DIM_1'].isin([27,28])]    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
+gcap_data_CP = pd.pivot_table(gcap_data_CP[gcap_data_CP['time'].isin(list(range(YEAR_START,YEAR_END+1)))], index=['time','DIM_1'], values=list(range(1,TECH_GEN+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (34));  the last column in gcap_data (= totals) is now removed
+# renaming multi-index dataframe: generation capacity, based on the regions in grid_length_Hv & technologies as given
+gcap_data_CP.index = pd.MultiIndex.from_product([list(range(YEAR_START,YEAR_END+1)), region_list], names=['years', 'regions'])
+
+gcap.columns = gcap_tech_list
+
+knowledge_graph_region = create_region_graph()
+knowledge_graph_electr = create_electricity_graph()
+
+
+mat_intensities = knowledge_graph.rebroadcast_xarray(
+                        mat_intensities, floorspace.coords["Type"].values)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ###########################################################################################################
 ###########################################################################################################
@@ -2735,9 +2778,9 @@ path_test_plots = Path(path_base, "imagematerials", "electricity", "out_test", s
 # apply the dedicated electricity storage market shares to the demand for dedicated (other) storage to find storage by type and by region
 # stock = stock_cohorts.loc[idx[:,:],idx[:,:]].sum(axis=1, level=0)
 # storage_stock_abs = stock.sum(axis=0, level=1) 
-stock =  stock_cohorts.T.groupby(level=0).sum().T # sum(level) is and groupby(axis) will be deprecated -> transose first with .T (instead of specifying axis), then groupby level, then sum. To get intial shape back, transpose again with .T
-storage_stock_abs  = stock.groupby(level=1).sum()                             # sum over all regions to get the global share of the stock
-stock_total = stock.sum(axis=1).unstack(level=0)                            # total stock by region
+stock =  stock_cohorts.T.groupby(level=0).sum().T  # sum(level) is and groupby(axis) will be deprecated -> transose first with .T (instead of specifying axis), then groupby level, then sum. To get intial shape back, transpose again with .T
+storage_stock_abs  = stock.groupby(level=1).sum()  # sum over all regions to get the global share of the stock
+stock_total = stock.sum(axis=1).unstack(level=0)   # total stock by region
 storage_stock_share = pd.DataFrame(index=storage_stock_abs.index, columns=storage_stock_abs.columns)
 
 for tech in storage_stock_abs.columns:
@@ -2746,7 +2789,7 @@ for tech in storage_stock_abs.columns:
 # then, the sum of the global inflow & outflow is calculated for comparison in the figures below
 # outflow = outflow_cohorts.loc[idx[:,:],idx[:,:]].sum(axis=1, level=0)
 outflow =  outflow_cohorts.T.groupby(level=0).sum().T # sum(level) is and groupby(axis) will be deprecated -> transose first with .T (instead of specifying axis), then groupby level, then sum. To get intial shape back, transpose again with .T
-outflow_total = outflow.sum(axis=1).unstack(level=0)                        # total by regions
+outflow_total = outflow.sum(axis=1).unstack(level=0)  # total by regions
 
 inflow_total = inflow_by_tech.sum(axis=1).unstack(level=0)
 

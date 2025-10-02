@@ -98,11 +98,11 @@ TECH_VEHICLES = 25    # number of vehicle types
 # relative to this BASE loadfcator (persons/car))
 LOAD_FACTOR = 1.6
 
-LIGHT_COMMERCIAL_VEHICLE_SHARE = 0.04 
+LIGHT_COMMERCIAL_VEHICLE_SHARE = 0.04 # TODO: is this even used somewhere?
 # 0.04 is the fraction of the tkms driven by light commercial vehicles according to the IEA
 BEV_CAPACITY_CURRENT  = 59.6    #kWh current battery capacity of full electric vehicles, see current_specs.xlsx
 PHEV_CAPACITY_CURRENT = 11.2    #kWh current battery capacity of plugin electric vehicles, see current_specs.xlsx
-# TODO: is this even used somewhere?
+
 
 
 # Storage related constants ---------------------------------------------
