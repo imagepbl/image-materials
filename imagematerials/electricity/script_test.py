@@ -73,7 +73,9 @@ path_base = path_current.parent.parent # base path of the project -> image-mater
 path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
 # TEST---
 path_image_output_SSP2_BL = Path(path_base, "data", "raw", "image", "SSP2_BL")
+path_image_output_SSP2_450 = Path(path_base, "data", "raw", "image", "SSP2_450")
 path_image_output_SSP2_M_CP = Path(path_base, "data", "raw", "image", "SSP2_M_CP", "EnergyServices")
+path_image_output_SSP2_VLHO = Path(path_base, "data", "raw", "image", "SSP2_VLHO", "EnergyServices")
 #-----------
 path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
 path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scen_folder)
@@ -116,38 +118,139 @@ idx = pd.IndexSlice             # needed for slicing multi-index
 #%% 0) Compare Sebastiaans scenarios to the new 
 ###########################################################################################################
 
+#%%% Generation
+
 gcap_data_CP = read_mym_df(path_image_output_SSP2_M_CP / 'Gcap.out')
 gcap_data_BL = read_mym_df(path_image_output_SSP2_BL / 'Gcap.out')
+kilometrage = pd.read_csv(path_external_data_scenario / 'kilometrage.csv', index_col='t')   #annual car mileage in kms/yr, based  mostly  on  Pauliuk  et  al.  (2012a)
+composition_generation = pd.read_csv(path_external_data_scenario / 'composition_generation.csv',index_col=[0,1]).transpose()  # in gram/MW
 
-# region_list = list(kilometrage.columns.values)   
-# gcap_tech_list = list(composition_generation.loc[:,idx[2020,:]].droplevel(axis=1, level=0).columns)    #list of names of the generation technologies (workaround to retain original order)
+# knowledge_graph_region = create_region_graph()
+# knowledge_graph_electr = create_electricity_graph()
+# mat_intensities = knowledge_graph.rebroadcast_xarray(mat_intensities, floorspace.coords["Type"].values)
 
-gcap_data_CP = gcap_data_CP.loc[~gcap_data_CP['DIM_1'].isin([27,28])]    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
-gcap_data_CP = pd.pivot_table(gcap_data_CP[gcap_data_CP['time'].isin(list(range(YEAR_START,YEAR_END+1)))], index=['time','DIM_1'], values=list(range(1,TECH_GEN+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (34));  the last column in gcap_data (= totals) is now removed
+region_list = list(kilometrage.columns.values)   
+gcap_tech_list = list(composition_generation.loc[:,idx[2020,:]].droplevel(axis=1, level=0).columns)    #list of names of the generation technologies (workaround to retain original order)
+
+gcap_CP = gcap_data_CP.loc[~gcap_data_CP['DIM_1'].isin([27,28])]    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
+gcap_CP = pd.pivot_table(gcap_CP[gcap_CP['time'].isin(list(range(YEAR_START,YEAR_END+1)))], index=['time','DIM_1'], values=list(range(1,TECH_GEN+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (34));  the last column in gcap_data (= totals) is now removed
 # renaming multi-index dataframe: generation capacity, based on the regions in grid_length_Hv & technologies as given
-gcap_data_CP.index = pd.MultiIndex.from_product([list(range(YEAR_START,YEAR_END+1)), region_list], names=['years', 'regions'])
+gcap_CP.index = pd.MultiIndex.from_product([list(range(YEAR_START,YEAR_END+1)), region_list], names=['years', 'regions'])
+gcap_CP.columns = gcap_tech_list
 
-gcap.columns = gcap_tech_list
+gcap_BL = gcap_data_BL.loc[~gcap_data_BL['DIM_1'].isin([27,28])]    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
+gcap_BL = pd.pivot_table(gcap_BL[gcap_BL['time'].isin(list(range(YEAR_START,YEAR_END+1)))], index=['time','DIM_1'], values=list(range(1,TECH_GEN-3)))  #gcap as multi-index (index = years & regions (26); columns = technologies (34));  the last column in gcap_data (= totals) is now removed
+# renaming multi-index dataframe: generation capacity, based on the regions in grid_length_Hv & technologies as given
+gcap_BL.index = pd.MultiIndex.from_product([list(range(YEAR_START,YEAR_END+1)), region_list], names=['years', 'regions'])
+gcap_BL.columns = gcap_tech_list
 
-knowledge_graph_region = create_region_graph()
-knowledge_graph_electr = create_electricity_graph()
+# 1. Technology comparison (total over years & regions)
+tech_CP = gcap_CP.sum()
+tech_BL = gcap_BL.sum()
+
+plt.figure(figsize=(12,6))
+plt.bar(tech_CP.index, tech_CP.values, alpha=0.6, label="CP")
+plt.bar(tech_BL.index, tech_BL.values, alpha=0.6, label="BL")
+plt.xticks(rotation=90)
+plt.ylabel("Total Capacity")
+plt.title("Total Capacity by Technology")
+plt.legend()
+plt.tight_layout()
+plt.show()
 
 
-mat_intensities = knowledge_graph.rebroadcast_xarray(
-                        mat_intensities, floorspace.coords["Type"].values)
+# 2. Regional comparison (total over years & technologies)
+region_CP = gcap_CP.groupby(level=1).sum().sum(axis=1)
+region_BL = gcap_BL.groupby(level=1).sum().sum(axis=1)
+
+plt.figure(figsize=(12,6))
+x = range(len(region_CP))
+plt.bar(x, region_CP.values, width=0.4, label="CP", align="center")
+plt.bar([i+0.4 for i in x], region_BL.values, width=0.4, label="BL", align="center")
+plt.xticks([i+0.2 for i in x], region_CP.index, rotation=90)
+plt.ylabel("Total Capacity")
+plt.title("Total Capacity by Region")
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+
+# 3. Global time series comparison (sum over all regions & techs)
+ts_CP = gcap_CP.groupby(level=0).sum().sum(axis=1)
+ts_BL = gcap_BL.groupby(level=0).sum().sum(axis=1)
+
+plt.figure(figsize=(12,6))
+plt.plot(ts_CP.index, ts_CP.values, label="CP", lw=2)
+plt.plot(ts_BL.index, ts_BL.values, label="BL", lw=2, linestyle="--")
+plt.ylabel("Total Capacity")
+plt.xlabel("Year")
+plt.title("Global Capacity over Time: CP vs BL")
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+
+
+##############################################################
+#%%% Storage
+
+path_test_plots = Path(path_base, "imagematerials", "electricity", "out_test")
+
+storage_VLHO = read_mym_df(path_image_output_SSP2_VLHO.joinpath("StorResTot.out"))
+storage_CP = read_mym_df(path_image_output_SSP2_M_CP.joinpath("StorResTot.out"))
+storage_450 = read_mym_df(path_image_output_SSP2_450.joinpath("StorResTot.out"))
+storage_BL = read_mym_df(path_image_output_SSP2_BL.joinpath("StorResTot.out"))
+kilometrage = pd.read_csv(path_external_data_scenario / 'kilometrage.csv', index_col='t')   #annual car mileage in kms/yr, based  mostly  on  Pauliuk  et  al.  (2012a)
+
+
+storage_CP = storage_CP.iloc[:, :26]    # drop global total column and empty (27) column
+storage_VLHO = storage_VLHO.iloc[:, :26]
+storage_BL = storage_BL.iloc[:, :26]    # drop global total column and empty (27) column
+storage_450 = storage_450.iloc[:, :26]
+
+region_list = list(kilometrage.columns.values)   
+storage_CP.columns = region_list
+storage_VLHO.columns = region_list
+storage_BL.columns = region_list
+storage_450.columns = region_list
 
 
 
 
+# 2. Global time series (sum over all regions)
+ts_CP = storage_CP.sum(axis=1)
+ts_VLHO = storage_VLHO.sum(axis=1)
+ts_BL = storage_BL.sum(axis=1)
+ts_450 = storage_450.sum(axis=1)
+
+fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(12, 6))
+plt.plot(ts_CP.index, ts_CP.values, label="SSP2_M_CP", lw=2)
+plt.plot(ts_VLHO.index, ts_VLHO.values, label="SSP2_VLHO", lw=2)
+plt.plot(ts_BL.index, ts_BL.values, label="SSP2_BL", lw=2, linestyle="--")
+plt.plot(ts_450.index, ts_450.values, label="SSP2_450", lw=2, linestyle="--")
+plt.ylabel("Storage (MWh)")
+plt.xlabel("Year")
+plt.title("Global Storage over Time (TIMER StorResTot.out in MWh)")
+plt.legend()
+plt.tight_layout()
+fig.savefig(path_test_plots / f"TIMER_storage_scenario_comparison.png", dpi=300)
+plt.show()
 
 
+# 3. Selected regions time series (e.g. US, China, India, Europe)
+regions = ["US", "China", "India", "W.Europe"]
 
+plt.figure(figsize=(12,6))
+for r in regions:
+    plt.plot(storage_CP.index, storage_CP[r], label=f"CP {r}", lw=2)
+    plt.plot(storage_BL.index, storage_BL[r], label=f"BL {r}", lw=2, linestyle="--")
 
-
-
-
-
-
+plt.ylabel("Storage")
+plt.xlabel("Year")
+plt.title("Regional Storage over Time (Selected)")
+plt.legend()
+plt.tight_layout()
+plt.show()
 
 
 ###########################################################################################################
