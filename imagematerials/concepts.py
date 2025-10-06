@@ -323,55 +323,66 @@ def create_building_graph():
     # )
     return building_knowledge_graph
 
+
 def create_region_graph():
-    target_regions= ["Canada","Central Europe","China","India","Japan",
-                     "USA","Western Europe","Latin America","Middle East and Northern Africa",
-                    "Other Asia","Other OECD","Reforming Economies","Subsaharan Africa"]
+    #TODO move to seperate file
+    
     region_knowledge_graph = KnowledgeGraph()
-        # Add target regions as main nodes
+
+    # Add target regions as main nodes (non-numeric)
+    target_regions = [
+        "Latin America", "Middle East and Northern Africa",
+        "Other Asia", "Other OECD", "Reforming Economies", "Subsaharan Africa"
+    ]
     for region in target_regions:
         region_knowledge_graph.add(Node(region))
-    
-    # Assign image regions stepwise to their respective target regions
 
-    for region in ["RCAM", "BRA", "RSAM"]:
-        region_knowledge_graph.add(Node(region, inherits_from="Latin America"))
-    for region in ["NAF", "ME"]:
-        region_knowledge_graph.add(Node(region, inherits_from="Middle East and Northern Africa"))
-    for region in ["WAF", "EAF", "SAF", "RSAF"]:
-        region_knowledge_graph.add(Node(region, inherits_from="Subsaharan Africa"))
-    for region in [ "UKR", "STAN", "RUS"]:
-        region_knowledge_graph.add(Node(region, inherits_from="Reforming Economies"))
-    for region in ["KOR", "SEAS", "INDO", "RSAS"]:
-        region_knowledge_graph.add(Node(region, inherits_from="Other Asia"))
-    for region in ["TUR", "OCE", "MEX"]:
-        region_knowledge_graph.add(Node(region, inherits_from="Other OECD"))
-    region_knowledge_graph["Canada"].synonyms = ["CAN","1"]
-    region_knowledge_graph["USA"].synonyms = ["USA","US","2"]
-    region_knowledge_graph["Western Europe"].synonyms = ["WEU","W.Europe","11"]
-    region_knowledge_graph["Central Europe"].synonyms = ["CEU","C.Europe","12"]
-    region_knowledge_graph["India"].synonyms = ["INDIA","18"]
-    region_knowledge_graph["China"].synonyms = ["CHN","20"]
-    region_knowledge_graph["Japan"].synonyms = ["JAP","23"]
-    region_knowledge_graph["BRA"].synonyms = ["Brazil","5"]
-    region_knowledge_graph["EAF"].synonyms = ["E.Africa","9"]
-    region_knowledge_graph["INDO"].synonyms = ["Indonesia","22"]
-    region_knowledge_graph["KOR"].synonyms = ["Korea","19"]
-    region_knowledge_graph["ME"].synonyms = ["M.East","17"]
-    region_knowledge_graph["MEX"].synonyms = ["Mexico","3"]
-    region_knowledge_graph["NAF"].synonyms = ["N.Africa","7"]
-    region_knowledge_graph["OCE"].synonyms = ["Oceania","24"]
-    region_knowledge_graph["RCAM"].synonyms = ["Rest C.Am.","4"]
-    region_knowledge_graph["RSAM"].synonyms = ["Rest S.Am.","6"]
-    region_knowledge_graph["RSAF"].synonyms = ["Rest S.Africa","26"]
-    region_knowledge_graph["RSAS"].synonyms = ["Rest S.Asia","25"]
-    region_knowledge_graph["RUS"].synonyms = ["Russia","16"]
-    region_knowledge_graph["SEAS"].synonyms = ["SE.Asia","21"]
-    region_knowledge_graph["SAF"].synonyms = ["South Africa","10"]
-    region_knowledge_graph["STAN"].synonyms = ["Stan","15"]
-    region_knowledge_graph["TUR"].synonyms = ["Turkey","13"]
-    region_knowledge_graph["UKR"].synonyms = ["Ukraine","14"]
-    region_knowledge_graph["WAF"].synonyms = ["W.Africa","8"]
+    # Add numeric region nodes first with full synonyms
+    numeric_region_map = {
+        "1": ["Canada", "CAN"],
+        "2": ["USA", "US"],
+        "3": ["Mexico", "MEX"],
+        "4": ["Rest of Central America", "RCAM", "Rest C.Am."],
+        "5": ["Brazil", "BRA"],
+        "6": ["Rest of South America", "RSAM", "Rest S.Am."],
+        "7": ["Northern Africa", "NAF", "N.Africa"],
+        "8": ["Western Africa", "WAF", "W.Africa"],
+        "9": ["Eastern Africa", "EAF", "E.Africa"],
+        "10": ["South Africa", "SAF"],
+        "11": ["Western Europe", "WEU", "W.Europe"],
+        "12": ["Central Europe", "CEU", "C.Europe"],
+        "13": ["Turkey", "TUR"],
+        "14": ["Ukraine +", "UKR", "Ukraine"],
+        "15": ["Asian-Stan", "STAN", "Stan"],
+        "16": ["Russia +", "RUS", "Russia"],
+        "17": ["Middle East", "ME", "M.East"],
+        "18": ["India +", "INDIA", "India"],
+        "19": ["Korea", "KOR"],
+        "20": ["China +", "CHN", "China"],
+        "21": ["Southeastern Asia", "SEAS", "SE.Asia"],
+        "22": ["Indonesia +", "INDO", "Indonesia"],
+        "23": ["Japan", "JAP"],
+        "24": ["Oceania", "OCE"],
+        "25": ["Rest of South Asia", "RSAS", "Rest S.Asia"],
+        "26": ["Rest of Southern Africa", "RSAF", "Rest S.Africa"]
+    }
+
+    subregion_division = {
+        "Latin America": {"RCAM", "BRA", "RSAM"},
+        "Middle East and Northern Africa": {"NAF", "ME"},
+        "Subsaharan Africa": {"WAF", "EAF", "SAF", "RSAF"},
+        "Reforming Economies": {"UKR", "STAN", "RUS"},
+        "Other Asia": {"KOR", "SEAS", "INDO", "RSAS"},
+        "Other OECD": {"TUR", "OCE", "MEX"},
+    }
+
+    for number, synonyms in numeric_region_map.items():
+        inherits_from = None
+        for super_region, regions in subregion_division.items():
+            if len(regions.intersection(synonyms)) > 0:
+                inherits_from = super_region
+                break
+        region_knowledge_graph.add(Node(number, synonyms=synonyms, inherits_from=inherits_from))
 
     return region_knowledge_graph
 

@@ -10,20 +10,10 @@ from importlib.resources import files
 from imagematerials.buildings.constants import (
     urban_share_1820)
 
-from imagematerials.buildings.constants import (
-    far_start_year, 
-    start_year,
-    end_year, 
-    global_pop_1700,
-    global_pop_1820, 
-    known_years,
-    full_years_pop)
-
 from imagematerials.util import dataset_to_array
 from imagematerials.read_mym import read_mym_df
 
-years_1721_1820 = xr.DataArray(np.arange(far_start_year, start_year), dims=["Time"], coords={"Time": np.arange(far_start_year, start_year)})
-years_1820_1970 = xr.DataArray(np.arange(start_year, end_year), dims=["Time"], coords={"Time": np.arange(start_year, end_year)})
+prism.unit_registry.load_definitions(files("imagematerials") / "units.txt")
 
 def compute_population(image_directory, base_directory):
     # Compute total/rural/urban populations
@@ -57,91 +47,70 @@ def compute_population(image_directory, base_directory):
 def compute_total_population(image_directory, base_directory):
 
     # import total population 1971 - 2100 from IMAGE
-    population_1970_future_df: pd.DataFrame = read_mym_df(image_directory.joinpath("Socioeconomic", "pop.scn"))
-    # drop empty and global region
-    population_1970_future_df = population_1970_future_df.loc[:, :26]
+    population_1971_future_df: pd.DataFrame = read_mym_df(image_directory.joinpath("Socioeconomic", "pop.scn"))
+    population_1971_future_df = population_1971_future_df.loc[:, :26]
+    population_1971_future_df.columns = population_1971_future_df.columns.astype(str)
 
-    # initial population as a percentage of the 1970 population; unit: %; according to the Maddison Project Database (MPD) 2018 (Groningen University)
-    historic_population_df = pd.read_csv(base_directory / 'buildings' / 'files_initial_stock' /'hist_pop.csv', index_col = [0])  
-    historic_population_df.columns = historic_population_df.columns.astype(int) # for multiplication both indexes must be int
+    # read in historic global population from Maddison Project Database 2020 & 1700 value from https://www.johnstonsarchive.net/other/worldpop.html in 1000 people
+    historic_pop = pd.read_csv(base_directory / 'buildings' / 'standard_data' / 'historic_population.csv', index_col=0, header = 0)
+    historic_pop = historic_pop.loc[:1971] / 1000 # unit conversion
 
-    population_1970_future_df = population_1970_future_df.rename_axis(index = "Time", columns = "Region")
+    # interpolate for missing years 
+    historic_pop = historic_pop.reindex(range(historic_pop.index.min(), historic_pop.index.max() + 1)).interpolate(method="linear") # with cubic interpolation we see a drop at 1700
 
-    # Deriving historic population tail based on fraction for 1971
-    population_1971 = population_1970_future_df.loc[1971]
+    # regionalize data to IMAGE regions accoring to 1971 regionalization
+    share_regionalization_1971 = population_1971_future_df.loc[1971]/population_1971_future_df.loc[1971].sum()
 
-    # multiply shares from historic populatin with last year from IMAGE data 
-    historic_population = historic_population_df.multiply(population_1971, axis=1)
+    # create pd dataframe with regionalized total population based on shares in 1971
+    regionalized_total_pop = pd.DataFrame(index=historic_pop.index, columns=share_regionalization_1971.index)
 
-    population_1820_future_df = pd.concat([historic_population.loc[:1970], population_1970_future_df])
-    population_1820_future_df = population_1820_future_df.rename_axis(index = "Time", columns = "Region")
+    for region in share_regionalization_1971.index:
+        regionalized_total_pop[region] = historic_pop * share_regionalization_1971[region]
 
-    population_1820_future = xr.DataArray(
-        data=population_1820_future_df.values,                # Data values from the DataFrame
-        dims=["Time", "Region"],                  # Names for the two dimensions
-        coords={"Time": population_1820_future_df.index,      # Time coordinates from the DataFrame index
-                "Region": population_1820_future_df.columns}  # Region coordinates from the DataFrame columns
+    # concat total population data
+    regionalized_total_pop_history_future = pd.concat([regionalized_total_pop, population_1971_future_df])
+
+    # to xarry
+    regionalized_total_pop_history_future = regionalized_total_pop_history_future.rename_axis(index = "Time", columns = "Region")
+
+    regionalized_total_pop_history_future_xr = xr.DataArray(
+        data=regionalized_total_pop_history_future.values,                # Data values from the DataFrame
+        dims=["Time", "Region"],                                          # Names for the two dimensions
+        coords={"Time": regionalized_total_pop_history_future.index,      # Time coordinates from the DataFrame index
+                "Region": regionalized_total_pop_history_future.columns}  # Region coordinates from the DataFrame columns
     )
 
 
-    return population, population_1970_future_df
+    return regionalized_total_pop_history_future_xr, regionalized_total_pop_history_future 
 
     
 
-def compute_rur_urb_pop(image_directory, population_1970_future_df):
+def compute_rur_urb_pop(image_directory, base_directory):
+    (_, regionalized_total_pop_history_future) = compute_total_population(image_directory, base_directory)
+
     #rural population total meaning [Million]: the total of people living in rural areas (over time, by region)
     rural_population: pd.DataFrame = read_mym_df(image_directory.joinpath("Socioeconomic", "RURPOPTOT.out"))
+    rural_population.columns = rural_population.columns.astype(str)
 
     #urban population total meaning [Million]: the total of people living in urban areas (over time, by region)
     urban_population: pd.DataFrame = read_mym_df(image_directory.joinpath("Socioeconomic", "URBPOPTOT.out"))
+    urban_population.columns = urban_population.columns.astype(str)
 
     # remove emty and global region
-    rural_population = rural_population.loc[:, :26]
-    urban_population = urban_population.loc[:, :26]
+    rural_population, urban_population = rural_population.loc[:, :"26"], urban_population.loc[:, :"26"]
 
-    # extrapolate to history:
-    # Calculate each region's share of global population in the base year
-    regional_shares = population_1970_future_df.loc[1971]/population_1970_future_df.loc[1971].sum()
+    # split up in rural and urban
+    # get urban share for base year
+    urban_share = urban_population/regionalized_total_pop_history_future
+    urban_share.loc[1700] = 0
+    # interpolate urban share
+    urban_share = urban_share.interpolate()
+    rural_share = 1 - urban_share
 
-    # Calculate total population for 1971 and regional shares
-    regional_pop_1971 = population_1970_future_df.loc[1971]
-    regional_shares = regional_pop_1971 / regional_pop_1971.sum()
-
-    # Urban share in 1971 per region (percent)
-    urban_share_1971 = (urban_population.loc[1971] / regional_pop_1971) * 100
-
-    # Urban share known values for each region
-    urban_share_known = pd.DataFrame(index=known_years, columns=regional_shares.index)
-
-    for region in regional_shares.index:
-        urban_share_known.loc[1700, region] = 0.0
-        urban_share_known.loc[1820, region] = 7.2 #https://www2.census.gov/programs-surveys/decennial/1990/tables/cph-2/table-4.pdf
-        urban_share_known.loc[1971, region] = urban_share_1971[region]
-
-    # Total global population known values
-    total_global_pop_known = pd.Series(data=[global_pop_1700, global_pop_1820, regional_pop_1971.sum()], index=known_years)
-
-    # Interpolate urban share for all years and regions
-    urban_share_interp = pd.DataFrame(index=full_years_pop, columns=regional_shares.index, dtype=float)
-
-    urban_share_known = urban_share_known.astype(float)
-    for region in regional_shares.index:
-        urban_share_interp[region] = np.interp(full_years_pop, known_years, urban_share_known[region])
-
-    # Calculate rural share = 100 - urban share
-    rural_share_interp = 100 - urban_share_interp
-
-    # Interpolate total global population for all years
-    total_global_pop_interp = np.interp(full_years_pop, known_years, total_global_pop_known)
-
-    # Calculate total population per region for all years by scaling with constant regional shares
-
-    total_pop_interp = pd.DataFrame(index=full_years_pop, columns=regional_shares.index, dtype=float)
-    for year_idx, year in enumerate(full_years_pop):
-        total_pop_interp.loc[year] = regional_shares * total_global_pop_interp[year_idx]
-
-    # Calculate urban and rural populations per region and year
-    urban_pop_interp = total_pop_interp * (urban_share_interp / 100)
-    rural_pop_interp = total_pop_interp * (rural_share_interp / 100)
-
-    return rural_pop_interp, urban_pop_interp
+    urban_pop_total = urban_share*regionalized_total_pop_history_future
+    rural_pop_total = rural_share*regionalized_total_pop_history_future
+    
+    urban_pop_total = urban_pop_total.rename_axis(index = "Time", columns = "Region")
+    rural_pop_total = rural_pop_total.rename_axis(index = "Time", columns = "Region")
+    
+    return urban_pop_total, rural_pop_total

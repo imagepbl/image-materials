@@ -56,8 +56,9 @@ from imagematerials.vehicles.constants import (
     years_range,
     maintenance_lifetime_per_mode,
 )
+from imagematerials.concepts import create_vehicle_graph
 from imagematerials.vehicles.modelling_functions import (interpolate, tkms_to_nr_of_vehicles_fixed,  
-    change_value, apply_change_per_region)
+    scenario_change, apply_change_per_region)
 #from imagematerials.concepts import vehicle_knowledge_graph
 
 
@@ -450,10 +451,14 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
         implementation_rate = circular_economy_config['slow']['vehicles']['implementation_rate']
         # possibilities for implementation rate are: linear, immediate, s-curve
 
-        lifetimes_vehicles = change_value(
+        lifetimes_vehicles = scenario_change(
             lifetimes_vehicles, base_year, target_year, 
             lifetime_increase, implementation_rate, "lifetime")
+        
+        print("implemented 'slow' for Vehicles (extend lifetimes)")
 
+    
+    # increase mileages\kilometrages
     if 'narrow' in circular_economy_config.keys():
         target_year = circular_economy_config['narrow']['vehicles']['target_year']
         base_year = circular_economy_config['narrow']['vehicles']['base_year']
@@ -461,7 +466,7 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
         region_mileage = circular_economy_config['narrow']['vehicles']['region_mileage']
         implementation_rate = circular_economy_config['narrow']['vehicles']['implementation_rate']
 
-        mileages = change_value(
+        mileages = scenario_change(
             mileages, base_year, target_year, 
             mileage_increase, implementation_rate)
 
@@ -478,16 +483,6 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
             kilometrage_midi_bus, base_year, target_year, 
             mileage_increase['Regular Buses'], implementation_rate
         )
-        #for mode, increase in mileage_change.items():
-        #    col = (mode, 'mileage')
-        #    if col in mileages.columns:
-        #        base_val = mileages.loc[base_year, col]
-        #        mileages.loc[target_year, col] = base_val * (1 + increase / 100)
-        #    else:
-        #        print(f"Missing mode in mileages: {col}")
-
-        #mileages = interpolate(pd.DataFrame(mileages))
-
 
         print("implemented 'narrow' for Vehicles (increase mileage)")
     
