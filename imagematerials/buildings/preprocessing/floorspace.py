@@ -19,15 +19,12 @@ from imagematerials.buildings.constants import (
     REGIONS_RANGE,
     START_YEAR,
     YEARS,
-    SCENARIO_SELECT
 )
 from imagematerials.buildings.preprocessing.circular_economy_measures import ce_measures_residential_housing
 
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, merge_dims
-
-
-prism.unit_registry.load_definitions(files("imagematerials") / "units.txt")
+from imagematerials.concepts import create_region_graph
 
 far_start_year = 1721
 start_year = 1820
@@ -121,7 +118,7 @@ def extrapolate_floorspace(floorspace_image, minimum_comm):
 
 def get_floorspace_urban_rural(image_directory):
     # load IMAGE data-files (MyM file format)
-    floorspace: pd.DataFrame = read_mym_df(image_directory.joinpath("EnergyServices", "res_FloorSpace.out"))
+    floorspace: pd.DataFrame = read_mym_df(image_directory.joinpath("EnergyServices", "res_Floorspace.out"))
     floorspace = floorspace[['time','DIM_1',2,3]].rename(columns={"DIM_1": "Region", 'time':'t', 2:'Urban', 3:'Rural'})
     # the other columns are average per capita floorspace per quintile (we also exclude the average per capita floorspace of the total population in column 1, 
     # because we use the urban & rural specific totals)
@@ -235,19 +232,48 @@ def compute_average_m2_capita(base_directory):
 
     return average_m2_capita
 
-
-def compute_housing_residential(population, average_m2_capita, housing_type, floorspace_rururb, circular_economy_config:dict):
-    # Calculate the m2 per capita for each housing type
+def compute_housing_residential(population, average_m2_capita, housing_type, floorspace_rururb, circular_economy_config):
     m2_housing_per_capita = average_m2_capita * housing_type
     # Calculate the share of housing types on a m2 basis
     m2_housing_share = m2_housing_per_capita / m2_housing_per_capita.sum(["Type"])
     total_m2_housing_per_cap = m2_housing_share*floorspace_rururb
-    total_m2_housing_per_cap = prism.Q_(total_m2_housing_per_cap, "m^2/person")
 
-    # Implement circular economy measures if configuration is provided
     if 'base' in circular_economy_config.keys():
-        total_m2_housing_per_cap = ce_measures_residential_housing(total_m2_housing_per_cap, circular_economy_config)
-    
+        base_year = circular_economy_config["base"]["buildings"]["base_year"]
+        target_year = circular_economy_config["base"]["buildings"]["target_year"]
+        floor_pc_2020 = circular_economy_config["base"]["buildings"]["residential"]["2020"]["useful_floor_pc"]
+        region_knowledge_graph = create_region_graph()
+        regions = total_m2_housing_per_cap.coords["Region"].values
+        floor_pc_2020_xr = xr.DataArray(
+            list(floor_pc_2020.values()),
+            coords={"Region": list(floor_pc_2020.keys())},
+            dims=["Region"],
+            name="floor_pc_2020"
+        )
+
+        regions_mapped = list(region_knowledge_graph.find_relations_inverse(regions, floor_pc_2020.keys()))
+        floor_pc_2020_mapped = region_knowledge_graph.rebroadcast_xarray(floor_pc_2020_xr, output_coords=regions_mapped, dim="Region")
+        target_vals = floor_pc_2020_mapped
+        current_vals = total_m2_housing_per_cap.sel(Time=2020)\
+                                            .sum(dim="Type")\
+                                            .mean(dim="Area")
+
+        scaling_factors = target_vals / current_vals
+
+        total_m2_housing_per_cap.loc[{"Region": regions_mapped}] = total_m2_housing_per_cap.sel(Region = regions_mapped) * scaling_factors
+
+    if 'narrow' in circular_economy_config.keys():
+        base_year = circular_economy_config["narrow"]["buildings"]["base_year"]
+        target_year = circular_economy_config["narrow"]["buildings"]["target_year"]
+        
+        mileage_increase = circular_economy_config['narrow']['vehicles']['mileage']
+        region_mileage = circular_economy_config['narrow']['vehicles']['region_mileage']
+        implementation_rate = circular_economy_config['narrow']['vehicles']['implementation_rate']
+
+        mileages = change_value(
+            mileages, base_year, target_year, 
+            mileage_increase, implementation_rate)
+
     total_m2_housing = total_m2_housing_per_cap * population.sel({"Area": ["Rural", "Urban"]})
     floorspace_residential = merge_dims(total_m2_housing, "Type", "Area")
     return floorspace_residential.transpose("Time", "Region", "Type")
