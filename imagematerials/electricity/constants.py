@@ -149,7 +149,7 @@ style_combinations = list(itertools.product(colors, linestyles))
 DICT_STOR_STYLES = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
 
 
-DICT_GENTECHCAT_COLORS = {
+DICT_GEN_CATEGORY_COLORS = {
     'Solar':             "#FBBF09",
     'Wind':              "#4BABFF",
     'Biomass':           "#42DD88",

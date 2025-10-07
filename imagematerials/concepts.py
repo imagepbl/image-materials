@@ -382,7 +382,67 @@ def create_region_graph():
 
 knowledge_graph = KnowledgeGraph(*create_building_graph()._items, *create_vehicle_graph()._items)
 
+
+
 def create_electricity_graph():
+    """
+    Constructs and returns a hierarchical knowledge graph representing the electricity system for the subsystems:
+    generation, transmission, and storage components.
+
+    The function builds a structured ontology using `KnowledgeGraph` and `Node` objects to
+    define relationships between electricity-related entities. It organizes technologies and
+    infrastructure into supertype and subtype categories.
+
+    Structure:
+
+    Electricity
+    ├── Generation
+    │   ├── Solar PV
+    │   ├── Conv. Coal
+    │   ├── ...
+    │   └── CHP Biomass + CCS
+    │
+    ├── Transmission
+    │   ├── High Voltage (HV)
+    │   │   ├── Lines
+    │   │   │   ├── Overhead
+    │   │   │   └── Underground
+    │   │   ├── Substations
+    │   │   └── Transformers
+    │   ├── Medium Voltage (MV)
+    │   │   ├── ...
+    │   └── Low Voltage (LV)
+    │       ├── ...
+    │
+    └── Storage
+        ├── PHS
+        ├── V2G-Batteries
+        └── Other Storage
+            ├── mechanical storage
+            │   ├── Flywheel
+            │   └── Compressed Air
+            ├── lithium batteries
+            │   ├── LMO
+            │   ├── ...
+            │   └── Lithium-air
+            ├── molten salt and flow batteries
+            │   ├── Zinc-Bromide
+            │   ├── ...
+            └── other
+                ├── Hydrogen FC
+                ├── NiMH
+                └── Deep-cycle Lead-Acid
+
+
+    Returns:
+        KnowledgeGraph: A fully constructed knowledge graph object describing the
+        electricity system hierarchy.
+
+    Notes:
+        - `V2G-Batteries` (Vehicle-to-Grid) could later be linked to vehicle systems.
+        - The graph currently does not include sub-technologies (e.g. different PV techologies) for generation types, but
+          placeholders are present for future expansion.
+    """
 
     # Generation ======================================================================================
     generation_supertypes = ["Solar PV", "Solar PV residential", "CSP", "Wind onshore", "Wind offshore", 
@@ -397,6 +457,7 @@ def create_electricity_graph():
     for supertype in generation_supertypes:
         electricity_knowledge_graph.add(Node(supertype, inherits_from="Generation"))
     
+    # dict that associates generation types with integer identifiers from TIMER
     numeric_electr_generation_map = {
     "1":  ["Solar PV"],
     "2":  ["Solar PV residential"],
@@ -489,6 +550,7 @@ def create_electricity_graph():
     storage_supertypes = ["PHS", "V2G-Batteries", "Other Storage"] # Pumped Hydro Storage, Vehicle-to-Grid Batteries
     # Storage calculations follow a 3 tiered structure: Demand is filled first with PHS, then with (anyway available) V2G-Batteries, and 
     # the residual demand with Other Storage
+    storage_subtypes_categories = ["mechanical storage", "lithium batteries", "molten salt and flow batteries", "other"]
     storage_subtypes = ["Flywheel", "Compressed Air", "Hydrogen FC", "NiMH", "Deep-cycle Lead-Acid", "LMO",
                         "NMC", "NCA", "LFP", "LTO", "Zinc-Bromide", "Vanadium Redox", "Sodium-Sulfur", "ZEBRA",
                         "Lithium Sulfur", "Lithium Ceramic", "Lithium-air"]
@@ -497,9 +559,17 @@ def create_electricity_graph():
 
     for supertype in storage_supertypes:
         electricity_knowledge_graph.add(Node(supertype, inherits_from="Storage"))
-    # TODO: V2G Batteries are also related to Vehicles + Add V2G-Batteries subtypes?
-    for subtype in storage_subtypes:
-        electricity_knowledge_graph.add(Node(subtype, inherits_from="Other Storage"))
+    # TODO: V2G Batteries are also related to Vehicles + Add V2G-Batteries subtypes? Problem with that is, that these are the same sub types as for Other Storage, how to do this?
+    for subtype_category in storage_subtypes_categories:
+        electricity_knowledge_graph.add(Node(subtype_category, inherits_from="Other Storage"))
+    for subtype in ["Flywheel", "Compressed Air"]:
+        electricity_knowledge_graph.add(Node(subtype, inherits_from="mechanical storage"))
+    for subtype in ["LMO","NMC", "NCA", "LFP", "LTO","Lithium Sulfur", "Lithium Ceramic", "Lithium-air"]:
+        electricity_knowledge_graph.add(Node(subtype, inherits_from="lithium batteries"))
+    for subtype in ["Zinc-Bromide", "Vanadium Redox", "Sodium-Sulfur", "ZEBRA"]:
+        electricity_knowledge_graph.add(Node(subtype, inherits_from="molten salt and flow batteries"))
+    for subtype in ["Hydrogen FC", "NiMH", "Deep-cycle Lead-Acid"]:
+        electricity_knowledge_graph.add(Node(subtype, inherits_from="other"))
     
 
     return electricity_knowledge_graph
