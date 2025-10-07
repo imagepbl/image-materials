@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from imagematerials import iamc_config as CFG
+from imagematerials.reporting import iamc_config as CFG
 
 # ---------------------------------------------------------------------
 # Helpers for time, labels, units
