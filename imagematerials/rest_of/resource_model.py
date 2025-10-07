@@ -192,12 +192,18 @@ class ResourceModel():
                                                                 best_rmse_models)
 
     def assign_fit_to_groups_not_fitted(self, list_regions: list, 
-                                        assign_model: str, model_nr: int):
+                                        assign_model: str, model_nr: int, 
+                                        overwrite_existing: bool = False):
             """
             Assign a model fit to regions that are not yet fitted because of missing data.
             
             """
             for region in list_regions:
+                if overwrite_existing == True:
+                    # assign fit of low steady model
+                    self.region_model_match[region] = self.model_groups[assign_model][model_nr]
+                    print(assign_model, "assigned to", region)
+                    
             # check if region is in self.region_model_match
                 if region in self.region_model_match and self.region_model_match[region] is not None:
                     pass
