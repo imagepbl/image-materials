@@ -676,9 +676,16 @@ class EndOfLife(prism.Model):
             
             'commercial': ["Office","Retail+","Hotels+","Govt+"
         ],
-        #   'generation':[], 
-        #   'grid':[],
-        #   'storage': []
+            'generation':["Solar PV", "Solar PV residential", "CSP", "Wind Onshore", "Wind Offshore", "Wave", "Hydro", "Other Renewables", "Geothermal", "Hydrogen power",
+                          "Conv. Coal", "Conv. Natural Gas", "Conv. Oil", "Waste", "IGCC", "OGCC", "NG CC", "Biomass CC",
+                          "Coal + CCS", "Oil/Coal + CCS", "Natural Gas + CCS", "Biomass + CCS", 
+                          "CHP Coal", "CHP Natural Gas", "CHP Oil", "CHP Biomass", "CHP Coal + CCS", "CHP Natural Gas + CCS", "CHP Oil + CCS", "CHP Biomass + CCS", "CHP Geothermal", "CHP Hydrogen"
+            ],
+            'grid':['HV Overhead' , 'HV Underground' , 'HV Substations', 'HV Transformers' , # is this correct?  
+                    'MV Overhead' , 'MV Underground' , 'MV Substations', 'MV Transformers' ,
+                    'LV Overhead' , 'LV Underground' , 'LV Substations', 'LV Transformers' ,
+],
+            'storage': ["PHS", "V2G-Batteries", "Other Storage"]
 
         }
         self.sum_outflow[t] = prism.Q_(0.0, 'kg')
