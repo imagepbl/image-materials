@@ -8,6 +8,11 @@ implementation_rate = 'linear'
 base_year = 2020
 target_year = 2060
 
+[electricity]
+base_year = 2020
+target_year = 2060
+implementation_rate = 'linear'
+
 [vehicles.data_files]
 lifetimes = '....csv'
 material_composation = '.csv'
@@ -92,6 +97,18 @@ USA = 90
 "Reforming Economies" =	90
 "Sub-Saharan Africa" = 60
 
+[electricity.generation.lifetime_increase_percent]
+'solar PV centralized' = 32
+'solar PV roof' = 32
+'CSP' = 10
+'wind onshore' = 20 
+'wind offshore' = 20
+'wave' = 0
+'hydropower' = 6 
+
+[electricity.grid.lifetime_increase_percent]
+'auxiliary grid equipment' = 10 
+
 [buildings.eol_reuse_rate_2060]
 Steel = 0.29
 Concrete = 0.13
@@ -106,3 +123,10 @@ Copper = 0.28
 Glass = 0.68
 Aluminium = 0.29
 
+[electricity.eol_reuse_rate_2060]
+Steel = 0.238
+Concrete = 0.21
+Wood = 0.455
+Copper = 0.33
+Glass = 0.68
+Aluminium = 0.345

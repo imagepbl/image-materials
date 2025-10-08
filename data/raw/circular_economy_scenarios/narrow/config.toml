@@ -9,6 +9,11 @@ target_year = 2060
 # possibilities for implementation rate are: linear, immediate, s-curve
 implementation_rate = 'linear'
 
+[electricity]
+base_year = 2020
+target_year = 2060
+implementation_rate = 'linear'
+
 [buildings.residential.m2_change_pc]
 "Asian-Stan" = -15.0
 Brazil = -16.7
@@ -184,3 +189,13 @@ USA = -14.3
 'Midi Buses' = -8.2
 'Regular Buses' = -8.2
 'Cars' = -8.2
+
+[electricity.generation.weight_change_pc]
+'solar PV centralized' = -20
+'solar PV roof' = -10
+'CSP' = -30
+'wind onshore' = -20
+'wind offshore' = -10
+'wave' = -30
+'hydropower' = 0
+'auxiliary grid equipment' = -10
