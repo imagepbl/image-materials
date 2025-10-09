@@ -63,6 +63,7 @@ SCEN = "SSP2"
 # VARIANT = "VLHO"
 VARIANT = "M_CP"
 # VARIANT = "BL"
+# VARIANT = "450"
 # Define paths ----------------------------------------------------------------------
 #YOUR_DIR = "C:\\Users\\Admin\\surfdrive\\Projects\\IRP\\GRO23\\Modelling\\2060\\ELMA"   # Change the running directory here
 # os.chdir(YOUR_DIR)
@@ -3580,7 +3581,7 @@ data_oth_cat = knowledge_graph.aggregate_sum(data_oth, storage_subtypes_categori
 
 data_all = xr.concat([data_oth_cat, data_phs], dim='Type')
 
-t_end = 2100
+t_end = 2050
 data_all = data_all.sel(Type=data_all.Type != '<EMPTY>', Time=slice(1990, t_end)).pint.to("kilotonne") # only from 1971 onwards, convert grams to tonnes
 data_all = data_all.sum('Region')
 
@@ -3604,7 +3605,7 @@ for i, material in enumerate(materials):
     colors = [DICT_STOR_CATEGORY_COLORS_SEBASTIAAN[cat] for cat in data_plot.columns] # select colors based on technology category
     data_plot.plot.area(ax=axes[row, col], stacked=True, color = colors)
 
-    axes[row, col].set_title(material, fontsize=15)
+    axes[row, col].set_title(material, fontsize=15, fontweight="bold")
     axes[row, col].set_ylabel(f'Material stock (kt)', fontsize=s_label) #{unit}
     handles, labels = axes[row, col].get_legend_handles_labels() # reverse the order of legend to match the stacked plot
     axes[row, col].legend(handles[::-1], labels[::-1], loc='upper left', fontsize=s_legend)
@@ -3623,11 +3624,12 @@ plt.tight_layout(rect=[0, 0, 1, 0.98])  # Adjust layout to make room for the sup
 plt.show()
 
 # Sebastiaans numbers taken from figures in his thesis:
-# total = data_all.sum("Type")
-# ratio_steel_BL = total.sel(material="Steel", Time = 2100)/7000
-# ratio_aluminium_BL = total.sel(material="Aluminium", Time = 2100)/300
-# ratio_neodymium_BL = total.sel(material="Nd", Time = 2100)/9
-# ratio_cobalt_BL = total.sel(material="Co", Time = 2100)/1.5
+total = data_all.sum("Type")
+ratio_steel_BL = total.sel(material="Steel", Time = 2050)/7200
+ratio_aluminium_BL = total.sel(material="Aluminium", Time = 2050)/300
+ratio_neodymium_BL = total.sel(material="Nd", Time = 2050)/9
+ratio_cobalt_BL = total.sel(material="Co", Time = 2050)/1.5
+print("Ratios to BL (2050):", ratio_steel_BL.values, ratio_aluminium_BL.values, ratio_neodymium_BL.values, ratio_cobalt_BL.values)
 # # ->steel: 109; aluminium: 287, neodymium: 273, cobalt: 271 for SSP_M_CP
 
 
@@ -3657,8 +3659,6 @@ plt.show()
 # plt.tight_layout()
 # # fig.savefig(path_test_plots / f"Stor_stock-materials-techcategory_{material.lower()}_world_1990.png", dpi=300)
 # plt.show()
-
-
 
 
 
