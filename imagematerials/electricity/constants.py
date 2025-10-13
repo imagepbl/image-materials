@@ -41,13 +41,72 @@ unit_mapping = {
     'time': ureg.year,
     'year': ureg.year,
     'Year': ureg.year,
-    'kg': ureg.kilogram,
     'yr': ureg.year,
+    'kg': ureg.kilogram,
     '%': ureg.percent,
     't': ureg.tonne,
     'MW': ureg.megawatt, #added
     'GW': ureg.gigawatt, #added
+    'MWh': ureg.megawatthour, #added
 }
+
+TIMER_REGIONS = [ # TODO: check if this is true
+    "Canada",
+    "USA",
+    "Mexico",
+    "Rest of Central America",
+    "Brazil",
+    "Rest of South America",
+    "Northern Africa",
+    "Western Africa",
+    "Eastern Africa",
+    "South Africa",
+    "Western Europe",
+    "Central Europe",
+    "Turkey",
+    "Ukraine +",
+    "Asian-Stan",
+    "Russia +",
+    "Middle East",
+    "India +",
+    "Korea",
+    "China +",
+    "Southeastern Asia",
+    "Indonesia +",
+    "Japan",
+    "Oceania",
+    "Rest of South Asia",
+    "Rest of Southern Africa"
+]
+
+#  #regions in the file kilometrage.csv are like this:
+#  region_list  = [
+#  'Canada',
+#  'US',
+#  'Mexico',
+#  'Rest C.Am.',
+#  'Brazil',
+#  'Rest S.Am.',
+#  'N.Africa',
+#  'W.Africa',
+#  'E.Africa',
+#  'South Africa',
+#  'W.Europe',
+#  'C.Europe',
+#  'Turkey',
+#  'Ukraine',
+#  'Stan',
+#  'Russia',
+#  'M.East',
+#  'India',
+#  'Korea',
+#  'China',
+#  'SE.Asia',
+#  'Indonesia',
+#  'Japan',
+#  'Oceania',
+#  'Rest S.Asia',
+#  'Rest S.Africa']
 
 # Electricity Generation related constants ---------------------------------------------
 
