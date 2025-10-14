@@ -143,10 +143,10 @@ data_array = np.stack([values, np.full_like(values, np.nan)], axis=0)
 # Create DataArray
 gcap_lifetime_xr = xr.DataArray(
     data_array,
-    dims=["ScipyParam", "Time", "Type"],
+    dims=["ScipyParam", "Cohort", "Type"],
     coords={
         "ScipyParam": scipy_params,
-        "Time": times,
+        "Cohort": times,
         "Type": [str(r) for r in types]
     },
     name="Lifetime"
@@ -154,7 +154,7 @@ gcap_lifetime_xr = xr.DataArray(
 
 gcap_lifetime_xr = prism.Q_(gcap_lifetime_xr, "year")
 gcap_lifetime_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_lifetime_xr, output_coords=GEN_TYPES_SEBASTIAAN, dim="Type")
-
+gcap_lifetime_xr = gcap_lifetime_xr.assign_coords(Type=np.array(gcap_lifetime_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
 # Material Intensities -------
 # Extract coordinate labels
@@ -167,10 +167,10 @@ data_array = gcap_materials_data.to_numpy().reshape(len(materials), len(years), 
 # Build xarray DataArray
 gcap_materials_xr = xr.DataArray(
     data_array,
-    dims=('Material', 'Time', 'Type'),
+    dims=('Material', 'Cohort', 'Type'),
     coords={
         'Material': materials,
-        'Time': years,
+        'Cohort': years,
         'Type': techs
     },
     name='MaterialIntensities'
@@ -205,6 +205,8 @@ gcap_xr = xr.DataArray(
 gcap_xr = prism.Q_(gcap_xr, "MW")
 gcap_xr = knowledge_graph_region.rebroadcast_xarray(gcap_xr, output_coords=REGIONS_TIMER, dim="Region")
 gcap_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_xr, output_coords=GEN_TYPES_SEBASTIAAN, dim="Type")
+gcap_xr = gcap_xr.assign_coords(Type=np.array(gcap_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
+
 
 # -------------------------------------------------------------
 
@@ -224,7 +226,91 @@ gcap_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_xr, output_coords=GEN_T
 
 #%%%% 2. Interpolate =================================================================================
 
-# Material Intensities -------
+def interpolate_xr(dataarray, t_start, t_end):
+    """
+    Interpolate an xarray.DataArray over a continuous time range and 
+    extend its boundary values beyond the available data.
+
+    The function performs linear interpolation between all existing time 
+    coordinates in the input DataArray and fills values outside the 
+    original time range with the first and last available data, respectively.
+
+    Parameters
+    ----------
+    dataarray : xarray.DataArray
+        Input DataArray with a 'Time' coordinate containing numeric values (e.g. 2020, 2050).
+    t_start : int or float
+        Start year for the interpolation range.,
+    t_end : int or float
+        End year for the interpolation range.
+
+    Returns
+    -------
+    xarray.DataArray
+        DataArray interpolated across the full range from `t_start` to `t_end`
+    """
+
+    # Determine which dimension to use
+    dim = 'Time' if 'Time' in dataarray.dims else 'Cohort'
+    
+    # Get the coordinate values along that dimension
+    coord_values = dataarray[dim].values
+    # Define new full range
+    new_range = np.arange(t_start, t_end + 1)
+
+    # Interpolate linearly
+    da_interp = dataarray.interp({dim: new_range})
+
+    # Fill values outside original range
+    da_interp.loc[{dim: slice(None, coord_values.min())}] = da_interp.sel({dim: coord_values.min()})
+    da_interp.loc[{dim: slice(coord_values.max(), None)}] = da_interp.sel({dim: coord_values.max()})
+
+    # # Extract the first and last available times from the original DataArray
+    # t_min = float(dataarray.Time.min())
+    # t_max = float(dataarray.Time.max())
+    # # Fill t_start-t_min with t_min values and t_max-t_end with t_max values
+    # da_interp.loc[dict(Time=slice(None, t_min))] = da_interp.sel(Time=t_min)
+    # da_interp.loc[dict(Time=slice(t_max, None))] = da_interp.sel(Time=t_max)
+
+    return da_interp
+
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# TODO: I loose the unit currently - fix this
+gcap_materials_xr_interp = interpolate_xr(gcap_materials_xr, YEAR_FIRST_GRID, YEAR_OUT)
+
+
+gcap_lifetime_xr_interp = interpolate_xr(gcap_lifetime_xr, YEAR_FIRST_GRID, YEAR_OUT)
+gcap_lifetime_xr_interp.loc[dict(ScipyParam="stdv")] = gcap_lifetime_xr_interp.loc[dict(ScipyParam="mean")] * STD_LIFETIMES_ELECTR
+
+gcap_xr_interp = add_historic_stock(gcap_xr, YEAR_FIRST_GRID)
+
+#%%%% 3. Prep data =================================================================================
+
+prep_data = {}
+prep_data["lifetimes"] = gcap_lifetime_xr_interp
+prep_data["stocks"] = gcap_xr_interp
+prep_data["material_intensities"] = gcap_materials_xr_interp
+prep_data["knowledge_graph"] = create_electricity_graph()
+
+
+# Define the complete timeline, including historic tail
+time_start = prep_data["stocks"].coords["Time"].min().values
+complete_timeline = prism.Timeline(time_start, YEAR_END, 1)
+simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
+
+
+sec_electr_gen = Sector("electr_gen", prep_data)
+
+main_model_factory = ModelFactory(
+    sec_electr_gen, complete_timeline
+    ).add(GenericStocks
+    ).add(MaterialIntensities
+    ).finish()
+
+main_model_factory.simulate(simulation_timeline)
+
+list(main_model_factory.electr_gen)
+
 
 
 # da_sel = da_interp.isel(Material=4, Type=2)
@@ -238,17 +324,6 @@ gcap_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_xr, output_coords=GEN_T
 # plt.ylabel("Material Intensity")
 # plt.grid(True)
 
-
-
-
-gcap_materials_xr_interp = interpolate_xr(gcap_materials_xr, YEAR_FIRST_GRID, YEAR_OUT)
-
-gcap_lifetime_xr_interp = interpolate_xr(gcap_lifetime_xr, YEAR_FIRST_GRID, YEAR_OUT)
-gcap_lifetime_xr_interp.loc[dict(ScipyParam="stdv")] = gcap_lifetime_xr_interp.loc[dict(ScipyParam="mean")] * STD_LIFETIMES_ELECTR
-
-
-
-gcap_xr_interp = add_historic_stock(gcap_xr, 1920)
 
 # test2 = add_historic_stock(gcap_xr, 1920)
 # da_sel1 = gcap_xr.isel(Region=0, Type=12)
@@ -284,9 +359,9 @@ gcap_xr_interp = add_historic_stock(gcap_xr, 1920)
 # gcap_lifetime_old = gcap_lifetime_old.reindex(list(range(YEAR_FIRST_GRID,YEAR_OUT+1)), axis=0).interpolate(limit_direction='both')
 
 # Calculate the historic tail to the Gcap (stock) 
-gcap_new = pd.DataFrame(index=pd.MultiIndex.from_product([range(YEAR_FIRST_GRID,YEAR_OUT+1), REGIONS_TIMER], names=['years', 'regions']), columns=gcap.columns)
-for tech in gcap_tech_list:
-    gcap_new.loc[idx[:,:],tech] = stock_tail(gcap.loc[idx[:,:],tech].unstack(level=1), YEAR_OUT).stack()
+# gcap_new = pd.DataFrame(index=pd.MultiIndex.from_product([range(YEAR_FIRST_GRID,YEAR_OUT+1), REGIONS_TIMER], names=['years', 'regions']), columns=gcap.columns)
+# for tech in gcap_tech_list:
+#     gcap_new.loc[idx[:,:],tech] = stock_tail(gcap.loc[idx[:,:],tech].unstack(level=1), YEAR_OUT).stack()
 
 
 # Bring dataframes into correct shape for the results_dict
@@ -296,19 +371,19 @@ for tech in gcap_tech_list:
 
 # A.
 # stocks: (years, regions) index and technologies as columns -> years as index and (technology, region) as columns
-gcap_stock = gcap_new.unstack(level='regions')
+# gcap_stock = gcap_new.unstack(level='regions')
 
-# lifetimes
-df_mean = gcap_lifetime_old.copy()
-df_stdev = df_mean * STD_LIFETIMES_ELECTR
-df_mean.columns = [(col, 'mean') for col in df_mean.columns] # Rename columns to multi-level tuples
-df_stdev.columns = [(col, 'stdev') for col in df_stdev.columns]
-gcap_lifetime_distr = pd.concat([df_mean, df_stdev], axis=1) # Concatenate along columns
+# # lifetimes
+# df_mean = gcap_lifetime_old.copy()
+# df_stdev = df_mean * STD_LIFETIMES_ELECTR
+# df_mean.columns = [(col, 'mean') for col in df_mean.columns] # Rename columns to multi-level tuples
+# df_stdev.columns = [(col, 'stdev') for col in df_stdev.columns]
+# gcap_lifetime_distr = pd.concat([df_mean, df_stdev], axis=1) # Concatenate along columns
 
-# MIs: (years, material) index and technologies as columns -> years as index and (technology, Material) as columns
-gcap_materials_interpol.index.names = ["Year", "Material"]
-# gcap_materials_interpol = gcap_materials_interpol.loc[:, ~(gcap_materials_interpol == 0.0).all()] # delete empty columns
-gcap_types_materials = gcap_materials_interpol.unstack(level='Material')
+# # MIs: (years, material) index and technologies as columns -> years as index and (technology, Material) as columns
+# gcap_materials_interpol.index.names = ["Year", "Material"]
+# # gcap_materials_interpol = gcap_materials_interpol.loc[:, ~(gcap_materials_interpol == 0.0).all()] # delete empty columns
+# gcap_types_materials = gcap_materials_interpol.unstack(level='Material')
 
 
 #----------------------------------------------------------------------------------------------------------
