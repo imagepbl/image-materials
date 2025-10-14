@@ -151,6 +151,42 @@ def stock_test(stock, year_startoperation, year_startsim, year_endsim):
     return stock_new
 
 
+def interpolate_xr(dataarray, t_start, t_end):
+    """
+    Interpolate an xarray.DataArray over a continuous time range and 
+    extend its boundary values beyond the available data.
+
+    The function performs linear interpolation between all existing time 
+    coordinates in the input DataArray and fills values outside the 
+    original time range with the first and last available data, respectively.
+
+    Parameters
+    ----------
+    dataarray : xarray.DataArray
+        Input DataArray with a 'Time' coordinate containing numeric values (e.g. 2020, 2050).
+    t_start : int or float
+        Start year for the interpolation range.,
+    t_end : int or float
+        End year for the interpolation range.
+
+    Returns
+    -------
+    xarray.DataArray
+        DataArray interpolated across the full range from `t_start` to `t_end`
+    """
+    # Define new full time range
+    new_time = np.arange(t_start, t_end + 1)
+    # Interpolate linearly between available data points
+    da_interp = dataarray.interp(Time=new_time)
+    # Extract the first and last available times from the original DataArray
+    t_min = float(dataarray.Time.min())
+    t_max = float(dataarray.Time.max())
+    # Fill t_start-t_min with t_min values and t_max-t_end with t_max values
+    da_interp.loc[dict(Time=slice(None, t_min))] = da_interp.sel(Time=t_min)
+    da_interp.loc[dict(Time=slice(t_max, None))] = da_interp.sel(Time=t_max)
+    return da_interp
+
+
 def MNLogit(df, logitpar):
     '''
     Multinomial Logit function, assumes input of an ordered dataframe with rows as years and columns as technologies, values as prices. 

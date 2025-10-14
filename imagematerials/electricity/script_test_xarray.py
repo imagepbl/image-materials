@@ -23,7 +23,7 @@ from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_life
 from imagematerials.model import GenericMainModel, GenericStocks, SharesInflowStocks, Maintenance, GenericMaterials, MaterialIntensities
 from imagematerials.factory import ModelFactory, Sector
 from imagematerials.concepts import create_electricity_graph, create_region_graph
-from imagematerials.electricity.utils import MNLogit, stock_tail, create_prep_data, stock_share_calc
+from imagematerials.electricity.utils import MNLogit, stock_tail, create_prep_data, stock_share_calc, interpolate_xr
 
 
 from imagematerials.electricity.constants import (
@@ -62,8 +62,8 @@ from imagematerials.electricity.electr_external_data import (
     df_iea_ni_aps
 )
 SCEN = "SSP2"
-# VARIANT = "VLHO"
-VARIANT = "M_CP"
+VARIANT = "VLHO"
+# VARIANT = "M_CP"
 # Define paths ----------------------------------------------------------------------
 #YOUR_DIR = "C:\\Users\\Admin\\surfdrive\\Projects\\IRP\\GRO23\\Modelling\\2060\\ELMA"   # Change the running directory here
 # os.chdir(YOUR_DIR)
@@ -108,7 +108,7 @@ knowledge_graph_electr = create_electricity_graph()
 # 1. External Data ======================================================================================== 
 
 # lifetimes of Gcap tech (original data according to van Vuuren 2006, PhD Thesis)
-gcap_lifetime = pd.read_csv(path_external_data_scenario / 'LTTechnical_dynamic.csv', index_col=['Year','DIM_1'])        
+gcap_lifetime_data = pd.read_csv(path_external_data_scenario / 'LTTechnical_dynamic.csv', index_col=['Year','DIM_1'])        
 
 # material compositions of electricity generation tecnologies (g/MW)
 gcap_materials_data = pd.read_csv(path_external_data_scenario / 'composition_generation.csv',index_col=[0,1]).transpose()
@@ -128,6 +128,33 @@ gcap_data = read_mym_df(path_image_output / 'Gcap.out')
 
 
 #%%%% 1. transform to xarray =================================================================================
+
+
+# Lifetimes -------
+# df = gcap_lifetime.copy()
+
+values = gcap_lifetime_data["TechnicalLT"].unstack().to_numpy(dtype=float)
+# Create coordinates
+times = gcap_lifetime_data.index.levels[0].to_numpy()
+types = gcap_lifetime_data.index.levels[1].to_numpy()
+scipy_params = ["mean", "stdv"]
+# Build full array: shape (ScipyParam, Time, Type)
+data_array = np.stack([values, np.full_like(values, np.nan)], axis=0)
+# Create DataArray
+gcap_lifetime_xr = xr.DataArray(
+    data_array,
+    dims=["ScipyParam", "Time", "Type"],
+    coords={
+        "ScipyParam": scipy_params,
+        "Time": times,
+        "Type": [str(r) for r in types]
+    },
+    name="Lifetime"
+)
+
+gcap_lifetime_xr = prism.Q_(gcap_lifetime_xr, "year")
+gcap_lifetime_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_lifetime_xr, output_coords=GEN_TYPES_SEBASTIAAN, dim="Type")
+
 
 # Material Intensities -------
 # Extract coordinate labels
@@ -150,6 +177,8 @@ gcap_materials_xr = xr.DataArray(
 )
 gcap_materials_xr = prism.Q_(gcap_materials_xr, "g/MW")
 
+
+
 # Gcap ------
 gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
 gcap_data = gcap_data.loc[gcap_data['time'].isin(range(YEAR_START, YEAR_END + 1)),
@@ -157,14 +186,14 @@ gcap_data = gcap_data.loc[gcap_data['time'].isin(range(YEAR_START, YEAR_END + 1)
 # Extract numeric columns (technologies)
 tech_cols = list(range(1, TECH_GEN+1))
 # Pivot to 3D array
-gcap_array = gcap_data[tech_cols].to_numpy().reshape(
+data_array = gcap_data[tech_cols].to_numpy().reshape(
     len(gcap_data['time'].unique()),
     len(gcap_data['DIM_1'].unique()),
     len(tech_cols)
 )
 # Create xarray DataArray
 gcap_xr = xr.DataArray(
-    gcap_array,
+    data_array,
     dims=('Time', 'Region', 'Type'),
     coords={
         'Time': sorted(gcap_data['time'].unique()),
@@ -181,8 +210,8 @@ gcap_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_xr, output_coords=GEN_T
 
 
 # region_list = list(kilometrage.columns.values)   
-
-# gcap_tech_list = list(composition_generation.loc[:,idx[2020,:]].droplevel(axis=1, level=0).columns)    #list of names of the generation technologies (workaround to retain original order)
+idx = pd.IndexSlice 
+gcap_tech_list = list(gcap_materials_data.loc[:,idx[2020,:]].droplevel(axis=1, level=0).columns)    #list of names of the generation technologies (workaround to retain original order)
 # gcap_material_list = list(composition_generation.index.values)  #list of materials the generation technologies
 
 # gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
@@ -198,23 +227,44 @@ gcap_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_xr, output_coords=GEN_T
 # Material Intensities -------
 
 
+# da_sel = da_interp.isel(Material=4, Type=2)
+# da_sel2 = gcap_materials_xr.isel(Material=4, Type=2)
+# # Plot over time
+# plt.figure(figsize=(8, 4))
+# da_sel.plot(marker='o')
+# da_sel2.plot(marker='o')
+# plt.title(f"{da_sel.Material.values} - {da_sel.Type.values}")
+# plt.xlabel("Year")
+# plt.ylabel("Material Intensity")
+# plt.grid(True)
+
+
+
+
+gcap_materials_xr_interp = interpolate_xr(gcap_materials_xr, YEAR_FIRST_GRID, YEAR_OUT)
+
+gcap_lifetime_xr_interp = interpolate_xr(gcap_lifetime_xr, YEAR_FIRST_GRID, YEAR_OUT)
+gcap_lifetime_xr_interp.loc[dict(ScipyParam="stdv")] = gcap_lifetime_xr_interp.loc[dict(ScipyParam="mean")] * STD_LIFETIMES_ELECTR
+
+
 
 # Interpolate material intensities (dynamic content for gcap & storage technologies between 1926 to 2100, based on data files)
-index = pd.MultiIndex.from_product([list(range(YEAR_FIRST_GRID, YEAR_OUT+1)), list(composition_generation.index)])
-gcap_materials_interpol = pd.DataFrame(index=index, columns=composition_generation.columns.levels[1])
+# index = pd.MultiIndex.from_product([list(range(YEAR_FIRST_GRID, YEAR_OUT+1)), list(composition_generation.index)])
+# gcap_materials_interpol = pd.DataFrame(index=index, columns=composition_generation.columns.levels[1])
 
-# material intensities for gcap
-for cat in list(composition_generation.columns.levels[1]):
-   gcap_materials_1st   = composition_generation.loc[:,idx[composition_generation.columns[0][0],cat]]
-   gcap_materials_interpol.loc[idx[YEAR_FIRST_GRID ,:],cat] = gcap_materials_1st.to_numpy()  # set the first year (1926) values to the first available values in the dataset (for the year 2000) 
-   gcap_materials_interpol.loc[idx[composition_generation.columns.levels[0].min(),:],cat] = composition_generation.loc[:, idx[composition_generation.columns.levels[0].min(),cat]].to_numpy()  # set the middle year (2000) values to the first available values in the dataset (for the year 2000) 
-   gcap_materials_interpol.loc[idx[composition_generation.columns.levels[0].max(),:],cat] = composition_generation.loc[:, idx[composition_generation.columns.levels[0].max(),cat]].to_numpy()  # set the last year (2100) values to the last available values in the dataset (for the year 2050) 
-   gcap_materials_interpol.loc[idx[:,:],cat] = gcap_materials_interpol.loc[idx[:,:],cat].unstack().astype('float64').interpolate().stack()
+# # material intensities for gcap
+# for cat in list(composition_generation.columns.levels[1]):
+#    gcap_materials_1st   = composition_generation.loc[:,idx[composition_generation.columns[0][0],cat]]
+#    gcap_materials_interpol.loc[idx[YEAR_FIRST_GRID ,:],cat] = gcap_materials_1st.to_numpy()  # set the first year (1926) values to the first available values in the dataset (for the year 2000) 
+#    gcap_materials_interpol.loc[idx[composition_generation.columns.levels[0].min(),:],cat] = composition_generation.loc[:, idx[composition_generation.columns.levels[0].min(),cat]].to_numpy()  # set the middle year (2000) values to the first available values in the dataset (for the year 2000) 
+#    gcap_materials_interpol.loc[idx[composition_generation.columns.levels[0].max(),:],cat] = composition_generation.loc[:, idx[composition_generation.columns.levels[0].max(),cat]].to_numpy()  # set the last year (2100) values to the last available values in the dataset (for the year 2050) 
+#    gcap_materials_interpol.loc[idx[:,:],cat] = gcap_materials_interpol.loc[idx[:,:],cat].unstack().astype('float64').interpolate().stack()
 
 # interpolate Gcap (technical) lifetime data
-gcap_lifetime.index = gcap_lifetime.index.set_levels(gcap_tech_list, level=1)
-gcap_lifetime = gcap_lifetime.unstack().droplevel(axis=1, level=0)
-gcap_lifetime = gcap_lifetime.reindex(list(range(YEAR_FIRST_GRID,YEAR_OUT+1)), axis=0).interpolate(limit_direction='both')
+# gcap_lifetime_old = gcap_lifetime.copy()
+# gcap_lifetime_old.index = gcap_lifetime_old.index.set_levels(gcap_tech_list, level=1)
+# gcap_lifetime_old = gcap_lifetime_old.unstack().droplevel(axis=1, level=0)
+# gcap_lifetime_old = gcap_lifetime_old.reindex(list(range(YEAR_FIRST_GRID,YEAR_OUT+1)), axis=0).interpolate(limit_direction='both')
 
 # Calculate the historic tail to the Gcap (stock) 
 gcap_new = pd.DataFrame(index=pd.MultiIndex.from_product([range(YEAR_FIRST_GRID,YEAR_OUT+1), REGIONS_TIMER], names=['years', 'regions']), columns=gcap.columns)
@@ -232,7 +282,7 @@ for tech in gcap_tech_list:
 gcap_stock = gcap_new.unstack(level='regions')
 
 # lifetimes
-df_mean = gcap_lifetime.copy()
+df_mean = gcap_lifetime_old.copy()
 df_stdev = df_mean * STD_LIFETIMES_ELECTR
 df_mean.columns = [(col, 'mean') for col in df_mean.columns] # Rename columns to multi-level tuples
 df_stdev.columns = [(col, 'stdev') for col in df_stdev.columns]
