@@ -23,7 +23,7 @@ from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_life
 from imagematerials.model import GenericMainModel, GenericStocks, SharesInflowStocks, Maintenance, GenericMaterials, MaterialIntensities
 from imagematerials.factory import ModelFactory, Sector
 from imagematerials.concepts import create_electricity_graph, create_region_graph
-from imagematerials.electricity.utils import MNLogit, stock_tail, create_prep_data, stock_share_calc, interpolate_xr
+from imagematerials.electricity.utils import MNLogit, stock_tail, create_prep_data, stock_share_calc, interpolate_xr, add_historic_stock
 
 
 from imagematerials.electricity.constants import (
@@ -210,8 +210,8 @@ gcap_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_xr, output_coords=GEN_T
 
 
 # region_list = list(kilometrage.columns.values)   
-idx = pd.IndexSlice 
-gcap_tech_list = list(gcap_materials_data.loc[:,idx[2020,:]].droplevel(axis=1, level=0).columns)    #list of names of the generation technologies (workaround to retain original order)
+# idx = pd.IndexSlice 
+# gcap_tech_list = list(gcap_materials_data.loc[:,idx[2020,:]].droplevel(axis=1, level=0).columns)    #list of names of the generation technologies (workaround to retain original order)
 # gcap_material_list = list(composition_generation.index.values)  #list of materials the generation technologies
 
 # gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
@@ -245,6 +245,23 @@ gcap_materials_xr_interp = interpolate_xr(gcap_materials_xr, YEAR_FIRST_GRID, YE
 
 gcap_lifetime_xr_interp = interpolate_xr(gcap_lifetime_xr, YEAR_FIRST_GRID, YEAR_OUT)
 gcap_lifetime_xr_interp.loc[dict(ScipyParam="stdv")] = gcap_lifetime_xr_interp.loc[dict(ScipyParam="mean")] * STD_LIFETIMES_ELECTR
+
+
+
+gcap_xr_interp = add_historic_stock(gcap_xr, 1920)
+
+# test2 = add_historic_stock(gcap_xr, 1920)
+# da_sel1 = gcap_xr.isel(Region=0, Type=12)
+# da_sel2 = test2.isel(Region=0, Type=12)
+# # Plot over time
+# plt.figure(figsize=(8, 4))
+# da_sel2.plot()
+# plt.scatter(da_sel1.Time, da_sel1.values, marker='o', color="orange")
+# plt.xlabel("Year")
+# plt.grid(True)
+
+
+
 
 
 

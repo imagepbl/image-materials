@@ -5,6 +5,7 @@ import xarray as xr
 import math
 import matplotlib.pyplot as plt
 import scipy.stats
+import prism
 
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_life_time_vehicles
 from imagematerials.concepts import create_electricity_graph
@@ -36,6 +37,62 @@ def stock_tail(stock, YEAR_OUT):
     # The explanation above is from Sebastiaan and indicates it should be 1971 (which also makes sense), however in his code it is YEAR_OUT (2060)
     # I think I had indeed some jumps around 1971, maybe this is the explanation
     return stock_new
+
+def add_historic_stock(da, year_start=1920, interp_method="linear"):
+    """
+    Calculates historic (pre TIMER simulation time = before 1971) stock values.
+    In year_start the stock is 0, then it (linearly) increases to the first existing year in da.
+
+    Parameters
+    ----------
+    da : xarray.DataArray
+        Input DataArray with dims ('Time', 'Region', 'Type').
+    year_start : int
+        The first year to start historic stock from (will be filled with zeros).
+    interp_method : str, optional
+        Interpolation method for historic stock growth. Supported options:
+        - "linear": linear increase from 0 to first year value
+        - "quadratic": quadratic increase from 0 to first year value
+        Default is "linear".
+
+    Returns
+    -------
+    xarray.DataArray
+        DataArray extended backwards to year_start, with historic values
+        interpolated according to `interp_method` up to the first year in `da`
+    """
+
+    t_first = int(da.Time.min())
+    if year_start >= t_first:
+        return da
+    
+    unit = prism.U_(da)
+
+    t_hist = np.arange(year_start, t_first)
+    n_hist = len(t_hist)
+
+    # Interpolate from 0 to first existing value - use this approach as it is faster than using xr.interp()
+    first_values = da.sel(Time=t_first).values.astype(float)
+    if interp_method == "linear":
+        stock_hist = np.linspace(0, 1, n_hist)[:, None, None] * first_values[None, :, :]
+    elif interp_method == "quadratic":
+        stock_hist = np.linspace(0, 1, n_hist)[:, None, None]**2 * first_values[None, :, :]
+    else:
+        raise ValueError(f"Unknown method: {interp_method}. Choose 'linear' or 'quadratic'.")
+
+    # Build historic DataArray
+    da_hist = xr.DataArray(
+        stock_hist,
+        coords={"Time": t_hist, "Region": da.Region, "Type": da.Type},
+        dims=("Time", "Region", "Type")
+    )
+
+    da_hist = prism.Q_(da_hist, unit)
+
+    # Concatenate with input array
+    da_extended = xr.concat([da_hist, da], dim="Time")
+
+    return da_extended
 
 # TODO: check if this is working and replace stock_tail() with it
 def stock_historictail(stock, year_startoperation, year_startsim: int, year_endsim: int):
