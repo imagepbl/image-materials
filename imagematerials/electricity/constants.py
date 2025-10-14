@@ -50,7 +50,7 @@ unit_mapping = {
     'MWh': ureg.megawatthour, #added
 }
 
-TIMER_REGIONS = [ # TODO: check if this is true
+REGIONS_TIMER = [ # TODO: check if this is true
     "Canada",
     "USA",
     "Mexico",
@@ -111,6 +111,52 @@ TIMER_REGIONS = [ # TODO: check if this is true
 # Electricity Generation related constants ---------------------------------------------
 
 TECH_GEN = 34   # number of electricity generation technologies -> 33 technologies + 1 empty row
+
+# names of generation technologies as in the input files (e.g. composition_generation.csv) from Sebastiaan - should be renamed in files to match TIMER names in the future
+GEN_TYPES_SEBASTIAAN = ["Solar PV", "Solar PV residential", "CSP", "Wind onshore", "Wind offshore", 
+                        "Wave", "Hydro", "Other Renewables", "Geothermal","Hydrogen power", "Nuclear", "Conv. Coal",
+                        "Conv. Oil", "Conv. Natural Gas","Waste", "IGCC", "OGCC", "NG CC", "Biomass CC",
+                        "Coal + CCS", "Oil/Coal + CCS", "Natural Gas + CCS", "Biomass + CCS",
+                        "CHP Coal", "CHP Oil", "CHP Natural Gas", "CHP Biomass","CHP Geothermal", "CHP Hydrogen",
+                        "CHP Coal + CCS", "CHP Oil + CCS", "CHP Natural Gas + CCS", "CHP Biomass + CCS"]
+# names of generation technologies as in TIMER model - TODO: check if these are correct
+GEN_TYPES_TIMER = [
+    "SPV",
+    "SPVR",
+    "CSP",
+    "WON",
+    "WOFF",
+    "WAVE",
+    "HYD",
+    "OREN",
+    "GEO",
+    "H2P",
+    "NUC",
+    "FREE12",
+    "ClST",
+    "OlST",
+    "NGOT",
+    "BioST",
+    "IGCC",
+    "OlCC",
+    "NGCC",
+    "BioCC",
+    "ClCS",
+    "OlCS",
+    "NGCS",
+    "BioCS",
+    "ClCHP",
+    "OlCHP",
+    "NGCHP",
+    "BioCHP",
+    "ClCHPCS",
+    "OlCHPCS",
+    "NGCHPCS",
+    "BioCHPCS",
+    "GeoCHP",
+    "H2CHP"
+]
+
 
 # Define mapping: technology -> category
 DICT_GENTECH_TO_CATEGORY = {
