@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import math
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import scipy.stats
 
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_life_time_vehicles

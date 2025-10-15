@@ -53,7 +53,7 @@ SCEN = "SSP2"
 # path_base = Path().resolve() # TODO absolute path of file "preprocessing.py" ? current solution can differ depending on IDE used (?) 
 path_current = Path().resolve()
 path_base = path_current.parent.parent # base path of the project -> image-materials
-
+climate_policy_scenario_dir = Path(path_base, "data", "raw", "image", scen_folder)
 
 
 ####################################################################################################################
@@ -65,7 +65,7 @@ YEAR_START = 1971   # start year of the simulation period
 YEAR_END = 2100     # end year of the calculations
 YEAR_OUT = 2100     # year of output generation = last year of reporting
 
-prep_data = get_preprocessing_data_gen(path_base, SCEN, VARIANT, YEAR_START, YEAR_END, YEAR_OUT)
+prep_data = get_preprocessing_data_gen(path_base, climate_policy_scenario_dir, scen_folder, YEAR_START, YEAR_END, YEAR_OUT)
 
 # Define the complete timeline, including historic tail
 time_start = prep_data["stocks"].coords["Time"].min().values
