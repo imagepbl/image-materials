@@ -5,6 +5,13 @@ Image materials core functionality relies on the method of dynamic stock modelli
 
 This section provides an overview of the models implemented in IMAGE materials. For detailed documentation of each model, please refer to the :doc:`API reference <api/models_detail>`.
 
+**Subpages**
+
+.. toctree::
+   :maxdepth: 1
+
+   model/survival_matrix
+
 Model Overview
 ----------------------
 - :class:`imagematerials.model.GenericStocks`: A class for modeling generic stock dynamics using survival matrices.
