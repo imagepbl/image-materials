@@ -3,7 +3,7 @@ Installation Guide
 
 This document will guide you through the process of installing the ``imagematerials`` package. 
 
-It is recommended to use a virtual environment for installing dependencies. See [this guide](https://docs.python.org/3/tutorial/venv.html) for instructions on creating and managing Python environments.
+It is recommended to use a virtual environment for installing dependencies. See `this guide <https://docs.python.org/3/tutorial/venv.html>`_ for instructions on creating and managing Python environments.
 
 Step 1: Install Python
 ---------------------------
@@ -37,51 +37,57 @@ Install **pint-xarray** using:
 
 	pip install git+https://github.com/xarray-contrib/pint-xarray
 
-**Prism** and **pym** are not public (yet), so you will need to be given access to the GitHub repository by PBL.
-Then you can install the packages by cloning the repository and installing them using pip.
+**Prism** and **pym** are not public (yet), so you will need to be given access to the GitHub repository by PBL. Then install them using:
 
-.. code-block:: console
 
-	git clone https://github.com/imagepbl/pym.git
-	git clone https://github.com/imagepbl/prism.git
+.. tab:: Normal Use
 
-.. code-block:: console
+	.. code-block:: console
 
-	pip install ./pym
-	pip install ./prism
+		pip install git+https://github.com/imagepbl/prism.git
+		pip install git+https://github.com/imagepbl/pym.git
 
-.. or using this?:
-   pip install git+https://github.com/imagepbl/prism.git
-   pip install git+https://github.com/imagepbl/pym.git
-   pip install git+https://github.com/imagepbl/image-materials.git
+.. tab:: Developer
+
+	.. code-block:: console
+
+		git clone https://github.com/imagepbl/pym.git
+		git clone https://github.com/imagepbl/prism.git
+
+		pip install ./pym
+		pip install ./prism
+
 
 
 Step 4: Install IMAGE-Materials
 -------------------------------
 
-Clone the repository and install it using pip.
+Install imagematerials from the command prompt or terminal with:
 
-.. code-block:: console
+.. tab:: Normal Use
 
-	git clone https://github.com/imagepbl/image-materials.git
+	.. code-block:: console
 
-.. code-block:: console
+		pip install git+https://github.com/imagepbl/image-materials.git
 
-	pip install image-materials
+.. tab:: Developer
 
-For developers:
+	.. code-block:: console
 
-.. code-block:: console
+		git clone https://github.com/imagepbl/image-materials.git
 
-	pip install -e image-materials
+		pip install -e image-materials
 
-Using -e ensures automatic updates when modifying the package.
+
+Using -e (developers) ensures automatic updates when modifying the package.
 
 To install additional dependencies for documentation and testing, run
 
 .. code-block:: console
 
 	pip install -e ".[all]"
+
+after you installed the package.
 
 
 Step 5: Verify Installation
@@ -92,5 +98,7 @@ To ensure ``imagematerials`` has been successfully installed, run the following 
 .. code-block:: python
 
 	import imagematerials
+
+If the command runs without any errors, you have successfully installed imagematerials.
 
 
