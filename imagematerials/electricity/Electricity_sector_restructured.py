@@ -121,6 +121,14 @@ vehicles = 25
 regions = 26
 epg_techs = 34          # number of electricity generation technologies -> 33 technologies + 1 empty row
 # epg_techs = 33
+# years used by Sebastiaan (already renamed - YEAR_START was called startyear, etc.):
+# YEAR_FIRST_GRID = 1926   # UK Electricity supply act - https://www.bbc.com/news/uk-politics-11619751   
+# YEAR_FIRST = 1807  # first_year_vehicle.values.min()
+# YEAR_END = 2060    # end year of the calculations
+# YEAR_OUT = 2060    # year of output generation = last year of reporting (in the output files) 
+# # YEAR_LAST = 2060   # last year available in the IMAGE data-files (which are input to ELMA)
+# # J: not true, goes until 2100 ??
+# YEAR_SWITCH = 1990 # year after which other batteries than lead-acid are allowed
 
 weibull_shape = 1.89
 weibull_scale = 10.3

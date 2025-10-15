@@ -1,0 +1,28 @@
+# Scrap flow from process 9, Waste and scrap recovery, to process 10, Scrap trade
+# (CIRCOMOD material cycle system definition), by material and by originating from
+# (Demand Sector)
+- Scrap|Iron and Steel|Steel|{Demand Sector}:
+    description: Amount of steel scrap originating from (Demand Sector), F_9_10 -
+      flow of steel scrap by (Demand Sector) from process 9, Waste and scrap
+      recovery, to process 10, Scrap trade
+    unit: Mt/yr
+    notes: Does not included diverted scrap from manufacturing, flow F_5_10
+- Scrap|Non-Ferrous Metals|Aluminum|{Demand Sector}:
+    description: Amount of aluminum scrap originating from (Demand Sector), F_9_10 -
+      flow of aluminum scrap by (Demand Sector) from process 9, Waste and scrap
+      recovery, to process 10, Scrap trade
+    unit: Mt/yr
+    notes: Does not included diverted scrap from manufacturing, flow F_5_10
+
+# Scrap flow from process 9, Waste and scrap recovery, to process 10, Scrap trade
+# (CIRCOMOD material cycle system definition), by material (total)
+- Scrap|Iron and Steel|Steel:
+    description: Amount of total steel scrap, F_9_10 - flow of steel scrap from
+      process 9, Waste and scrap recovery, to process 10, Scrap trade
+    unit: Mt/yr
+    notes: Does not included diverted scrap from manufacturing, flow F_5_10
+- Scrap|Non-Ferrous Metals|Aluminum:
+    description: Amount of total aluminum scrap, F_9_10 - flow of aluminum scrap
+      from process 9, Waste and scrap recovery, to process 10, Scrap trade
+    unit: Mt/yr
+    notes: Does not included diverted scrap from manufacturing, flow F_5_10

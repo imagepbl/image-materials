@@ -94,6 +94,7 @@ def make_gompertz_coefs_da(results_models, material_order=None, region_order=Non
     rows = []
 
     for material in material_list_complete_fit + material_list_sub_regions_fit:
+        print(material)
         # if material in material_list_complete_fit:
         region_model_match = results_models['SSP2_M_CP'][material].new_region_model_match
         # else:

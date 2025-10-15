@@ -1,0 +1,40 @@
+# Final product demand, product flow from process 6 to 7 in CIRCOMOD material cycle
+# system definition, by end-use sector and by product type
+- Final Product Demand|Transportation|{Vehicles}:
+    description: Number of new {Vehicles} registered/commissioned in a year, F_6_7 -
+      flow of {Vehicles} from market and transport process 6, Final products
+      trade, to process 7, Use phase
+    unit: thousand/yr
+- Final Product Demand|Buildings|{Building Types}:
+    description: New useful floor space of {Building Types} built in a year, F_6_7 -
+      flow of {Building Types} from market and transport process 6, Final
+      products trade, to process 7, Use phase
+    unit: m^2/yr
+- Final Product Demand|Transportation Infrastructure|{Mobility Infrastructure Types}:
+    description: New length (if unit is km) or area (if unit is km^2) of {Mobility Infrastructure Types} built in a year,
+      F_6_7 - flow of {Mobility Infrastructure Types} from market and transport
+      process 6, Final products trade, to process 7, Use phase
+    unit: "{Mobility Infrastructure Types}"
+
+# Final product demand, product flow from process 6 to 7 in CIRCOMOD material cycle
+# system definition, by end-use sector
+- Final Product Demand|Buildings:
+    description: Total new useful floor space (residential and commercial) built in
+      a year, F_6_7 - flow of total useful floor space from market and transport
+      process 6, Final products trade, to process 7, Use phase
+    unit: m^2/yr
+    components:
+      - Final Product Demand|Buildings|Residential
+      - Final Product Demand|Buildings|Commercial
+
+- Final Product Demand|Buildings|Commercial":
+    description: Total new useful floor space (commercial) built in
+      a year, F_6_7 - flow of total useful floor space from market and transport
+      process 6, Final products trade, to process 7, Use phase
+    unit: m^2/yr
+
+- Final Product Demand|Buildings|Residential":
+    description: Total new useful floor space (residential) built in
+      a year, F_6_7 - flow of total useful floor space from market and transport
+      process 6, Final products trade, to process 7, Use phase
+    unit: m^2/yr

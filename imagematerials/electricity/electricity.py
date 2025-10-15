@@ -21,7 +21,7 @@ This is still work in progress. The preprocessing.py file is already available a
 
 """
 ###########################################################################################################
-#%% define imports, counters & settings
+#%% Imports & Settings
 ###########################################################################################################
 
 import pandas as pd
@@ -34,22 +34,22 @@ from pathlib import Path
 
 from imagematerials.electricity.preprocessing import (
     get_preprocessing_data_gen,
-    get_preprocessing_data_grid
-    # get_preprocessing_data_stor
+    get_preprocessing_data_grid,
+    get_preprocessing_data_stor
 )
 # from imagematerials.util import import_from_netcdf, export_to_netcdf
-from imagematerials.model import GenericMainModel, GenericMaterials, GenericStocks, Maintenance, MaterialIntensities
+from imagematerials.model import GenericMainModel, GenericMaterials, GenericStocks, Maintenance, MaterialIntensities, SharesInflowStocks
 from imagematerials.factory import ModelFactory, Sector
 import prism
 
 from imagematerials.electricity.constants import (
-    SCEN,
-    VARIANT
+    SCENARIO_DEFAULT
 )
 
 # VARIANT = "VLHO"
-# SCEN = "SSP2"
-scen_folder = SCEN + "_" + VARIANT
+VARIANT = "M_CP"
+SCEN = "SSP2"
+
 # path_base = Path().resolve() # TODO absolute path of file "preprocessing.py" ? current solution can differ depending on IDE used (?) 
 path_current = Path().resolve()
 path_base = path_current.parent.parent # base path of the project -> image-materials
@@ -143,6 +143,52 @@ list(main_model_factory_add.electr_grid_add)
 
 
 
+####################################################################################################################
+#%% Storage
+####################################################################################################################
+
+YEAR_FIRST_STOR = 1907 # first use of pumped storage was in 1907 at the Engeweiher pumped storage facility near Schaffhausen, Switzerland (Mitali et al. 2022)
+YEAR_START = 1971  # start year of the simulation period
+YEAR_END = 2100    # end year of the calculations
+YEAR_OUT = 2100    # year of output generation = last year of reporting
+
+prep_data_phs, prep_data_oth_storage = get_preprocessing_data_stor(path_base, SCEN, VARIANT, YEAR_START, YEAR_END, YEAR_OUT)
 
 
-# %%
+# PHS =======================================================================================
+
+# # Define the complete timeline, including historic tail
+time_start = prep_data_phs["stocks"].coords["Time"].min().values
+complete_timeline = prism.Timeline(time_start, YEAR_END, 1)
+simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
+
+sec_electr_stor_phs = Sector("electr_stor_phs", prep_data_phs)
+
+main_model_factory_phs = ModelFactory(
+    sec_electr_stor_phs, complete_timeline
+    ).add(GenericStocks
+    ).add(MaterialIntensities
+    ).finish()
+
+main_model_factory_phs.simulate(simulation_timeline)
+list(main_model_factory_phs.electr_stor_phs)
+
+
+
+# Other Storage ==============================================================================
+
+time_start = prep_data_oth_storage["stocks"].coords["Time"].min().values
+complete_timeline = prism.Timeline(time_start, YEAR_END, 1)
+simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
+
+sec_electr_stor_oth = Sector("electr_stor_oth", prep_data_oth_storage, check_coordinates=False)
+
+main_model_factory_oth = ModelFactory(
+    sec_electr_stor_oth, complete_timeline
+    ).add(SharesInflowStocks
+    ).add(MaterialIntensities
+    ).finish()
+
+main_model_factory_oth.simulate(simulation_timeline)
+list(main_model_factory_oth.electr_stor_oth)
+

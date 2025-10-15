@@ -20,10 +20,10 @@ import prism
 from imagematerials.distribution import ALL_DISTRIBUTIONS, NAME_TO_DIST
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_life_time_vehicles
-from imagematerials.model import GenericMainModel, GenericMaterials, GenericStocks, Maintenance, MaterialIntensities
+from imagematerials.model import GenericMainModel, GenericStocks, SharesInflowStocks, Maintenance, GenericMaterials, MaterialIntensities
 from imagematerials.factory import ModelFactory, Sector
 from imagematerials.concepts import create_electricity_graph
-from imagematerials.electricity.utils import MNLogit, stock_tail, create_prep_data, print_df_info
+from imagematerials.electricity.utils import MNLogit, stock_tail, create_prep_data, stock_share_calc
 
 
 from imagematerials.electricity.constants import (
@@ -42,13 +42,14 @@ from imagematerials.electricity.constants import (
     BEV_CAPACITY_CURRENT,
     PHEV_CAPACITY_CURRENT,
     unit_mapping,
-    gen_tech_to_category,
-    dict_gentech_styles,
-    dict_gentechcat_colors,
-    dict_materials_colors,
-    dict_grid_colors,
-    dict_grid_styles,
-    dict_grid_styles2
+    DICT_GENTECH_TO_CATEGORY,
+    DICT_GENTECH_STYLES,
+    DICT_STOR_STYLES,
+    DICT_GENTECHCAT_COLORS,
+    DICT_MATERIALS_COLORS,
+    DICT_GRID_COLORS,
+    DICT_GRID_STYLES_1,
+    DICT_GRID_STYLES_2
 )
 
 from imagematerials.electricity.electr_external_data import (
@@ -423,7 +424,7 @@ for i, region in enumerate(regions):  # regions now has length 3
     # Top row: Types 1–15
     for t in techs_upper:
         data_plot = data_all.sel(Type=t, Region=region)
-        color, ls = dict_gentech_styles.get(t, ('black', '-'))
+        color, ls = DICT_GENTECH_STYLES.get(t, ('black', '-'))
         axes[0, col].plot(data_plot.Time, data_plot.values, label=t, color=color, linestyle=ls, linewidth=linewidth)
     axes[0, col].set_title(f"{region}", fontsize=15)
     axes[0, col].grid(alpha=0.3, linestyle='--')
@@ -433,7 +434,7 @@ for i, region in enumerate(regions):  # regions now has length 3
     # Bottom row: Types 16–30
     for t in techs_lower:
         data_plot = data_all.sel(Type=t, Region=region)
-        color, ls = dict_gentech_styles.get(t, ('black', '-'))
+        color, ls = DICT_GENTECH_STYLES.get(t, ('black', '-'))
         axes[1, col].plot(data_plot.Time, data_plot.values, label=t, color=color, linestyle=ls, linewidth=linewidth)
     axes[1, col].grid(alpha=0.3, linestyle='--')
     axes[1, col].tick_params(axis='both', which='major', labelsize=s_legend)
@@ -487,7 +488,7 @@ axes[0].set_title('Sum over Type and Region')
 # First subplot: data_all_1 (summed over Region, still over Type and time likely)
 for t in data_all_1.Type.values:
     data_plot = data_all_1.sel(Type=t)
-    color, ls = dict_gentech_styles.get(t, ('black', '-'))
+    color, ls = DICT_GENTECH_STYLES.get(t, ('black', '-'))
     axes[1].plot(data_plot.Time, data_plot.values, label=t, color=color, linestyle=ls, linewidth=linewidth)
     axes[1].grid(alpha=0.3, linestyle='--')
     axes[1].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
@@ -523,14 +524,14 @@ for i, country in enumerate(countries):
 
     # Top row: techs 15–30
     for tech in techs_upper:
-        color, ls = dict_gentech_styles[tech]
+        color, ls = DICT_GENTECH_STYLES[tech]
         axes[0, i].plot(df.index, df[tech], label=tech, color=color, linestyle=ls)
     # axes[0, i].set_title(f"{country} (Technologies 16–30)")
     axes[0, i].grid(alpha=0.3, linestyle='--')
 
     # Bottom row: techs 0–14
     for tech in techs_lower:
-        color, ls = dict_gentech_styles[tech]
+        color, ls = DICT_GENTECH_STYLES[tech]
         axes[1, i].plot(df.index, df[tech], label=tech, color=color, linestyle=ls)
     axes[1, i].set_xlabel('Year')
     axes[1, i].grid(alpha=0.3, linestyle='--')
@@ -565,14 +566,14 @@ techs_lower = df.columns[:15]
 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
 
 for tech in techs_upper:
-    color, ls = dict_gentech_styles[tech]
+    color, ls = DICT_GENTECH_STYLES[tech]
     df[tech].plot(ax=ax1, label=tech, color=color, linestyle=ls)
 ax1.set_ylabel('Value')
 ax1.legend(ncol=2, fontsize='small', loc='upper left')
 
 # Lower panel: tech 16–30
 for tech in techs_lower:
-    color, ls = dict_gentech_styles[tech]
+    color, ls = DICT_GENTECH_STYLES[tech]
     df[tech].plot(ax=ax2, label=tech, color=color, linestyle=ls)
 ax2.set_xlabel('Year')
 ax2.set_ylabel('Value')
@@ -619,7 +620,7 @@ for i, region in enumerate(regions):
     # Top row: Level 1 materials
     for mat in types_level1:
         if (region in data_plot.Region.values) and (mat in data_plot.material.values):
-            data_plot.sel(material=mat, Region=region).plot(ax=axes[0, i], label=mat, color=dict_materials_colors[mat], linewidth=linewidth)
+            data_plot.sel(material=mat, Region=region).plot(ax=axes[0, i], label=mat, color=DICT_MATERIALS_COLORS[mat], linewidth=linewidth)
     axes[0, i].set_title(f"{region}")
     axes[0, i].set_xlabel(" ")
     axes[0, i].set_ylabel(" ")
@@ -631,7 +632,7 @@ for i, region in enumerate(regions):
     # Middle row: Level 2 materials
     for mat in types_level2:
         if (region in data_plot.Region.values) and (mat in data_plot.material.values):
-            data_plot.sel(material=mat, Region=region).plot(ax=axes[1, i], label=mat, color=dict_materials_colors[mat], linewidth=linewidth)
+            data_plot.sel(material=mat, Region=region).plot(ax=axes[1, i], label=mat, color=DICT_MATERIALS_COLORS[mat], linewidth=linewidth)
     axes[1, i].set_title(f" ")
     axes[1, i].set_xlabel(" ")
     axes[1, i].set_ylabel(" ")
@@ -643,7 +644,7 @@ for i, region in enumerate(regions):
     # Bottom row: Level 3 materials
     for mat in types_level3:
         if (region in data_plot.Region.values) and (mat in data_plot.material.values):
-            data_plot.sel(material=mat, Region=region).plot(ax=axes[2, i], label=mat, color=dict_materials_colors[mat], linewidth=linewidth)
+            data_plot.sel(material=mat, Region=region).plot(ax=axes[2, i], label=mat, color=DICT_MATERIALS_COLORS[mat], linewidth=linewidth)
     axes[2, i].set_title(f" ")
     axes[2, i].set_xlabel("Time", fontsize=s_label)
     axes[2, i].set_ylabel(" ")
@@ -653,9 +654,9 @@ for i, region in enumerate(regions):
     axes[2, 2].legend(loc='upper left', fontsize=s_legend)
     
 
-axes[0, 0].set_ylabel("Material inflow (t)", fontsize=s_label)
-axes[1, 0].set_ylabel("Material inflow (t)", fontsize=s_label)
-axes[2, 0].set_ylabel("Material inflow (t)", fontsize=s_label)
+axes[0, 0].set_ylabel("Material stocks (t)", fontsize=s_label)
+axes[1, 0].set_ylabel("Material stocks (t)", fontsize=s_label)
+axes[2, 0].set_ylabel("Material stocks (t)", fontsize=s_label)
 
 plt.suptitle(f"{scen_folder}: Generation - Stocks Materials", fontsize=16)
 plt.tight_layout(rect=[0, 0, 1, 0.98])  # Adjust layout to make room for the suptitle
@@ -682,7 +683,7 @@ s_label = 14
 # Top row: Level 1 materials
 for mat in types_level1:
     if mat in data_plot.material.values:
-        data_plot.sel(material=mat).plot(ax=axes[0], label=mat, color=dict_materials_colors[mat], linewidth=linewidth)
+        data_plot.sel(material=mat).plot(ax=axes[0], label=mat, color=DICT_MATERIALS_COLORS[mat], linewidth=linewidth)
 axes[0].set_title(f" ")
 axes[0].set_xlabel(" ")
 axes[0].set_ylabel("Material stocks (t)", fontsize=s_label)
@@ -694,7 +695,7 @@ axes[0].legend(loc='upper left', fontsize=s_legend)
 # Middle row: Level 2 materials
 for mat in types_level2:
     if mat in data_plot.material.values:
-        data_plot.sel(material=mat).plot(ax=axes[1], label=mat, color=dict_materials_colors[mat], linewidth=linewidth)
+        data_plot.sel(material=mat).plot(ax=axes[1], label=mat, color=DICT_MATERIALS_COLORS[mat], linewidth=linewidth)
 
 axes[1].set_title(" ")
 axes[1].set_xlabel(" ")
@@ -707,7 +708,7 @@ axes[1].legend(loc='upper left', fontsize=s_legend)
 # Bottom row: Level 3 materials
 for mat in types_level3:
     if mat in data_plot.material.values:
-        data_plot.sel(material=mat).plot(ax=axes[2], label=mat, color=dict_materials_colors[mat], linewidth=linewidth)
+        data_plot.sel(material=mat).plot(ax=axes[2], label=mat, color=DICT_MATERIALS_COLORS[mat], linewidth=linewidth)
 axes[2].set_title(" ")
 axes[2].set_xlabel("Time", fontsize=s_label)
 axes[2].set_ylabel("Material stocks (t)", fontsize=s_label)
@@ -730,7 +731,7 @@ plt.show()
 #%%%% Per TECH category - world - STACKED
 
 # Define mapping: technology -> category
-# gen_tech_to_category = {
+# DICT_GENTECH_TO_CATEGORY = {
 #     "Solar PV": 'Solar', 
 #     "Solar PV residential": 'Solar',
 #     "CSP": 'Solar', 
@@ -766,7 +767,7 @@ plt.show()
 #     "CHP Biomass + CCS": 'Biomass'
 # }
 
-# dict_gentechcat_colors = {
+# DICT_GENTECHCAT_COLORS = {
 #     'Solar':             "#FBBF09",
 #     'Wind':              "#4BABFF",
 #     'Biomass':           "#42DD88",
@@ -785,7 +786,7 @@ data_all = data_all.sum('Region')
 # Step 1: Get technology level from index
 tech_level = data_all.Type.values
 # Step 2: Map technologies to categories
-category = pd.Series(tech_level).map(gen_tech_to_category)
+category = pd.Series(tech_level).map(DICT_GENTECH_TO_CATEGORY)
 
 # Step 3: Add this mapping as a new coordinate to the DataArray
 data_all.coords['tech_category'] = ('Type', category)
@@ -837,7 +838,7 @@ for i, material in enumerate(materials):
     data_plot = data_plot.drop_vars('material')
     data_plot = data_plot.to_pandas()
     data_plot = data_plot[desired_order] # Reorder columns
-    colors = [dict_gentechcat_colors[cat] for cat in data_plot.columns] # select colors based on technology category
+    colors = [DICT_GENTECHCAT_COLORS[cat] for cat in data_plot.columns] # select colors based on technology category
     data_plot.plot.area(ax=axes[row, col], stacked=True, color = colors)
 
     axes[row, col].set_title(material, fontsize=15)
@@ -896,7 +897,7 @@ for i, region in enumerate(regions):  # regions now has length 3
     # Top row: Types 1–15
     for t in techs_upper:
         data_plot = data_all.sel(Type=t, Region=region)
-        color, ls = dict_gentech_styles.get(t, ('black', '-'))
+        color, ls = DICT_GENTECH_STYLES.get(t, ('black', '-'))
         axes[0, col].plot(data_plot.time, data_plot.values, label=t, color=color, linestyle=ls, linewidth=linewidth)
     axes[0, col].set_title(f"{region}", fontsize=15)
     axes[0, col].grid(alpha=0.3, linestyle='--')
@@ -906,7 +907,7 @@ for i, region in enumerate(regions):  # regions now has length 3
     # Bottom row: Types 16–30
     for t in techs_lower:
         data_plot = data_all.sel(Type=t, Region=region)
-        color, ls = dict_gentech_styles.get(t, ('black', '-'))
+        color, ls = DICT_GENTECH_STYLES.get(t, ('black', '-'))
         axes[1, col].plot(data_plot.time, data_plot.values, label=t, color=color, linestyle=ls, linewidth=linewidth)
     axes[1, col].grid(alpha=0.3, linestyle='--')
     axes[1, col].tick_params(axis='both', which='major', labelsize=s_legend)
@@ -961,7 +962,7 @@ axes[0].set_title('Sum over Type and Region')
 # First subplot: data_all_1 (summed over Region, still over Type and time likely)
 for t in data_all_1.Type.values:
     data_plot = data_all_1.sel(Type=t)
-    color, ls = dict_gentech_styles.get(t, ('black', '-'))
+    color, ls = DICT_GENTECH_STYLES.get(t, ('black', '-'))
     axes[1].plot(data_plot.time, data_plot.values, label=t, color=color, linestyle=ls, linewidth=linewidth)
     axes[1].grid(alpha=0.3, linestyle='--')
     axes[1].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
@@ -1010,7 +1011,7 @@ for i, region in enumerate(regions):
     # Top row: Level 1 materials
     for mat in types_level1:
         if (region in data_plot.Region.values) and (mat in data_plot.material.values):
-            data_plot.sel(material=mat, Region=region).plot(ax=axes[0, i], label=mat, color=dict_materials_colors[mat], linewidth=linewidth)
+            data_plot.sel(material=mat, Region=region).plot(ax=axes[0, i], label=mat, color=DICT_MATERIALS_COLORS[mat], linewidth=linewidth)
     axes[0, i].set_title(f"{region}")
     axes[0, i].set_xlabel(" ")
     axes[0, i].set_ylabel(" ")
@@ -1022,7 +1023,7 @@ for i, region in enumerate(regions):
     # Middle row: Level 2 materials
     for mat in types_level2:
         if (region in data_plot.Region.values) and (mat in data_plot.material.values):
-            data_plot.sel(material=mat, Region=region).plot(ax=axes[1, i], label=mat, color=dict_materials_colors[mat], linewidth=linewidth)
+            data_plot.sel(material=mat, Region=region).plot(ax=axes[1, i], label=mat, color=DICT_MATERIALS_COLORS[mat], linewidth=linewidth)
     axes[1, i].set_title(f" ")
     axes[1, i].set_xlabel(" ")
     axes[1, i].set_ylabel(" ")
@@ -1034,7 +1035,7 @@ for i, region in enumerate(regions):
     # Bottom row: Level 3 materials
     for mat in types_level3:
         if (region in data_plot.Region.values) and (mat in data_plot.material.values):
-            data_plot.sel(material=mat, Region=region).plot(ax=axes[2, i], label=mat, color=dict_materials_colors[mat], linewidth=linewidth)
+            data_plot.sel(material=mat, Region=region).plot(ax=axes[2, i], label=mat, color=DICT_MATERIALS_COLORS[mat], linewidth=linewidth)
     axes[2, i].set_title(f" ")
     axes[2, i].set_ylabel(" ")
     axes[2, i].set_xlabel("Time", fontsize=s_label)
@@ -1066,21 +1067,21 @@ plt.show()
 # for i, region in enumerate(regions):
 #     # Top row: 
 #     for mat in types_level1:
-#         da_x.sel(material=mat, Region=region).plot(ax=axes[0, i], label=mat, color=dict_materials_colors[mat])
+#         da_x.sel(material=mat, Region=region).plot(ax=axes[0, i], label=mat, color=DICT_MATERIALS_COLORS[mat])
 #     axes[0, i].set_title(f"{region}")
 #     axes[0, i].set_xlabel("Time")
 #     axes[0, i].legend()
 
 #     # Middle row: 
 #     for mat in types_level2:
-#         da_x.sel(material=mat, Region=region).plot(ax=axes[1, i], label=mat, color=dict_materials_colors[mat])
+#         da_x.sel(material=mat, Region=region).plot(ax=axes[1, i], label=mat, color=DICT_MATERIALS_COLORS[mat])
 #     axes[1, i].set_title(f"{region}")
 #     axes[1, i].set_xlabel("Time")
 #     axes[1, i].legend(loc ='upper left')
 
 #     # Bottom row: 
 #     for mat in types_level3:
-#         da_x.sel(material=mat, Region=region).plot(ax=axes[2, i], label=mat, color=dict_materials_colors[mat])
+#         da_x.sel(material=mat, Region=region).plot(ax=axes[2, i], label=mat, color=DICT_MATERIALS_COLORS[mat])
 #     axes[2, i].set_title(f"{region}")
 #     axes[2, i].set_xlabel("Time")
 #     axes[2, i].legend(loc ='upper left')
@@ -1118,7 +1119,7 @@ data_plot = data_all.sel(time=slice(1971, None)).pint.to("t") # only from 1971 o
 # Top row: Level 1 materials
 for mat in types_level1:
     if mat in data_plot.material.values:
-        data_plot.sel(material=mat).plot(ax=axes[0], label=mat, color=dict_materials_colors[mat])
+        data_plot.sel(material=mat).plot(ax=axes[0], label=mat, color=DICT_MATERIALS_COLORS[mat])
 axes[0].grid(alpha=0.3, linestyle='--')
 axes[0].tick_params(axis='both', which='major', labelsize=s_legend)
 axes[0].set_xlabel(" ", fontsize=s_label)
@@ -1129,10 +1130,10 @@ axes[0].set_title(" ")
 # Middle row: Level 2 materials
 for mat in types_level2:
     if mat in data_plot.material.values:
-        data_plot.sel(material=mat).plot(ax=axes[1], label=mat, color=dict_materials_colors[mat])
+        data_plot.sel(material=mat).plot(ax=axes[1], label=mat, color=DICT_MATERIALS_COLORS[mat])
 
 axes[1].scatter(df_iea_cu_aps.index, df_iea_cu_aps['Gen_solar']+df_iea_cu_aps['Gen_wind']+df_iea_cu_aps['Gen_other'], 
-                label=f"{df_iea_cu_aps.name}"+"\nclean en.gen.", s=10, edgecolors=dict_materials_colors['Cu'], facecolors='none')
+                label=f"{df_iea_cu_aps.name}"+"\nclean en.gen.", s=10, edgecolors=DICT_MATERIALS_COLORS['Cu'], facecolors='none')
 
 axes[1].grid(alpha=0.3, linestyle='--')
 axes[1].tick_params(axis='both', which='major', labelsize=s_legend)
@@ -1144,10 +1145,10 @@ axes[1].set_title(" ")
 # Bottom row: Level 3 materials
 for mat in types_level3:
     if mat in data_plot.material.values:
-        data_plot.sel(material=mat).plot(ax=axes[2], label=mat, color=dict_materials_colors[mat])
+        data_plot.sel(material=mat).plot(ax=axes[2], label=mat, color=DICT_MATERIALS_COLORS[mat])
 
 axes[2].scatter(df_iea_ni_aps.index, df_iea_ni_aps['Gen_solar']+df_iea_ni_aps['Gen_wind']+df_iea_ni_aps['Gen_other'], 
-                label=f"{df_iea_ni_aps.name}"+"\nclean en.gen.", s=10, edgecolors=dict_materials_colors['Ni'], facecolors='none')
+                label=f"{df_iea_ni_aps.name}"+"\nclean en.gen.", s=10, edgecolors=DICT_MATERIALS_COLORS['Ni'], facecolors='none')
 
 axes[2].grid(alpha=0.3, linestyle='--')
 axes[2].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
@@ -1202,7 +1203,7 @@ for i, region in enumerate(regions):  # regions now has length 3
     # Top row: Types 1–15
     for t in techs_upper:
         data_plot = data_all.sel(Type=t, Region=region)
-        color, ls = dict_gentech_styles.get(t, ('black', '-'))
+        color, ls = DICT_GENTECH_STYLES.get(t, ('black', '-'))
         axes[0, col].plot(data_plot.time, data_plot.values, label=t, color=color, linestyle=ls, linewidth=linewidth)
     axes[0, col].set_title(f"{region}", fontsize=15)
     axes[0, col].grid(alpha=0.3, linestyle='--')
@@ -1212,7 +1213,7 @@ for i, region in enumerate(regions):  # regions now has length 3
     # Bottom row: Types 16–30
     for t in techs_lower:
         data_plot = data_all.sel(Type=t, Region=region)
-        color, ls = dict_gentech_styles.get(t, ('black', '-'))
+        color, ls = DICT_GENTECH_STYLES.get(t, ('black', '-'))
         axes[1, col].plot(data_plot.time, data_plot.values, label=t, color=color, linestyle=ls, linewidth=linewidth)
     axes[1, col].grid(alpha=0.3, linestyle='--')
     axes[1, col].tick_params(axis='both', which='major', labelsize=s_legend)
@@ -1265,7 +1266,7 @@ axes[0].set_title('Sum over Type and Region')
 # First subplot: data_all_1 (summed over Region, still over Type and time likely)
 for t in data_all_1.Type.values:
     data_plot = data_all_1.sel(Type=t)
-    color, ls = dict_gentech_styles.get(t, ('black', '-'))
+    color, ls = DICT_GENTECH_STYLES.get(t, ('black', '-'))
     axes[1].plot(data_plot.time, data_plot.values, label=t, color=color, linestyle=ls, linewidth=linewidth)
     axes[1].grid(alpha=0.3, linestyle='--')
     axes[1].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
@@ -1311,7 +1312,7 @@ for i, region in enumerate(regions):
     # Top row: Level 1 materials
     for mat in types_level1:
         if (region in data_plot.Region.values) and (mat in data_plot.material.values):
-            data_plot.sel(material=mat, Region=region).plot(ax=axes[0, i], label=mat, color=dict_materials_colors[mat], linewidth=linewidth)
+            data_plot.sel(material=mat, Region=region).plot(ax=axes[0, i], label=mat, color=DICT_MATERIALS_COLORS[mat], linewidth=linewidth)
     axes[0, i].set_title(f"{region}")
     axes[0, i].set_xlabel(" ")
     axes[0, i].set_ylabel(" ")
@@ -1323,7 +1324,7 @@ for i, region in enumerate(regions):
     # Middle row: Level 2 materials
     for mat in types_level2:
         if (region in data_plot.Region.values) and (mat in data_plot.material.values):
-            data_plot.sel(material=mat, Region=region).plot(ax=axes[1, i], label=mat, color=dict_materials_colors[mat], linewidth=linewidth)
+            data_plot.sel(material=mat, Region=region).plot(ax=axes[1, i], label=mat, color=DICT_MATERIALS_COLORS[mat], linewidth=linewidth)
     axes[1, i].set_title(f" ")
     axes[1, i].set_xlabel(" ")
     axes[1, i].set_ylabel(" ")
@@ -1335,7 +1336,7 @@ for i, region in enumerate(regions):
     # Bottom row: Level 3 materials
     for mat in types_level3:
         if (region in data_plot.Region.values) and (mat in data_plot.material.values):
-            data_plot.sel(material=mat, Region=region).plot(ax=axes[2, i], label=mat, color=dict_materials_colors[mat], linewidth=linewidth)
+            data_plot.sel(material=mat, Region=region).plot(ax=axes[2, i], label=mat, color=DICT_MATERIALS_COLORS[mat], linewidth=linewidth)
     axes[2, i].set_title(f" ")
     axes[2, i].set_ylabel(" ")
     axes[2, i].set_xlabel("Time", fontsize=s_label)
@@ -1377,7 +1378,7 @@ data_plot = data_all.sel(time=slice(1971, None)).pint.to("t") # only from 1971 o
 # Top row: Level 1 materials
 for mat in types_level1:
     if mat in data_plot.material.values:
-        data_plot.sel(material=mat).plot(ax=axes[0], label=mat, color=dict_materials_colors[mat])
+        data_plot.sel(material=mat).plot(ax=axes[0], label=mat, color=DICT_MATERIALS_COLORS[mat])
 axes[0].grid(alpha=0.3, linestyle='--')
 axes[0].tick_params(axis='both', which='major', labelsize=s_legend)
 axes[0].set_xlabel(" ", fontsize=s_label)
@@ -1388,7 +1389,7 @@ axes[0].set_title(" ")
 # Middle row: Level 2 materials
 for mat in types_level2:
     if mat in data_plot.material.values:
-        data_plot.sel(material=mat).plot(ax=axes[1], label=mat, color=dict_materials_colors[mat])
+        data_plot.sel(material=mat).plot(ax=axes[1], label=mat, color=DICT_MATERIALS_COLORS[mat])
 axes[1].grid(alpha=0.3, linestyle='--')
 axes[1].tick_params(axis='both', which='major', labelsize=s_legend)
 axes[1].set_xlabel(" ", fontsize=s_label)
@@ -1399,7 +1400,7 @@ axes[1].set_title(" ")
 # Bottom row: Level 3 materials
 for mat in types_level3:
     if mat in data_plot.material.values:
-        data_plot.sel(material=mat).plot(ax=axes[2], label=mat, color=dict_materials_colors[mat])
+        data_plot.sel(material=mat).plot(ax=axes[2], label=mat, color=DICT_MATERIALS_COLORS[mat])
 axes[2].grid(alpha=0.3, linestyle='--')
 axes[2].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
 axes[2].tick_params(axis='both', which='major', labelsize=s_legend)
@@ -1848,7 +1849,7 @@ storage_lifetime = pd.read_csv(path_external_data_standard / 'storage_lifetime.c
 
 kilometrage = pd.read_csv(path_external_data_scenario / 'kilometrage.csv', index_col='t')   #annual car mileage in kms/yr, based  mostly  on  Pauliuk  et  al.  (2012a)
 
-# material compositions (storage)
+# material compositions (storage) in wt%
 storage_materials = pd.read_csv(path_external_data_standard / 'storage_materials_dynamic.csv',index_col=[0,1]).transpose()  # wt% of total battery weight for various materials, total battery weight is given by the density file above
 
 # Hydro-dam power capacity (also MW) within 5 regions reported by the IHA (international Hydropwer Association)
@@ -1882,14 +1883,17 @@ gcap_data = gcap_data.iloc[:, :26]
 
 
 
-#----------------------------------------------------------------------------------------------------------
-###########################################################################################################
-#%% 2.2) Prepare general variables
-###########################################################################################################
-#----------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------
+# ##########################################################################################################
+# %% 2.2) Prepare general variables
+# ##########################################################################################################
+# ----------------------------------------------------------------------------------------------------------
 
 # Calculations used in both 'vehicle battery storage' and 'other storage'
-
+YEAR_FIRST = 1907 # first use of pumped storage was in 1907 at the Engeweiher pumped storage facility near Schaffhausen, Switzerland (Mitali et al. 2022)
+YEAR_START = 1971
+YEAR_END = 2060
+YEAR_OUT = 2060
 
 ##################
 # Interpolations #
@@ -1935,7 +1939,7 @@ for year in range(2030+1,YEAR_OUT+1):
     row.index = [year]
     storage_density_interpol = pd.concat([storage_density_interpol, row])
 # assumed fixed energy densities before 2018
-for year in reversed(range(YEAR_SWITCH,storage_start)):
+for year in reversed(range(YEAR_FIRST_GRID,storage_start)): # was YEAR_SWITCH, storage_start
     # storage_density_interpol = storage_density_interpol.append(pd.Series(storage_density_interpol.loc[storage_density_interpol.first_valid_index()], name=year)).sort_index(axis=0)
     row = storage_density_interpol.loc[[storage_density_interpol.first_valid_index()]]
     row.index = [year]
@@ -2013,6 +2017,9 @@ for year in range(2050+1,YEAR_OUT+1):
     row = pd.DataFrame([storage_market_share.loc[storage_market_share.last_valid_index()]])
     storage_market_share.loc[year] = row.iloc[0]
 
+# total = storage_market_share.sum(axis=1)
+region_list = list(kilometrage.columns.values)   
+storage.columns = region_list
 
 #----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
@@ -2050,7 +2057,6 @@ PHEV_share.columns = region_list
 BEV_share.columns = region_list
 passengerkms.columns = region_list
 loadfactor.columns = region_list
-storage.columns = region_list
 
 
 
@@ -2077,7 +2083,7 @@ vehicles_EV = vehicles_PHEV + vehicles_BEV
 
 #First we calculate the share of the inflow using only a few of the technologies in the storage market share
 #The selection represents only the batteries that are suitable for EV & mobile applications
-EV_battery_list = ['NiMH', 'LMO', 'NMC', 'NCA', 'LFP', 'Lithium Sulfur', 'Lithium Ceramic ', 'Lithium-air']
+EV_battery_list = ['NiMH', 'LMO', 'NMC', 'NCA', 'LFP', 'Lithium Sulfur', 'Lithium Ceramic', 'Lithium-air']
 #normalize the selection of market shares, so that total market share is 1 again (taking the relative share in the selected battery techs)
 market_share_EVs = pd.DataFrame().reindex_like(storage_market_share[EV_battery_list])
 
@@ -2093,69 +2099,69 @@ test = market_share_EVs.sum(axis=1) # -> market share sums to 1 for each year
 ###########################################################################################################
 
 
-ureg = pint.UnitRegistry(force_ndarray_like=True)
-# Define the units for each dimension
-unit_mapping = {
-    'time': ureg.year,
-    'year': ureg.year,
-    'Year': ureg.year,
-    'kg': ureg.kilogram,
-    'yr': ureg.year,
-    '%': ureg.percent,
-    't': ureg.tonne,
-    'MW': ureg.megawatt, #added
-    'GW': ureg.gigawatt, #added
-}
+# ureg = pint.UnitRegistry(force_ndarray_like=True)
+# # Define the units for each dimension
+# unit_mapping = {
+#     'time': ureg.year,
+#     'year': ureg.year,
+#     'Year': ureg.year,
+#     'kg': ureg.kilogram,
+#     'yr': ureg.year,
+#     '%': ureg.percent,
+#     't': ureg.tonne,
+#     'MW': ureg.megawatt, #added
+#     'GW': ureg.gigawatt, #added
+# }
 
-# Conversion table for all coordinates, to be removed/adapted after input tables are fixed.
-conversion_table = {
-    "gcap_stock": (["Time"], ["Type", "Region"],),
-    "gcap_types_materials": (["Cohort"], ["Type", "material"],)
-    # "gcap_materials_interpol": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]})
-}
+# # Conversion table for all coordinates, to be removed/adapted after input tables are fixed.
+# conversion_table = {
+#     "gcap_stock": (["Time"], ["Type", "Region"],),
+#     "gcap_types_materials": (["Cohort"], ["Type", "material"],)
+#     # "gcap_materials_interpol": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]})
+# }
+
+# # results_dict = {
+# #         'total_nr_vehicles_simple': total_nr_vehicles_simple,
+# #         'material_fractions_simple': material_fractions_simple,
+# #         'material_fractions_typical': material_fractions_typical,
+# #         'vehicle_weights_simple': vehicle_weights_simple,
+# #         'vehicle_weights_typical': vehicle_weights_typical,
+# #         'lifetimes': lifetimes_vehicles,
+# #         'battery_weights_typical': battery_weights_typical,
+# #         'battery_materials': battery_materials,
+# #         'battery_shares': battery_shares,
+# #         'weight_boats': weight_boats,
+# #         'vehicle_shares_typical': vehicle_shares_typical
+# #     }
 
 # results_dict = {
-#         'total_nr_vehicles_simple': total_nr_vehicles_simple,
-#         'material_fractions_simple': material_fractions_simple,
-#         'material_fractions_typical': material_fractions_typical,
-#         'vehicle_weights_simple': vehicle_weights_simple,
-#         'vehicle_weights_typical': vehicle_weights_typical,
-#         'lifetimes': lifetimes_vehicles,
-#         'battery_weights_typical': battery_weights_typical,
-#         'battery_materials': battery_materials,
-#         'battery_shares': battery_shares,
-#         'weight_boats': weight_boats,
-#         'vehicle_shares_typical': vehicle_shares_typical
-#     }
+#         'gcap_stock': gcap_stock,
+#         'gcap_types_materials': gcap_types_materials,
+#         'gcap_lifetime_distr': gcap_lifetime_distr,
+# }
 
-results_dict = {
-        'gcap_stock': gcap_stock,
-        'gcap_types_materials': gcap_types_materials,
-        'gcap_lifetime_distr': gcap_lifetime_distr,
-}
-
-# df = gcap_materials_interpol.copy()
+# # df = gcap_materials_interpol.copy()
 
 
-# Convert the DataFrames to xarray Datasets and apply units
-preprocessing_results_xarray = {}
+# # Convert the DataFrames to xarray Datasets and apply units
+# preprocessing_results_xarray = {}
 
 
-for df_name, df in results_dict.items():
-    if df_name in conversion_table:
-        data_xar_dataset = pandas_to_xarray(df, unit_mapping)
-        data_xarray = dataset_to_array(data_xar_dataset, *conversion_table[df_name])
-    else:
-        # lifetimes_vehicles does not need to be converted in the same way.
-        data_xarray = pandas_to_xarray(df, unit_mapping)
-    preprocessing_results_xarray[df_name] = data_xarray
+# for df_name, df in results_dict.items():
+#     if df_name in conversion_table:
+#         data_xar_dataset = pandas_to_xarray(df, unit_mapping)
+#         data_xarray = dataset_to_array(data_xar_dataset, *conversion_table[df_name])
+#     else:
+#         # lifetimes_vehicles does not need to be converted in the same way.
+#         data_xarray = pandas_to_xarray(df, unit_mapping)
+#     preprocessing_results_xarray[df_name] = data_xarray
 
 
 
-preprocessing_results_xarray["lifetimes"] = convert_life_time_vehicles(preprocessing_results_xarray["gcap_lifetime_distr"])
-preprocessing_results_xarray["stocks"] = preprocessing_results_xarray.pop("gcap_stock")
-preprocessing_results_xarray["material_intensities"] = preprocessing_results_xarray.pop("gcap_types_materials")
-# preprocessing_results_xarray["shares"] = preprocessing_results_xarray.pop("vehicle_shares")
+# preprocessing_results_xarray["lifetimes"] = convert_life_time_vehicles(preprocessing_results_xarray["gcap_lifetime_distr"])
+# preprocessing_results_xarray["stocks"] = preprocessing_results_xarray.pop("gcap_stock")
+# preprocessing_results_xarray["material_intensities"] = preprocessing_results_xarray.pop("gcap_types_materials")
+# # preprocessing_results_xarray["shares"] = preprocessing_results_xarray.pop("vehicle_shares")
 
 
 
@@ -2164,30 +2170,188 @@ preprocessing_results_xarray["material_intensities"] = preprocessing_results_xar
 #%%% 2.3.2) Stock Modelling
 ###########################################################################################################
 # TODO: move this to electricity.py
+import scipy
+
+def stock_share_calc(stock, market_share, init_tech, techlist, storage_lifetime_interpol):
+
+    # Here, we define the market share of the stock based on a pre-calculation with several steps: 
+    # 1) use Global total stock development, the market shares of the inflow and technology specific lifetimes to derive 
+    # the shares in the stock, assuming that pre-1990 100% of the stock was determined by Lead-acid batteries. 
+    # 2) Then, apply the global stock-related market shares to disaggregate the stock to technologies in all regions 
+    # (assuming that battery markets are global markets)
+    # As the development of the total stock of dedicated electricity storage is known, but we don't know the inflow, 
+    # and only the market share related to the inflow we need to calculate the inflow first. 
+
+    # first we define the survival of the 1990 stock (assumed 100% Lead-acid, for each cohort in 1990)
+    pre_time = 20                           # the years required for the pre-calculation of the Lead-acid stock
+    cohorts = YEAR_OUT-YEAR_SWITCH            # nr. of cohorts in the stock calculations (after YEAR_SWITCH)
+    timeframe = np.arange(0,cohorts+1)      # timeframe for the pre-calcluation
+    pre_year_list = list(range(YEAR_SWITCH-pre_time,YEAR_SWITCH+1))   # list of years to pre-calculate the Lead-acid stock for
+
+    #define new dataframes
+    stock_cohorts = pd.DataFrame(index=pd.MultiIndex.from_product([stock.columns,range(YEAR_SWITCH,YEAR_OUT+1)]), columns=pd.MultiIndex.from_product([techlist, range(YEAR_SWITCH-pre_time,YEAR_END+1)])) # year, by year, by tech
+    inflow_by_tech = pd.DataFrame(index=pd.MultiIndex.from_product([stock.columns,range(YEAR_SWITCH,YEAR_OUT+1)]), columns=techlist)
+    outflow_cohorts = pd.DataFrame(index=pd.MultiIndex.from_product([stock.columns,range(YEAR_SWITCH,YEAR_OUT+1)]), columns=pd.MultiIndex.from_product([techlist, range(YEAR_SWITCH-pre_time,YEAR_END+1)])) # year by year by tech
+    
+    #specify lifetime & other settings
+    stdev_mult = 0.214
+    mean = storage_lifetime_interpol.loc[YEAR_SWITCH,init_tech] # select the mean lifetime for Lead-acid batteries in 1990
+    stdev = mean * stdev_mult               # we use thesame standard-deviation as for generation technologies, given that these apply to 'energy systems' more generally
+    survival_init = scipy.stats.foldnorm.sf(timeframe, mean/stdev, 0, scale=stdev)
+    techlist_new = techlist
+    techlist_new.remove(init_tech)          # techlist without Lead-acid (or other init_tech)
+    
+    # actual inflow & outflow calculations, this bit takes long!
+    # loop over regions, technologies and years to calculate the inflow, stock & outflow of storage technologies, given their share of the inflow.
+    for region in stock.columns:
+        
+        # pre-calculate the stock by cohort of the initial stock of Lead-acid
+        multiplier_pre = stock.loc[YEAR_SWITCH,region]/survival_init.sum()   # the stock is subdivided by the previous cohorts according to the survival function (only allowed when assuming steady stock inflow) 
+        
+        #pre-calculate the stock as lists (for efficiency)
+        initial_stock_years = [np.flip(survival_init[0:pre_time+1]) * multiplier_pre]
+            
+        for year in range(1, (YEAR_OUT-YEAR_SWITCH)+1):      # then fill the columns with the remaining fractions
+            initial_stock_years.append(initial_stock_years[0] * survival_init[year])
+    
+        stock_cohorts.loc[idx[region,:],idx[init_tech, list(range(YEAR_SWITCH-pre_time,YEAR_SWITCH+1))]] = initial_stock_years       # fill the stock dataframe according to the pre-calculated stock 
+        outflow_cohorts.loc[idx[region,:],idx[init_tech, list(range(YEAR_SWITCH-pre_time,YEAR_SWITCH+1))]] = stock_cohorts.loc[idx[region,:],idx[init_tech, list(range(YEAR_SWITCH-pre_time,YEAR_SWITCH+1))]].shift(1, axis=0) - stock_cohorts.loc[idx[region,:],idx[init_tech, list(range(YEAR_SWITCH-pre_time,YEAR_SWITCH+1))]]
+    
+        # set the other stock cohorts to zero
+        stock_cohorts.loc[idx[region,:],idx[techlist_new, pre_year_list]] = 0
+        outflow_cohorts.loc[idx[region,:],idx[techlist_new, pre_year_list]] = 0
+        inflow_by_tech.loc[idx[region, YEAR_SWITCH], techlist_new] = 0                                                   # inflow of other technologies in 1990 = 0
+        
+        # except for outflow and inflow in 1990 (YEAR_SWITCH), which can be pre-calculated for Deep-cycle Lead Acid (@ steady state inflow, inflow = outflow = stock/lifetime)
+        outflow_cohorts.loc[idx[region, YEAR_SWITCH], idx[init_tech,:]] = outflow_cohorts.loc[idx[region, YEAR_SWITCH+1], idx[init_tech,:]]     # given the assumption of steady state inflow (pre YEAR_SWITCH), we can determine that the outflow is the same in switchyear as in switchyear+1                                        
+        inflow_by_tech.loc[idx[region, YEAR_SWITCH], init_tech] =   stock.loc[YEAR_SWITCH,region]/mean                                          # given the assumption of steady state inflow (pre YEAR_SWITCH), we can determine the inflow to be the same as the outflow at a value of stock/avg. lifetime                                                          
+        
+        # From YEAR_SWITCH onwards, define a stock-driven model with a known market share (by tech) of the new inflow 
+        for year in range(YEAR_SWITCH+1,YEAR_OUT+1):
+            
+            # calculate the remaining stock as the sum of all cohorts in a year, for each technology
+            remaining_stock = 0 # reset remaining stock
+            for tech in inflow_by_tech.columns:
+                remaining_stock += stock_cohorts.loc[idx[region,year],idx[tech,:]].sum()
+               
+            # total inflow required (= required stock - remaining stock);    
+            inflow = max(0, stock.loc[year, region] - remaining_stock)   # max 0 avoids negative inflow, but allows for idle stock surplus in case the size of the required stock is declining more rapidly than it's natural decay
+            
+            stock_cohorts_list = []
+                   
+            # enter the new inflow & apply the survival rate, which is different for each technology, so calculate the surviving fraction in stock for each technology  
+            for tech in inflow_by_tech.columns:
+                # apply the known market share to the inflow
+                inflow_by_tech.loc[idx[region,year],tech] = inflow * market_share.loc[year,tech]
+                # first calculate the  (based on lifetimes specific to the year of inflow)
+                survival = scipy.stats.foldnorm.sf(np.arange(0,(YEAR_OUT+1)-year), storage_lifetime_interpol.loc[year,tech]/(storage_lifetime_interpol.loc[year,tech]*0.2), 0, scale=storage_lifetime_interpol.loc[year,tech]*0.2)           
+                # then apply the survival to the inflow in current cohort, both the inflow & the survival are entered into the stock_cohort dataframe in 1 step
+                stock_cohorts_list.append(inflow_by_tech.loc[idx[region,year],tech]  *  survival)
+                
+            stock_cohorts.loc[idx[region,list(range(year,YEAR_OUT+1))],idx[:,year]] = list(map(list, zip(*stock_cohorts_list)))        
+        
+    # separate the outflow (by cohort) calculation (separate shift calculation for each region & tech is MUCH more efficient than including it in additional loop over years)
+    # calculate the outflow by cohort based on the stock by cohort that was just calculated
+    for region in stock.columns:
+        for tech in inflow_by_tech.columns:
+            outflow_cohorts.loc[idx[region,:],idx[tech,:]] = stock_cohorts.loc[idx[region,:],idx[tech,:]].shift(1,axis=0) - stock_cohorts.loc[idx[region,:],idx[tech,:]]
+
+    return inflow_by_tech, stock_cohorts, outflow_cohorts
+
+import time
+
+start_time = time.time()
 
 # then we use that market share in combination with the stock developments to derive the stock share 
 # Here we use the vehcile stock (number of cars) as a proxy for the development of the battery stock (given that we're calculating the actual battery stock still, and just need to account for the dynamics of purchases to derive te stock share here) 
-EV_inflow_by_tech, EV_stock_cohorts, EV_outflow_cohorts = stock_share_calc(vehicles_EV, market_share_EVs, 'NiMH', ['NiMH', 'LMO', 'NMC', 'NCA', 'LFP', 'Lithium Sulfur', 'Lithium Ceramic ', 'Lithium-air'])
+EV_inflow_by_tech, EV_stock_cohorts, EV_outflow_cohorts = stock_share_calc(vehicles_EV, market_share_EVs, 'NiMH', ['NiMH', 'LMO', 'NMC', 'NCA', 'LFP', 'Lithium Sulfur', 'Lithium Ceramic ', 'Lithium-air'], storage_lifetime_interpol)
+# takes ~ 1-2 min to run
+end_time = time.time()
+print(f"Execution time: {end_time - start_time:.4f} seconds")
 
 
+###########################################################################################################
+#%%% 2.3.3) Postprocess EV
+###########################################################################################################
+#
 
+EV_stock =  EV_stock_cohorts.T.groupby(level=0).sum().T   # sum(level) is and groupby(axis) will be deprecated -> transose first with .T (instead of specifying axis), then groupby level, then sum. To get intial shape back, transpose again with .T
+EV_storage_stock_abs  = EV_stock.groupby(level=1).sum()   # sum over all regions to get the global share of the stock
+EV_storage_inflow_abs = EV_inflow_by_tech.groupby(level=1).sum()  # sum over all regions to get the global share of the inflow
 
+# Calc. global share of different battery technologies (stock & inflow)
+EV_storage_stock_share  = pd.DataFrame(index=EV_storage_stock_abs.index,  columns=EV_storage_stock_abs.columns)
+EV_storage_inflow_share = pd.DataFrame(index=EV_storage_inflow_abs.index, columns=EV_storage_inflow_abs.columns)
+for tech in EV_storage_stock_abs.columns:
+    EV_storage_stock_share.loc[:,tech]  = EV_storage_stock_abs.loc[:,tech].div(EV_storage_stock_abs.sum(axis=1))
+    EV_storage_inflow_share.loc[:,tech] = EV_storage_inflow_abs.loc[:,tech].div(EV_storage_inflow_abs.sum(axis=1))
 
+# EV_storage_stock_share.to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test'  / 'battery_share_stock.csv') # Average global car battery share (in stock) is exported to be used in paper on vehicles
+# EV_storage_inflow_share.to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test'  / 'battery_share_inflow.csv') # Average global car battery share (in inflow) is exported to be used in paper on vehicles
+  
+#The global share of the battery technologies in stock is then used to derive the (weihgted) average density (kg/kWh)
+weighted_average_density_stock  = EV_storage_stock_share.mul(storage_density_interpol[EV_battery_list]).sum(axis=1)
+weighted_average_density_inflow = EV_storage_inflow_share.mul(storage_density_interpol[EV_battery_list]).sum(axis=1)
+
+# weighted_average_density_stock.loc[:YEAR_OUT].to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test'  / 'ev_battery_density_stock.csv')        # Average car battery density (in stock) is exported to be used in paper on vehicles
+# weighted_average_density_inflow.loc[:YEAR_OUT].to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test'  / 'ev_battery_density_inflow.csv')      # Average car battery density (in inflow) is exported to be used in paper on vehicles
+
+# assumed fixed energy densities before 1990 (=NiMH)
+add = pd.Series(weighted_average_density_stock[weighted_average_density_stock.first_valid_index()], index=list(range(YEAR_START,1990)))
+weighted_average_density = pd.concat([weighted_average_density_stock, add]).sort_index(axis=0)
+
+# With a pre-determined battery capacity in 2018, we assume an increasing capacity (as an effect of an increased density) based on a fixed weight assumption
+BEV_dynamic_capacity = (weighted_average_density[2018] * BEV_CAPACITY_CURRENT) / weighted_average_density
+PHEV_dynamic_capacity = (weighted_average_density[2018] * PHEV_CAPACITY_CURRENT) / weighted_average_density
+
+# Define the V2G settings over time (assuming slow adoption to the maximum usable capacity)
+year_v2g_start = 2025-1 # -1 leads to usable capacity in 2025
+year_full_capacity = 2040
+v2g_usable = pd.Series(index=list(range(YEAR_START,YEAR_OUT+1)), name='years')    #fraction of the cars ready and willing to use v2g
+for year in list(range(YEAR_START,YEAR_OUT+1)):
+    if (year <= year_v2g_start):
+        v2g_usable[year] = 0
+    elif (year >= year_full_capacity):
+        v2g_usable[year] = 1
+v2g_usable = v2g_usable.interpolate()
+
+#total capacity per car connected to v2g (in kWh)
+max_capacity_BEV = v2g_usable * capacity_usable_BEV  
+max_capacity_PHEV = v2g_usable * capacity_usable_PHEV   
+
+#usable capacity per car connected to v2g (in kWh)
+usable_capacity_BEV = max_capacity_BEV.mul(BEV_dynamic_capacity[:YEAR_OUT])     
+usable_capacity_PHEV = max_capacity_PHEV.mul(PHEV_dynamic_capacity[:YEAR_OUT])  
+
+# Vehicle storage in MWh
+storage_BEV = storage_PHEV = pd.DataFrame().reindex_like(vehicles_BEV)
+for region in region_list:
+    storage_PHEV[region] = vehicles_PHEV[region].mul(usable_capacity_PHEV) /1000
+    storage_BEV[region] = vehicles_BEV[region].mul(usable_capacity_BEV) /1000
+
+storage_vehicles = storage_BEV + storage_PHEV
 
 
 ###########################################################################################################
 #%% 2.4) Hydro Power & Other Storage
 ###########################################################################################################
 
+# OPTION: NO V2G ---------------------------------------------------------------
+storage_vehicles = pd.DataFrame(0, index=storage.index, columns=storage.columns)  # set vehicle storage to zero when not using V2G
+storage_vehicles = storage_vehicles.loc[:YEAR_OUT]
+#-------------------------------------------------------------------------------
+
 # Take the TIMER Hydro-dam capacity (MW) & compare it to Pumped hydro capacity (MW) projections from the International Hydropower Association
 
 Gcap_hydro = gcap_data[['time','DIM_1', 7]].pivot_table(index='time', columns='DIM_1')   # IMAGE-TIMER Hydro dam capacity (power, in MW)
 Gcap_hydro = Gcap_hydro.iloc[:, :26]
+region_list = list(kilometrage.columns.values)  # get a list with region names
 Gcap_hydro.columns = region_list
 Gcap_hydro = Gcap_hydro.loc[:YEAR_OUT]
 
 #storage capacity in MW (power capacity), to compare it to Pumped hydro storage projections (also given in MW, power capacity)              
-storage_power.drop(storage_power.iloc[:, -2:], inplace = True, axis = 1)    
+# storage_power.drop(storage_power.iloc[:, -2:], inplace = True, axis = 1) # error prone
+storage_power = storage_power.iloc[:, :26]  
 storage_power.columns = region_list
 storage_power = storage_power.loc[:YEAR_OUT]
 
@@ -2236,18 +2400,241 @@ storage_out_phs = pd.concat([phs_storage], keys=['phs'], names=['type'])
 storage_out_evs = pd.concat([evs_storage], keys=['evs'], names=['type']) 
 storage_out_oth = pd.concat([oth_storage], keys=['oth'], names=['type']) 
 storage_out = pd.concat([storage_out_phs, storage_out_evs, storage_out_oth])
-storage_out.to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test'  / 'storage_by_type_MWh.csv')        # in MWh
+# storage_out.to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test'  / 'storage_by_type_MWh.csv')        # in MWh
 
 # derive inflow & outflow (in MWh) for PHS, for later use in the material calculations 
 PHS_kg_perkWh = 26.8   # kg per kWh storage capacity (as weight addition to existing hydro plants to make them pumped) 
-phs_storage_stock_tail   = stock_tail(phs_storage.astype(float), YEAR_OUT)
+phs_storage_stock_tail = stock_tail(phs_storage.astype(float), YEAR_OUT)
 storage_lifetime_PHS = storage_lifetime['PHS'].reindex(list(range(YEAR_FIRST_GRID,YEAR_OUT+1)), axis=0).interpolate(limit_direction='both')
 
+#%%%% TESTS TESTS --------------------------------------------------------
+
+# Test PHS interpolation pre-1971
+regions_to_plot = ["China", "Brazil", "US"]  # adjust to your available columns
+df = phs_storage_stock_tail.loc[:1980,:]  # replace with your actual variable
+fig, ax = plt.subplots(figsize=(10, 6))
+for region in regions_to_plot:
+    if region in df.columns:
+        ax.plot(df.index[:-1], df[region].iloc[:-1], label=region)  # up to before last timestep
+        # ax.plot(phs_storage.index[:-1], phs_storage[region].iloc[:-1], label=region)
+ax.set_xlabel("Year")
+ax.set_ylabel("Value")
+ax.set_title("Comparison of Regions")
+ax.legend()
+ax.grid(alpha=0.3, linestyle="--")
+plt.show()
+
+
+# Storage tier comparisons
+region_colors = {
+    "China": "blue",
+    "Brazil": "green",
+    "Mexico": "orange"
+}
+scenario_linestyles = {
+    "PHS": "-",
+    "V2G": "--",
+    "other storage": ":"
+}
+
+# Plot 1 absolute----------------------------
+dfs = [phs_storage, evs_storage, oth_storage]
+names = ["PHS", "V2G", "other storage"]  # labels for legend
+
+regions_to_plot = ["China", "Brazil", "Mexico"]
+
+fig, ax = plt.subplots(figsize=(10, 6))
+for df, name in zip(dfs, names):
+    # Ensure numeric (your data is object type)
+    df = df.apply(pd.to_numeric, errors="coerce")
+    df = df.iloc[:-1]  # drop last timestep
+    
+    for region in regions_to_plot:
+        if region in df.columns:
+            ax.plot(df.index, df[region],
+                    label=f"{region} - {name}",
+                    color=region_colors[region],
+                    linestyle=scenario_linestyles[name])
+
+ax.set_xlabel("Year")
+ax.set_ylabel("Value")
+ax.set_title("Comparison of Regions Across Scenarios")
+ax.legend()
+ax.grid(alpha=0.3, linestyle="--")
+plt.legend()
+plt.show()
+
+# Plot 1 relative----------------------------
+dfs = [phs_storage_fraction, evs_storage_fraction, oth_storage_fraction]
+names = ["PHS", "V2G", "other storage"]  # labels for legend
+
+regions_to_plot = ["China", "Brazil", "Mexico"]
+
+fig, ax = plt.subplots(figsize=(10, 6))
+for df, name in zip(dfs, names):
+    # Ensure numeric (your data is object type)
+    df = df.apply(pd.to_numeric, errors="coerce")
+    df = df.iloc[:-1]  # drop last timestep
+    
+    for region in regions_to_plot:
+        if region in df.columns:
+            ax.plot(df.index, df[region],
+                    label=f"{region} - {name}",
+                    color=region_colors[region],
+                    linestyle=scenario_linestyles[name])
+
+ax.set_xlabel("Year")
+ax.set_ylabel("Value")
+ax.set_title("Comparison of Regions Across Scenarios")
+ax.legend()
+ax.grid(alpha=0.3, linestyle="--")
+plt.legend()
+plt.show()
 
 ###########################################################################################################
 #%%% 2.4.1) Prep_data File
 ###########################################################################################################
 
+
+# PHS -----------------------------------------------------------------------------------------------------
+
+phs_stock = phs_storage_stock_tail.copy() #it was oth_storage.copy() Hä?
+
+# Bring dataframes into correct shape for the results_dict
+
+# stocks: years as index and regions as columns -> years as index and (technology, region) as columns
+# Current columns are regions
+regions = phs_stock.columns.tolist()
+
+# Create a MultiIndex with technology "PHS" for all columns
+multi_cols = pd.MultiIndex.from_tuples([("PHS", r) for r in regions], names=["technology", "region"])
+# Assign to the DataFrame
+phs_stock.columns = multi_cols
+
+
+# lifetimes
+df_mean = storage_lifetime_PHS.copy().to_frame()
+df_stdev = df_mean * STD_LIFETIMES_ELECTR
+df_mean.columns = [(col, 'mean') for col in df_mean.columns] # Rename columns to multi-level tuples
+df_stdev.columns = [(col, 'stdev') for col in df_stdev.columns]
+phs_lifetime_distr = pd.concat([df_mean, df_stdev], axis=1) # Concatenate along columns
+phs_lifetime_distr.index.name = 'Year'
+
+# MIs: (years, material) index and technologies as columns -> years as index and (technology, Material) as columns
+phs_materials = stor_materials_interpol.loc[idx[:,:],'PHS'].unstack() * PHS_kg_perkWh * 1000 # wt% * kg/kWh * 1000 kWh/MWh = kg/MWh
+# Current columns are materials
+materials = phs_materials.columns.tolist()
+# Create a MultiIndex with technology "PHS" for all columns
+multi_cols = pd.MultiIndex.from_tuples([("PHS", m) for m in materials], names=["technology", "material"])
+# Assign to the DataFrame
+phs_materials.columns = multi_cols
+
+
+# Conversion table for all coordinates, to be removed/adapted after input tables are fixed.
+conversion_table = {
+    "phs_stock": (["Time"], ["Type", "Region"],),
+    "phs_materials": (["Cohort"], ["Type", "material"],)
+    # "gcap_materials_interpol": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]})
+}
+
+results_dict = {
+        'phs_stock': phs_stock,
+        'phs_materials': phs_materials,
+        'phs_lifetime_distr': phs_lifetime_distr,
+}
+
+
+prep_data_phs = create_prep_data(results_dict, conversion_table, unit_mapping)
+prep_data_phs["stocks"] = prism.Q_(prep_data_phs["stocks"], "MWh")
+prep_data_phs["material_intensities"] = prism.Q_(prep_data_phs["material_intensities"], "kg/MWh")
+prep_data_phs["set_unit_flexible"] = prism.U_(prep_data_phs["stocks"]) # prism.U_ gives the unit back
+
+
+# Other storage--------------------------------------------------------------------------------------------
+
+oth_storage_stock = oth_storage.copy()
+
+# Bring dataframes into correct shape for the results_dict
+
+# stocks: (years, regions) index and technologies as columns -> years as index and (technology, region) as columns
+# Current columns are regions
+regions = oth_storage.columns.tolist()
+# stor_tech = list(storage_lifetime_interpol.columns)
+# Create a MultiIndex with technology "Other Storage" for all columns
+multi_cols = pd.MultiIndex.from_tuples([("Other Storage", r) for r in regions], names=["technology", "region"])
+# multi_cols = pd.MultiIndex.from_product([stor_tech, regions], names=["technology", "region"])
+# Assign to the DataFrame
+oth_storage_stock.columns = multi_cols
+
+
+# lifetimes
+df_mean = storage_lifetime_interpol.copy() #.to_frame()
+df_stdev = df_mean * STD_LIFETIMES_ELECTR
+df_mean.columns = [(col, 'mean') for col in df_mean.columns] # Rename columns to multi-level tuples
+df_stdev.columns = [(col, 'stdev') for col in df_stdev.columns]
+oth_storage_lifetime_distr = pd.concat([df_mean, df_stdev], axis=1) # Concatenate along columns
+oth_storage_lifetime_distr.index.name = 'Year'
+
+# MIs: (years, material) index and technologies as columns -> years as index and (technology, Material) as columns
+stor_tech = list(storage_lifetime_interpol.columns)
+# 2nd level of the MultiIndex are materials (1971,'Aluminium')
+oth_storage_materials = stor_materials_interpol.copy()
+oth_storage_materials.index.names = ["year", "material"]  # assign names
+oth_storage_materials = oth_storage_materials.reset_index(level=["year", "material"])
+# Pivot so we get (technology, material) as columns, years as index
+oth_storage_materials = oth_storage_materials.melt(id_vars=["year", "material"], var_name="technology", value_name="value")
+oth_storage_materials = oth_storage_materials.pivot_table(index="year", columns=["technology", "material"], values="value")
+# Ensure proper MultiIndex column names
+oth_storage_materials.columns = pd.MultiIndex.from_tuples(oth_storage_materials.columns, names=["technology", "material"])
+xr_oth_storage_materials = dataset_to_array(pandas_to_xarray(oth_storage_materials, unit_mapping), *(["Cohort"], ["Type", "material"],))
+xr_storage_density_interpol = dataset_to_array(pandas_to_xarray(storage_density_interpol, unit_mapping), *(["Cohort"], ["Type"],))
+oth_storage_materialintens = xr_oth_storage_materials * xr_storage_density_interpol
+
+
+
+# Conversion table for all coordinates, to be removed/adapted after input tables are fixed.
+# conversion_table = {
+#     "oth_storage_stock": (["Time"], ["Type", "Region"],),
+#     "oth_storage_materials": (["Cohort"], ["Type", "material"],), #SubType
+#     "oth_storage_shares": (["Cohort"], ["Type",]) #SubType
+# }
+conversion_table = {
+    "oth_storage_stock": (["Time"], ["SuperType", "Region"],),
+    "oth_storage_materials": (["Cohort"], ["Type", "material"],), #SubType
+    "oth_storage_shares": (["Cohort"], ["Type",]) #SubType
+}
+## "gcap_materials_interpol": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]})
+
+results_dict = {
+        'oth_storage_stock': oth_storage_stock,
+        'oth_storage_materials': oth_storage_materialintens.sel(Cohort=slice(1971, None)),
+        'oth_storage_lifetime_distr': oth_storage_lifetime_distr,
+        'oth_storage_shares': storage_market_share
+}
+
+
+prep_data_oth_storage = create_prep_data(results_dict, conversion_table, unit_mapping)
+prep_data_oth_storage["stocks"] = prism.Q_(prep_data_oth_storage["stocks"], "MWh")
+prep_data_oth_storage["material_intensities"] = prism.Q_(prep_data_oth_storage["material_intensities"], "kg/kWh")
+prep_data_oth_storage["shares"] = prism.Q_(prep_data_oth_storage["shares"], "share")
+prep_data_oth_storage["set_unit_flexible"] = prism.U_(prep_data_oth_storage["stocks"]) # prism.U_ gives the unit back
+
+
+# TESTS TESTS --------------------------------------------------------
+
+
+total = storage_market_share.sum(axis=1)
+df = storage_market_share
+plt.figure(figsize=(12, 8))
+for column in df.columns:
+    plt.plot(df.index, df[column], label=column, linewidth=2)
+plt.xlabel('Year', fontsize=12)
+plt.ylabel('Values', fontsize=12)
+plt.title('Technology Trends Over Time', fontsize=14, fontweight='bold')
+plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()
 
 
 ###########################################################################################################
@@ -2255,25 +2642,668 @@ storage_lifetime_PHS = storage_lifetime['PHS'].reindex(list(range(YEAR_FIRST_GRI
 ###########################################################################################################
 # TODO: move this to electricity.py
 
-
+# OLD OLD OLD ==========================================================================
 # Next step: stock modelling
 phs_storage_inflow, phs_storage_outflow, phs_storage_stock  = inflow_outflow(phs_storage_stock_tail, storage_lifetime_PHS, stor_materials_interpol.loc[idx[:,:],'PHS'].unstack() * PHS_kg_perkWh * 1000, 'PHS')    # PHS lifetime is fixed at 60 yrs anyway so, we simply select 1 value
 
-inflow_by_tech, stock_cohorts, outflow_cohorts = stock_share_calc(oth_storage, storage_market_share, 'Deep-cycle Lead-Acid', list(storage_lifetime_interpol.columns)) # run the function that calculates stock shares from total stock & inflow shares
+inflow_by_tech, stock_cohorts, outflow_cohorts = stock_share_calc(oth_storage, storage_market_share, 'Deep-cycle Lead-Acid', list(storage_lifetime_interpol.columns),storage_lifetime_interpol) # run the function that calculates stock shares from total stock & inflow shares
+# stock, market_share, init_tech, techlist, storage_lifetime_interpol
+
+
+# TESTS TESTS --------------------------------------------------------
+
+stock_cohorts.index.names = ["Region", "Time"]
+stock_cohorts.columns.names = ["Type", "Cohort"]
+df_stacked = stock_cohorts.stack([0, 1])  # stack the columns levels
+da = xr.DataArray(df_stacked) #convert to xarray
+da = da.unstack()  
+da = da.transpose("Time", "Region", "Type", "Cohort")
+
+c = 1992
+t=2000
+a_stocks = prep_data_oth_storage["stocks"].loc[t]
+a_shares = prep_data_oth_storage["shares"]
+knowledge_graph = create_electricity_graph()
+a_stock_diff = knowledge_graph.aggregate_sum(da.loc[t].sum("Cohort"), a_stocks.coords["Type"].values, dim="Type")
+a_inflow_tech = knowledge_graph.rebroadcast_xarray(a_stock_diff, da.coords["Type"].values, dim="Type", shares=a_shares.sel(Cohort=t))
+# this is working -> theoretically the SharesInflowStocks model should work as well?
+
+
+from imagematerials.survival import ScipySurvival, SurvivalMatrix
+a_lifetimes = prep_data_oth_storage["lifetimes"]
+survival = ScipySurvival(a_lifetimes, a_shares.coords["Type"], knowledge_graph=knowledge_graph) #self.stocks.coords["Type"],
+survival_matrix = SurvivalMatrix(survival)
+b_inflow_tech = xr.where(a_inflow_tech>0, a_inflow_tech/survival_matrix[t, c].drop("Cohort"), 0)
+a = a_inflow_tech/survival_matrix[t, c].drop("Cohort")
+
+a_MI = prep_data_oth_storage["material_intensities"]
+
+# REGION = prism.Dimension("Region")
+# aa = prism.Coords[REGION]
+
+# =======================================================================================
+
+
+
+# PHS =======================================================================================
+
+# # Define the complete timeline, including historic tail
+time_start = prep_data_phs["stocks"].coords["Time"].min().values
+complete_timeline = prism.Timeline(time_start, YEAR_END, 1)
+simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
+
+sec_electr_stor_phs = Sector("electr_stor_phs", prep_data_phs)
+
+main_model_factory_phs = ModelFactory(
+    sec_electr_stor_phs, complete_timeline
+    ).add(GenericStocks
+    ).add(MaterialIntensities
+    ).finish()
+
+main_model_factory_phs.simulate(simulation_timeline)
+list(main_model_factory_phs.electr_stor_phs)
+
+
+
+# Other Storage ==============================================================================
+from imagematerials.model import GenericMainModel, GenericStocks, SharesInflowStocks, Maintenance, GenericMaterials, MaterialIntensities #, MaterialIntensitiesTEST
+
+time_start = prep_data_oth_storage["stocks"].coords["Time"].min().values
+complete_timeline = prism.Timeline(time_start, YEAR_END, 1)
+simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
+
+sec_electr_stor_oth = Sector("electr_stor_oth", prep_data_oth_storage, check_coordinates=False)
+
+main_model_factory_oth = ModelFactory(
+    sec_electr_stor_oth, complete_timeline
+    ).add(SharesInflowStocks
+    ).add(MaterialIntensities
+    ).finish()
+
+main_model_factory_oth.simulate(simulation_timeline)
+list(main_model_factory_oth.electr_stor_oth)
+
+
+
+path_test_plots = Path(path_base, "imagematerials", "electricity", "out_test", scen_folder, "Figures")
+
+###########################################################################################################
+#%%% 2.4.3) Material calculations
+###########################################################################################################
+
+
+# apply the dedicated electricity storage market shares to the demand for dedicated (other) storage to find storage by type and by region
+# stock = stock_cohorts.loc[idx[:,:],idx[:,:]].sum(axis=1, level=0)
+# storage_stock_abs = stock.sum(axis=0, level=1) 
+stock =  stock_cohorts.T.groupby(level=0).sum().T # sum(level) is and groupby(axis) will be deprecated -> transose first with .T (instead of specifying axis), then groupby level, then sum. To get intial shape back, transpose again with .T
+storage_stock_abs  = stock.groupby(level=1).sum()                             # sum over all regions to get the global share of the stock
+stock_total = stock.sum(axis=1).unstack(level=0)                            # total stock by region
+storage_stock_share = pd.DataFrame(index=storage_stock_abs.index, columns=storage_stock_abs.columns)
+
+for tech in storage_stock_abs.columns:
+    storage_stock_share.loc[:,tech] = storage_stock_abs.loc[:,tech].div(storage_stock_abs.sum(axis=1))
+
+# then, the sum of the global inflow & outflow is calculated for comparison in the figures below
+# outflow = outflow_cohorts.loc[idx[:,:],idx[:,:]].sum(axis=1, level=0)
+outflow =  outflow_cohorts.T.groupby(level=0).sum().T # sum(level) is and groupby(axis) will be deprecated -> transose first with .T (instead of specifying axis), then groupby level, then sum. To get intial shape back, transpose again with .T
+outflow_total = outflow.sum(axis=1).unstack(level=0)                        # total by regions
+
+inflow_total = inflow_by_tech.sum(axis=1).unstack(level=0)
+
+
+# define empty dataframe for the weight of storage technolgies (in kg)
+i_storage_weight = pd.DataFrame().reindex_like(stock)            
+o_storage_weight = pd.DataFrame().reindex_like(stock)           
+s_storage_weight = pd.DataFrame().reindex_like(stock)      
+
+index  = i_storage_weight.index
+column = pd.MultiIndex.from_product([i_storage_weight.columns, storage_materials.index], names=['technologies', 'materials'])
+i_storage_materials = pd.DataFrame(index=index.set_names(['regions', 'years']), columns=column)            
+o_storage_materials= []
+s_storage_materials= []
+
+# calculate the total weight of the inflow of storage technologies in kg based on the (CHANGING!) energy density (kg/kWh) and storage demand (MWh)
+for region in oth_storage.columns:
+   for material in storage_materials.index:
+      inflow_multiplier = inflow_by_tech.loc[idx[region,:],:]
+      inflow_multiplier.index = inflow_multiplier.index.droplevel(0)
+      i_storage_weight.loc[idx[region,:],:] = storage_density_interpol.mul(inflow_multiplier).values * 1000  # * 1000 because density is in kg/kWh and storage is in MWh
+      for tech in storage_density_interpol.columns:
+         i_storage_materials.loc[idx[region,:],idx[tech,material]] = i_storage_weight.loc[idx[region,:],tech].mul(stor_materials_interpol.loc[idx[list(range(1990,endyear+1)),material],tech].to_numpy()) / 1000000 # kg to kt
+
+# calculate the weight of the stock and the outflow (in kg)
+# this one's tricky, the outflow and stock are calculated by year AND cohort, because the total weight is represented by the sum of the weight of each cohort. 
+# As the density (kg/kWh) is different for every cohort (battery weight changes over time, older batteries are heavier), the total outflow FOR EACH YEAR is the 
+# sumproduct of the density and the outflow by cohort.
+# 'intermediate' variables are use to speed up computing (by avoiding accessing dataframes unnecesarily), still, this loop takes about 25 minutes
+for region in oth_storage.columns: #['India']:
+    for tech in storage_density_interpol.columns: #['Flywheel']: 
+        for year in storage_density_interpol.index:
+            
+            # the first series of the sumproduct (the storage capacity in MWh) has a multi-level index, so the second level needs to be removed before it can be multiplied
+            series_mwh_o = outflow_cohorts.loc[idx[region,year],idx[tech,:]]
+            series_mwh_o.index = series_mwh_o.index.droplevel(0)                
+            o_storage_weight_intermediate               = series_mwh_o.loc[list(range(1990, outyear + 1))].mul(storage_density_interpol[tech] * 1000)       # * 1000 because density is in kg/kWh and storage is in MWh
+            o_storage_weight.loc[idx[region,year],tech] = o_storage_weight_intermediate.sum()
+            o_storage_materials_intermediate = stor_materials_interpol.loc[idx[list(range(1990, outyear + 1)),:],tech].unstack().mul(o_storage_weight_intermediate, axis=0).sum(axis=0)
+            
+            # same for stock
+            series_mwh_s = stock_cohorts.loc[idx[region,year],idx[tech,:]]
+            series_mwh_s.index = series_mwh_s.index.droplevel(0)                
+            s_storage_weight_intermediate               = series_mwh_s.mul(storage_density_interpol[tech] * 1000)       # * 1000 because density is in kg/kWh and storage is in MWh
+            s_storage_weight.loc[idx[region,year],tech] = s_storage_weight_intermediate.sum()  
+            s_storage_materials_intermediate = stor_materials_interpol.loc[idx[list(range(1990, outyear + 1)),:],tech].unstack().mul(s_storage_weight_intermediate, axis=0).sum(axis=0)
+            
+            o_storage_materials.append([region, tech, year, o_storage_materials_intermediate[0], o_storage_materials_intermediate[1], o_storage_materials_intermediate[2], o_storage_materials_intermediate[3], o_storage_materials_intermediate[4], o_storage_materials_intermediate[5], o_storage_materials_intermediate[6], o_storage_materials_intermediate[7], o_storage_materials_intermediate[8]])
+            s_storage_materials.append([region, tech, year, s_storage_materials_intermediate[0], s_storage_materials_intermediate[1], s_storage_materials_intermediate[2], s_storage_materials_intermediate[3], s_storage_materials_intermediate[4], s_storage_materials_intermediate[5], s_storage_materials_intermediate[6], s_storage_materials_intermediate[7], s_storage_materials_intermediate[8]]) 
+            
+order = list(s_storage_materials_intermediate.index)
+
+# restore storage materials to pandas dataframe (unit: kg)
+o_storage_materials = pd.DataFrame(o_storage_materials).set_index([0,1,2]).rename(columns=dict(zip(list(range(3,12)), order))).stack().unstack(level=[1,3]).reindex_like(i_storage_materials) / 1000000
+s_storage_materials = pd.DataFrame(s_storage_materials).set_index([0,1,2]).rename(columns=dict(zip(list(range(3,12)), order))).stack().unstack(level=[1,3]).reindex_like(i_storage_materials) / 1000000
+
+# Insert the materials (in kg) of the PHS storage component, which was calculated before 
+for material in storage_materials.index:
+   i_storage_materials.loc[idx[:,:], idx['PHS', material]] = phs_storage_inflow.reorder_levels([1,0]).loc[:,idx['PHS',material]]  / 1000000
+   s_storage_materials.loc[idx[:,:], idx['PHS', material]] = phs_storage_stock.reorder_levels([1,0]).loc[:,idx['PHS',material]]   / 1000000
+   o_storage_materials.loc[idx[:,:], idx['PHS', material]] = phs_storage_outflow.reorder_levels([1,0]).loc[:,idx['PHS',material]] / 1000000 
 
 
 
 
+###########################################################################################################
+#%%% 2.4.3) Visulalization PHS
+###########################################################################################################
+
+#%%%% Sum & Per TECH - World
+
+# da_x = main_model_factory.inflow.to_array().sum('Type')
+da_stocks = main_model_factory_phs.stocks#.to_array()
+
+data_all = da_stocks.sel(Type=da_stocks.Type != '<EMPTY>')
+data_all_1 = data_all.sum('Region')
+
+data_all_1 = data_all_1.sel(Time=slice(1971, None))
+
+fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(8, 6))
+linewidth = 2
+s_legend = 12
+s_label = 14
+
+# Second subplot: data_all_2 (summed over Region and Type, likely only time and material left)
+data_all_1.plot(ax=axes, color='black', linewidth=linewidth)
+axes.grid(alpha=0.3, linestyle='--')
+axes.tick_params(axis='both', which='major', labelsize=s_legend)
+axes.set_xlabel(" ", fontsize=s_label)
+axes.set_ylabel("Pumped Hydro Storage (MWh)", fontsize=s_label)
+axes.set_title('Sum over Region')
+
+# # First subplot: data_all_1 (summed over Region, still over Type and time likely)
+# for t in data_all_1.Type.values:
+#     data_plot = data_all_1.sel(Type=t)
+#     color, ls = DICT_GENTECH_STYLES.get(t, ('black', '-'))
+#     axes[1].plot(data_plot.Time, data_plot.values, label=t, color=color, linestyle=ls, linewidth=linewidth)
+#     axes[1].grid(alpha=0.3, linestyle='--')
+#     axes[1].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+#     axes[1].tick_params(axis='both', which='major', labelsize=s_legend)
+#     axes[1].set_xlabel("Time", fontsize=s_label)
+#     axes[1].set_ylabel("Peak Capacity (MW)", fontsize=s_label)
+#     axes[1].legend(fontsize='small', ncol=5, loc='upper center', bbox_to_anchor=(0.5, -0.2))
+#     axes[1].set_title('Sum over Region')
+
+plt.suptitle(f"{scen_folder}: Generation - Stocks: Peak Capacity (MW)", fontsize=16)
+plt.tight_layout(rect=[0, 0, 1, 0.98])  # Adjust layout to make room for the suptitle
+# fig.savefig(path_test_plots / f"Gen_inflow_world.png", dpi=300, bbox_inches='tight')
+# fig.savefig(path_test_plots / f"Gen_stocks_world_1971.png", dpi=300, bbox_inches='tight')
+plt.show()
+
+
+#================================================================================
+#%%%% SUM over TECHs - world
+
+
+da_stocks_mat = main_model_factory_phs.stock_by_cohort_materials.copy() #stock_by_cohort_materials
+
+data_all = da_stocks_mat
+# data_all = data_all.sel(Type=data_all.Type != '<EMPTY>').sum('Type')
+# data_all = data_all.sel(Type=data_all.Type != '<EMPTY>').sum('Region')
+
+# Pick desired regions by name
+regions = ["Brazil", "C.Europe", "China"] 
+
+types_level1 = [m for m in data_all.material.values if m in ["Steel", "Concrete"]]
+types_level2 = [m for m in data_all.material.values if m in ["Aluminium", "Cu"]]
+types_level3 = [m for m in data_all.material.values if m not in (types_level1 + types_level2)]
+
+fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(18, 12), sharex=True)
+linewidth = 2
+s_legend = 12
+s_label = 14
+
+data_plot = data_all.sel(Time=slice(1971, None)).pint.to("t") # convert grams to tonnes
+
+for i, region in enumerate(regions):
+    # Top row: Level 1 materials
+    for mat in types_level1:
+        if (region in data_plot.Region.values) and (mat in data_plot.material.values):
+            data_plot.sel(material=mat, Region=region).plot(ax=axes[0, i], label=mat, color=DICT_MATERIALS_COLORS[mat], linewidth=linewidth)
+    axes[0, i].set_title(f"{region}")
+    axes[0, i].set_xlabel(" ")
+    axes[0, i].set_ylabel(" ")
+    axes[0, i].grid(alpha=0.3, linestyle='--')
+    axes[0, i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+    axes[0, i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+    axes[0, 2].legend(loc='upper left', fontsize=s_legend)
+
+    # Middle row: Level 2 materials
+    for mat in types_level2:
+        if (region in data_plot.Region.values) and (mat in data_plot.material.values):
+            data_plot.sel(material=mat, Region=region).plot(ax=axes[1, i], label=mat, color=DICT_MATERIALS_COLORS[mat], linewidth=linewidth)
+    axes[1, i].set_title(f" ")
+    axes[1, i].set_xlabel(" ")
+    axes[1, i].set_ylabel(" ")
+    axes[1, i].grid(alpha=0.3, linestyle='--')
+    axes[1, i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+    axes[1, i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+    axes[1, 2].legend(loc='upper left', fontsize=s_legend)
+
+    # Bottom row: Level 3 materials
+    for mat in types_level3:
+        if (region in data_plot.Region.values) and (mat in data_plot.material.values):
+            data_plot.sel(material=mat, Region=region).plot(ax=axes[2, i], label=mat, color=DICT_MATERIALS_COLORS[mat], linewidth=linewidth)
+    axes[2, i].set_title(f" ")
+    axes[2, i].set_xlabel("Time", fontsize=s_label)
+    axes[2, i].set_ylabel(" ")
+    axes[2, i].grid(alpha=0.3, linestyle='--')
+    axes[2, i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+    axes[2, i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+    axes[2, 2].legend(loc='upper left', fontsize=s_legend)
+    
+
+axes[0, 0].set_ylabel("Material inflow (t)", fontsize=s_label)
+axes[1, 0].set_ylabel("Material inflow (t)", fontsize=s_label)
+axes[2, 0].set_ylabel("Material inflow (t)", fontsize=s_label)
+
+plt.suptitle(f"{scen_folder}: Generation - Stocks Materials", fontsize=16)
+plt.tight_layout(rect=[0, 0, 1, 0.98])  # Adjust layout to make room for the suptitle
+region_str = "_".join(regions)
+# fig.savefig(path_test_plots / f"Gen_stocks-materials_{region_str}_1971.png", dpi=300)
+# fig.savefig(path_test_plots / f"Gen_stocks-materials_{region_str}_1971.svg", dpi=300)
+plt.show()
+
+
+#================================================================================
+#%%%% SUM over TECHs - world
+
+da_stocks_mat = main_model_factory_phs.stock_by_cohort_materials.copy()
+data_all = da_stocks_mat.sel(Type=da_stocks_mat.Type != '<EMPTY>').sum('Type').sum('Region')
+data_plot = data_all.sel(Time=slice(1971, None)) / 1_000_000  # grams → tonnes
+
+fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(10, 8))
+linewidth = 2
+s_legend = 12
+s_label = 14
+
+# Upper row: Copper
+for mat in ["Cu"]:
+    if mat in data_plot.material.values:
+        data_plot.sel(material=mat).plot(ax=axes[0], label=mat, color=DICT_MATERIALS_COLORS.get(mat, None), linewidth=linewidth)
+# axes[0].set_title("Copper stocks", fontsize=s_label)
+axes[0].set_ylabel("Material stocks (t)", fontsize=s_label)
+axes[0].grid(alpha=0.3, linestyle='--')
+axes[0].ticklabel_format(style='sci', axis='y', scilimits=(0, 0))
+axes[0].tick_params(axis='both', which='major', labelsize=s_legend)
+axes[0].legend(loc='upper left', fontsize=s_legend)
+
+# Lower row: Aluminium and Steel
+for mat in ["Steel"]:
+    if mat in data_plot.material.values:
+        data_plot.sel(material=mat).plot(ax=axes[1], label=mat, color=DICT_MATERIALS_COLORS.get(mat, None), linewidth=linewidth)
+# axes[1].set_title("Aluminium & Steel stocks", fontsize=s_label)
+axes[1].set_xlabel("Time", fontsize=s_label)
+axes[1].set_ylabel("Material stocks (t)", fontsize=s_label)
+axes[1].grid(alpha=0.3, linestyle='--')
+axes[1].ticklabel_format(style='sci', axis='y', scilimits=(0, 0))
+axes[1].tick_params(axis='both', which='major', labelsize=s_legend)
+axes[1].legend(loc='upper left', fontsize=s_legend)
+
+for mat in ["Aluminium"]:
+    if mat in data_plot.material.values:
+        data_plot.sel(material=mat).plot(ax=axes[2], label=mat, color=DICT_MATERIALS_COLORS.get(mat, None), linewidth=linewidth)
+# axes[2].set_title("Aluminium & Steel stocks", fontsize=s_label)
+axes[2].set_xlabel("Time", fontsize=s_label)
+axes[2].set_ylabel("Material stocks (t)", fontsize=s_label)
+axes[2].grid(alpha=0.3, linestyle='--')
+axes[2].ticklabel_format(style='sci', axis='y', scilimits=(0, 0))
+axes[2].tick_params(axis='both', which='major', labelsize=s_legend)
+axes[2].legend(loc='upper left', fontsize=s_legend)
+
+plt.tight_layout()
+plt.show()
+
+
+
+###########################################################################################################
+#%%% 2.4.3) Visulalization Other STorage
+###########################################################################################################
+
+import itertools
+# Grid Storage technologies
+technologies = [
+    "Flywheel", "Compressed Air", "Hydrogen FC", "NiMH", "Deep-cycle Lead-Acid", "LMO",
+    "NMC", "NCA", "LFP", "LTO", "Zinc-Bromide", "Vanadium Redox", "Sodium-Sulfur", "ZEBRA",
+    "Lithium Sulfur", "Lithium Ceramic", "Lithium-air"
+]
+# Define color and linestyle pools
+colors = plt.get_cmap('tab20').colors  # 20 distinct colors
+linestyles = ['-', '--', ':'] #'-.'
+# Create a cycle of (color, linestyle) combinations
+style_combinations = list(itertools.product(colors, linestyles))
+# Map technologies to (color, linestyle)
+DICT_STOR_STYLES = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
+
+
+#================================================================================
+#%%%% STOCKS - Per TECH - per Region
+
+# da_x = main_model_factory.inflow.to_array().sum('Type')
+da_inflow = main_model_factory_oth.stock_by_cohort.sum('Cohort') #.to_array()
+
+data_all = da_inflow
+data_all = data_all.sel(Type=data_all.Type != '<EMPTY>')
+
+data_all = data_all.sel(Time=slice(2000, None), Region=regions)
+
+regions = ['Brazil', 'C.Europe', 'China'] 
+types = data_all.coords['Type'].values
+mid = len(types)// 2 
+techs_upper = list(types[:mid])
+techs_lower = list(types[mid:])
+
+
+fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(18, 8))  # Now 3 columns for 3 regions
+linewidth = 2
+s_legend = 12
+s_label = 14
+
+for i, region in enumerate(regions):  # regions now has length 3
+    col = i  # Column index: 0, 1, 2
+
+    # Top row: Types 1–15
+    for t in techs_upper:
+        data_plot = data_all.sel(Type=t, Region=region)
+        color, ls = DICT_STOR_STYLES.get(t, ('black', '-'))
+        axes[0, col].plot(data_plot.Time, data_plot.values, label=t, color=color, linestyle=ls, linewidth=linewidth)
+    axes[0, col].set_title(f"{region}", fontsize=15)
+    axes[0, col].grid(alpha=0.3, linestyle='--')
+    axes[0, col].tick_params(axis='both', which='major', labelsize=s_legend)
+    axes[0, 0].set_ylabel("Stocks (MWh)", fontsize=s_label)
+
+    # Bottom row: Types 16–30
+    for t in techs_lower:
+        data_plot = data_all.sel(Type=t, Region=region)
+        color, ls = DICT_STOR_STYLES.get(t, ('black', '-'))
+        axes[1, col].plot(data_plot.Time, data_plot.values, label=t, color=color, linestyle=ls, linewidth=linewidth)
+    axes[1, col].grid(alpha=0.3, linestyle='--')
+    axes[1, col].tick_params(axis='both', which='major', labelsize=s_legend)
+    axes[1, 0].set_ylabel("Stocks (MWh)", fontsize=s_label)
+    axes[1, col].set_xlabel("Time", fontsize=s_label)
+
+# Y-axis number formatting and hiding right y-axis ticks
+for ax in axes.flat:
+    ax.yaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}'))
+
+axes[0, 2].legend(fontsize=s_legend, ncol=2, loc='upper center', bbox_to_anchor=(-1.7, -1.41))
+axes[1, 2].legend(fontsize=s_legend, ncol=3, loc='upper center', bbox_to_anchor=(-0.2, -0.21))
+
+plt.suptitle(f"{scen_folder}: Grid Storage - Stocks: Capacity (MWh)", fontsize=16)
+plt.tight_layout(rect=[0, 0, 1, 0.98])  # Adjust layout to make room for the suptitle
+region_str = "_".join(regions)
+# fig.savefig(path_test_plots / f"Grid_othstor_stocks_{region_str}.png", dpi=300, bbox_inches='tight')
+# fig.savefig(path_test_plots / f"Gen_inflow_{region_str}_1971.png", dpi=300, bbox_inches='tight')
+plt.show()
+
+
+#%%%% Sum & Per TECH - World
+
+# da_x = main_model_factory.inflow.to_array().sum('Type')
+da_stocks = main_model_factory_oth.stocks#.to_array()
+
+data_all = da_stocks.sel(Type=da_stocks.Type != '<EMPTY>')
+data_all_1 = data_all.sum('Region')
+
+data_all_1 = data_all_1.sel(Time=slice(1971, None))
+
+fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(8, 6))
+linewidth = 2
+s_legend = 12
+s_label = 14
+
+# Second subplot: data_all_2 (summed over Region and Type, likely only time and material left)
+data_all_1.plot(ax=axes, color='black', linewidth=linewidth)
+axes.grid(alpha=0.3, linestyle='--')
+axes.tick_params(axis='both', which='major', labelsize=s_legend)
+axes.set_xlabel(" ", fontsize=s_label)
+axes.set_ylabel("Other Storage (MWh)", fontsize=s_label)
+axes.set_title('Sum over Region')
+
+# # First subplot: data_all_1 (summed over Region, still over Type and time likely)
+# for t in data_all_1.Type.values:
+#     data_plot = data_all_1.sel(Type=t)
+#     color, ls = DICT_GENTECH_STYLES.get(t, ('black', '-'))
+#     axes[1].plot(data_plot.Time, data_plot.values, label=t, color=color, linestyle=ls, linewidth=linewidth)
+#     axes[1].grid(alpha=0.3, linestyle='--')
+#     axes[1].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+#     axes[1].tick_params(axis='both', which='major', labelsize=s_legend)
+#     axes[1].set_xlabel("Time", fontsize=s_label)
+#     axes[1].set_ylabel("Peak Capacity (MW)", fontsize=s_label)
+#     axes[1].legend(fontsize='small', ncol=5, loc='upper center', bbox_to_anchor=(0.5, -0.2))
+#     axes[1].set_title('Sum over Region')
+
+plt.suptitle(f"{scen_folder}: Generation - Stocks: Peak Capacity (MW)", fontsize=16)
+plt.tight_layout(rect=[0, 0, 1, 0.98])  # Adjust layout to make room for the suptitle
+# fig.savefig(path_test_plots / f"Gen_inflow_world.png", dpi=300, bbox_inches='tight')
+# fig.savefig(path_test_plots / f"Gen_stocks_world_1971.png", dpi=300, bbox_inches='tight')
+plt.show()
+
+
+#================================================================================
+#%%%% SUM over TECHs - per region
+
+# Sum over technologies dimension
+
+da_stocks_mat = main_model_factory_oth.stock_by_cohort_materials.copy() #stock_by_cohort_materials
+
+data_all = da_stocks_mat
+data_all = data_all.sel(Type=data_all.Type != '<EMPTY>').sum('Type')
+# data_all = data_all.sel(Type=data_all.Type != '<EMPTY>').sum('Region')
+
+# Pick desired regions by name
+regions = ["Brazil", "C.Europe", "China"] 
+
+types_level1 = [m for m in data_all.material.values if m in ["Steel", "Concrete"]]
+types_level2 = [m for m in data_all.material.values if m in ["Aluminium", "Cu"]]
+types_level3 = [m for m in data_all.material.values if m not in (types_level1 + types_level2)]
+
+fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(18, 12), sharex=True)
+linewidth = 2
+s_legend = 12
+s_label = 14
+
+data_plot = data_all.sel(Time=slice(2020, None)).pint.to("t") # convert to tonnes
+
+for i, region in enumerate(regions):
+    # Top row: Level 1 materials
+    for mat in types_level1:
+        if (region in data_plot.Region.values) and (mat in data_plot.material.values):
+            data_plot.sel(material=mat, Region=region).plot(ax=axes[0, i], label=mat, color=DICT_MATERIALS_COLORS[mat], linewidth=linewidth)
+    axes[0, i].set_title(f"{region}")
+    axes[0, i].set_xlabel(" ")
+    axes[0, i].set_ylabel(" ")
+    axes[0, i].grid(alpha=0.3, linestyle='--')
+    axes[0, i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+    axes[0, i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+    axes[0, 2].legend(loc='upper left', fontsize=s_legend)
+
+    # Middle row: Level 2 materials
+    for mat in types_level2:
+        if (region in data_plot.Region.values) and (mat in data_plot.material.values):
+            data_plot.sel(material=mat, Region=region).plot(ax=axes[1, i], label=mat, color=DICT_MATERIALS_COLORS[mat], linewidth=linewidth)
+    axes[1, i].set_title(f" ")
+    axes[1, i].set_xlabel(" ")
+    axes[1, i].set_ylabel(" ")
+    axes[1, i].grid(alpha=0.3, linestyle='--')
+    axes[1, i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+    axes[1, i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+    axes[1, 2].legend(loc='upper left', fontsize=s_legend)
+
+    # Bottom row: Level 3 materials
+    for mat in types_level3:
+        if (region in data_plot.Region.values) and (mat in data_plot.material.values):
+            data_plot.sel(material=mat, Region=region).plot(ax=axes[2, i], label=mat, color=DICT_MATERIALS_COLORS[mat], linewidth=linewidth)
+    axes[2, i].set_title(f" ")
+    axes[2, i].set_xlabel("Time", fontsize=s_label)
+    axes[2, i].set_ylabel(" ")
+    axes[2, i].grid(alpha=0.3, linestyle='--')
+    axes[2, i].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+    axes[2, i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+    axes[2, 2].legend(loc='upper left', fontsize=s_legend)
+    
+
+axes[0, 0].set_ylabel("Material stocks (t)", fontsize=s_label)
+axes[1, 0].set_ylabel("Material stocks (t)", fontsize=s_label)
+axes[2, 0].set_ylabel("Material stocks (t)", fontsize=s_label)
+
+plt.suptitle(f"{scen_folder}: Grid Storage - Stock Materials", fontsize=16)
+plt.tight_layout(rect=[0, 0, 1, 0.98])  # Adjust layout to make room for the suptitle
+region_str = "_".join(regions)
+fig.savefig(path_test_plots / f"Grid_othstor_stocks-materials_{region_str}.png", dpi=300)
+# fig.savefig(path_test_plots / f"Gen_stocks-materials_{region_str}_1971.svg", dpi=300)
+plt.show()
+
+
+#================================================================================
+#%%%% SUM over TECHs - world
+
+da_stocks_mat = main_model_factory_oth.stock_by_cohort_materials.copy() #stock_by_cohort_materials
+data_all = da_stocks_mat
+data_all = data_all.sel(Type=data_all.Type != '<EMPTY>').sum('Type').sum('Region')
+# data_plot = data_all.pint.to("t") # convert grams to tonnes
+data_plot = data_all.sel(Time=slice(1971, None)).pint.to("t") # only from 1971 onwards, convert grams to tonnes
+
+fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(8, 10))
+linewidth = 2
+s_legend = 12
+s_label = 14
+
+# Top row: Level 1 materials
+for mat in types_level1:
+    if mat in data_plot.material.values:
+        data_plot.sel(material=mat).plot(ax=axes[0], label=mat, color=DICT_MATERIALS_COLORS[mat], linewidth=linewidth)
+axes[0].set_title(f" ")
+axes[0].set_xlabel(" ")
+axes[0].set_ylabel("Material stocks (t)", fontsize=s_label)
+axes[0].grid(alpha=0.3, linestyle='--')
+axes[0].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+axes[0].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+axes[0].legend(loc='upper left', fontsize=s_legend)
+
+# Middle row: Level 2 materials
+for mat in types_level2:
+    if mat in data_plot.material.values:
+        data_plot.sel(material=mat).plot(ax=axes[1], label=mat, color=DICT_MATERIALS_COLORS[mat], linewidth=linewidth)
+
+axes[1].set_title(" ")
+axes[1].set_xlabel(" ")
+axes[1].set_ylabel("Material stocks (t)", fontsize=s_label)
+axes[1].grid(alpha=0.3, linestyle='--')
+axes[1].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+axes[1].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+axes[1].legend(loc='upper left', fontsize=s_legend)
+
+# Bottom row: Level 3 materials
+for mat in types_level3:
+    if mat in data_plot.material.values:
+        data_plot.sel(material=mat).plot(ax=axes[2], label=mat, color=DICT_MATERIALS_COLORS[mat], linewidth=linewidth)
+axes[2].set_title(" ")
+axes[2].set_xlabel("Time", fontsize=s_label)
+axes[2].set_ylabel("Material stocks (t)", fontsize=s_label)
+axes[2].grid(alpha=0.3, linestyle='--')
+axes[2].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+axes[2].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+axes[2].legend(loc='upper left', fontsize=s_legend)
+
+plt.suptitle(f"{scen_folder}: Generation - Stocks Materials - World", fontsize=16)
+plt.tight_layout()
+# fig.savefig(path_test_plots / "Gen_stocks-materials_world.png", dpi=300)
+# fig.savefig(path_test_plots / "Gen_stocks-materials_world_1971.png", dpi=300)
+# fig.savefig(path_test_plots / "Gen_stocks-materials_world_1971.pdf", dpi=300)
+# fig.savefig(path_test_plots / "Gen_stocks-materials_world_1971.svg", dpi=300)
+plt.show()
 
 
 
 
+#================================================================================
+#%%%% INFLOW - Per TECH - per Region
+
+# da_x = main_model_factory.inflow.to_array().sum('Type')
+da_inflow = main_model_factory_oth.inflow #.to_array()
+
+data_all = da_inflow
+data_all = data_all.sel(Type=data_all.Type != '<EMPTY>')
+
+data_all = data_all.sel(Time=slice(2000, None), Region=regions)
+
+regions = ['Brazil', 'C.Europe', 'China'] 
+types = data_all.coords['Type'].values
+mid = len(types)// 2 
+techs_upper = list(types[:mid])
+techs_lower = list(types[mid:])
 
 
+fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(18, 8))  # Now 3 columns for 3 regions
+linewidth = 2
+s_legend = 12
+s_label = 14
 
+for i, region in enumerate(regions):  # regions now has length 3
+    col = i  # Column index: 0, 1, 2
 
+    # Top row: Types 1–15
+    for t in techs_upper:
+        data_plot = data_all.sel(Type=t, Region=region)
+        color, ls = DICT_STOR_STYLES.get(t, ('black', '-'))
+        axes[0, col].plot(data_plot.Time, data_plot.values, label=t, color=color, linestyle=ls, linewidth=linewidth)
+    axes[0, col].set_title(f"{region}", fontsize=15)
+    axes[0, col].grid(alpha=0.3, linestyle='--')
+    axes[0, col].tick_params(axis='both', which='major', labelsize=s_legend)
+    axes[0, 0].set_ylabel("Inflow (MWh)", fontsize=s_label)
 
+    # Bottom row: Types 16–30
+    for t in techs_lower:
+        data_plot = data_all.sel(Type=t, Region=region)
+        color, ls = DICT_STOR_STYLES.get(t, ('black', '-'))
+        axes[1, col].plot(data_plot.Time, data_plot.values, label=t, color=color, linestyle=ls, linewidth=linewidth)
+    axes[1, col].grid(alpha=0.3, linestyle='--')
+    axes[1, col].tick_params(axis='both', which='major', labelsize=s_legend)
+    axes[1, 0].set_ylabel("Inflow (MWh)", fontsize=s_label)
+    axes[1, col].set_xlabel("Time", fontsize=s_label)
 
+# Y-axis number formatting and hiding right y-axis ticks
+for ax in axes.flat:
+    ax.yaxis.set_major_formatter(StrMethodFormatter('{x:,.0f}'))
+
+axes[0, 2].legend(fontsize=s_legend, ncol=2, loc='upper center', bbox_to_anchor=(-1.7, -1.41))
+axes[1, 2].legend(fontsize=s_legend, ncol=3, loc='upper center', bbox_to_anchor=(-0.2, -0.21))
+
+plt.suptitle(f"{scen_folder}: Grid Storage - Inflow: Capacity (MWh)", fontsize=16)
+plt.tight_layout(rect=[0, 0, 1, 0.98])  # Adjust layout to make room for the suptitle
+region_str = "_".join(regions)
+fig.savefig(path_test_plots / f"Grid_othstor_inflow_{region_str}.png", dpi=300, bbox_inches='tight')
+# fig.savefig(path_test_plots / f"Gen_inflow_{region_str}_1971.png", dpi=300, bbox_inches='tight')
+plt.show()
 
 
 
@@ -2441,7 +3471,7 @@ def get_preprocessing_data_grid(base_dir: str, SCEN, VARIANT, YEAR_START, YEAR_E
     grid_length_HV_out_a = pd.concat([grid_length_Hv_above], keys=['aboveground'], names=['type']) 
     grid_length_HV_out_u = pd.concat([grid_length_Hv_under], keys=['underground'], names=['type']) 
     grid_length_HV_out   = pd.concat([grid_length_HV_out_a, grid_length_HV_out_u])
-    grid_length_HV_out.to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test' / 'grid_length_HV_km.csv') # in km
+    # grid_length_HV_out.to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test' / 'grid_length_HV_km.csv') # in km
 
     grid_length_Mv_above = grid_length_Mv_time * (1 - function_Mv_under/100)
     grid_length_Mv_under = grid_length_Mv_time * function_Mv_under/100
@@ -2765,7 +3795,7 @@ grid_length_Hv_under = grid_length_Hv_total * function_Hv_under/100
 grid_length_HV_out_a = pd.concat([grid_length_Hv_above], keys=['aboveground'], names=['type']) 
 grid_length_HV_out_u = pd.concat([grid_length_Hv_under], keys=['underground'], names=['type']) 
 grid_length_HV_out   = pd.concat([grid_length_HV_out_a, grid_length_HV_out_u])
-grid_length_HV_out.to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test' / 'grid_length_HV_km.csv') # in km
+# grid_length_HV_out.to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test' / 'grid_length_HV_km.csv') # in km
 
 grid_length_Mv_above = grid_length_Mv_time * (1 - function_Mv_under/100)
 grid_length_Mv_under = grid_length_Mv_time * function_Mv_under/100
@@ -3114,7 +4144,7 @@ s_label = 14
 
 i=0
 for t in types_top:
-    axes[0].plot(data_plot.Time, data_plot.sel(Type=t), label=t, color=dict_grid_styles2[t][0], linestyle=dict_grid_styles2[t][1], linewidth=linewidth)
+    axes[0].plot(data_plot.Time, data_plot.sel(Type=t), label=t, color=DICT_GRID_STYLES_2[t][0], linestyle=DICT_GRID_STYLES_2[t][1], linewidth=linewidth)
 # axes.set_title(f"{region} (Types 1–10)")
 # axes[0].set_xlabel(" ")
 axes[0].set_ylabel("Stocks (unit/km)", fontsize=s_label)
@@ -3125,7 +4155,7 @@ axes[0].legend(loc='upper left', fontsize=s_legend)
 
 # Bottom row: Types 11–20
 for t in types_bottom:
-    axes[1].plot(data_plot.Time, data_plot.sel(Type=t), label=t, color=dict_grid_styles2[t][0], linestyle=dict_grid_styles2[t][1], linewidth=linewidth)
+    axes[1].plot(data_plot.Time, data_plot.sel(Type=t), label=t, color=DICT_GRID_STYLES_2[t][0], linestyle=DICT_GRID_STYLES_2[t][1], linewidth=linewidth)
 # axes.set_title(f"{region} (Types 11–20)")
 axes[1].set_xlabel("Time", fontsize=s_label)
 axes[1].set_ylabel("Stocks (unit)", fontsize=s_label)
@@ -3216,9 +4246,9 @@ materials = ["Steel", "Concrete", "Aluminium", "Cu"]
 # s_label = 14
 
 # for i, mat in enumerate(materials):
-#     lines_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Lines'], label="Lines")
-#     transformers_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Transformers'], label="Transformers")
-#     substations_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Substations'], label="Substations")
+#     lines_sum.sel(material=mat).plot(ax=axes[i], color = DICT_GRID_COLORS['Lines'], label="Lines")
+#     transformers_sum.sel(material=mat).plot(ax=axes[i], color = DICT_GRID_COLORS['Transformers'], label="Transformers")
+#     substations_sum.sel(material=mat).plot(ax=axes[i], color = DICT_GRID_COLORS['Substations'], label="Substations")
 #     data_plot.sel(material=mat).plot(ax=axes[i], label="Total", color='red', alpha=0.8, linestyle='--', linewidth=3)
 
 #     # if mat == "Cu":
@@ -3272,9 +4302,9 @@ s_legend = 12
 s_label = 14
 
 for i, mat in enumerate(materials):
-    lines_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Lines'], label="Lines")
-    transformers_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Transformers'], label="Transformers")
-    substations_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Substations'], label="Substations")
+    lines_sum.sel(material=mat).plot(ax=axes[i], color = DICT_GRID_COLORS['Lines'], label="Lines")
+    transformers_sum.sel(material=mat).plot(ax=axes[i], color = DICT_GRID_COLORS['Transformers'], label="Transformers")
+    substations_sum.sel(material=mat).plot(ax=axes[i], color = DICT_GRID_COLORS['Substations'], label="Substations")
     data_sum.sel(material=mat).plot(ax=axes[i], label="Total", color='red', alpha=0.8, linestyle='--', linewidth=3)
 
     # if mat == "Cu":
@@ -3355,8 +4385,8 @@ for i, region in enumerate(regions):  # regions now has length 3
     # Top row: Types 1–15
     for t in techs_upper:
         data_plot = data_lines.sel(Type=t, Region=region)
-        color, ls = dict_gentech_styles.get(t, ('black', '-'))
-        axes[0, col].plot(data_plot.time, data_plot.values, label=t, color=dict_grid_styles2[t][0], linestyle=dict_grid_styles2[t][1], linewidth=linewidth)
+        color, ls = DICT_GENTECH_STYLES.get(t, ('black', '-'))
+        axes[0, col].plot(data_plot.time, data_plot.values, label=t, color=DICT_GRID_STYLES_2[t][0], linestyle=DICT_GRID_STYLES_2[t][1], linewidth=linewidth)
     axes[0, col].set_title(f"{region}", fontsize=15)
     axes[0, col].grid(alpha=0.3, linestyle='--')
     axes[0, col].tick_params(axis='both', which='major', labelsize=s_legend)
@@ -3365,8 +4395,8 @@ for i, region in enumerate(regions):  # regions now has length 3
     # Bottom row: Types 16–30
     for t in techs_lower:
         data_plot = data_add.sel(Type=t, Region=region)
-        color, ls = dict_gentech_styles.get(t, ('black', '-'))
-        axes[1, col].plot(data_plot.time, data_plot.values, label=t, color=dict_grid_styles2[t][0], linestyle=dict_grid_styles2[t][1], linewidth=linewidth)
+        color, ls = DICT_GENTECH_STYLES.get(t, ('black', '-'))
+        axes[1, col].plot(data_plot.time, data_plot.values, label=t, color=DICT_GRID_STYLES_2[t][0], linestyle=DICT_GRID_STYLES_2[t][1], linewidth=linewidth)
     axes[1, col].grid(alpha=0.3, linestyle='--')
     axes[1, col].tick_params(axis='both', which='major', labelsize=s_legend)
     axes[1, 0].set_ylabel("Inflow (# counts)", fontsize=s_label)
@@ -3419,7 +4449,7 @@ s_label = 14
 # Second subplot: data_all_2 (summed over Region and Type, likely only time and material left)
 for t in types_top:
     data_plot = data_lines.sel(Type=t)
-    data_plot.plot(ax=axes[0], label=t, color=dict_grid_styles2[t][0], linestyle=dict_grid_styles2[t][1], linewidth=linewidth)
+    data_plot.plot(ax=axes[0], label=t, color=DICT_GRID_STYLES_2[t][0], linestyle=DICT_GRID_STYLES_2[t][1], linewidth=linewidth)
     axes[0].grid(alpha=0.3, linestyle='--')
     axes[0].tick_params(axis='both', which='major', labelsize=s_legend)
     axes[0].set_xlabel(" ", fontsize=s_label)
@@ -3430,7 +4460,7 @@ for t in types_top:
 # First subplot: data_all_1 (summed over Region, still over Type and time likely)
 for t in types_bottom:
     data_plot = data_add.sel(Type=t)
-    axes[1].plot(data_plot.time, data_plot.values, label=t, color=dict_grid_styles2[t][0], linestyle=dict_grid_styles2[t][1], linewidth=linewidth)
+    axes[1].plot(data_plot.time, data_plot.values, label=t, color=DICT_GRID_STYLES_2[t][0], linestyle=DICT_GRID_STYLES_2[t][1], linewidth=linewidth)
     axes[1].grid(alpha=0.3, linestyle='--')
     axes[1].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
     axes[1].tick_params(axis='both', which='major', labelsize=s_legend)
@@ -3541,9 +4571,9 @@ df_iea_t_steel = df_iea_t_steel.pint.to("t")  # Convert kg -> t
 # s_label = 14
 
 # for i, mat in enumerate(materials):
-#     lines_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Lines'], label="Lines")
-#     transformers_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Transformers'], label="Transformers")
-#     substations_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Substations'], label="Substations")
+#     lines_sum.sel(material=mat).plot(ax=axes[i], color = DICT_GRID_COLORS['Lines'], label="Lines")
+#     transformers_sum.sel(material=mat).plot(ax=axes[i], color = DICT_GRID_COLORS['Transformers'], label="Transformers")
+#     substations_sum.sel(material=mat).plot(ax=axes[i], color = DICT_GRID_COLORS['Substations'], label="Substations")
 #     data_plot.sel(material=mat).plot(ax=axes[i], label="Total", color='red', alpha=0.8, linestyle='--', linewidth=3)
 
 #     if mat == "Cu":
@@ -3597,9 +4627,9 @@ s_legend = 12
 s_label = 14
 
 for i, mat in enumerate(materials):
-    lines_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Lines'], label="Lines")
-    transformers_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Transformers'], label="Transformers")
-    substations_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Substations'], label="Substations")
+    lines_sum.sel(material=mat).plot(ax=axes[i], color = DICT_GRID_COLORS['Lines'], label="Lines")
+    transformers_sum.sel(material=mat).plot(ax=axes[i], color = DICT_GRID_COLORS['Transformers'], label="Transformers")
+    substations_sum.sel(material=mat).plot(ax=axes[i], color = DICT_GRID_COLORS['Substations'], label="Substations")
     data_sum.sel(material=mat).plot(ax=axes[i], label="Total", color='red', alpha=0.8, linestyle='--', linewidth=3)
 
     if mat == "Cu":
@@ -3658,9 +4688,9 @@ s_legend = 12
 s_label = 14
 
 for i, mat in enumerate(materials):
-    lines_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Lines'], label="Lines")
-    transformers_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Transformers'], label="Transformers")
-    substations_sum.sel(material=mat).plot(ax=axes[i], color = dict_grid_colors['Substations'], label="Substations")
+    lines_sum.sel(material=mat).plot(ax=axes[i], color = DICT_GRID_COLORS['Lines'], label="Lines")
+    transformers_sum.sel(material=mat).plot(ax=axes[i], color = DICT_GRID_COLORS['Transformers'], label="Transformers")
+    substations_sum.sel(material=mat).plot(ax=axes[i], color = DICT_GRID_COLORS['Substations'], label="Substations")
     data_sum.sel(material=mat).plot(ax=axes[i], label="Total", color='red', alpha=0.8, linestyle='--', linewidth=3)
     
     axes[i].grid(alpha=0.3, linestyle='--')

@@ -1,0 +1,111 @@
+UNIT_CONVERSIONS:
+  # -------------------------------
+  # FINAL PRODUCT DEMAND
+  # -------------------------------
+  Final Product Demand:
+    "Final Product Demand|Transportation|{Vehicles}":
+      factor: 1e-3       
+      to: "thousand/yr"
+    "Final Product Demand|Buildings|{Building Types}":
+      factor: 1
+      to: "m2/yr" 
+  
+  # -------------------------------
+  # PRODUCT STOCK
+  # -------------------------------
+  Product Stock:
+    "Product Stock|Transportation|{Vehicles}":
+      factor: 1e-3 
+      to: "thousand"           
+    "Product Stock|Buildings|{Building Types}":
+      factor: 1
+      to: "m2"         
+
+  # -------------------------------
+  # STOCK RETIREMENT
+  # -------------------------------
+  Stock Retirement:
+    "Stock Retirement|Transportation|{Vehicles}":
+      factor: 1e-3
+      to: "thousand/yr"
+    "Stock Retirement|Buildings|{Building Types}":
+      factor: 1
+      to: "m2/yr"
+
+  # -------------------------------
+  # FINAL MATERIAL DEMAND
+  # -------------------------------
+  Final Material Demand:
+    "Final Material Demand|{Engineered Material}|{Demand Sector}":
+      factor: 1e-9               
+      to: "Mt/yr"
+    "Final Material Demand|{Engineered Material}|{Demand Sector}|Reused":
+      factor: 1e-9               
+      to: "Mt/yr"
+    "Final Material Demand|{Engineered Material}|{Demand Sector}|Recycled":
+      factor: 1e-9               
+      to: "Mt/yr"
+    "Final Material Demand|{Engineered Material}|{Demand Sector}|Virgin Input":
+      factor: 1e-9               
+      to: "Mt/yr"
+  # -------------------------------
+  # MATERIAL STOCK
+  # -------------------------------
+  Material Stock:
+    "Material Stock|{Engineered Material}|{Demand Sector}":
+      factor: 1e-9
+      to: "Mt"
+
+  # -------------------------------
+  # MATERIAL OUTFLOW 
+  # -------------------------------
+  Material Outflow:
+    "Material Outflow|{Engineered Material}|{Demand Sector}":
+      factor: 1e-9
+      to: "Mt/yr"
+
+  # -------------------------------
+  # MATERIAL LOSSES
+  # -------------------------------
+  Material Losses:
+    "Material Losses|{Engineered Material}":
+      factor: 1e-9
+      to: "Mt/yr"
+
+  # -------------------------------
+  # SCRAP
+  # -------------------------------
+  Scrap:
+    "Scrap|{Engineered Material}|{Demand Sector}":
+      factor: 1e-9
+      to: "Mt/yr"
+    "Scrap|Iron and Steel|Steel":
+      factor: 1e-9
+      to: "Mt/yr"
+    "Scrap|Non-ferrous Metals|Aluminum":
+      factor: 1e-9
+      to: "Mt/yr"
+    "Scrap|Iron and Steel|Steel|Transportation":
+      factor: 1e-9
+      to: "Mt/yr"
+    "Scrap|Non-ferrous Metals|Aluminum|Transportation":
+      factor: 1e-9
+      to: "Mt/yr"
+    "Scrap|Iron and Steel|Steel|Buildings":
+      factor: 1e-9
+      to: "Mt/yr"
+    "Scrap|Non-ferrous Metals|Aluminum|Buildings":
+      factor: 1e-9
+      to: "Mt/yr"
+    "Scrap|Iron and Steel|Steel|Buildings|Commercial":
+      factor: 1e-9
+      to: "Mt/yr"
+    "Scrap|Non-ferrous Metals|Aluminum|Buildings|Commercial":
+      factor: 1e-9
+      to: "Mt/yr"
+    "Scrap|Iron and Steel|Steel|Buildings|Residential":
+      factor: 1e-9
+      to: "Mt/yr"
+    "Scrap|Non-ferrous Metals|Aluminum|Buildings|Residential":
+      factor: 1e-9
+      to: "Mt/yr"
