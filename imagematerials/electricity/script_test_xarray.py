@@ -226,58 +226,7 @@ gcap_xr = gcap_xr.assign_coords(Type=np.array(gcap_xr.Type.values, dtype=object)
 
 #%%%% 2. Interpolate =================================================================================
 
-def interpolate_xr(dataarray, t_start, t_end):
-    """
-    Interpolate an xarray.DataArray over a continuous time range and 
-    extend its boundary values beyond the available data.
-
-    The function performs linear interpolation between all existing time 
-    coordinates in the input DataArray and fills values outside the 
-    original time range with the first and last available data, respectively.
-
-    Parameters
-    ----------
-    dataarray : xarray.DataArray
-        Input DataArray with a 'Time' coordinate containing numeric values (e.g. 2020, 2050).
-    t_start : int or float
-        Start year for the interpolation range.,
-    t_end : int or float
-        End year for the interpolation range.
-
-    Returns
-    -------
-    xarray.DataArray
-        DataArray interpolated across the full range from `t_start` to `t_end`
-    """
-
-    # Determine which dimension to use
-    dim = 'Time' if 'Time' in dataarray.dims else 'Cohort'
-    
-    # Get the coordinate values along that dimension
-    coord_values = dataarray[dim].values
-    # Define new full range
-    new_range = np.arange(t_start, t_end + 1)
-
-    # Interpolate linearly
-    da_interp = dataarray.interp({dim: new_range})
-
-    # Fill values outside original range
-    da_interp.loc[{dim: slice(None, coord_values.min())}] = da_interp.sel({dim: coord_values.min()})
-    da_interp.loc[{dim: slice(coord_values.max(), None)}] = da_interp.sel({dim: coord_values.max()})
-
-    # # Extract the first and last available times from the original DataArray
-    # t_min = float(dataarray.Time.min())
-    # t_max = float(dataarray.Time.max())
-    # # Fill t_start-t_min with t_min values and t_max-t_end with t_max values
-    # da_interp.loc[dict(Time=slice(None, t_min))] = da_interp.sel(Time=t_min)
-    # da_interp.loc[dict(Time=slice(t_max, None))] = da_interp.sel(Time=t_max)
-
-    return da_interp
-
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# TODO: I loose the unit currently - fix this
 gcap_materials_xr_interp = interpolate_xr(gcap_materials_xr, YEAR_FIRST_GRID, YEAR_OUT)
-
 
 gcap_lifetime_xr_interp = interpolate_xr(gcap_lifetime_xr, YEAR_FIRST_GRID, YEAR_OUT)
 gcap_lifetime_xr_interp.loc[dict(ScipyParam="stdv")] = gcap_lifetime_xr_interp.loc[dict(ScipyParam="mean")] * STD_LIFETIMES_ELECTR

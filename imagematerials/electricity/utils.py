@@ -97,12 +97,12 @@ def add_historic_stock(da, year_start=1920, interp_method="linear"):
 
 
 
-def interpolate_xr(dataarray, t_start, t_end):
+def interpolate_xr(dataarray, t_start, t_end, interp_method = 'linear'):
     """
     Interpolate an xarray.DataArray over a continuous time range and 
-    extend its boundary values beyond the available data.
+    extend its boundary values beyond the available data to span t_start - t_end.
 
-    The function performs linear interpolation between all existing time 
+    The function performs (linear) interpolation between all existing time 
     coordinates in the input DataArray and fills values outside the 
     original time range with the first and last available data, respectively.
 
@@ -114,22 +114,38 @@ def interpolate_xr(dataarray, t_start, t_end):
         Start year for the interpolation range.,
     t_end : int or float
         End year for the interpolation range.
+    interp_method : str, optional
+        Interpolation method to use (default is 'linear'). See xarray documentation for available methods.
 
     Returns
     -------
     xarray.DataArray
         DataArray interpolated across the full range from `t_start` to `t_end`
     """
-    # Define new full time range
-    new_time = np.arange(t_start, t_end + 1)
-    # Interpolate linearly between available data points
-    da_interp = dataarray.interp(Time=new_time)
-    # Extract the first and last available times from the original DataArray
-    t_min = float(dataarray.Time.min())
-    t_max = float(dataarray.Time.max())
-    # Fill t_start-t_min with t_min values and t_max-t_end with t_max values
-    da_interp.loc[dict(Time=slice(None, t_min))] = da_interp.sel(Time=t_min)
-    da_interp.loc[dict(Time=slice(t_max, None))] = da_interp.sel(Time=t_max)
+
+    # Determine which dimension to use
+    dim = 'Time' if 'Time' in dataarray.dims else 'Cohort'
+
+    # The interpolations strips the unit, so save it here and reattach later
+    unit = prism.U_(dataarray)
+    
+    # Get the coordinate values along that dimension
+    coord_values = dataarray[dim].values
+    # Define new full range
+    new_range = np.arange(t_start, t_end + 1)
+
+    # Interpolate linearly
+    da_interp = dataarray.interp({dim: new_range}, method = interp_method)
+
+    # Fill values outside original range
+    da_interp.loc[{dim: slice(None, coord_values.min())}] = da_interp.sel({dim: coord_values.min()})
+    da_interp.loc[{dim: slice(coord_values.max(), None)}] = da_interp.sel({dim: coord_values.max()})
+
+    # Reattach the unit if it existed
+    if unit != prism.Unit('dimensionless'):
+        print(f"Reattaching unit {unit}")
+        da_interp = prism.Q_(da_interp, unit)
+
     return da_interp
 
 
