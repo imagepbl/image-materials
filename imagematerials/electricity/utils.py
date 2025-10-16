@@ -143,7 +143,6 @@ def interpolate_xr(dataarray, t_start, t_end, interp_method = 'linear'):
 
     # Reattach the unit if it existed
     if unit != prism.Unit('dimensionless'):
-        print(f"Reattaching unit {unit}")
         da_interp = prism.Q_(da_interp, unit)
 
     return da_interp

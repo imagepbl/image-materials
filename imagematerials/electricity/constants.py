@@ -114,11 +114,11 @@ TECH_GEN = 34   # number of electricity generation technologies -> 33 technologi
 
 # names of generation technologies as in the input files (e.g. composition_generation.csv) from Sebastiaan - should be renamed in files to match TIMER names in the future
 GEN_TYPES_SEBASTIAAN = ["Solar PV", "Solar PV residential", "CSP", "Wind onshore", "Wind offshore", 
-                        "Wave", "Hydro", "Other Renewables", "Geothermal","Hydrogen power", "Nuclear", "Conv. Coal",
+                        "Wave", "Hydro", "Other Renewables", "Geothermal","Hydrogen power", "Nuclear","<EMPTY>", "Conv. Coal",
                         "Conv. Oil", "Conv. Natural Gas","Waste", "IGCC", "OGCC", "NG CC", "Biomass CC",
                         "Coal + CCS", "Oil/Coal + CCS", "Natural Gas + CCS", "Biomass + CCS",
-                        "CHP Coal", "CHP Oil", "CHP Natural Gas", "CHP Biomass","CHP Geothermal", "CHP Hydrogen",
-                        "CHP Coal + CCS", "CHP Oil + CCS", "CHP Natural Gas + CCS", "CHP Biomass + CCS"]
+                        "CHP Coal", "CHP Oil", "CHP Natural Gas", "CHP Biomass",
+                        "CHP Coal + CCS", "CHP Oil + CCS", "CHP Natural Gas + CCS", "CHP Biomass + CCS", "CHP Geothermal", "CHP Hydrogen"]
 # names of generation technologies as in TIMER model - TODO: check if these are correct
 GEN_TYPES_TIMER = [
     "SPV",

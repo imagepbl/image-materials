@@ -241,6 +241,9 @@ prep_data["stocks"] = gcap_xr_interp
 prep_data["material_intensities"] = gcap_materials_xr_interp
 prep_data["knowledge_graph"] = create_electricity_graph()
 
+prep_data["stocks"] = prism.Q_(prep_data["stocks"], "MW")
+prep_data["material_intensities"] = prism.Q_(prep_data["material_intensities"], "g/MW")
+prep_data["set_unit_flexible"] = prism.U_(prep_data["stocks"])
 
 # Define the complete timeline, including historic tail
 time_start = prep_data["stocks"].coords["Time"].min().values
