@@ -131,7 +131,12 @@ gcap_data = read_mym_df(path_image_output / 'Gcap.out')
 
 
 # Lifetimes -------
-# df = gcap_lifetime.copy()
+
+# from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_life_time_vehicles
+# df = gcap_lifetime_distr.copy()
+# data_xarray = pandas_to_xarray(df, unit_mapping)
+# test1 = convert_life_time_vehicles(data_xarray)
+
 
 values = gcap_lifetime_data["TechnicalLT"].unstack().to_numpy(dtype=float)
 # Create coordinates
@@ -143,9 +148,9 @@ data_array = np.stack([values, np.full_like(values, np.nan)], axis=0)
 # Create DataArray
 gcap_lifetime_xr = xr.DataArray(
     data_array,
-    dims=["ScipyParam", "Cohort", "Type"],
+    dims=["DistributionParams", "Cohort", "Type"],
     coords={
-        "ScipyParam": scipy_params,
+        "DistributionParams": scipy_params,
         "Cohort": times,
         "Type": [str(r) for r in types]
     },
@@ -229,9 +234,22 @@ gcap_xr = gcap_xr.assign_coords(Type=np.array(gcap_xr.Type.values, dtype=object)
 gcap_materials_xr_interp = interpolate_xr(gcap_materials_xr, YEAR_FIRST_GRID, YEAR_OUT)
 
 gcap_lifetime_xr_interp = interpolate_xr(gcap_lifetime_xr, YEAR_FIRST_GRID, YEAR_OUT)
-gcap_lifetime_xr_interp.loc[dict(ScipyParam="stdv")] = gcap_lifetime_xr_interp.loc[dict(ScipyParam="mean")] * STD_LIFETIMES_ELECTR
+gcap_lifetime_xr_interp.loc[dict(DistributionParams="stdv")] = gcap_lifetime_xr_interp.loc[dict(DistributionParams="mean")] * STD_LIFETIMES_ELECTR
 
 gcap_xr_interp = add_historic_stock(gcap_xr, YEAR_FIRST_GRID)
+
+
+# gcap_lifetime_ds2 = xr.Dataset(
+#     {
+#         (str(type_name), str(dist_param)): gcap_lifetime_xr_interp.sel(Type=type_name, DistributionParams=dist_param).drop_vars(["Type", "DistributionParams"])
+#         for type_name in gcap_lifetime_xr_interp.coords["Type"].values
+#         for dist_param in gcap_lifetime_xr_interp.coords["DistributionParams"].values
+#     }
+# )
+# test4 = convert_life_time_vehicles(gcap_lifetime_ds2)
+
+# gcap_lifetime_ds = gcap_lifetime_xr_interp.to_dataset(dim="DistributionParams")
+# test3 = convert_life_time_vehicles(gcap_lifetime_ds)
 
 #%%%% 3. Prep data =================================================================================
 

@@ -272,7 +272,7 @@ gcap_data = read_mym_df(path_image_output / 'Gcap.out')
 #%%% 1.2) Prepare model specific variables
 ###########################################################################################################
 #----------------------------------------------------------------------------------------------------------
-
+idx = pd.IndexSlice 
 region_list = list(kilometrage.columns.values)   
 
 gcap_tech_list = list(composition_generation.loc[:,idx[2020,:]].droplevel(axis=1, level=0).columns)    #list of names of the generation technologies (workaround to retain original order)
