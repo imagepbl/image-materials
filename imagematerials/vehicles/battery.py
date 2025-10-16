@@ -9,7 +9,7 @@ MATERIAL_TYPE = prism.Dimension("material")
 BATTERY_TYPE = prism.Dimension("battery")
 
 @prism.interface
-class Battery(prism.Model):
+class ElectricVehicleBatteries(prism.Model):
     """ Module to calculate material use for vehicle batteries.
 
     Calculates inflow, stock, and outflow of batteries in vehicles based on the battery weights, 
