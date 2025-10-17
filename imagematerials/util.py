@@ -301,14 +301,16 @@ def _read_config(scenario_folder) -> dict:
 
 def convert_lifetime(lifetimes):
     if isinstance(lifetimes, xr.Dataset):
+        print("Dataset")
         return convert_lifetime_dataset(lifetimes)
     elif isinstance(lifetimes, xr.DataArray):
+        print("Dataarray")
         return convert_lifetime_dataarray(lifetimes)
     else:
         raise TypeError("Input must be an xarray.Dataset or xarray.DataArray")
     
 
-def convert_lifetime_dataset(life_time_vehicles: xr.Dataset) -> dict[str, xr.DataArray]:
+def convert_lifetime_dataset(lifetime_dataset: xr.Dataset) -> dict[str, xr.DataArray]:
     """Convert lifetime vehicles dataset to a more appropriate data format.
 
     This conversion should probably move to the preprocessing stage after we figure out
@@ -316,12 +318,13 @@ def convert_lifetime_dataset(life_time_vehicles: xr.Dataset) -> dict[str, xr.Dat
 
     Parameters
     ----------
-    life_time_vehicles
-        The input life_time_vehicles xarray dataset. It is supposed to be in a very particular format:
+    lifetime_dataset
+        The input is a xarray dataset. It is supposed to be in a very particular format:
         it contains the parameters for each of the modes. However, the distribution types are not
         the same for each of the modes. Thus, the distribution types need to be inferred from the
         names of the parameters that are given. If multiple parameter sets for multiple distributions
         are given, the Weibull distribution is given preference over the FoldedNormal distribution.
+        Only works when the dataset has dimensions (mode, param) and coordinate 'year'. #TODO: make it more flexible to work with Year, Time, Cohort, not only year?
 
     Returns
     -------
@@ -332,7 +335,7 @@ def convert_lifetime_dataset(life_time_vehicles: xr.Dataset) -> dict[str, xr.Dat
     """
     # Create a dictionary to find which parameters are available for which mode.
     mode_param = defaultdict(list)
-    for mode, par in life_time_vehicles.data_vars:
+    for mode, par in lifetime_dataset.data_vars:
         mode_param[mode].append(par)
 
     # Create a dictionary that says which modes are tied to which distribution.
@@ -355,13 +358,13 @@ def convert_lifetime_dataset(life_time_vehicles: xr.Dataset) -> dict[str, xr.Dat
         array = xr.DataArray(
             0.0, dims=("Time", "Type", "ScipyParam"),
             coords={
-                "Time": life_time_vehicles.coords["Year"].to_numpy(),
+                "Time": lifetime_dataset.coords["year"].to_numpy(),
                 "Type": mode_list,
                 "ScipyParam": dist.variable_scipy_param})
         for mode in mode_list:
             orig_param_dict = {}
             for param in dist.params:
-                orig_param_dict[param] = life_time_vehicles.data_vars[str(mode), param].to_numpy()
+                orig_param_dict[param] = lifetime_dataset.data_vars[str(mode), param].to_numpy()
             scipy_params = dist.get_param(orig_param_dict)
             for cur_scipy_key, cur_scipy_par in scipy_params.items():
                 if cur_scipy_key in dist.variable_scipy_param:
