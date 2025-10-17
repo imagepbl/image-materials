@@ -311,7 +311,10 @@ def convert_lifetime(lifetimes):
     
 
 def convert_lifetime_dataset(lifetime_dataset: xr.Dataset) -> dict[str, xr.DataArray]:
-    """Convert lifetime vehicles dataset to a more appropriate data format.
+    """
+    Convert dataset with lifetimes to a dictonary with 
+    keys = name of the distribution applied to the lifetimes (folded_normal, Weibull)
+    values = xarray DataArray with the scipy parameters for the distribution
 
     This conversion should probably move to the preprocessing stage after we figure out
     the exact details of what the output should look like.
@@ -375,14 +378,16 @@ def convert_lifetime_dataset(lifetime_dataset: xr.Dataset) -> dict[str, xr.DataA
     return ret_scipy_params
 
 
-def convert_lifetime_dataarray(life_time_vehicles: xr.DataArray) -> dict[str, xr.DataArray]:
+def convert_lifetime_dataarray(lifetime_dataarray: xr.DataArray) -> dict[str, xr.DataArray]:
     """
-    Convert lifetime vehicles DataArray to a dictionary of DataArrays compatible with the stock model.
+    Convert DataArray with lifetimes to a dictonary with 
+    keys = name of the distribution applied to the lifetimes (folded_normal, Weibull)
+    values = xarray DataArray with the scipy parameters for the distribution
     
     Parameters
     ----------
-    life_time_vehicles : xr.DataArray
-        DataArray with dimensions (DistributionParams, Cohort, Type), containing lifetime parameters.
+    lifetime_dataarray : xr.DataArray
+        DataArray with dimensions (DistributionParams, Cohort, Type), containing lifetime parameters. #TODO: make it more flexible to work with Year, Time, year, not only Cohort?
     
     Returns
     -------
@@ -393,8 +398,8 @@ def convert_lifetime_dataarray(life_time_vehicles: xr.DataArray) -> dict[str, xr
     
     # 1. Build a dictionary of parameters available for each technology
     mode_param = defaultdict(list)
-    for mode in life_time_vehicles.coords["Type"].values:
-        for par in life_time_vehicles.coords["DistributionParams"].values:
+    for mode in lifetime_dataarray.coords["Type"].values:
+        for par in lifetime_dataarray.coords["DistributionParams"].values:
             mode_param[mode].append(str(par))
 
     # 2. Determine which distributions correspond to which modes
@@ -427,7 +432,7 @@ def convert_lifetime_dataarray(life_time_vehicles: xr.DataArray) -> dict[str, xr
             0.0,
             dims=("Time", "Type", "ScipyParam"),
             coords={
-                "Time": life_time_vehicles.coords["Cohort"].to_numpy(),
+                "Time": lifetime_dataarray.coords["Cohort"].to_numpy(),
                 "Type": mode_list,
                 "ScipyParam": dist.variable_scipy_param,
             },
@@ -436,10 +441,10 @@ def convert_lifetime_dataarray(life_time_vehicles: xr.DataArray) -> dict[str, xr
         for mode in mode_list:
             orig_param_dict = {}
             for param in dist.params:
-                if param not in life_time_vehicles.coords["DistributionParams"]:
+                if param not in lifetime_dataarray.coords["DistributionParams"]:
                     print(f"WARNING: Missing expected parameter '{param}' for mode '{mode}'")
                     continue
-                orig_param_dict[param] = life_time_vehicles.sel(
+                orig_param_dict[param] = lifetime_dataarray.sel(
                     Type=mode, DistributionParams=param
                 ).values
 
@@ -455,7 +460,7 @@ def convert_lifetime_dataarray(life_time_vehicles: xr.DataArray) -> dict[str, xr
 
     return ret_scipy_params
 
-
+# TODO: Old -> delete
 def convert_life_time_vehicles(life_time_vehicles: xr.Dataset) -> dict[str, xr.DataArray]:
     """Convert lifetime vehicles dataset to a more appropriate data format.
 
