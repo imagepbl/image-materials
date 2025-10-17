@@ -19,7 +19,7 @@ from matplotlib.ticker import ScalarFormatter
 import prism
 from imagematerials.distribution import ALL_DISTRIBUTIONS, NAME_TO_DIST
 from imagematerials.read_mym import read_mym_df
-from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_life_time_vehicles
+from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
 from imagematerials.model import GenericMainModel, GenericStocks, SharesInflowStocks, Maintenance, GenericMaterials, MaterialIntensities
 from imagematerials.factory import ModelFactory, Sector
 from imagematerials.concepts import create_electricity_graph, create_region_graph
@@ -126,7 +126,6 @@ gcap_data = read_mym_df(path_image_output / 'Gcap.out')
 ###########################################################################################################
 #----------------------------------------------------------------------------------------------------------
 
-
 #%%%% 1. transform to xarray =================================================================================
 
 
@@ -142,7 +141,7 @@ values = gcap_lifetime_data["TechnicalLT"].unstack().to_numpy(dtype=float)
 # Create coordinates
 times = gcap_lifetime_data.index.levels[0].to_numpy()
 types = gcap_lifetime_data.index.levels[1].to_numpy()
-scipy_params = ["mean", "stdv"]
+scipy_params = ["mean", "stdev"]
 # Build full array: shape (ScipyParam, Time, Type)
 data_array = np.stack([values, np.full_like(values, np.nan)], axis=0)
 # Create DataArray
@@ -172,9 +171,9 @@ data_array = gcap_materials_data.to_numpy().reshape(len(materials), len(years), 
 # Build xarray DataArray
 gcap_materials_xr = xr.DataArray(
     data_array,
-    dims=('Material', 'Cohort', 'Type'),
+    dims=('material', 'Cohort', 'Type'),
     coords={
-        'Material': materials,
+        'material': materials,
         'Cohort': years,
         'Type': techs
     },
@@ -234,27 +233,16 @@ gcap_xr = gcap_xr.assign_coords(Type=np.array(gcap_xr.Type.values, dtype=object)
 gcap_materials_xr_interp = interpolate_xr(gcap_materials_xr, YEAR_FIRST_GRID, YEAR_OUT)
 
 gcap_lifetime_xr_interp = interpolate_xr(gcap_lifetime_xr, YEAR_FIRST_GRID, YEAR_OUT)
-gcap_lifetime_xr_interp.loc[dict(DistributionParams="stdv")] = gcap_lifetime_xr_interp.loc[dict(DistributionParams="mean")] * STD_LIFETIMES_ELECTR
+gcap_lifetime_xr_interp.loc[dict(DistributionParams="stdev")] = gcap_lifetime_xr_interp.loc[dict(DistributionParams="mean")] * STD_LIFETIMES_ELECTR
+gcap_lifetime_xr_interp = convert_lifetime(gcap_lifetime_xr_interp)
 
 gcap_xr_interp = add_historic_stock(gcap_xr, YEAR_FIRST_GRID)
 
 
-# gcap_lifetime_ds2 = xr.Dataset(
-#     {
-#         (str(type_name), str(dist_param)): gcap_lifetime_xr_interp.sel(Type=type_name, DistributionParams=dist_param).drop_vars(["Type", "DistributionParams"])
-#         for type_name in gcap_lifetime_xr_interp.coords["Type"].values
-#         for dist_param in gcap_lifetime_xr_interp.coords["DistributionParams"].values
-#     }
-# )
-# test4 = convert_life_time_vehicles(gcap_lifetime_ds2)
-
-# gcap_lifetime_ds = gcap_lifetime_xr_interp.to_dataset(dim="DistributionParams")
-# test3 = convert_life_time_vehicles(gcap_lifetime_ds)
-
 #%%%% 3. Prep data =================================================================================
 
 prep_data = {}
-prep_data["lifetimes"] = gcap_lifetime_xr_interp
+prep_data["lifetimes"] = test_da
 prep_data["stocks"] = gcap_xr_interp
 prep_data["material_intensities"] = gcap_materials_xr_interp
 prep_data["knowledge_graph"] = create_electricity_graph()

@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import scipy.stats
 import prism
 
-from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_life_time_vehicles
+from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
 from imagematerials.concepts import create_electricity_graph
 from imagematerials.electricity.constants import (
     YEAR_FIRST,
@@ -190,7 +190,7 @@ def create_prep_data(results_dict, conversion_table, unit_mapping):
 
     for df_name in list(prep_data.keys()):
         if "lifetime" in df_name:
-            prep_data["lifetimes"] = convert_life_time_vehicles(prep_data[df_name])
+            prep_data["lifetimes"] = convert_lifetime_flexible(prep_data[df_name])
         elif "stock" in df_name:
             prep_data["stocks"] = prep_data.pop(df_name)
         elif "material" in df_name:
