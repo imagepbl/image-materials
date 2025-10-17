@@ -131,12 +131,6 @@ gcap_data = read_mym_df(path_image_output / 'Gcap.out')
 
 # Lifetimes -------
 
-# from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_life_time_vehicles
-# df = gcap_lifetime_distr.copy()
-# data_xarray = pandas_to_xarray(df, unit_mapping)
-# test1 = convert_life_time_vehicles(data_xarray)
-
-
 values = gcap_lifetime_data["TechnicalLT"].unstack().to_numpy(dtype=float)
 # Create coordinates
 times = gcap_lifetime_data.index.levels[0].to_numpy()
@@ -212,21 +206,6 @@ gcap_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_xr, output_coords=GEN_T
 gcap_xr = gcap_xr.assign_coords(Type=np.array(gcap_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
 
-# -------------------------------------------------------------
-
-
-# region_list = list(kilometrage.columns.values)   
-# idx = pd.IndexSlice 
-# gcap_tech_list = list(gcap_materials_data.loc[:,idx[2020,:]].droplevel(axis=1, level=0).columns)    #list of names of the generation technologies (workaround to retain original order)
-# gcap_material_list = list(composition_generation.index.values)  #list of materials the generation technologies
-
-# gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
-# gcap = pd.pivot_table(gcap_data[gcap_data['time'].isin(list(range(YEAR_START,YEAR_END+1)))], index=['time','DIM_1'], values=list(range(1,TECH_GEN+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (34));  the last column in gcap_data (= totals) is now removed
-
-# # renaming multi-index dataframe: generation capacity, based on the regions in grid_length_Hv & technologies as given
-# gcap.index = pd.MultiIndex.from_product([list(range(YEAR_START,YEAR_END+1)), region_list], names=['years', 'regions'])
-# gcap.columns = gcap_tech_list
-
 
 #%%%% 2. Interpolate =================================================================================
 
@@ -242,7 +221,7 @@ gcap_xr_interp = add_historic_stock(gcap_xr, YEAR_FIRST_GRID)
 #%%%% 3. Prep data =================================================================================
 
 prep_data = {}
-prep_data["lifetimes"] = test_da
+prep_data["lifetimes"] = gcap_lifetime_xr_interp
 prep_data["stocks"] = gcap_xr_interp
 prep_data["material_intensities"] = gcap_materials_xr_interp
 prep_data["knowledge_graph"] = create_electricity_graph()
