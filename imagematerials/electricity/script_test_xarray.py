@@ -18,6 +18,7 @@ from matplotlib.ticker import ScalarFormatter
 
 import prism
 from imagematerials.distribution import ALL_DISTRIBUTIONS, NAME_TO_DIST
+from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
 from imagematerials.model import GenericMainModel, GenericStocks, SharesInflowStocks, Maintenance, GenericMaterials, MaterialIntensities
@@ -32,10 +33,8 @@ from imagematerials.electricity.constants import (
     YEAR_SWITCH,
     STANDARD_SCEN_EXTERNAL_DATA,
     SENS_ANALYSIS,
-    REGIONS,
-    REGIONS_TIMER,
     TECH_GEN,
-    GEN_TYPES_SEBASTIAAN,
+    EPG_TECHNOLOGIES,
     STD_LIFETIMES_ELECTR,
     MEGA_TO_TERA,
     PKMS_TO_VKMS,
@@ -130,7 +129,6 @@ gcap_data = read_mym_df(path_image_output / 'Gcap.out')
 
 
 # Lifetimes -------
-
 values = gcap_lifetime_data["TechnicalLT"].unstack().to_numpy(dtype=float)
 # Create coordinates
 times = gcap_lifetime_data.index.levels[0].to_numpy()
@@ -149,10 +147,10 @@ gcap_lifetime_xr = xr.DataArray(
     },
     name="Lifetime"
 )
-
 gcap_lifetime_xr = prism.Q_(gcap_lifetime_xr, "year")
-gcap_lifetime_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_lifetime_xr, output_coords=GEN_TYPES_SEBASTIAAN, dim="Type")
+gcap_lifetime_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_lifetime_xr, output_coords=EPG_TECHNOLOGIES, dim="Type") # convert technology names to the standard names from TIMER
 gcap_lifetime_xr = gcap_lifetime_xr.assign_coords(Type=np.array(gcap_lifetime_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
+
 
 # Material Intensities -------
 # Extract coordinate labels
@@ -174,35 +172,33 @@ gcap_materials_xr = xr.DataArray(
     name='MaterialIntensities'
 )
 gcap_materials_xr = prism.Q_(gcap_materials_xr, "g/MW")
-
+gcap_materials_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_materials_xr, output_coords=EPG_TECHNOLOGIES, dim="Type")
+gcap_materials_xr = gcap_materials_xr.assign_coords(Type=np.array(gcap_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
 
 # Gcap ------
-gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
-gcap_data = gcap_data.loc[gcap_data['time'].isin(range(YEAR_START, YEAR_END + 1)),
-                     ['time', 'DIM_1', *range(1, TECH_GEN + 1)]]  # only keep relevant years and technology columns
-# Extract numeric columns (technologies)
-tech_cols = list(range(1, TECH_GEN+1))
-# Pivot to 3D array
-data_array = gcap_data[tech_cols].to_numpy().reshape(
-    len(gcap_data['time'].unique()),
-    len(gcap_data['DIM_1'].unique()),
-    len(tech_cols)
-)
-# Create xarray DataArray
+gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
+gcap_data = gcap_data.loc[gcap_data['time'].isin(range(YEAR_START, YEAR_END + 1)), ['time', 'DIM_1', *range(1, len(EPG_TECHNOLOGIES) + 1)]]  # only keep relevant years and technology columns
+# Extract coordinate labels
+years = sorted(gcap_data['time'].unique())
+regions = sorted(gcap_data['DIM_1'].unique())
+techs = list(range(1, len(EPG_TECHNOLOGIES)+1))
+# Convert to 3D array: (Year, Region, Tech)
+data_array = gcap_data[techs].to_numpy().reshape(len(years), len(regions), len(techs))
+# Build xarray DataArray
 gcap_xr = xr.DataArray(
     data_array,
     dims=('Time', 'Region', 'Type'),
     coords={
-        'Time': sorted(gcap_data['time'].unique()),
-        'Region': [str(r) for r in sorted(gcap_data['DIM_1'].unique())],
-        'Type': [str(r) for r in tech_cols]
+        'Time': years,
+        'Region': [str(r) for r in regions],
+        'Type': [str(r) for r in techs]
     },
     name='GCap'
 )
 gcap_xr = prism.Q_(gcap_xr, "MW")
-gcap_xr = knowledge_graph_region.rebroadcast_xarray(gcap_xr, output_coords=REGIONS_TIMER, dim="Region")
-gcap_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_xr, output_coords=GEN_TYPES_SEBASTIAAN, dim="Type")
+gcap_xr = knowledge_graph_region.rebroadcast_xarray(gcap_xr, output_coords=IMAGE_REGIONS, dim="Region") 
+gcap_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_xr, output_coords=EPG_TECHNOLOGIES, dim="Type")
 gcap_xr = gcap_xr.assign_coords(Type=np.array(gcap_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
 

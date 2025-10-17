@@ -120,7 +120,7 @@ GEN_TYPES_SEBASTIAAN = ["Solar PV", "Solar PV residential", "CSP", "Wind onshore
                         "CHP Coal", "CHP Oil", "CHP Natural Gas", "CHP Biomass",
                         "CHP Coal + CCS", "CHP Oil + CCS", "CHP Natural Gas + CCS", "CHP Biomass + CCS", "CHP Geothermal", "CHP Hydrogen"]
 # names of generation technologies as in TIMER model - TODO: check if these are correct
-GEN_TYPES_TIMER = [
+EPG_TECHNOLOGIES = [
     "SPV",
     "SPVR",
     "CSP",

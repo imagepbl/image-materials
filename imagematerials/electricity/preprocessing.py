@@ -1,30 +1,18 @@
-#%%
+#%% Import modules and constants
 import pandas as pd
 import numpy as np
-import os
-import scipy
-import warnings
 from pathlib import Path
 import pint
 import xarray as xr
-from collections import defaultdict
-import matplotlib.pyplot as plt
-from matplotlib.ticker import StrMethodFormatter
-from matplotlib.ticker import ScalarFormatter
 
-# path_current = Path(__file__).resolve().parent # absolute path of file
-# path_base = path_current.parent.parent # base path of the project -> image-materials
-# sys.path.append(str(path_base))
 
 import prism
-from imagematerials.distribution import ALL_DISTRIBUTIONS, NAME_TO_DIST
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
-from imagematerials.model import GenericMainModel, GenericMaterials, GenericStocks, Maintenance, MaterialIntensities
-from imagematerials.factory import ModelFactory, Sector
 from imagematerials.concepts import create_electricity_graph, create_region_graph
 from imagematerials.electricity.utils import MNLogit, stock_tail, create_prep_data, interpolate_xr, add_historic_stock
 
+from imagematerials.constants import IMAGE_REGIONS
 
 from imagematerials.electricity.constants import (
     STANDARD_SCEN_EXTERNAL_DATA,
@@ -32,26 +20,12 @@ from imagematerials.electricity.constants import (
     YEAR_FIRST_GRID,
     YEAR_SWITCH,
     SENS_ANALYSIS,
-    REGIONS,
-    REGIONS_TIMER,
-    GEN_TYPES_SEBASTIAAN,
-    TECH_GEN,
+    EPG_TECHNOLOGIES,
     STD_LIFETIMES_ELECTR,
-    MEGA_TO_TERA,
-    PKMS_TO_VKMS,
-    TONNES_TO_KGS,
     LOAD_FACTOR,
     BEV_CAPACITY_CURRENT,
     PHEV_CAPACITY_CURRENT,
     unit_mapping
-)
-
-from imagematerials.electricity.electr_external_data import (
-    df_iea_cu_aps,
-    df_iea_cu_nzs,
-    df_iea_co_aps,
-    df_iea_mn_aps,
-    df_iea_ni_aps
 )
 
 
@@ -68,8 +42,8 @@ def get_preprocessing_data_gen(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_E
     scen_folder = SCEN + "_" + VARIANT
     path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
     path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
-    path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scen_folder) #test
-        # test if path_external_data_scenario exists and if not set to standard scenario
+    path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scen_folder)
+    # test if path_external_data_scenario exists and if not set to standard scenario
     if not path_external_data_scenario.exists():
         path_external_data_scenario = Path(path_base, "data", "raw", "electricity", STANDARD_SCEN_EXTERNAL_DATA)
     print(f"Path to image output: {path_image_output}")
@@ -94,14 +68,16 @@ def get_preprocessing_data_gen(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_E
     # Generation capacity (stock demand per generation technology) in MW peak capacity
     gcap_data = read_mym_df(path_image_output / 'Gcap.out')
 
+
+
     ###########################################################################################################
     # Transform to xarray #
 
     knowledge_graph_region = create_region_graph()
     knowledge_graph_electr = create_electricity_graph()
     
-    # Lifetimes -------
 
+    # Lifetimes -------
     values = gcap_lifetime_data["TechnicalLT"].unstack().to_numpy(dtype=float)
     # Create coordinates
     times = gcap_lifetime_data.index.levels[0].to_numpy()
@@ -120,10 +96,10 @@ def get_preprocessing_data_gen(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_E
         },
         name="Lifetime"
     )
-
     gcap_lifetime_xr = prism.Q_(gcap_lifetime_xr, "year")
-    gcap_lifetime_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_lifetime_xr, output_coords=GEN_TYPES_SEBASTIAAN, dim="Type")
+    gcap_lifetime_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_lifetime_xr, output_coords=EPG_TECHNOLOGIES, dim="Type") # convert technology names to the standard names from TIMER
     gcap_lifetime_xr = gcap_lifetime_xr.assign_coords(Type=np.array(gcap_lifetime_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
+
 
     # Material Intensities -------
     # Extract coordinate labels
@@ -145,58 +121,62 @@ def get_preprocessing_data_gen(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_E
         name='MaterialIntensities'
     )
     gcap_materials_xr = prism.Q_(gcap_materials_xr, "g/MW")
+    gcap_materials_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_materials_xr, output_coords=EPG_TECHNOLOGIES, dim="Type")
+    gcap_materials_xr = gcap_materials_xr.assign_coords(Type=np.array(gcap_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
 
     # Gcap ------
-    gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
-    gcap_data = gcap_data.loc[gcap_data['time'].isin(range(YEAR_START, YEAR_END + 1)),
-                        ['time', 'DIM_1', *range(1, TECH_GEN + 1)]]  # only keep relevant years and technology columns
-    # Extract numeric columns (technologies)
-    tech_cols = list(range(1, TECH_GEN+1))
-    # Pivot to 3D array
-    data_array = gcap_data[tech_cols].to_numpy().reshape(
-        len(gcap_data['time'].unique()),
-        len(gcap_data['DIM_1'].unique()),
-        len(tech_cols)
-    )
-    # Create xarray DataArray
+    gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
+    gcap_data = gcap_data.loc[gcap_data['time'].isin(range(YEAR_START, YEAR_END + 1)), ['time', 'DIM_1', *range(1, len(EPG_TECHNOLOGIES) + 1)]]  # only keep relevant years and technology columns
+    # Extract coordinate labels
+    years = sorted(gcap_data['time'].unique())
+    regions = sorted(gcap_data['DIM_1'].unique())
+    techs = list(range(1, len(EPG_TECHNOLOGIES)+1))
+    # Convert to 3D array: (Year, Region, Tech)
+    data_array = gcap_data[techs].to_numpy().reshape(len(years), len(regions), len(techs))
+    # Build xarray DataArray
     gcap_xr = xr.DataArray(
         data_array,
         dims=('Time', 'Region', 'Type'),
         coords={
-            'Time': sorted(gcap_data['time'].unique()),
-            'Region': [str(r) for r in sorted(gcap_data['DIM_1'].unique())],
-            'Type': [str(r) for r in tech_cols]
+            'Time': years,
+            'Region': [str(r) for r in regions],
+            'Type': [str(r) for r in techs]
         },
         name='GCap'
     )
     gcap_xr = prism.Q_(gcap_xr, "MW")
-    gcap_xr = knowledge_graph_region.rebroadcast_xarray(gcap_xr, output_coords=REGIONS_TIMER, dim="Region")
-    gcap_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_xr, output_coords=GEN_TYPES_SEBASTIAAN, dim="Type")
+    gcap_xr = knowledge_graph_region.rebroadcast_xarray(gcap_xr, output_coords=IMAGE_REGIONS, dim="Region") 
+    gcap_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_xr, output_coords=EPG_TECHNOLOGIES, dim="Type")
     gcap_xr = gcap_xr.assign_coords(Type=np.array(gcap_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
 
     ###########################################################################################################
     # Interpolate #
 
+    # interpolate_xr: The lifetimes & material intensities are only given for specific years (2020 and 2050), so we linearly interpolate to get values for the years 2020-2050.
+    # The values before 2020 are kept constant at the 2020 level, and the values after 2050 are kept constant at the 2050 level.
     gcap_lifetime_xr_interp = interpolate_xr(gcap_lifetime_xr, YEAR_FIRST_GRID, YEAR_OUT)
     gcap_lifetime_xr_interp.loc[dict(DistributionParams="stdev")] = gcap_lifetime_xr_interp.loc[dict(DistributionParams="mean")] * STD_LIFETIMES_ELECTR
-    gcap_lifetime_xr_interp = convert_lifetime(gcap_lifetime_xr_interp)
-
     gcap_materials_xr_interp = interpolate_xr(gcap_materials_xr, YEAR_FIRST_GRID, YEAR_OUT)
 
+    # The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
+    gcap_lifetime_xr_interp = convert_lifetime(gcap_lifetime_xr_interp)
+
+    # TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
     gcap_xr_interp = add_historic_stock(gcap_xr, YEAR_FIRST_GRID)
 
 
     ###########################################################################################################
     # Prep_data File #
     
+    # bring preprocessing data into a generic format for the model
     prep_data = {}
     prep_data["lifetimes"] = gcap_lifetime_xr_interp
     prep_data["stocks"] = gcap_xr_interp
     prep_data["material_intensities"] = gcap_materials_xr_interp
     prep_data["knowledge_graph"] = create_electricity_graph()
-
+    # add units
     prep_data["stocks"] = prism.Q_(prep_data["stocks"], "MW")
     prep_data["material_intensities"] = prism.Q_(prep_data["material_intensities"], "g/MW")
     prep_data["set_unit_flexible"] = prism.U_(prep_data["stocks"]) # prism.U_ gives the unit back
@@ -271,10 +251,10 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     # Prepare model specific variables #
 
     gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
-    gcap = pd.pivot_table(gcap_data[gcap_data['time'].isin(list(range(YEAR_START,YEAR_END+1)))], index=['time','DIM_1'], values=list(range(1,TECH_GEN+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (28));  the last column in gcap_data (= totals) is now removed
+    gcap = pd.pivot_table(gcap_data[gcap_data['time'].isin(list(range(YEAR_START,YEAR_END+1)))], index=['time','DIM_1'], values=list(range(1,len(EPG_TECHNOLOGIES)+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (28));  the last column in gcap_data (= totals) is now removed
 
     gcap_BL_data = gcap_BL_data.loc[~gcap_BL_data['DIM_1'].isin([27,28])]    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
-    gcap_BL = pd.pivot_table(gcap_BL_data[gcap_BL_data['time'].isin(list(range(YEAR_START,YEAR_END+1)))], index=['time','DIM_1'], values=list(range(1,TECH_GEN+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (28));  the last column in gcap_data (= totals) is now removed
+    gcap_BL = pd.pivot_table(gcap_BL_data[gcap_BL_data['time'].isin(list(range(YEAR_START,YEAR_END+1)))], index=['time','DIM_1'], values=list(range(1,len(EPG_TECHNOLOGIES)+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (28));  the last column in gcap_data (= totals) is now removed
 
     region_list = list(grid_length_Hv.columns.values)
     material_list = list(materials_grid.columns.values)
@@ -795,7 +775,7 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
 
     for column in range(0,len(phs_regions)):
         sum_data = Gcap_hydro.iloc[:,phs_regions[column]].sum(axis=1) # first, get the sum of all hydropower in the IHA regions (to divide over in second step)
-        for region in range(0,REGIONS):
+        for region in range(0,len(IMAGE_REGIONS)):
             if region in phs_regions[column]:
                 phs_projections_IMAGE.iloc[:,region] = phs_projections.iloc[:,column] * (Gcap_hydro.iloc[:,region]/sum_data) 
                 # J: allocate share of the phs_projections to each IMAGE region based on the share of that region on the generation capacity of the IHA region it is part of
