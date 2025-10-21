@@ -210,7 +210,7 @@ class ResourceModel():
                 else:
                     # assign fit of low steady model
                     self.region_model_match[region] = self.model_groups[assign_model][model_nr]
-                    print(assign_model, "assigned to", region)
+                    print(assign_model, self.resource, "assigned to", region)
 
 
 

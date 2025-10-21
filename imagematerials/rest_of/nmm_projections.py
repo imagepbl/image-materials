@@ -102,57 +102,81 @@ def limestone_projection(scenario: str, path_input_data, path_input_data_image):
 
     # collect these above defined groups in a dictionary
 
-    high = ['class_ 2', 'class_ 20']
+    limestone.historic_other_fraction_consumption = limestone.historic_consumption_data.copy()
 
-    low = ['class_ 1']
+    group_1 = ['class_ 1']
+    group_2 = ['class_ 2']
+    group_3 = [ 'class_ 7', 'class_ 17', 
+            'class_ 24', 'class_ 26']
+    group_4 = ['class_ 11', 'class_ 12', 'class_ 21'] 
+    group_5 = ['class_ 19', 'class_ 23']
+    group_6 = ['class_ 4', 'class_ 6', 'class_ 22']
+    group_7 = ['class_ 3', 'class_ 14', 'class_ 15']
+    group_8 = ['class_ 20']
+    group_9 = ['class_ 18']
 
-    medium = ['class_ 11' , 'class_ 24',] 
+    diff = ['class_ 5', 'class_ 10', 'class_ 13', 'class_ 16', 'class_ 25', 'class_ 26']
+    exclude = ['class_ 8', 'class_ 9', 'class_ 25', 'class_ 26']
 
-    medium_high = ['class_ 23', 'class_ 19']
-
-    # trajectory not to forseen, will be fitted with global regression
-
-    # what is in rset will not be fitted because of outliers - will follow global projections       
+    # what is in rest will not be fitted because of outliers - will follow global projections
     rest = all_regions_list_class[:-1]
-    rest = [r for r in rest if r not in (high+medium+low+medium_high)]
+    rest = [r for r in rest if r not in (group_1+group_2+group_3+group_4+group_5+group_6+group_7+group_8+exclude+diff)]
 
-    limestone_grouping = {'all' : all_regions_list_class[:-1],
-                        'high': high,
-                        'medium': medium,
-                        'medium_high': medium_high,
-                        'low': low,
+    limestone_grouping = {'all_regions' : all_regions_list_class[:-1],
+                        'group_1': group_1,
+                        'group_2': group_2,
+                        'group_3': group_3,
+                        'group_4': group_4,
+                        'group_5': group_5,
+                        'group_6': group_6,
+                        'group_7': group_7,
+                        'group_8': group_8,
+                        'group_9': group_9,
                         }
+
 
     limestone.data_grouped_regions(regions_grouping = limestone_grouping) 
     limestone.sum_IMAGE_drivers_regions(regions_dict=None)
 
     # calculate regressors
     limestone.calculate_regressors(limestone.historic_consumption_data)
-
     best_rmse_models = {
-    'all': 'gompertz model',
-    'high': 'gompertz model',
-    'medium': 'gompertz model',
-    'low': 'gompertz model',
-    'medium_high': 'gompertz model'
+        'all_regions': 'gompertz model',
+        'group_1': 'gompertz model',
+        'group_2': 'gompertz model',
+        'group_3': 'gompertz model',
+        'group_4': 'gompertz model',
+        'group_5': 'gompertz model',
+        'group_6': 'gompertz model',
+        'group_7': 'gompertz model',
+        'group_8': 'gompertz model',
+        'group_9': 'gompertz model'
     }
 
     bounds = {
-        'all': ([0, 0, 0], [1, 10, 10]),
-        'high': ([0, 0, 0], [10, 10, 10]),
-        'medium': ([0, 2, 2], [10, 10, 10]),
-        'low': ([0, 0, 0], [10, 10, 10]),
-        'medium_high': ([0, 0, 0], [10, 10, 10])}
+        'all_regions': ([0, 0, 0], [1, 10, 10]),
+        'group_1': ([0, 0, 0], [10, 10, 10]),
+        'group_2': ([0, 0, 0], [2.7, 10, 10]),
+        'group_3': ([0, 0, 0], [10, 10, 10]),
+        'group_4': ([0, 0, 0], [10, 10, 10]),
+        'group_5': ([0, 0, 0], [10, 10, 10]),
+        'group_6': ([0, 0, 0], [10, 10, 10]),
+        'group_7': ([0, 0, 0], [10, 10, 10]),
+        'group_8': ([0, 0, 0], [2, 10, 10]),
+        'group_9': ([0, 0, 0], [10, 10, 10]),
+    }
 
     limestone.fit_models(best_rmse_models, bounds)
-    limestone.project_on_total(all_regions_list_class[:-1])
-    limestone.smooth_out_interpolation_all(10, 2017)
-    limestone.adjust_alpha_and_project(all_regions_list_class[:-1], 
-                    start_year_adjust=2025, 
-                    end_year_adjust=2100, 
-                    min_alpha=None)
 
-    limestone.remove_regions_with_no_good_fit_from_region_model_match(rest)
+    limestone.assign_fit_to_groups_not_fitted(['class_ 5', 'class_ 10', 'class_ 18'], 
+                                assign_model='group_6', 
+                                model_nr=6)
+                                
+    limestone.assign_fit_to_groups_not_fitted(['class_ 13', 'class_ 16'], 
+                            assign_model='all_regions', 
+                            model_nr=6)
+
+    limestone.remove_regions_with_no_good_fit_from_region_model_match(exclude)
 
     return limestone
 

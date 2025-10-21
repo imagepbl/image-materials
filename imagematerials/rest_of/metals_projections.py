@@ -168,15 +168,6 @@ def steel_projection(scenario: str, path_input_data, path_input_data_image):
                                     'too_low': 'gompertz model'},
                                     bounds=bounds)  
 
-
-    # project based on best model
-    # steel.project_on_total(all_regions_list_class[:-1])
-    # steel.smooth_out_interpolation_all(10, 2012)
-    # steel.adjust_alpha_and_project(all_regions_list_class[:-1], 
-    #                            start_year_adjust=2025, 
-    #                            end_year_adjust=2100, 
-    #                            min_alpha=None)
-    
     steel.remove_regions_with_no_good_fit_from_region_model_match(exclude)
     
     return steel
@@ -279,8 +270,6 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
     aluminium.assign_fit_to_groups_not_fitted(IAI_TO_IMAGE_CLASSES.get("South America"), 
                                     assign_model='low', 
                                     model_nr=6)
-
-
     aluminium.assign_fit_to_groups_not_fitted(IAI_TO_IMAGE_CLASSES.get("Oceania") +  
                                               IAI_TO_IMAGE_CLASSES.get("Japan"),
                                            assign_model='all_regions', 
