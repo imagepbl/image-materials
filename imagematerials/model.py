@@ -771,6 +771,7 @@ class RestOf(prism.Model):
             
             # Create a mask of where values are nan
             mask = np.isnan(self.inflow_materials_rest.loc[t])
+           
             # Use the mask to fill nans with historic_diff_consumption
             # Align historic_diff_consumption to the same dims/order as inflow_materials_rest
 
