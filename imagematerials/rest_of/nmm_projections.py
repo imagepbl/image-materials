@@ -248,23 +248,23 @@ def clay_projections(scenario: str, path_input_data, path_input_data_image):
                         path_input_data=path_input_data,
                         path_input_data_image=path_input_data_image)
 
+    clay.historic_other_fraction_consumption = clay.historic_consumption_data.copy()
+
     # collect these above defined groups in a dictionary
     low_steady = ['class_ 1', 'class_ 2', 'class_ 23']
-
     high_steady = ['class_ 11', 'class_ 17', 'class_ 24']
-
     medium = ['class_ 7', 'class_ 13', 'class_ 19', 'class_ 21'] 
-
     china = ['class_ 20']
 
     # not fitted
     low_gdp = ['class_ 3', 'class_ 4', 'class_ 5', 'class_ 6', 
-            'class_ 15', 'class_ 22', 'class_ 25', 'class_ 26']
+               'class_ 8', 'class_ 9', 'class_ 15', 'class_ 22', 'class_ 25', 'class_ 26']
     
-    no_trajectory_forseen = ['class_ 8', 'class_ 9', 'class_ 10', 'class_ 12',
+    no_trajectory_forseen = ['class_ 10', 'class_ 12',
                             'class_ 14', 'class_ 16']
 
     outliers = ['class_ 18']  # 18 : high per capita consumption on a very low gdp per capita
+    
     exclude = []
 
 
@@ -308,11 +308,10 @@ def clay_projections(scenario: str, path_input_data, path_input_data_image):
                                      assign_model='low_steady', 
                                      model_nr=6)
 
-    clay.assign_fit_to_groups_not_fitted(rest, 
+    clay.assign_fit_to_groups_not_fitted(no_trajectory_forseen+outliers, 
                                         assign_model='all_regions', 
                                         model_nr=6)
-    
-    clay.remove_regions_with_no_good_fit_from_region_model_match(exclude)
-
+    # will take historic average instead
+    clay.remove_regions_with_no_good_fit_from_region_model_match(exclude+low_gdp)
 
     return clay
