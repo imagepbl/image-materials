@@ -159,7 +159,7 @@ def mean_historic_other_fraction_consumption_to_xr(results_models):
     Create a DataArray of mean of last 5 years of historic other fraction consumption for all materials.
 
     """
-    no_full_data_avaiable_on_region_list = ['limestone', 'clay']
+    no_full_data_avaiable_on_region_list = [] # limestone, clay
     material_list_complete_fit = ['steel', 'cement', 'limestone', 'clay', 'sand', 'copper']
     material_list_sub_regions_fit = ['aluminium']
 
@@ -168,6 +168,7 @@ def mean_historic_other_fraction_consumption_to_xr(results_models):
 
     # save both in one xarray
     for material in material_list_complete_fit + material_list_sub_regions_fit:
+        print(material)
         if material in no_full_data_avaiable_on_region_list:
             diff_cons = results_models['SSP2_M_CP']['steel'].historic_other_fraction_consumption.iloc[-5:]
             diff_cons = diff_cons.mean(axis=0)
@@ -201,7 +202,8 @@ def historic_other_fraction_consumption_to_xr(results_models):
     Create a DataArray of historic other fraction consumption for all materials.
 
     """
-    no_full_data_avaiable_on_region_list = ['limestone', 'clay']
+    # fill if should be excluded for some materials
+    no_full_data_avaiable_on_region_list = []
     material_list_complete_fit = ['steel', 'cement', 'limestone', 'clay', 'sand', 'copper']
     material_list_sub_regions_fit = ['aluminium']
 
@@ -223,7 +225,7 @@ def historic_other_fraction_consumption_to_xr(results_models):
         # to xarray
         diff_cons = diff_cons.to_xarray().to_array()
         # rename coords
-        if material in ['cement', 'sand']:
+        if material in ['cement', 'sand', 'limestone', 'clay']:
             diff_cons = diff_cons.rename({'t': 'Time', 'variable': 'Region'})
         elif material in ['copper']:
             diff_cons = diff_cons.rename({'year': 'Time', 'variable': 'Region'})

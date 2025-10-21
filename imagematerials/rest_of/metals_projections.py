@@ -24,17 +24,19 @@ def copper_projection(scenario: str, path_input_data, path_input_data_image):
 
     group_1 = ["class_ 1", "class_ 24"]
     group_2 = ["class_ 11", "class_ 23"]
-    group_3 = ["class_ 3", "class_ 12", "class_ 13", "class_ 15", 
-            "class_ 16", "class_ 18", "class_ 21", "class_ 22"]
-    group_4 = ["class_ 10", "class_ 19", "class_ 20"]
+    group_3 = ["class_ 3", "class_ 13", "class_ 15", 
+            "class_ 16"]
+    group_4 = ["class_ 20"]
     group_5 = ["class_ 2"]
-
+    group_6 = ["class_ 19"]
 
     # trajectory not to forseen, will be fitted with global regression
-    no_data = [ "class_ 4", "class_ 5", "class_ 6", "class_ 7", 
-            "class_ 8", "class_ 9", "class_ 14", "class_ 17", 
-            "class_ 25", "class_ 26"]
-    exclude = no_data 
+  
+    # take average of last years for exclude and scattered
+    exclude = ["class_ 4", "class_ 5", "class_ 7", "class_ 8",  
+               "class_ 9", "class_ 14", "class_ 17", "class_ 18", "class_ 25", "class_ 26"]
+    
+    scattered = ["class_ 10", "class_ 12", ]
 
     # for these models a regression will be made
     # all reginos that are not in the high, medium, low will be fitted with the global regression
@@ -43,7 +45,8 @@ def copper_projection(scenario: str, path_input_data, path_input_data_image):
                 'group_2': group_2,
                 'group_3': group_3,
                 'group_4': group_4,
-                'group_5': group_5
+                'group_5': group_5,
+                'group_6': group_6
                 }
 
     copper.data_grouped_regions(regions_grouping = copper_regions) #list(COPPER_AVERAGE_REGIONS_TO_IMAGE.keys()
@@ -59,26 +62,24 @@ def copper_projection(scenario: str, path_input_data, path_input_data_image):
         'group_2': 'gompertz model',
         'group_3': 'gompertz model',
         'group_4': 'gompertz model',
-        'group_5': 'gompertz model'
+        'group_5': 'gompertz model',
+        'group_6': 'gompertz model'
     }
 
     bounds = {
         'all_regions' : ([0, 0, 0], [10, 10, 10]),
         'group_1': ([0, 0, 0], [0.005, 10, 10]),
         'group_2': ([0, 2, 2], [10, 10, 10]),
-        'group_3': ([0, 0, 0], [10, 10, 10]),
+        'group_3': ([0, 0, 0], [0.006, 10, 10]),
         'group_4': ([0, 0, 0], [10, 10, 10]),
-        'group_5': ([0, 2, 2], [10, 10, 10])
+        'group_5': ([0, 2, 2], [10, 10, 10]),
+        'group_6': ([0, 0, 0], [10, 10, 10]),
     }
 
     copper.calculate_regressors(copper.historic_other_fraction_consumption)
     copper.fit_models(best_rmse_models=best_rmse_models, bounds=bounds)
-    copper.assign_fit_to_groups_not_fitted(list_regions=all_regions_list_class[:-1], 
-                                           assign_model='group_3', model_nr=6)
-
-
-    # Projections 
-    # copper.project_on_total(all_regions_list_class[:-1])
+    copper.assign_fit_to_groups_not_fitted(list_regions=['class_ 18', "class_ 21",  "class_ 22"], 
+                                           assign_model='group_1', model_nr=6)
 
     copper.remove_regions_with_no_good_fit_from_region_model_match(exclude)
 
@@ -168,15 +169,6 @@ def steel_projection(scenario: str, path_input_data, path_input_data_image):
                                     'too_low': 'gompertz model'},
                                     bounds=bounds)  
 
-
-    # project based on best model
-    # steel.project_on_total(all_regions_list_class[:-1])
-    # steel.smooth_out_interpolation_all(10, 2012)
-    # steel.adjust_alpha_and_project(all_regions_list_class[:-1], 
-    #                            start_year_adjust=2025, 
-    #                            end_year_adjust=2100, 
-    #                            min_alpha=None)
-    
     steel.remove_regions_with_no_good_fit_from_region_model_match(exclude)
     
     return steel
@@ -279,8 +271,6 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
     aluminium.assign_fit_to_groups_not_fitted(IAI_TO_IMAGE_CLASSES.get("South America"), 
                                     assign_model='low', 
                                     model_nr=6)
-
-
     aluminium.assign_fit_to_groups_not_fitted(IAI_TO_IMAGE_CLASSES.get("Oceania") +  
                                               IAI_TO_IMAGE_CLASSES.get("Japan"),
                                            assign_model='all_regions', 
