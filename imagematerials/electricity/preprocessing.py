@@ -526,6 +526,60 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
 
 
 def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_END, YEAR_OUT): #, climate_policy_config: dict, circular_economy_config: dict
+    """
+    Preprocesses electricity storage data and creates "prep_data" in a format suitable for stock modelling using IMAGE-Materials.
+    It does so for the two sub-sectors:
+    1) Pumped Hydro Storage (PHS)
+    2) Other Electricity Storage Technologies (e.g., batteries, compressed air, flywheels)
+    (in the future also vehicle batteries will be added here)
+
+
+    The function performs the following steps:
+    1. Reads input data on storage stocks scenario projections (IMAGE/TIMER) and storage technologies, including costs, lifetimes, energy densities, and material compositions (different sources, e.g. IRENA, IHA)
+    2. Interpolates data over time to fill missing years.
+    3. Calculates market shares of different storage technologies using a multinomial logit model.
+    4. Infers pumped hydro storage demand from IHA projections and IMAGE hydro power projections.
+    5. Computes shares of total storage capacity from PHS, (electric vehicles - not yet), and other storage systems.
+
+    Parameters
+    ----------
+    path_base : str
+        Base directory of the project where the data structure is located.
+    SCEN : str
+        Scenario name (e.g., "SSP2").
+    VARIANT : str
+        Variant of the scenario (e.g., "M_CP", "VLHO").
+    YEAR_START : int
+        First simulation year for data processing (e.g., 1971).
+    YEAR_END : int
+        Last year for data interpolation (used for intermediate computations).
+    YEAR_OUT : int
+        Final output year for the results (e.g., 2100).
+
+    Returns
+    -------
+    tuple
+        A tuple containing two dictionaries:
+        - `prep_data_phs`: Prepared dataset for pumped hydro storage, including:
+            * "stocks": Time series of storage capacity (MWh)
+            * "material_intensities": Material intensities (kg/MWh)
+            * "lifetimes": Lifetime mean and standard deviation
+            * "set_unit_flexible": Unit mapping for Prism integration
+        - `prep_data_oth_storage`: Prepared dataset for other storage technologies, including:
+            * "stocks": Time series of storage capacity (MWh)
+            * "material_intensities": Material intensities (kg/kWh)
+            * "lifetimes": Lifetime mean and standard deviation
+            * "shares": Market shares of storage technologies
+            * "set_unit_flexible": Unit mapping for Prism integration
+
+
+    Notes
+    -----
+    - Assumes that the IMAGE/TIMER model outputs and other technology reference data are available in the expected
+      directory structure under `path_base/data/raw/`.
+    - Sensitivity variants (e.g., `high_stor`) affect storage demand scaling and pumped hydro projections. # TODO: move to parameters?
+
+    """
 
     scen_folder = SCEN + "_" + VARIANT
     path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
@@ -540,8 +594,6 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     assert path_image_output.is_dir()
     assert path_external_data_standard.is_dir()
     assert path_external_data_scenario.is_dir()
-
-    years = YEAR_END - YEAR_START  + 1
 
     idx = pd.IndexSlice   
 
@@ -584,29 +636,15 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
 
     # 2. IMAGE/TIMER files ====================================================================================
 
-
-    # # The vehicle shares of trucks (heavy) of the SSP2
-    #     loadfactor_car_data: pd.DataFrame = read_mym_df(
-    #         image_folder.joinpath("trp_trvl_Load.out")). rename(
-    #         columns={
-    #             "DIM_1": "region"})
-
     # read TIMER installed storage capacity (MWh, reservoir)
     storage = read_mym_df(path_image_output.joinpath("StorResTot.out"))   #storage capacity in MWh (reservoir, so energy capacity, not power capacity, the latter is used later on in the pumped hydro storage calculations)
         
     #storage capacity in MW (power capacity), to compare it to Pumped hydro storage projections (also given in MW, power capacity)
     storage_power = read_mym_df(path_image_output / 'StorCapTot.out')  
 
-    loadfactor_data = read_mym_df(path_image_output / 'trp_trvl_Load.out') 
-    
-    passengerkms_data = read_mym_df(path_image_output / 'trp_trvl_pkm.out')   # passenger kilometers in Tera pkm
-
-    vehicleshare_data = read_mym_df(path_image_output / 'trp_trvl_Vshare_car.out')
-
     # Generation capacity (stock & inflow/new) in MW peak capacity, FILES from TIMER
     gcap_data = read_mym_df(path_image_output / 'Gcap.out') # needed to get hydro power for storage
     gcap_data = gcap_data.iloc[:, :26]
-
 
 
     # ----------------------------------------------------------------------------------------------------------
@@ -747,6 +785,7 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     ###########################################################################################################
 
     # OPTION: NO V2G ---------------------------------------------------------------
+    # TODO: this is a temporary solution, until the coupling with the vehicle sector and the battery module calculations are implemented/integrated
     storage_vehicles = pd.DataFrame(0, index=storage.index, columns=storage.columns)  # set vehicle storage to zero when not using V2G
     storage_vehicles = storage_vehicles.loc[:YEAR_OUT]
     #-------------------------------------------------------------------------------
@@ -759,7 +798,7 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     Gcap_hydro.columns = region_list
     Gcap_hydro = Gcap_hydro.loc[:YEAR_OUT]
 
-    #storage capacity in MW (power capacity), to compare it to Pumped hydro storage projections (also given in MW, power capacity)              
+    # storage capacity in MW (power capacity), to compare it to Pumped hydro storage projections (also given in MW, power capacity)              
     # storage_power.drop(storage_power.iloc[:, -2:], inplace = True, axis = 1) # error prone
     storage_power = storage_power.iloc[:, :26]  
     storage_power.columns = region_list
@@ -814,7 +853,7 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
 
     # derive inflow & outflow (in MWh) for PHS, for later use in the material calculations 
     PHS_kg_perkWh = 26.8   # kg per kWh storage capacity (as weight addition to existing hydro plants to make them pumped) 
-    phs_storage_stock_tail   = stock_tail(phs_storage.astype(float), YEAR_OUT)
+    phs_storage_stock_tail = stock_tail(phs_storage.astype(float), YEAR_OUT)
     storage_lifetime_PHS = storage_lifetime['PHS'].reindex(list(range(YEAR_FIRST_GRID,YEAR_OUT+1)), axis=0).interpolate(limit_direction='both')
 
     ###########################################################################################################
@@ -824,7 +863,7 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
 
     # PHS -----------------------------------------------------------------------------------------------------
 
-    phs_stock = phs_storage_stock_tail.copy() #it was oth_storage.copy() Hä?
+    phs_stock = phs_storage_stock_tail.copy()
 
     # Bring dataframes into correct shape for the results_dict
 

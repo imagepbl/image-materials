@@ -133,6 +133,17 @@ style_combinations = list(itertools.product(colors, linestyles))
 # Map technologies to (color, linestyle)
 DICT_GENTECH_STYLES = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
 
+DICT_GEN_CATEGORY_COLORS = {
+    'Solar':             "#FBBF09",
+    'Wind':              "#4BABFF",
+    'Biomass':           "#42DD88",
+    'Other Renewables':  "#B6F795",
+    'Hydrogen':          '#B9FAF8',
+    'Nuclear':           "#B06106",
+    'Fossil':            "#575354",
+    'Fossil + CCS':      "#BBB8B9"
+}
+
 
 # Grid Storage technologies
 technologies = [
@@ -148,17 +159,15 @@ style_combinations = list(itertools.product(colors, linestyles))
 # Map technologies to (color, linestyle)
 DICT_STOR_STYLES = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
 
-
-DICT_GEN_CATEGORY_COLORS = {
-    'Solar':             "#FBBF09",
-    'Wind':              "#4BABFF",
-    'Biomass':           "#42DD88",
-    'Other Renewables':  "#B6F795",
-    'Hydrogen':          '#B9FAF8',
-    'Nuclear':           "#B06106",
-    'Fossil':            "#575354",
-    'Fossil + CCS':      "#BBB8B9"
+DICT_STOR_CATEGORY_COLORS_SEBASTIAAN = {
+    'mechanical storage':              "#AC501A",
+    'PHS':                             "#6F4126",
+    'lithium batteries':               "#E95E0D",
+    'molten salt and flow batteries':  "#F07C32",
+    'other':                           '#F69B58'
 }
+
+
 
 DICT_MATERIALS_COLORS = {
     'Steel':     '#FF9B85',

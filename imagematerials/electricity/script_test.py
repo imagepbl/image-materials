@@ -49,7 +49,8 @@ from imagematerials.electricity.constants import (
     DICT_MATERIALS_COLORS,
     DICT_GRID_COLORS,
     DICT_GRID_STYLES_1,
-    DICT_GRID_STYLES_2
+    DICT_GRID_STYLES_2,
+    DICT_STOR_CATEGORY_COLORS_SEBASTIAAN
 )
 
 from imagematerials.electricity.electr_external_data import (
@@ -1973,6 +1974,15 @@ a= df_combined[df_combined['year'] == 'change'].sum(numeric_only=True)
 
 
 
+
+
+
+
+
+
+
+
+
 ###########################################################################################################
 ###########################################################################################################
 #%% 2) STORAGE
@@ -2799,7 +2809,8 @@ xr_oth_storage_materials = dataset_to_array(pandas_to_xarray(oth_storage_materia
 xr_storage_density_interpol = dataset_to_array(pandas_to_xarray(storage_density_interpol, unit_mapping), *(["Cohort"], ["Type"],))
 oth_storage_materialintens = xr_oth_storage_materials * xr_storage_density_interpol
 
-
+# asses material intensity
+# atest = oth_storage_materialintens.sel(Cohort=2020) #material=["Steel", "Aluminium", "Co", "Nd"],
 
 # Conversion table for all coordinates, to be removed/adapted after input tables are fixed.
 # conversion_table = {
@@ -3381,12 +3392,86 @@ plt.tight_layout()
 plt.show()
 
 
-#%%%% STOCKS Sum & Per TECH - World ------------------------------------------------------
+#%%%% STOCKS - Per TECH - World ------------------------------------------------------
+
+da_stocks = main_model_factory_oth.stock_by_cohort#.to_array()
+
+data_all_1 = da_stocks.sum(['Region', 'Cohort'])
+data_all_1 = data_all_1.sel(Time=slice(2020, 2050))
+
+fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(8, 6))
+linewidth = 2
+s_legend = 12
+s_label = 14
+for t in data_all_1.Type.values:
+    data_plot = data_all_1.sel(Type=t)
+    color, ls = DICT_STOR_STYLES.get(t, ('black', '-'))
+    axes.plot(data_plot.Time, data_plot.values, label=t, color=color, linestyle=ls, linewidth=linewidth)
+    axes.grid(alpha=0.3, linestyle='--')
+    axes.ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+    axes.tick_params(axis='both', which='major', labelsize=s_legend)
+    axes.set_xlabel("Time", fontsize=s_label)
+    axes.set_ylabel("Storage Capacity (MWh)", fontsize=s_label)
+    axes.legend(fontsize='small', ncol=5, loc='upper center', bbox_to_anchor=(0.5, -0.2))
+    axes.set_title('Sum over Region')
+
+plt.suptitle(f"{scen_folder}: Oth. Storage - Stocks", fontsize=16)
+plt.tight_layout(rect=[0, 0, 1, 0.98])  # Adjust layout to make room for the suptitle
+fig.savefig(path_test_plots / f"Stor_oth_stock_pertech_world_2050.png", dpi=300, bbox_inches='tight')
+# fig.savefig(path_test_plots / f"Gen_stocks_world_1971.png", dpi=300, bbox_inches='tight')
+plt.show()
+
+#%%%% STOCKS - Per TECH Category - World ------------------------------------------------------
+
+data_oth = main_model_factory_oth.stock_by_cohort.copy()
+data_phs = main_model_factory_phs.stock_by_cohort.copy()
+
+storage_subtypes_categories = ["mechanical storage", "lithium batteries", "molten salt and flow batteries", "other"]
+knowledge_graph = create_electricity_graph()
+data_oth_cat = knowledge_graph.aggregate_sum(data_oth, storage_subtypes_categories, dim="Type")
+
+data_all = xr.concat([data_oth_cat, data_phs], dim='Type')
+
+t_end = 2050
+data_all = data_all.sel(Type=data_all.Type != '<EMPTY>', Time=slice(2020, t_end)) #.pint.to("kilotonne") # only from 1971 onwards, convert grams to tonnes
+data_all = data_all.sum(['Region', "Cohort"])
+
+
+desired_order = ['PHS', 'mechanical storage', 'lithium batteries', 'molten salt and flow batteries', 'other']
+
+
+fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(8, 6))
+linewidth = 2
+s_legend = 12
+s_label = 14
+
+data_plot = data_all
+
+# data_plot = data_plot.drop_vars('Cohort')
+data_plot = data_plot.to_pandas().T
+data_plot = data_plot[desired_order] # Reorder columns
+colors = [DICT_STOR_CATEGORY_COLORS_SEBASTIAAN[cat] for cat in data_plot.columns] # select colors based on technology category
+data_plot.plot.area(ax=axes, stacked=True, color = colors)
+axes.ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+axes.tick_params(axis='both', which='major', labelsize=s_legend)
+axes.set_xlabel("Time", fontsize=s_label)
+axes.set_ylabel("Storage Capacity (MWh)", fontsize=s_label)
+axes.legend(fontsize='small', ncol=5, loc='upper center', bbox_to_anchor=(0.5, -0.2))
+axes.set_title('Sum over Region')
+
+plt.suptitle(f"{scen_folder}: Oth. Storage - Stocks", fontsize=16)
+plt.tight_layout(rect=[0, 0, 1, 0.98])  # Adjust layout to make room for the suptitle
+fig.savefig(path_test_plots / f"Stor_oth_stock_pertechcat_world_2050.png", dpi=300, bbox_inches='tight')
+# fig.savefig(path_test_plots / f"Gen_stocks_world_1971.png", dpi=300, bbox_inches='tight')
+plt.show()
+
+
+#%%%% STOCKS - Total SUM - World ------------------------------------------------------
 
 # da_x = main_model_factory.inflow.to_array().sum('Type')
 da_stocks = main_model_factory_oth.stocks#.to_array()
 
-data_all = da_stocks.sel(Type=da_stocks.Type != '<EMPTY>')
+data_all = da_stocks #.sel(Type=da_stocks.Type != '<EMPTY>')
 data_all_1 = data_all.sum('Region')
 
 data_all_1 = data_all_1.sel(Time=slice(1971, None))
@@ -3403,19 +3488,6 @@ axes.tick_params(axis='both', which='major', labelsize=s_legend)
 axes.set_xlabel(" ", fontsize=s_label)
 axes.set_ylabel("Other Storage (MWh)", fontsize=s_label)
 axes.set_title('Sum over Region')
-
-# # First subplot: data_all_1 (summed over Region, still over Type and time likely)
-# for t in data_all_1.Type.values:
-#     data_plot = data_all_1.sel(Type=t)
-#     color, ls = DICT_GENTECH_STYLES.get(t, ('black', '-'))
-#     axes[1].plot(data_plot.Time, data_plot.values, label=t, color=color, linestyle=ls, linewidth=linewidth)
-#     axes[1].grid(alpha=0.3, linestyle='--')
-#     axes[1].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
-#     axes[1].tick_params(axis='both', which='major', labelsize=s_legend)
-#     axes[1].set_xlabel("Time", fontsize=s_label)
-#     axes[1].set_ylabel("Peak Capacity (MW)", fontsize=s_label)
-#     axes[1].legend(fontsize='small', ncol=5, loc='upper center', bbox_to_anchor=(0.5, -0.2))
-#     axes[1].set_title('Sum over Region')
 
 plt.suptitle(f"{scen_folder}: Generation - Stocks: Peak Capacity (MW)", fontsize=16)
 plt.tight_layout(rect=[0, 0, 1, 0.98])  # Adjust layout to make room for the suptitle
