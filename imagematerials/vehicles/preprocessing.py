@@ -21,6 +21,7 @@ from imagematerials.read_mym import read_mym_df
 from imagematerials.util import (
     dataset_to_array, 
     pandas_to_xarray,
+    convert_lifetime,
 )
 from imagematerials.vehicles.constants import (
     END_YEAR,
@@ -770,7 +771,7 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
             if df_name_simple not in df_name_list:
                 preprocessing_results_xarray[df_name[:-8]] = preprocessing_results_xarray.pop(df_name)
 
-    preprocessing_results_xarray["lifetimes"] = convert_life_time_vehicles(preprocessing_results_xarray["lifetimes"])
+    preprocessing_results_xarray["lifetimes"] = convert_lifetime(preprocessing_results_xarray["lifetimes"])
     preprocessing_results_xarray["stocks"] = preprocessing_results_xarray.pop("total_nr_vehicles")
     preprocessing_results_xarray["shares"] = preprocessing_results_xarray.pop("vehicle_shares")
 
