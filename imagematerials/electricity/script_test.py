@@ -2081,23 +2081,17 @@ phs_projections = pd.read_csv(path_external_data_standard / 'PHS.csv', index_col
 # 2. IMAGE/TIMER files ====================================================================================
 
 
-# # The vehicle shares of trucks (heavy) of the SSP2
-#     loadfactor_car_data: pd.DataFrame = read_mym_df(
-#         image_folder.joinpath("trp_trvl_Load.out")). rename(
-#         columns={
-#             "DIM_1": "region"})
-
 # read TIMER installed storage capacity (MWh, reservoir)
 storage = read_mym_df(path_image_output.joinpath("StorResTot.out"))   #storage capacity in MWh (reservoir, so energy capacity, not power capacity, the latter is used later on in the pumped hydro storage calculations)
     
 #storage capacity in MW (power capacity), to compare it to Pumped hydro storage projections (also given in MW, power capacity)
 storage_power = read_mym_df(path_image_output / 'StorCapTot.out')  
 
-# loadfactor_data = read_mym_df(path_image_output / 'trp_trvl_Load.out') 
+loadfactor_data = read_mym_df(path_image_output / 'trp_trvl_Load.out') 
   
-# passengerkms_data = read_mym_df(path_image_output / 'trp_trvl_pkm.out')   # passenger kilometers in Tera pkm
+passengerkms_data = read_mym_df(path_image_output / 'trp_trvl_pkm.out')   # passenger kilometers in Tera pkm
 
-# vehicleshare_data = read_mym_df(path_image_output / 'trp_trvl_Vshare_car.out')
+vehicleshare_data = read_mym_df(path_image_output / 'trp_trvl_Vshare_car.out')
 
 # Generation capacity (stock & inflow/new) in MW peak capacity, FILES from TIMER
 gcap_data = read_mym_df(path_image_output / 'Gcap.out') # needed to get hydro power for storage

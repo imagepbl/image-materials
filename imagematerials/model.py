@@ -12,7 +12,7 @@ import numpy as np
 from imagematerials.concepts import KnowledgeGraph
 from imagematerials.maintenance import Maintenance
 from imagematerials.survival import ScipySurvival, SurvivalMatrix
-from imagematerials.vehicles.battery import Battery
+from imagematerials.vehicles.battery import ElectricVehicleBatteries, Battery
 
 REGION = prism.Dimension("Region")
 STOCK_TYPE = prism.Dimension("Type")
@@ -537,7 +537,7 @@ class GenericMainModel(prism.Model):
             )
             self.material_model.compute_initial_values(timeline)
 
-        # Battery materials
+        # EV Battery materials
         if self.compute_battery_materials:
             self.battery_model = Battery(
                 self.complete_timeline, Region=self.Region, Type=self.Type, Cohort=self.Cohort, Time=self.Time, 
