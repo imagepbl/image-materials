@@ -102,57 +102,86 @@ def limestone_projection(scenario: str, path_input_data, path_input_data_image):
 
     # collect these above defined groups in a dictionary
 
-    high = ['class_ 2', 'class_ 20']
+    limestone.historic_other_fraction_consumption = limestone.historic_consumption_data.copy()
 
-    low = ['class_ 1']
+    group_1 = ['class_ 1']
+    group_2 = ['class_ 2']
+    group_3 = [ 'class_ 7', 'class_ 17', 
+                'class_ 24', 'class_ 26']
+    group_4 = ['class_ 11', 'class_ 12', 'class_ 21'] 
+    group_5 = ['class_ 19', 'class_ 23']
+    group_6 = ['class_ 4', 'class_ 6', 'class_ 22']
+    group_7 = ['class_ 3', 'class_ 14', 'class_ 15']
+    group_8 = ['class_ 20']
+    group_9 = ['class_ 18']
 
-    medium = ['class_ 11' , 'class_ 24',] 
+    diff = ['class_ 5', 'class_ 10', 'class_ 13', 'class_ 16', 'class_ 25', 'class_ 26']
+    other = ['class_ 8', 'class_ 9', 'class_ 25', 'class_ 26']
+    exclude = []
 
-    medium_high = ['class_ 23', 'class_ 19']
-
-    # trajectory not to forseen, will be fitted with global regression
-
-    # what is in rset will not be fitted because of outliers - will follow global projections       
+    # what is in rest will not be fitted because of outliers - will follow global projections
     rest = all_regions_list_class[:-1]
-    rest = [r for r in rest if r not in (high+medium+low+medium_high)]
+    rest = [r for r in rest if r not in (group_1+group_2+group_3+group_4+group_5+group_6+group_7+group_8+exclude+diff)]
 
-    limestone_grouping = {'all' : all_regions_list_class[:-1],
-                        'high': high,
-                        'medium': medium,
-                        'medium_high': medium_high,
-                        'low': low,
+    limestone_grouping = {'all_regions' : all_regions_list_class[:-1],
+                        'group_1': group_1,
+                        'group_2': group_2,
+                        'group_3': group_3,
+                        'group_4': group_4,
+                        'group_5': group_5,
+                        'group_6': group_6,
+                        'group_7': group_7,
+                        'group_8': group_8,
+                        'group_9': group_9,
                         }
+
 
     limestone.data_grouped_regions(regions_grouping = limestone_grouping) 
     limestone.sum_IMAGE_drivers_regions(regions_dict=None)
 
     # calculate regressors
     limestone.calculate_regressors(limestone.historic_consumption_data)
-
     best_rmse_models = {
-    'all': 'gompertz model',
-    'high': 'gompertz model',
-    'medium': 'gompertz model',
-    'low': 'gompertz model',
-    'medium_high': 'gompertz model'
+        'all_regions': 'gompertz model',
+        'group_1': 'gompertz model',
+        'group_2': 'gompertz model',
+        'group_3': 'gompertz model',
+        'group_4': 'gompertz model',
+        'group_5': 'gompertz model',
+        'group_6': 'gompertz model',
+        'group_7': 'gompertz model',
+        'group_8': 'gompertz model',
+        'group_9': 'gompertz model'
     }
 
     bounds = {
-        'all': ([0, 0, 0], [1, 10, 10]),
-        'high': ([0, 0, 0], [10, 10, 10]),
-        'medium': ([0, 2, 2], [10, 10, 10]),
-        'low': ([0, 0, 0], [10, 10, 10]),
-        'medium_high': ([0, 0, 0], [10, 10, 10])}
+        'all_regions': ([0, 0, 0], [1, 10, 10]),
+        'group_1': ([0, 0, 0], [10, 10, 10]),
+        'group_2': ([0, 0, 0], [2.7, 10, 10]),
+        'group_3': ([0, 0, 0], [10, 10, 10]),
+        'group_4': ([0, 0, 0], [10, 10, 10]),
+        'group_5': ([0, 0, 0], [10, 10, 10]),
+        'group_6': ([0, 0, 0], [10, 10, 10]),
+        'group_7': ([0, 0, 0], [10, 10, 10]),
+        'group_8': ([0, 0, 0], [2, 10, 10]),
+        'group_9': ([0, 0, 0], [10, 10, 10]),
+    }
 
     limestone.fit_models(best_rmse_models, bounds)
-    limestone.project_on_total(all_regions_list_class[:-1])
-    limestone.smooth_out_interpolation_all(10, 2017)
-    limestone.adjust_alpha_and_project(all_regions_list_class[:-1], 
-                    start_year_adjust=2025, 
-                    end_year_adjust=2100, 
-                    min_alpha=None)
 
-    limestone.remove_regions_with_no_good_fit_from_region_model_match(rest)
+    limestone.assign_fit_to_groups_not_fitted(['class_ 5', 'class_ 10', 'class_ 18'], 
+                                assign_model='group_6', 
+                                model_nr=6)
+                                
+    limestone.assign_fit_to_groups_not_fitted(['class_ 13', 'class_ 16'], 
+                            assign_model='all_regions', 
+                            model_nr=6)
+
+    limestone.assign_fit_to_groups_not_fitted(other, 
+                            assign_model='group_9', 
+                            model_nr=6)
+
+    limestone.remove_regions_with_no_good_fit_from_region_model_match(exclude)
 
     return limestone
 
@@ -166,20 +195,36 @@ def sand_projections(scenario: str, path_input_data, path_input_data_image):
 
     # collect these above defined groups in a dictionary
 
+    group_1 = ['class_ 1']  # Canada
+    group_2 = ['class_ 20']  # China
+    group_3 = ['class_ 5', 'class_ 12', 'class_ 13', 'class_ 15', 
+            'class_ 16', 'class_ 17', 'class_ 19', 
+            'class_ 7', 'class_ 21']  # Average
+    group_4 = ['class_ 3', 'class_ 6', 'class_ 10']  # Lower
+    group_5 = ['class_ 23']  # Japan
+    group_6 = ['class_ 2', 'class_ 24', 'class_ 11']  # High
+    group_7 = ['class_ 14', 'class_ 15']  # lower average
+    group_8 = ['class_ 18', 'class_ 22']  # indonesia
+    group_9 = ['class_ 4', 'class_ 10']  # South africa
+
+    # collect these above defined groups in a dictionary
     SAND_GROUPING_REGIONS = {
         'all_regions': [k for k in CLASS_TO_REGION_DICT.keys() if k != 'class_ 27'],
-        'Canada':  ['class_ 1'],
-        'China':   ['class_ 20'],
-        'Average': ['class_ 5', 'class_ 12', 'class_ 13', 'class_ 14','class_ 15', 
-                    'class_ 16', 'class_ 17', 'class_ 18', 'class_ 19', 
-                    'class_ 22', 'class_ 7', 'class_ 21'],
-        'Lower':    ['class_ 3', 'class_ 4', 'class_ 6', 'class_ 9', 'class_ 10', 
-                    'class_ 8', 'class_ 25', 'class_ 26'],
-        'Japan':    ['class_ 23'],
-        'High' : ['class_ 2', 'class_ 24', 'class_ 11']
-        }
+        'group_1':  group_1,
+        'group_2':  group_2,
+        'group_3':  group_3,
+        'group_4':  group_4,
+        'group_5':  group_5,
+        'group_6':  group_6,
+        'group_7':  group_7,
+        'group_8':  group_8,
+        'group_9':  group_9,
+    }
     
-    rest = []
+    # no projection, take group 4 model
+    other = ['class_ 8', 'class_ 9','class_ 25', 'class_ 26']  
+    exclude = []
+
     sand.data_grouped_regions(regions_grouping = SAND_GROUPING_REGIONS) #list(sand_AVERAGE_REGIONS_TO_IMAGE.keys()
     sand.sum_IMAGE_drivers_regions(regions_dict=None)
     sand.match_MAT_data_to_regions_year(match_external_regions=False)
@@ -192,26 +237,36 @@ def sand_projections(scenario: str, path_input_data, path_input_data_image):
 
     # Fit models 
     rmse_models = {'all_regions': 'gompertz model',
-    'Canada': 'gompertz model',
-    'China': 'gompertz model',
-    'Average': 'gompertz model',
-    'Lower': 'gompertz model',
-    'Japan': 'gompertz model',
-    'High': 'gompertz model'}
+    'group_1': 'gompertz model',
+    'group_2': 'gompertz model',
+    'group_3': 'gompertz model',
+    'group_4': 'gompertz model',
+    'group_5': 'gompertz model',
+    'group_6': 'gompertz model',
+    'group_7': 'gompertz model',
+    'group_8': 'gompertz model',
+    'group_9': 'gompertz model',}
 
     bounds = {
-        'all_regions' : ([0, 0, 0], [10, 10, 10]),
-        'Canada' : ([0, 2, 2], [10, 10, 10]),
-        'China' : ([0, 0, 0], [8, 10, 10]),
-        'Average' : ([0, 0, 0], [10, 10, 10]),
-        'Lower' : ([0, 0, 0], [10, 10, 10]),
-        'Japan' : ([0, 2, 2], [10, 10, 10]),
-        'High' : ([0, 5, 0], [10, 10, 10])
+        'all_regions' : ([0, 0, 0], [6, 10, 10]),
+        'group_1' : ([0, 2, 2], [10, 10, 10]),
+        'group_2' : ([0, 0, 0], [9, 10, 10]),
+        'group_3' : ([0, 0, 0], [10, 10, 10]),
+        'group_4' : ([0, 0, 0], [10, 2, 10]),
+        'group_5' : ([0, 2, 2], [10, 10, 10]),
+        'group_6' : ([0, 5, 0], [10, 10, 10]),
+        'group_7' : ([0, 0, 0], [10, 10, 10]),
+        'group_8' : ([0, 0, 0], [10, 10, 10]),
+        'group_9' : ([0, 0, 0], [10, 10, 10]),
     }
 
 
     sand.fit_models(best_rmse_models=rmse_models, bounds=bounds)
-    sand.remove_regions_with_no_good_fit_from_region_model_match(rest)
+
+    sand.assign_fit_to_groups_not_fitted(other, 
+                                assign_model='group_8', 
+                                model_nr=6)
+    sand.remove_regions_with_no_good_fit_from_region_model_match(exclude)
 
     return sand
 
@@ -223,27 +278,37 @@ def clay_projections(scenario: str, path_input_data, path_input_data_image):
                         path_input_data=path_input_data,
                         path_input_data_image=path_input_data_image)
 
+    clay.historic_other_fraction_consumption = clay.historic_consumption_data.copy()
+
     # collect these above defined groups in a dictionary
+    low_steady = ['class_ 1', 'class_ 2', 'class_ 23']
+    high_steady = ['class_ 11', 'class_ 17', 'class_ 24']
+    medium = ['class_ 7', 'class_ 13', 'class_ 19', 'class_ 21'] 
+    china = ['class_ 20']
 
-    high = ['class_ 20']
+    # not fitted
+    low_gdp = ['class_ 3', 'class_ 4', 'class_ 5', 'class_ 6', 
+               'class_ 8', 'class_ 9', 'class_ 15', 'class_ 22', 'class_ 25', 'class_ 26']
+    
+    no_trajectory_forseen = ['class_ 10', 'class_ 12',
+                            'class_ 14', 'class_ 16']
 
-    low = ['class_ 1', 'class_ 2', 'class_ 23', 'class_ 19',
-        'class_ 7', 'class_ 13']
-
-    medium = ['class_ 11' , 'class_ 24',] 
-
+    outliers = ['class_ 18']  # 18 : high per capita consumption on a very low gdp per capita
+    
+    exclude = []
 
 
     # trajectory not to forseen, will be fitted with global regression
 
-    # what is in rset will not be fitted because of outliers - will follow global projections       
+    # what is in rest will not be fitted because of outliers - will follow global projections       
     rest = all_regions_list_class[:-1]
-    rest = [r for r in rest if r not in (high+medium+low)]
+    rest = [r for r in rest if r not in (high_steady+medium+low_steady+china)]
 
     clay_grouping = {'all' : all_regions_list_class[:-1],
-                    'high': high,
-                    'medium': medium,
-                        'low': low,
+                    'low_steady' : low_steady,
+                    'high_steady' : high_steady,
+                    'medium' : medium,
+                    'china' : china
                     }
 
     clay.data_grouped_regions(regions_grouping = clay_grouping) 
@@ -253,26 +318,30 @@ def clay_projections(scenario: str, path_input_data, path_input_data_image):
     clay.calculate_regressors(clay.historic_consumption_data)
 
     best_rmse_models = {
-    'all': 'gompertz model',
-    'high': 'gompertz model',
-    'medium': 'gompertz model',
-    'low': 'gompertz model',
+        'all': 'gompertz model',
+        'low_steady' : 'gompertz model',
+        'high_steady' : 'gompertz model',
+        'medium' : 'gompertz model',
+        'china' : 'gompertz model'
     }
 
     bounds = {
         'all': ([0, 0, 0], [10, 10, 10]),
-        'high': ([0, 0, 0], [10, 10, 10]),
-        'medium': ([0, 2, 2], [10, 10, 10]),
-        'low': ([0, 0, 0], [10, 10, 10]),}
+        'low_steady': ([0, 0, 0], [10, 10, 10]),
+        'high_steady': ([0, 0, 0], [10, 10, 10]),
+        'medium' : ([0, 0, 0], [10, 10, 10]),
+        'china' : ([0, 0, 0], [10, 10, 10])
+    }
 
     clay.fit_models(best_rmse_models, bounds)
-    clay.project_on_total(all_regions_list_class[:-1])
-    clay.smooth_out_interpolation_all(10, 2017)
-    
-    clay.adjust_alpha_and_project(all_regions_list_class[:-1], 
-                        start_year_adjust=2025, 
-                        end_year_adjust=2100, 
-                        min_alpha=None)
+    clay.assign_fit_to_groups_not_fitted(low_gdp, 
+                                     assign_model='low_steady', 
+                                     model_nr=6)
 
-    clay.remove_regions_with_no_good_fit_from_region_model_match(rest)
+    clay.assign_fit_to_groups_not_fitted(no_trajectory_forseen+outliers, 
+                                        assign_model='all_regions', 
+                                        model_nr=6)
+    # will take historic average instead
+    clay.remove_regions_with_no_good_fit_from_region_model_match(exclude+low_gdp)
+
     return clay

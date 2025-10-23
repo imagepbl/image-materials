@@ -19,7 +19,7 @@ from matplotlib.ticker import ScalarFormatter
 import prism
 from imagematerials.distribution import ALL_DISTRIBUTIONS, NAME_TO_DIST
 from imagematerials.read_mym import read_mym_df
-from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_life_time_vehicles
+from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
 from imagematerials.model import GenericMainModel, GenericStocks, SharesInflowStocks, Maintenance, GenericMaterials, MaterialIntensities
 from imagematerials.factory import ModelFactory, Sector
 from imagematerials.concepts import create_electricity_graph, create_region_graph
@@ -425,8 +425,9 @@ kilometrage = pd.read_csv(path_external_data_scenario / 'kilometrage.csv', index
 
 # 2. IMAGE/TIMER files ====================================================================================
 
-# Generation capacity (stock & inflow/new) in MW peak capacity, FILES from TIMER
+# Generation capacity (stock demand per generation technology) in MW peak capacity
 gcap_data = read_mym_df(path_image_output / 'Gcap.out')
+
 
 
 #----------------------------------------------------------------------------------------------------------
@@ -434,7 +435,7 @@ gcap_data = read_mym_df(path_image_output / 'Gcap.out')
 #%%% 1.2) Prepare model specific variables
 ###########################################################################################################
 #----------------------------------------------------------------------------------------------------------
-
+idx = pd.IndexSlice 
 region_list = list(kilometrage.columns.values)   
 
 gcap_tech_list = list(composition_generation.loc[:,idx[2020,:]].droplevel(axis=1, level=0).columns)    #list of names of the generation technologies (workaround to retain original order)
@@ -446,6 +447,8 @@ gcap = pd.pivot_table(gcap_data[gcap_data['time'].isin(list(range(YEAR_START,YEA
 # renaming multi-index dataframe: generation capacity, based on the regions in grid_length_Hv & technologies as given
 gcap.index = pd.MultiIndex.from_product([list(range(YEAR_START,YEAR_END+1)), region_list], names=['years', 'regions'])
 gcap.columns = gcap_tech_list
+
+# gcap_data_xr3 = pandas_to_xarray(gcap, unit_mapping)
 
 # Interpolate material intensities (dynamic content for gcap & storage technologies between 1926 to 2100, based on data files)
 index = pd.MultiIndex.from_product([list(range(YEAR_FIRST_GRID, YEAR_OUT+1)), list(composition_generation.index)])

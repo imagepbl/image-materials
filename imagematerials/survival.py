@@ -93,7 +93,7 @@ class ScipySurvival():
         Parameters
         ----------
         lifetime_parameters : dict[str, xr.DataArray]
-            Output from convert_life_time_vehicles function. This should be a dictionary, with
+            Output from convert_lifetime function. This should be a dictionary, with
             the keys the name of the distribution, and the values a xr.DataArray with the scipy
             parameters. E.g. weibull or folded_normal.
             mandatory dimensions for the arrays: Cohort, Type, ScipyParam

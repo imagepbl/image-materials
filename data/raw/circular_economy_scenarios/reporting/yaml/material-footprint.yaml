@@ -1,0 +1,18 @@
+# Material footprint - definition from UNEP Indicator 12.2.1: "Material Footprint
+# (MF) is the attribution of global material extraction to domestic final demand
+# of a country while the total MF is the sum of the material footprint for
+# biomass, fossil fuels, metal ores and non-metal ores. This indicator is
+# calculated as raw material equivalent of imports (RMEIM) plus domestic
+# extraction (DE) minus raw material equivalents of exports (RMEEX).(...)".
+- Material Footprint|{Demand Sector}|{Raw Material}:
+    description: Material footprint, (Raw Material), of final consumption of
+      products in (Demand Sector) - system-wide raw material consumption
+    unit: Mt/yr
+
+# Total material footprint
+- Total Material Footprint|{Demand Sector}:
+    description: Total material footprint of final consumption of products in
+      (Demand Sector) - system-wide raw material consumption
+    unit: Mt/yr
+    notes: Total material footprint is sum of the material footprint for biomass,
+      fossil fuels, metal ores and non-metal ores

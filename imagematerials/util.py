@@ -6,6 +6,7 @@ from typing import Optional
 import netCDF4
 import numpy as np
 import xarray as xr
+import warnings
 import prism
 
 if sys.version_info < (3, 11):
@@ -299,20 +300,33 @@ def _read_config(scenario_folder) -> dict:
     return config_dict
 
 
-def convert_life_time_vehicles(life_time_vehicles: xr.Dataset) -> dict[str, xr.DataArray]:
-    """Convert lifetime vehicles dataset to a more appropriate data format.
+def convert_lifetime(lifetimes):
+    if isinstance(lifetimes, xr.Dataset):
+        return convert_lifetime_dataset(lifetimes)
+    elif isinstance(lifetimes, xr.DataArray):
+        return convert_lifetime_dataarray(lifetimes)
+    else:
+        raise TypeError("Input must be an xarray.Dataset or xarray.DataArray")
+    
+
+def convert_lifetime_dataset(lifetime_dataset: xr.Dataset) -> dict[str, xr.DataArray]:
+    """
+    Convert dataset with lifetimes to a dictonary with 
+    keys = name of the distribution applied to the lifetimes (folded_normal, Weibull)
+    values = xarray DataArray with the scipy parameters for the distribution
 
     This conversion should probably move to the preprocessing stage after we figure out
     the exact details of what the output should look like.
 
     Parameters
     ----------
-    life_time_vehicles
-        The input life_time_vehicles xarray dataset. It is supposed to be in a very particular format:
+    lifetime_dataset
+        The input is a xarray dataset. It is supposed to be in a very particular format:
         it contains the parameters for each of the modes. However, the distribution types are not
         the same for each of the modes. Thus, the distribution types need to be inferred from the
         names of the parameters that are given. If multiple parameter sets for multiple distributions
         are given, the Weibull distribution is given preference over the FoldedNormal distribution.
+        Only works when the dataset has dimensions (mode, param) and coordinate 'year'. #TODO: make it more flexible to work with Year, Time, Cohort, not only year?
 
     Returns
     -------
@@ -321,12 +335,12 @@ def convert_life_time_vehicles(life_time_vehicles: xr.Dataset) -> dict[str, xr.D
         types change over time, this data structure needs to be adjusted.
 
     """
-    # Create a dictionary to find which parameters are available for which mode.
+    # 1. Build a dictionary of parameters available for each mode (technology)
     mode_param = defaultdict(list)
-    for mode, par in life_time_vehicles.data_vars:
+    for mode, par in lifetime_dataset.data_vars:
         mode_param[mode].append(par)
 
-    # Create a dictionary that says which modes are tied to which distribution.
+    # 2. Determine which distributions correspond to which modes
     dist_mode = defaultdict(list)
     modes_done = set()  # temporary
     for dist in ALL_DISTRIBUTIONS:
@@ -334,33 +348,143 @@ def convert_life_time_vehicles(life_time_vehicles: xr.Dataset) -> dict[str, xr.D
             if mode not in modes_done and dist.has_param(param):
                 dist_mode[dist.name].append(mode)
                 modes_done.add(mode)
+    
+    # Raise error if nothing matched
+    if not any(dist_mode.values()):
+        accepted_params = {dist.name: dist.params for dist in ALL_DISTRIBUTIONS}
+        raise ValueError(
+        "No distributions matched the dataset. \n"
+        "Possible cause: parameter name mismatch (e.g., 'stdv' vs 'stdev').\n"
+        f"Accepted parameter names per distribution:\n{accepted_params}"
+        )
 
-    # Iterate over all distributions to create a data array for each of them.
+    # 3. Build output arrays for each distribution
     ret_scipy_params = {}
     for dist_name, mode_list in dist_mode.items():
         if len(mode_list) == 0:
             continue
         dist = NAME_TO_DIST[dist_name]
 
-        # param_arrays = {}
         array = xr.DataArray(
             0.0, dims=("Time", "Type", "ScipyParam"),
             coords={
-                "Time": life_time_vehicles.coords["Year"].to_numpy(),
+                "Time": lifetime_dataset.coords["year"].to_numpy(),
                 "Type": mode_list,
                 "ScipyParam": dist.variable_scipy_param})
+        
         for mode in mode_list:
             orig_param_dict = {}
             for param in dist.params:
-                orig_param_dict[param] = life_time_vehicles.data_vars[str(mode), param].to_numpy()
+                if (str(mode), param) not in lifetime_dataset.data_vars:
+                    raise ValueError(
+                        f"Missing expected parameter '{param}' for mode '{mode}'. "
+                        "Please verify that all required distribution parameters are present in the dataset."
+                    )
+                orig_param_dict[param] = lifetime_dataset.data_vars[str(mode), param].to_numpy()
+
             scipy_params = dist.get_param(orig_param_dict)
+
             for cur_scipy_key, cur_scipy_par in scipy_params.items():
                 if cur_scipy_key in dist.variable_scipy_param:
                     array.loc[:, str(mode), cur_scipy_key] = cur_scipy_par
                 else:
                     array.attrs[cur_scipy_key] = cur_scipy_par
+
         ret_scipy_params[dist_name] = array
+        
     return ret_scipy_params
+
+
+def convert_lifetime_dataarray(lifetime_dataarray: xr.DataArray) -> dict[str, xr.DataArray]:
+    """
+    Convert DataArray with lifetimes to a dictonary with 
+    keys = name of the distribution applied to the lifetimes (folded_normal, Weibull)
+    values = xarray DataArray with the scipy parameters for the distribution
+    
+    Parameters
+    ----------
+    lifetime_dataarray : xr.DataArray
+        DataArray with dimensions (DistributionParams, Cohort, Type), containing lifetime parameters. 
+
+    Returns
+    -------
+    dict[str, xr.DataArray]
+        Dictionary containing one DataArray per distribution, with dimensions (Time, Type, ScipyParam),
+        fully preserving coordinates for compatibility with downstream code.
+
+    Notes
+    -----
+    #TODO: make it more flexible to work with Year, Time, year, not only Cohort?
+    #TODO: works only when all modes ('Type') have the same distribution, so the same parameters in DistributionParams.
+           -> Support cases where different modes use different distributions with different parameters. In this case,
+           different parameters would be within DistributionParams (mean, stedv, shape, scale), and the values associated with 
+           modes in the Type coordinate would be either the right value for that distribution parameters, or NaN for the distribution parameters that do not apply to that mode.
+    """
+    
+    # 1. Build a dictionary of parameters available for each mode (technology)
+    mode_param = defaultdict(list)
+    for mode in lifetime_dataarray.coords["Type"].values:
+        for par in lifetime_dataarray.coords["DistributionParams"].values:
+            mode_param[mode].append(str(par))
+
+    # 2. Determine which distributions correspond to which modes
+    dist_mode = defaultdict(list)
+    modes_done = set()
+    for dist in ALL_DISTRIBUTIONS:
+        for mode, param_list in mode_param.items():
+            if mode not in modes_done and dist.has_param(param_list):
+                dist_mode[dist.name].append(mode)
+                modes_done.add(mode)
+
+    # Raise error if nothing matched
+    if not any(dist_mode.values()):
+        accepted_params = {dist.name: dist.params for dist in ALL_DISTRIBUTIONS}
+        raise ValueError(
+        "No distributions matched the dataset. \n"
+        "Possible cause: parameter name mismatch (e.g., 'stdv' vs 'stdev').\n"
+        f"Accepted parameter names per distribution:\n{accepted_params}"
+        )
+
+    # 3. Build output arrays for each distribution
+    ret_scipy_params = {}
+    for dist_name, mode_list in dist_mode.items():
+        if not mode_list:
+            continue
+        dist = NAME_TO_DIST[dist_name]
+
+        array = xr.DataArray(
+            0.0,
+            dims=("Time", "Type", "ScipyParam"),
+            coords={
+                "Time": lifetime_dataarray.coords["Cohort"].to_numpy(),
+                "Type": mode_list,
+                "ScipyParam": dist.variable_scipy_param,
+            },
+        )
+
+        for mode in mode_list:
+            orig_param_dict = {}
+            for param in dist.params:
+                if param not in lifetime_dataarray.coords["DistributionParams"].values:
+                    raise ValueError(
+                        f"Missing expected parameter '{param}' for mode '{mode}'. "
+                        "Please verify that all required distribution parameters are present in the dataset."
+                    )
+                orig_param_dict[param] = lifetime_dataarray.sel(Type=mode, DistributionParams=param).values
+
+            scipy_params = dist.get_param(orig_param_dict)
+
+            for cur_scipy_key, cur_scipy_par in scipy_params.items():
+                if cur_scipy_key in dist.variable_scipy_param:
+                    array.loc[:, str(mode), cur_scipy_key] = cur_scipy_par
+                else:
+                    array.attrs[cur_scipy_key] = cur_scipy_par
+
+        ret_scipy_params[dist_name] = array
+
+    return ret_scipy_params
+
+
 
 
 def scenario_change(arr: xr.DataArray, base_year: int, target_year: int, change: dict,

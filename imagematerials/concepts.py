@@ -294,15 +294,21 @@ def create_vehicle_graph():
 
 
 def create_building_graph():
-    building_nodes = []
+    building_nodes = [
+    Node("Buildings"),
+
+]
     for super_type in ["Detached", "Semi-detached", "Appartment", "High-rise"]:
-        building_nodes.append(Node(super_type))
+        building_nodes.append(Node(super_type, inherits_from="Buildings"))
 
         for sub_type in ["Urban", "Rural"]:
             building_nodes.append(Node(f"{super_type} - {sub_type}", inherits_from=super_type))
 
+    for c in ["Retail+", "Hotels+", "Office", "Govt+"]:
+        building_nodes.append(Node(c, inherits_from="Buildings"))
 
-    building_knowledge_graph = KnowledgeGraph(*building_nodes)
+    building_knowledge_graph = KnowledgeGraph(*building_nodes)  
+
     # knowledge_graph = KnowledgeGraph(*building_nodes)
 
 
@@ -445,55 +451,49 @@ def create_electricity_graph():
     """
 
     # Generation ======================================================================================
-    generation_supertypes = ["Solar PV", "Solar PV residential", "CSP", "Wind onshore", "Wind offshore", 
-                        "Wave", "Hydro", "Other Renewables", "Geothermal","Hydrogen power", "Nuclear", "Conv. Coal",
-                        "Conv. Oil", "Conv. Natural Gas","Waste", "IGCC", "OGCC", "NG CC", "Biomass CC",
-                        "Coal + CCS", "Oil/Coal + CCS", "Natural Gas + CCS", "Biomass + CCS",
-                        "CHP Coal", "CHP Oil", "CHP Natural Gas", "CHP Biomass","CHP Geothermal", "CHP Hydrogen",
-                        "CHP Coal + CCS", "CHP Oil + CCS", "CHP Natural Gas + CCS", "CHP Biomass + CCS"]
+    
+    numeric_generation_map = {
+        "1": ["Solar PV", "SPV"],               # Solar PV power (central)
+        "2": ["Solar PV residential", "SPVR"],  # Solar PV power (decentral/residential)
+        "3": ["CSP"],                           # Concentrated Solar Power 
+        "4": ["Wind onshore", "WON"],           # Onshore wind power
+        "5": ["Wind offshore", "WOFF"],         # Offshore wind power
+        "6": ["Wave", "WAVE"],                  # Wave power
+        "7": ["Hydro", "HYD"],                  # Hydro power
+        "8": ["Other Renewables", "OREN"],      # Other renewables (tidal and geothermal power)
+        "9": ["Geothermal", "GEO"],             # Geothermal power
+        "10": ["Hydrogen power", "H2P"],        # Hydrogen to power
+        "11": ["Nuclear", "NUC"],               # Nuclear
+        "12": ["<EMPTY>", "FREE12"],            # Free spot
+        "13": ["Conv. Coal", "ClST"],           # Coal steam turbine
+        "14": ["Conv. Oil", "OlST"],            # Oil steam turbine
+        "15": ["Conv. Natural Gas", "NGOT"],    # NG open cycle turbine
+        "16": ["Waste", "BioST"],               # Biomass steam turbine
+        "17": ["IGCC"],                         # Integrated gasification combined cycle
+        "18": ["OGCC", "OlCC"],                 # Oil combined cycle
+        "19": ["NG CC", "NGCC"],                # NG combined cycle
+        "20": ["Biomass CC", "BioCC"],          # Biomass combined cycle
+        "21": ["Coal + CCS", "ClCS"],           # Coal carbon capture and storage
+        "22": ["Oil/Coal + CCS", "OlCS"],       # Oil carbon capture and storage
+        "23": ["Natural Gas + CCS", "NGCS"],    # NG carbon capture and storage
+        "24": ["Biomass + CCS", "BioCS"],       # Biomass carbon capture and storage
+        "25": ["CHP Coal", "ClCHP"],            # Coal combined heat and power
+        "26": ["CHP Oil", "OlCHP"],             # Oil combined heat and power
+        "27": ["CHP Natural Gas", "NGCHP"],     # NG combined heat and power
+        "28": ["CHP Biomass", "BioCHP"],        # Biomass combined heat and power
+        "29": ["CHP Coal + CCS", "ClCHPCS"],    # Coal combined heat and power carbon capture and storage
+        "30": ["CHP Oil + CCS", "OlCHPCS"],     # Oil combined heat and power carbon capture and storage
+        "31": ["CHP Natural Gas + CCS", "NGCHPCS"], # NG combined heat and power carbon capture and storage
+        "32": ["CHP Biomass + CCS", "BioCHPCS"],    # Biomass combined heat and power carbon capture and storage
+        "33": ["CHP Geothermal", "GeoCHP"],         # Geothermal combined heat and power
+        "34": ["CHP Hydrogen", "H2CHP"]             # Hydrogen combined heat and power
+    }
+
 
     electricity_knowledge_graph = KnowledgeGraph(Node("Electricity"))
     electricity_knowledge_graph.add(Node("Generation", inherits_from="Electricity"))
-    for supertype in generation_supertypes:
-        electricity_knowledge_graph.add(Node(supertype, inherits_from="Generation"))
-    
-    # dict that associates generation types with integer identifiers from TIMER
-    numeric_electr_generation_map = {
-    "1":  ["Solar PV"],
-    "2":  ["Solar PV residential"],
-    "3":  ["CSP"],
-    "4":  ["Wind onshore"],
-    "5":  ["Wind offshore"],
-    "6":  ["Wave"],
-    "7":  ["Hydro"],
-    "8":  ["Other Renewables"],
-    "9":  ["Geothermal"],
-    "10": ["Hydrogen power"],
-    "11": ["Nuclear"],
-    "12": ["<EMPTY>"],
-    "13": ["Conv. Coal"],
-    "14": ["Conv. Oil"],
-    "15": ["Conv. Natural Gas"],
-    "16": ["Waste"],
-    "17": ["IGCC"],
-    "18": ["OGCC"],
-    "19": ["NG CC"],
-    "20": ["Biomass CC"],
-    "21": ["Coal + CCS"],
-    "22": ["Oil/Coal + CCS"],
-    "23": ["Natural Gas + CCS"],
-    "24": ["Biomass + CCS"],
-    "25": ["CHP Coal"],
-    "26": ["CHP Oil"],
-    "27": ["CHP Natural Gas"],
-    "28": ["CHP Biomass"],
-    "29": ["CHP Coal + CCS"],
-    "30": ["CHP Oil + CCS"],
-    "31": ["CHP Natural Gas + CCS"],
-    "32": ["CHP Biomass + CCS"],
-    "33": ["CHP Geothermal"],
-    "34": ["CHP Hydrogen"]
-    }
+    for number, synonyms in numeric_generation_map.items():
+        electricity_knowledge_graph.add(Node(number, synonyms=synonyms, inherits_from="Generation"))
 
     # # Sub-Technologies --------------------------
 
