@@ -41,17 +41,122 @@ unit_mapping = {
     'time': ureg.year,
     'year': ureg.year,
     'Year': ureg.year,
-    'kg': ureg.kilogram,
     'yr': ureg.year,
+    'kg': ureg.kilogram,
     '%': ureg.percent,
     't': ureg.tonne,
     'MW': ureg.megawatt, #added
     'GW': ureg.gigawatt, #added
+    'MWh': ureg.megawatthour, #added
 }
+
+REGIONS_TIMER = [ # TODO: check if this is true
+    "Canada",
+    "USA",
+    "Mexico",
+    "Rest of Central America",
+    "Brazil",
+    "Rest of South America",
+    "Northern Africa",
+    "Western Africa",
+    "Eastern Africa",
+    "South Africa",
+    "Western Europe",
+    "Central Europe",
+    "Turkey",
+    "Ukraine +",
+    "Asian-Stan",
+    "Russia +",
+    "Middle East",
+    "India +",
+    "Korea",
+    "China +",
+    "Southeastern Asia",
+    "Indonesia +",
+    "Japan",
+    "Oceania",
+    "Rest of South Asia",
+    "Rest of Southern Africa"
+]
+
+#  #regions in the file kilometrage.csv are like this:
+#  region_list  = [
+#  'Canada',
+#  'US',
+#  'Mexico',
+#  'Rest C.Am.',
+#  'Brazil',
+#  'Rest S.Am.',
+#  'N.Africa',
+#  'W.Africa',
+#  'E.Africa',
+#  'South Africa',
+#  'W.Europe',
+#  'C.Europe',
+#  'Turkey',
+#  'Ukraine',
+#  'Stan',
+#  'Russia',
+#  'M.East',
+#  'India',
+#  'Korea',
+#  'China',
+#  'SE.Asia',
+#  'Indonesia',
+#  'Japan',
+#  'Oceania',
+#  'Rest S.Asia',
+#  'Rest S.Africa']
 
 # Electricity Generation related constants ---------------------------------------------
 
 TECH_GEN = 34   # number of electricity generation technologies -> 33 technologies + 1 empty row
+
+# names of generation technologies as in the input files (e.g. composition_generation.csv) from Sebastiaan - should be renamed in files to match TIMER names in the future
+GEN_TYPES_SEBASTIAAN = ["Solar PV", "Solar PV residential", "CSP", "Wind onshore", "Wind offshore", 
+                        "Wave", "Hydro", "Other Renewables", "Geothermal","Hydrogen power", "Nuclear","<EMPTY>", "Conv. Coal",
+                        "Conv. Oil", "Conv. Natural Gas","Waste", "IGCC", "OGCC", "NG CC", "Biomass CC",
+                        "Coal + CCS", "Oil/Coal + CCS", "Natural Gas + CCS", "Biomass + CCS",
+                        "CHP Coal", "CHP Oil", "CHP Natural Gas", "CHP Biomass",
+                        "CHP Coal + CCS", "CHP Oil + CCS", "CHP Natural Gas + CCS", "CHP Biomass + CCS", "CHP Geothermal", "CHP Hydrogen"]
+# names of generation technologies as in TIMER model - TODO: check if these are correct
+EPG_TECHNOLOGIES = [
+    "SPV",
+    "SPVR",
+    "CSP",
+    "WON",
+    "WOFF",
+    "WAVE",
+    "HYD",
+    "OREN",
+    "GEO",
+    "H2P",
+    "NUC",
+    "FREE12",
+    "ClST",
+    "OlST",
+    "NGOT",
+    "BioST",
+    "IGCC",
+    "OlCC",
+    "NGCC",
+    "BioCC",
+    "ClCS",
+    "OlCS",
+    "NGCS",
+    "BioCS",
+    "ClCHP",
+    "OlCHP",
+    "NGCHP",
+    "BioCHP",
+    "ClCHPCS",
+    "OlCHPCS",
+    "NGCHPCS",
+    "BioCHPCS",
+    "GeoCHP",
+    "H2CHP"
+]
+
 
 # Define mapping: technology -> category
 DICT_GENTECH_TO_CATEGORY = {
@@ -98,11 +203,11 @@ TECH_VEHICLES = 25    # number of vehicle types
 # relative to this BASE loadfcator (persons/car))
 LOAD_FACTOR = 1.6
 
-LIGHT_COMMERCIAL_VEHICLE_SHARE = 0.04 
+LIGHT_COMMERCIAL_VEHICLE_SHARE = 0.04 # TODO: is this even used somewhere?
 # 0.04 is the fraction of the tkms driven by light commercial vehicles according to the IEA
 BEV_CAPACITY_CURRENT  = 59.6    #kWh current battery capacity of full electric vehicles, see current_specs.xlsx
 PHEV_CAPACITY_CURRENT = 11.2    #kWh current battery capacity of plugin electric vehicles, see current_specs.xlsx
-# TODO: is this even used somewhere?
+
 
 
 # Storage related constants ---------------------------------------------
@@ -133,6 +238,17 @@ style_combinations = list(itertools.product(colors, linestyles))
 # Map technologies to (color, linestyle)
 DICT_GENTECH_STYLES = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
 
+DICT_GEN_CATEGORY_COLORS = {
+    'Solar':             "#FBBF09",
+    'Wind':              "#4BABFF",
+    'Biomass':           "#42DD88",
+    'Other Renewables':  "#B6F795",
+    'Hydrogen':          '#B9FAF8',
+    'Nuclear':           "#B06106",
+    'Fossil':            "#575354",
+    'Fossil + CCS':      "#BBB8B9"
+}
+
 
 # Grid Storage technologies
 technologies = [
@@ -148,17 +264,15 @@ style_combinations = list(itertools.product(colors, linestyles))
 # Map technologies to (color, linestyle)
 DICT_STOR_STYLES = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
 
-
-DICT_GENTECHCAT_COLORS = {
-    'Solar':             "#FBBF09",
-    'Wind':              "#4BABFF",
-    'Biomass':           "#42DD88",
-    'Other Renewables':  "#B6F795",
-    'Hydrogen':          '#B9FAF8',
-    'Nuclear':           "#B06106",
-    'Fossil':            "#575354",
-    'Fossil + CCS':      "#BBB8B9"
+DICT_STOR_CATEGORY_COLORS_SEBASTIAAN = {
+    'mechanical storage':              "#AC501A",
+    'PHS':                             "#6F4126",
+    'lithium batteries':               "#E95E0D",
+    'molten salt and flow batteries':  "#F07C32",
+    'other':                           '#F69B58'
 }
+
+
 
 DICT_MATERIALS_COLORS = {
     'Steel':     '#FF9B85',

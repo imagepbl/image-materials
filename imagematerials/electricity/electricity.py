@@ -72,7 +72,6 @@ time_start = prep_data["stocks"].coords["Time"].min().values
 complete_timeline = prism.Timeline(time_start, YEAR_END, 1)
 simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
 
-
 sec_electr_gen = Sector("electr_gen", prep_data)
 
 main_model_factory = ModelFactory(
@@ -84,7 +83,6 @@ main_model_factory = ModelFactory(
 main_model_factory.simulate(simulation_timeline)
 
 list(main_model_factory.electr_gen)
-
 
 
 

@@ -680,3 +680,75 @@ CAT_PRODUCTS_FROM_BIOMASS = [
 # Excavated earthen materials (including soil) nec Excavated earthen materials (including soil) nec
 # Mixed and complex products nec. Mixed / complex products nec.
 # Waste for final treatment and disposal Waste for final treatment and disposal
+
+
+# Use relative paths
+path_image_materials = Path("../image-materials")
+path_image_scenarios = Path("image")
+
+raw_data = path_image_materials / "data/raw"
+path_rest_of_data = raw_data / "rest-of"
+
+scenario_base_path = Path("scenario_config")
+
+scenarios = ["SSP2_M_CP", "SSP2_VLLO", "SSP2_VLLO_LifeTech"]
+scenario_list = {"base":("SSP2_M_CP", None),
+                 "climate":("SSP2_VLLO", None),
+                 "narrow":("SSP2_VLLO_LifeTech", ["narrow"])}
+
+scenario_name_resource_model = "SSP2_M_CP"
+
+cement_in_concrete_factor = 0.1
+sand_in_cement_conversion = 0.17 #(silica)
+sand_in_concrete = cement_in_concrete_factor*sand_in_cement_conversion
+sand_in_glass_conversion = 0.7
+
+
+R5_mapping = {
+    "OECD & EU" : ["1", "12", "23", "24", "13", "2", "11"],
+    "Reforming Economies" : ["16", "15", "14"],
+    "Asia" : ["20", "18", "22", "19", "25", "21"],
+    "Middle East & Africa" : ["9", "17", "7", "26", "10", "8"],
+    "Latin America" : ["5", "3", "4", "6"]
+}
+
+REGION_TO_CLASS_DICT_IMAGE_MAT = {
+    'Canada': '1',
+    'US': '2',
+    'Mexico': '3',
+    'Rest C.Am.': '4',
+    'Brazil': '5',
+    'Rest S.Am.': '6',
+    'N.Africa': '7',
+    'W.Africa': '8',
+    'E.Africa': '9',
+    'South Africa': '10',
+    'W.Europe': '11',
+    'C.Europe': '12',
+    'Turkey': '13',
+    'Ukraine': '14',
+    'Stan': '15',
+    'Russia': '16',
+    'M.East': '17',
+    'India': '18',
+    'Korea': '19',
+    'China': '20',
+    'SE.Asia': '21',
+    'Indonesia': '22',
+    'Japan': '23',
+    'Oceania': '24',
+    'Rest S.Asia': '25',
+    'Rest S.Africa': '26'}
+
+# Reverse mapping: class number to region name
+CLASS_TO_REGION_DICT_IMAGE_MAT = {v: k for k, v in REGION_TO_CLASS_DICT_IMAGE_MAT.items()}
+
+R5_to_IAI = {
+    "OECD & EU" : ['Japan', 'North America', 'Western & Central Europe'],
+    "Reforming Economies" : ['Russia & Eastern Europe'],
+    "Asia" : ['Asia (ex China)', 'China (Estimated)'],
+    "Middle East & Africa" : ['Africa', 'Estimated Unreported to IAI', 'Gulf Cooperation Council'],
+    "Latin America" : ['South America']
+    }
+
+
