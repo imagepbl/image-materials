@@ -203,11 +203,11 @@ TECH_VEHICLES = 25    # number of vehicle types
 # relative to this BASE loadfcator (persons/car))
 LOAD_FACTOR = 1.6
 
-LIGHT_COMMERCIAL_VEHICLE_SHARE = 0.04 
+LIGHT_COMMERCIAL_VEHICLE_SHARE = 0.04 # TODO: is this even used somewhere?
 # 0.04 is the fraction of the tkms driven by light commercial vehicles according to the IEA
 BEV_CAPACITY_CURRENT  = 59.6    #kWh current battery capacity of full electric vehicles, see current_specs.xlsx
 PHEV_CAPACITY_CURRENT = 11.2    #kWh current battery capacity of plugin electric vehicles, see current_specs.xlsx
-# TODO: is this even used somewhere?
+
 
 
 # Storage related constants ---------------------------------------------
@@ -238,6 +238,17 @@ style_combinations = list(itertools.product(colors, linestyles))
 # Map technologies to (color, linestyle)
 DICT_GENTECH_STYLES = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
 
+DICT_GEN_CATEGORY_COLORS = {
+    'Solar':             "#FBBF09",
+    'Wind':              "#4BABFF",
+    'Biomass':           "#42DD88",
+    'Other Renewables':  "#B6F795",
+    'Hydrogen':          '#B9FAF8',
+    'Nuclear':           "#B06106",
+    'Fossil':            "#575354",
+    'Fossil + CCS':      "#BBB8B9"
+}
+
 
 # Grid Storage technologies
 technologies = [
@@ -253,17 +264,15 @@ style_combinations = list(itertools.product(colors, linestyles))
 # Map technologies to (color, linestyle)
 DICT_STOR_STYLES = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
 
-
-DICT_GENTECHCAT_COLORS = {
-    'Solar':             "#FBBF09",
-    'Wind':              "#4BABFF",
-    'Biomass':           "#42DD88",
-    'Other Renewables':  "#B6F795",
-    'Hydrogen':          '#B9FAF8',
-    'Nuclear':           "#B06106",
-    'Fossil':            "#575354",
-    'Fossil + CCS':      "#BBB8B9"
+DICT_STOR_CATEGORY_COLORS_SEBASTIAAN = {
+    'mechanical storage':              "#AC501A",
+    'PHS':                             "#6F4126",
+    'lithium batteries':               "#E95E0D",
+    'molten salt and flow batteries':  "#F07C32",
+    'other':                           '#F69B58'
 }
+
+
 
 DICT_MATERIALS_COLORS = {
     'Steel':     '#FF9B85',
