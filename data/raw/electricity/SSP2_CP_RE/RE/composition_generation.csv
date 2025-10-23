@@ -1,4 +1,4 @@
-year,g/MW,Steel,Aluminium,Concrete,Plastics,Glass,Cu,Nd,Ta,Co,Pb,Mn,Ni
+year,g/MW,steel,aluminium,concrete,plastics,glass,copper,neodymium,tantalum,cobalt,lead,manganese,nickel
 2020,Solar PV,150000000.0,10176000.0,0.0,0.0,0.0,6341800.0,0.0,0.0,0.0,121643.0,0.0,1200.0
 2020,Solar PV residential,150000000.0,10176000.0,0.0,0.0,0.0,6341800.0,0.0,0.0,0.0,121643.0,0.0,1200.0
 2020,CSP,576235814.3,5500000.0,1351812440.0,0.0,155986667.0,3145804.8,0.0,0.0,0.0,0.0,3850000.0,1370000.0
