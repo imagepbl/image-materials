@@ -24,7 +24,7 @@ SUBTYPE_SEPARATOR = " - "
 
 
 # Regions
-_IMAGE_REGIONS = [
+IMAGE_REGIONS = [
     "CAN",
     "USA",
     "MEX",
@@ -52,13 +52,13 @@ _IMAGE_REGIONS = [
     "RSAS",
     "RSAF"
 ]
-Region = prism.Dimension('region', _IMAGE_REGIONS + ["World"])  # World regions
+Region = prism.Dimension('region', IMAGE_REGIONS + ["World"])  # World regions
 ExtendedRegion = prism.Dimension('region', Region.coords + ["World2"])
 ImportRegion = prism.Dimension("import_region", Region.coords)
 ExportRegion = prism.Dimension("export_region", Region.coords)
-ReducedRegion = prism.Dimension("region", _IMAGE_REGIONS)
-ReducedImportRegion = prism.Dimension("import_region", _IMAGE_REGIONS)
-ReducedExportRegion = prism.Dimension("export_region", _IMAGE_REGIONS)
+ReducedRegion = prism.Dimension("region", IMAGE_REGIONS)
+ReducedImportRegion = prism.Dimension("import_region", IMAGE_REGIONS)
+ReducedExportRegion = prism.Dimension("export_region", IMAGE_REGIONS)
 
 
 def region_diag(
