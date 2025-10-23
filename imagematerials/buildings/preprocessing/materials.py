@@ -4,8 +4,7 @@ import numpy as np
 import xarray as xr
 import prism
 
-
-from imagematerials.concepts import create_region_graph
+from imagematerials.constants import IMAGE_REGIONS
 
 from imagematerials.buildings.constants import END_YEAR, HIST_YEAR
 from imagematerials.buildings.preprocessing.circular_economy_measures import (circular_economy_measures_material_intensities_residential,
@@ -32,8 +31,10 @@ def compute_mat_intensities_residential(database_dir, circular_economy_config: d
             building_materials_dynamic.loc[idx[:,:,building], material] = selection.stack()
 
     xr_mat_res_intensities = dataset_to_array(building_materials_dynamic.to_xarray(), ["Cohort", "Region", "Type"], ["material"])
+    # make sure that material names are not captialized
+    xr_mat_res_intensities.coords["material"] = [mat.lower() for mat in xr_mat_res_intensities.coords["material"].values]
     xr_mat_res_intensities.coords["Type"] = ["Detached", "Semi-detached", "Appartment", "High-rise"]
-    xr_mat_res_intensities.coords["Region"] = [str(x) for x in xr_mat_res_intensities.coords["Region"].values]
+    xr_mat_res_intensities.coords["Region"] = IMAGE_REGIONS
  
     # applying material intensity changes for residential buildings
     if 'narrow' in circular_economy_config.keys():
@@ -64,13 +65,14 @@ def compute_mat_intensities_commercial(database_dir, circular_economy_config: di
     xr_mat_comm_intensities.coords["Type"] = ["Office", "Retail+", "Hotels+", "Govt+"]
 
     # broadcast to Regions and order dims
-    model_regions = [str(i) for i in range(1, 27)]
-    xr_mat_comm_intensities = xr_mat_comm_intensities.expand_dims(Region=model_regions)
+    xr_mat_comm_intensities = xr_mat_comm_intensities.expand_dims(Region=IMAGE_REGIONS)
     xr_mat_comm_intensities = xr_mat_comm_intensities.transpose("Cohort", "Region", "Type", "material")
+    # makes ure that materials are not capitalized
+    xr_mat_comm_intensities.coords["material"] = [mat.lower() for mat in xr_mat_comm_intensities.coords["material"].values]
 
     # apply CE changes (per material, per region)
     if 'narrow' in circular_economy_config.keys():
-        xr_mat_comm_intensities = circular_economy_measures_material_intensities_commercial(xr_mat_comm_intensities, circular_economy_config, model_regions)
+        xr_mat_comm_intensities = circular_economy_measures_material_intensities_commercial(xr_mat_comm_intensities, circular_economy_config, IMAGE_REGIONS)
 
     xr_mat_comm_intensities = prism.Q_(xr_mat_comm_intensities, "kg/m^2") # assign unit
 

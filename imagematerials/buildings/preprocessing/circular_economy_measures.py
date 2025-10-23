@@ -3,13 +3,15 @@ import numpy as np
 
 import prism
 
+from imagematerials.constants import IMAGE_REGIONS
+
 from imagematerials.concepts import create_region_graph
 from imagematerials.util import apply_change_per_region
 
 def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray, circular_economy_config:dict):
 
     region_knowledge_graph = create_region_graph()
-    regions = total_m2_housing_per_cap.coords["Region"].values
+    regions = IMAGE_REGIONS
 
     base_year = circular_economy_config["base"]["buildings"]["base_year"]
     target_year = circular_economy_config["base"]["buildings"]["target_year"]
@@ -35,29 +37,6 @@ def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray, circ
     print("implemented 'base' for Residential Buildings")
 
     return total_m2_housing_per_cap
-
-
-        # if 'narrow' in circular_economy_config.keys():
-        #     base_year = circular_economy_config["narrow"]["buildings"]["base_year"]
-        #     target_year = circular_economy_config["narrow"]["buildings"]["target_year"]
-            
-        #     residential_scenario_settings = circular_economy_config['narrow']["buildings"]['residential']['m2_change_pc']
-        #     implementation_rate = circular_economy_config['narrow']['buildings']['implementation_rate']
-
-        #     residential_scenario_settings_xr = xr.DataArray(
-        #         list(residential_scenario_settings.values()),
-        #         coords={"Region": list(residential_scenario_settings.keys())},
-        #         dims=["Region"],
-        #         name="residential_scenario_settings"
-        #     )
-
-        #     regions_mapped = list(region_knowledge_graph.find_relations_inverse(regions, residential_scenario_settings.keys()))
-        #     residential_scenario_settings_xr_mapped = region_knowledge_graph.rebroadcast_xarray(residential_scenario_settings_xr, output_coords=regions_mapped, dim="Region")
-            
-        #     total_m2_housing_per_cap = apply_change_per_region(
-        #         total_m2_housing_per_cap, base_year, target_year, 
-        #         residential_scenario_settings_xr_mapped, implementation_rate)
-        #     print("implemented 'narrow' for Residential Buildings")
 
 
 def apply_circular_economy_commercial_floorspace(floorspace_commercial, circular_economy_config):

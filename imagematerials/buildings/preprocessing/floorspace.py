@@ -26,6 +26,7 @@ from imagematerials.buildings.preprocessing.circular_economy_measures import ce_
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, merge_dims
 
+from imagematerials.constants import IMAGE_REGIONS, Region_without_World
 
 prism.unit_registry.load_definitions(files("imagematerials") / "units.txt")
 
@@ -120,7 +121,7 @@ def get_image_floorspace(image_directory: Path, base_directory: Path) -> (xr.Dat
 
     for data_name, data_var in floorspace_dataset.data_vars.items():
         floorspace_xr.loc[:, :, data_name] = data_var
-    floorspace_xr.coords["Region"] = [str(x.values) for x in floorspace_xr.coords["Region"]]
+    floorspace_xr = floorspace_xr.assign_coords({"Region": IMAGE_REGIONS})
 
     # Quantify units
     floorspace_xr = prism.Q_(floorspace_xr, "m^2/person")
@@ -166,6 +167,7 @@ def extrapolate_floorspace(floorspace_image: xr.DataArray,
 
     # combine historic with IMAGE data here
     floorspace = xr.concat((floor_1721_1820, floor_1820_1970, floorspace_image), dim="Time")
+    floorspace = floorspace.assign_coords({"Region": IMAGE_REGIONS})
 
     # Quantify units
     floorspace = prism.Q_(floorspace, "m^2/person")

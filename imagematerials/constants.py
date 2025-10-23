@@ -52,6 +52,37 @@ IMAGE_REGIONS = [
     "RSAS",
     "RSAF"
 ]
+
+IMAGE_REGIONS_DICT = {
+    "CAN": 1,
+    "USA": 2,
+    "MEX": 3,
+    "RCAM": 4,
+    "BRA": 5,
+    "RSAM": 6,
+    "NAF": 7,
+    "WAF": 8,
+    "EAF": 9,
+    "SAF": 10,
+    "WEU": 11,
+    "CEU": 12,
+    "TUR": 13,
+    "UKR": 14,
+    "STAN": 15,
+    "RUS": 16,
+    "ME": 17,
+    "INDIA": 18,
+    "KOR": 19,
+    "CHN": 20,
+    "SEAS": 21,
+    "INDO": 22,
+    "JAP": 23,
+    "OCE": 24,
+    "RSAS": 25,
+    "RSAF": 26
+}
+
+Region_without_World = prism.Dimension('region', IMAGE_REGIONS)  # World regions without "World"
 Region = prism.Dimension('region', IMAGE_REGIONS + ["World"])  # World regions
 ExtendedRegion = prism.Dimension('region', Region.coords + ["World2"])
 ImportRegion = prism.Dimension("import_region", Region.coords)

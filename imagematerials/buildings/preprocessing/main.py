@@ -4,6 +4,8 @@ from pathlib import Path
 import xarray as xr
 import numpy as np
 
+from imagematerials.constants import IMAGE_REGIONS
+
 from imagematerials.buildings.constants import SCENARIO_SELECT
 from imagematerials.buildings.preprocessing.floorspace import (
     compute_average_m2_capita,
@@ -78,8 +80,7 @@ def buildings_preprocessing(base_directory, climate_policy_config: dict,
                             mat_intensities, floorspace.coords["Type"].values)
     
     #TODO remove this quick fix
-    region_coords = np.sort(floorspace.coords["Region"].values.astype(int)).astype(str)
-    floorspace = knowledge_graph.rebroadcast_xarray(floorspace, region_coords, dim ="Region")
+    floorspace = knowledge_graph.rebroadcast_xarray(floorspace, IMAGE_REGIONS, dim ="Region")
 
     return {"stocks": floorspace, "lifetimes": lifetimes, "material_intensities": mat_intensities,
             "knowledge_graph": knowledge_graph, "set_unit_flexible": str(floorspace.pint.units)}

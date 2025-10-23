@@ -6,6 +6,7 @@ import xarray as xr
 import prism
 from importlib.resources import files
 
+from imagematerials.constants import IMAGE_REGIONS
 
 from imagematerials.buildings.constants import (
     urban_share_1820)
@@ -25,14 +26,14 @@ def compute_population(image_directory, base_directory):
     data=rurpop_total.values,                # Data values from the DataFrame
     dims=["Time", "Region"],                 # Names for the two dimensions
     coords={"Time": rurpop_total.index,      # Time coordinates from the DataFrame index
-            "Region": rurpop_total.columns}  # Region coordinates from the DataFrame columns
+            "Region": IMAGE_REGIONS}  # Region coordinates from the DataFrame columns
         )
 
     urbpop_total_xr = xr.DataArray(
     data=urbpop_total.values,                # Data values from the DataFrame
     dims=["Time", "Region"],                 # Names for the two dimensions
     coords={"Time": urbpop_total.index,      # Time coordinates from the DataFrame index
-            "Region": urbpop_total.columns}  # Region coordinates from the DataFrame columns
+            "Region": IMAGE_REGIONS}  # Region coordinates from the DataFrame columns
         )
 
     all_population = xr.concat((tot_population_xr, rurpop_total_xr, urbpop_total_xr), dim="Area")
@@ -77,7 +78,7 @@ def compute_total_population(image_directory, base_directory):
         data=regionalized_total_pop_history_future.values,                # Data values from the DataFrame
         dims=["Time", "Region"],                                          # Names for the two dimensions
         coords={"Time": regionalized_total_pop_history_future.index,      # Time coordinates from the DataFrame index
-                "Region": regionalized_total_pop_history_future.columns}  # Region coordinates from the DataFrame columns
+                "Region": IMAGE_REGIONS}  # Region coordinates from the DataFrame columns
     )
 
 

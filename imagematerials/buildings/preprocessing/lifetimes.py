@@ -1,6 +1,8 @@
 import pandas as pd
 import xarray as xr
 
+from imagematerials.constants import IMAGE_REGIONS
+
 from imagematerials.buildings.constants import FLAG_NORMAL, SCENARIO_SELECT, ALL_YEARS
 from imagematerials.util import dataset_to_array, merge_dims
 
@@ -69,6 +71,10 @@ def compute_lifetimes(base_directory, commercial_types, circular_economy_config,
     xr_lifetimes_residential = merge_dims(xr_lifetimes_residential, "Type", "Area")
     xr_lifetimes_residential = xr_lifetimes_residential.transpose("Time", "Region", "Type", "Parameter")
     lifetimes_array = xr.concat((xr_lifetimes_commercial, xr_lifetimes_residential), dim="Type")
+
+    # rename regions to names
+    lifetimes_array.coords["Region"] = IMAGE_REGIONS
+
     return convert_lifetimes_buildings(lifetimes_array, distribution_type)
 
 def convert_lifetimes_buildings(lifetimes, distribution_type="folded_norm"):
