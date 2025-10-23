@@ -81,7 +81,7 @@ def get_preprocessing_data(
         circular_economy_scenario_dirs: Optional[dict[str, Union[Path, str]]] = None,
         cache: Union[bool, Path, str] = False,
         standard_scenario: str = "SSP2",
-        year_start: int = 1970,
+        year_start: int = 1971,
         year_end: int = 2100,
         year_out: int = 2100):
     """Get preprocessing data with optional caching.
