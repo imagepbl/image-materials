@@ -526,8 +526,8 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
 
 
 def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_END, YEAR_OUT): #, climate_policy_config: dict, circular_economy_config: dict
-    """
-    Preprocesses electricity storage data and creates "prep_data" in a format suitable for stock modelling using IMAGE-Materials.
+    """Preprocess electricity storage data and creates "prep_data" suitable for stock modelling using IMAGE-Materials.
+
     It does so for the two sub-sectors:
     1) Pumped Hydro Storage (PHS)
     2) Other Electricity Storage Technologies (e.g., batteries, compressed air, flywheels)
@@ -558,14 +558,14 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
 
     Returns
     -------
-    tuple
-        A tuple containing two dictionaries:
-        - `prep_data_phs`: Prepared dataset for pumped hydro storage, including:
+    prep_data_phs: 
+        Prepared dataset for pumped hydro storage, including:
             * "stocks": Time series of storage capacity (MWh)
             * "material_intensities": Material intensities (kg/MWh)
             * "lifetimes": Lifetime mean and standard deviation
             * "set_unit_flexible": Unit mapping for Prism integration
-        - `prep_data_oth_storage`: Prepared dataset for other storage technologies, including:
+    prep_data_oth_storage: 
+        Prepared dataset for other storage technologies, including:
             * "stocks": Time series of storage capacity (MWh)
             * "material_intensities": Material intensities (kg/kWh)
             * "lifetimes": Lifetime mean and standard deviation
