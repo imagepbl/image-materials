@@ -39,14 +39,14 @@ def stock_tail(stock, YEAR_OUT):
     return stock_new
 
 
-def add_historic_stock(da, year_start=1920, interp_method="linear"):
+def add_historic_stock(da_stock, year_start=1920, interp_method="linear"):
     """
     Calculates historic (pre TIMER simulation time = before 1971) stock values.
     In year_start the stock is 0, then it (linearly) increases to the first existing year in da.
 
     Parameters
     ----------
-    da : xarray.DataArray
+    da_stock : xarray.DataArray
         Input DataArray with dims ('Time', 'Region', 'Type').
     year_start : int
         The first year to start historic stock from (will be filled with zeros).
@@ -63,17 +63,17 @@ def add_historic_stock(da, year_start=1920, interp_method="linear"):
         interpolated according to `interp_method` up to the first year in `da`
     """
 
-    t_first = int(da.Time.min())
+    t_first = int(da_stock.Time.min())
     if year_start >= t_first:
-        return da
+        return da_stock
     
-    unit = prism.U_(da)
+    unit = prism.U_(da_stock)
 
     t_hist = np.arange(year_start, t_first)
     n_hist = len(t_hist)
 
     # Interpolate from 0 to first existing value - use this approach as it is faster than using xr.interp()
-    first_values = da.sel(Time=t_first).values.astype(float)
+    first_values = da_stock.sel(Time=t_first).values.astype(float)
     if interp_method == "linear":
         stock_hist = np.linspace(0, 1, n_hist)[:, None, None] * first_values[None, :, :]
     elif interp_method == "quadratic":
@@ -82,22 +82,22 @@ def add_historic_stock(da, year_start=1920, interp_method="linear"):
         raise ValueError(f"Unknown method: {interp_method}. Choose 'linear' or 'quadratic'.")
 
     # Build historic DataArray
-    da_hist = xr.DataArray(
+    da_stock_hist = xr.DataArray(
         stock_hist,
-        coords={"Time": t_hist, "Region": da.Region, "Type": da.Type},
+        coords={"Time": t_hist, "Region": da_stock.Region, "Type": da_stock.Type},
         dims=("Time", "Region", "Type")
     )
 
-    da_hist = prism.Q_(da_hist, unit)
+    da_stock_hist = prism.Q_(da_stock_hist, unit)
 
     # Concatenate with input array
-    da_extended = xr.concat([da_hist, da], dim="Time")
+    da_stock_extended = xr.concat([da_stock_hist, da_stock], dim="Time")
 
-    return da_extended
+    return da_stock_extended
 
 
 
-def interpolate_xr(dataarray, t_start, t_end, interp_method = 'linear'):
+def interpolate_xr(data_array, t_start, t_end, interp_method = 'linear'):
     """
     Interpolate an xarray.DataArray over a continuous time range and 
     extend its boundary values beyond the available data to span t_start - t_end.
@@ -108,7 +108,7 @@ def interpolate_xr(dataarray, t_start, t_end, interp_method = 'linear'):
 
     Parameters
     ----------
-    dataarray : xarray.DataArray
+    data_array : xarray.DataArray
         Input DataArray with a 'Time' coordinate containing numeric values (e.g. 2020, 2050).
     t_start : int or float
         Start year for the interpolation range.,
@@ -124,18 +124,18 @@ def interpolate_xr(dataarray, t_start, t_end, interp_method = 'linear'):
     """
 
     # Determine which dimension to use
-    dim = 'Time' if 'Time' in dataarray.dims else 'Cohort'
+    dim = 'Time' if 'Time' in data_array.dims else 'Cohort'
 
     # The interpolations strips the unit, so save it here and reattach later
-    unit = prism.U_(dataarray)
+    unit = prism.U_(data_array)
     
     # Get the coordinate values along that dimension
-    coord_values = dataarray[dim].values
+    coord_values = data_array[dim].values
     # Define new full range
     new_range = np.arange(t_start, t_end + 1)
 
     # Interpolate linearly
-    da_interp = dataarray.interp({dim: new_range}, method = interp_method)
+    da_interp = data_array.interp({dim: new_range}, method = interp_method)
 
     # Fill values outside original range
     da_interp.loc[{dim: slice(None, coord_values.min())}] = da_interp.sel({dim: coord_values.min()})
@@ -190,7 +190,7 @@ def create_prep_data(results_dict, conversion_table, unit_mapping):
 
     for df_name in list(prep_data.keys()):
         if "lifetime" in df_name:
-            prep_data["lifetimes"] = convert_lifetime_flexible(prep_data[df_name])
+            prep_data["lifetimes"] = convert_lifetime(prep_data[df_name])
         elif "stock" in df_name:
             prep_data["stocks"] = prep_data.pop(df_name)
         elif "material" in df_name:
