@@ -53,22 +53,20 @@ from imagematerials.electricity.electr_external_data import (
 )
 
 
-
 ###########################################################################################################
 ###########################################################################################################
 #%% 1) Generation 
 ###########################################################################################################
 ###########################################################################################################
-
-
 def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
-    path_image_output = Path(path_base, "data", "raw", "image", scenario, "EnergyServices")
-    path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
-    path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scenario)
+    path_image_output = Path(path_base, "image", scenario, "EnergyServices")
+    path_external_data_standard = Path(path_base, "electricity", "standard_data")
+    path_external_data_scenario = Path(path_base, "electricity", scenario)
+
         # test if path_external_data_scenario exists and if not set to standard scenario
     if not path_external_data_scenario.exists():
-        path_external_data_scenario = Path(path_base, "data", "raw", "electricity", STANDARD_SCEN_EXTERNAL_DATA)
+        path_external_data_scenario = Path(path_base, "electricity", STANDARD_SCEN_EXTERNAL_DATA)
     assert path_image_output.is_dir()
     assert path_external_data_standard.is_dir()
     assert path_external_data_scenario.is_dir()
