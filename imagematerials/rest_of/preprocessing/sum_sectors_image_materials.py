@@ -192,6 +192,7 @@ def sum_inflows_for_output(model_name, materials_dict, resource_group,
             total_material_pd = total_material_pd.loc[1971:]
         else: 
             pass
+        
         if save == True:
             total_material_pd.to_csv(f'../data/raw/rest-of/{resource_group}/image_materials_{key}.csv')
             print('done', key)

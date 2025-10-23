@@ -38,17 +38,23 @@ def read_gompertz_values(base_directory, scenario: str):
     - The function expects regions to be numeric strings for sorting.
     """
 
-    xr_gompertz = xr.open_dataset(base_directory / "rest-of" / "gompertz_values" / "coefs_gompertz.nc", engine="netcdf4")
+    if scenario in ["SSP2_VLLO_LifeTech"]:
+        print('Using Gompertz coefficients for resource efficiency measures')
+        name = "coef_gompertz_eff.nc"
+    else: 
+        name = "coefs_gompertz.nc"
+
+    xr_gompertz = xr.open_dataset(base_directory / "rest-of" / "gompertz_values" / name, engine="netcdf4")
     xr_gompertz = xr_gompertz.to_array().isel(variable=0).drop_vars("variable")
 
     # # Reorder the data to match the sorted regions
     xr_gompertz = xr_gompertz.sel(Region=sorted(xr_gompertz.coords["Region"].values, key=lambda x: int(x)))
 
-    if scenario in ["SSP2_VLLO_LifeTech"]:
-        xr_gompertz = adapt_gompertz_regional(xr_gompertz, scenario=scenario,
-                                              start_implementation_year=2030,
-                                              end_implementation_year=2050)
-
+    # if scenario in ["SSP2_VLLO_LifeTech"]:
+        # print('Adapting Gompertz coefficient: a for resource efficiency measures')
+        # xr_gompertz = adapt_gompertz_regional(xr_gompertz, scenario=scenario,
+        #                                       start_implementation_year=2030,
+        #                                       end_implementation_year=2050)
 
     return xr_gompertz
 
