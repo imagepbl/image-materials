@@ -410,7 +410,7 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
             new_col = f"{level} - {typ}"
             expanded_data[new_col] = lifetime_grid_elements[typ]
     lifetime_grid_elements = pd.DataFrame(expanded_data, index=lifetime_grid_elements.index)
-    lifetime_grid_elements.rename_axis('Year', inplace=True)
+    lifetime_grid_elements.rename_axis('year', inplace=True)
 
     # no differentiation between HV, MV & LV lines as well as between aboveground and belowground
     # Types: lines, transformers, substations
@@ -429,7 +429,7 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
 
     materials_grid_additions_kgperunit            = materials_grid_additions_interpol.copy()
     # material intensities: (years, tech. type) index and materials as columns -> years as index and (tech. type, materials) as columns
-    materials_grid_additions_kgperunit.index.names = ["Year", "Type"]
+    materials_grid_additions_kgperunit.index.names = ["year", "Type"]
     materials_grid_additions_kgperunit             = materials_grid_additions_kgperunit.unstack(level='Type')   # bring tech. type from row index to column header
     materials_grid_additions_kgperunit.columns     = materials_grid_additions_kgperunit.columns.swaplevel(0, 1) # Swap the levels of the MultiIndex columns
     materials_grid_additions_kgperunit             = materials_grid_additions_kgperunit.sort_index(axis=1)
@@ -443,7 +443,7 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
 
     # Grid MIs ---
     materials_grid_kgperkm              = materials_grid_interpol.copy() # copy the interpolated material intensities
-    materials_grid_kgperkm.index.names  = ["Year", "Type"]
+    materials_grid_kgperkm.index.names  = ["year", "Type"]
     materials_grid_kgperkm              = materials_grid_kgperkm.unstack(level='Type') # bring tech. type from row index to column header
     materials_grid_kgperkm.columns      = materials_grid_kgperkm.columns.swaplevel(0, 1) # Swap the levels of the MultiIndex columns
     materials_grid_kgperkm              = materials_grid_kgperkm.sort_index(axis=1)
@@ -886,7 +886,7 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     df_mean.columns = [(col, 'mean') for col in df_mean.columns] # Rename columns to multi-level tuples
     df_stdev.columns = [(col, 'stdev') for col in df_stdev.columns]
     phs_lifetime_distr = pd.concat([df_mean, df_stdev], axis=1) # Concatenate along columns
-    phs_lifetime_distr.index.name = 'Year'
+    phs_lifetime_distr.index.name = 'year'
 
     # MIs: (years, material) index and technologies as columns -> years as index and (technology, Material) as columns
     phs_materials = stor_materials_interpol.loc[idx[:,:],'PHS'].unstack() * PHS_kg_perkWh * 1000 # wt% * kg/kWh * 1000 kWh/MWh = kg/MWh
@@ -938,7 +938,7 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     df_mean.columns = [(col, 'mean') for col in df_mean.columns] # Rename columns to multi-level tuples
     df_stdev.columns = [(col, 'stdev') for col in df_stdev.columns]
     oth_storage_lifetime_distr = pd.concat([df_mean, df_stdev], axis=1) # Concatenate along columns
-    oth_storage_lifetime_distr.index.name = 'Year'
+    oth_storage_lifetime_distr.index.name = 'year'
 
     # MIs: (years, material) index and technologies as columns -> years as index and (technology, Material) as columns
     stor_tech = list(storage_lifetime_interpol.columns)
