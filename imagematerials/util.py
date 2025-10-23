@@ -375,7 +375,7 @@ def convert_lifetime_dataset(lifetime_dataset: xr.Dataset) -> dict[str, xr.DataA
         for mode in mode_list:
             orig_param_dict = {}
             for param in dist.params:
-                if param not in lifetime_dataset.data_vars:
+                if (str(mode), param) not in lifetime_dataset.data_vars:
                     raise ValueError(
                         f"Missing expected parameter '{param}' for mode '{mode}'. "
                         "Please verify that all required distribution parameters are present in the dataset."
@@ -404,13 +404,21 @@ def convert_lifetime_dataarray(lifetime_dataarray: xr.DataArray) -> dict[str, xr
     Parameters
     ----------
     lifetime_dataarray : xr.DataArray
-        DataArray with dimensions (DistributionParams, Cohort, Type), containing lifetime parameters. #TODO: make it more flexible to work with Year, Time, year, not only Cohort?
-    
+        DataArray with dimensions (DistributionParams, Cohort, Type), containing lifetime parameters. 
+
     Returns
     -------
     dict[str, xr.DataArray]
         Dictionary containing one DataArray per distribution, with dimensions (Time, Type, ScipyParam),
         fully preserving coordinates for compatibility with downstream code.
+
+    Notes
+    -----
+    #TODO: make it more flexible to work with Year, Time, year, not only Cohort?
+    #TODO: works only when all modes ('Type') have the same distribution, so the same parameters in DistributionParams.
+           -> Support cases where different modes use different distributions with different parameters. In this case,
+           different parameters would be within DistributionParams (mean, stedv, shape, scale), and the values associated with 
+           modes in the Type coordinate would be either the right value for that distribution parameters, or NaN for the distribution parameters that do not apply to that mode.
     """
     
     # 1. Build a dictionary of parameters available for each mode (technology)
@@ -457,7 +465,7 @@ def convert_lifetime_dataarray(lifetime_dataarray: xr.DataArray) -> dict[str, xr
         for mode in mode_list:
             orig_param_dict = {}
             for param in dist.params:
-                if param not in lifetime_dataarray.coords["DistributionParams"]:
+                if param not in lifetime_dataarray.coords["DistributionParams"].values:
                     raise ValueError(
                         f"Missing expected parameter '{param}' for mode '{mode}'. "
                         "Please verify that all required distribution parameters are present in the dataset."
@@ -474,6 +482,71 @@ def convert_lifetime_dataarray(lifetime_dataarray: xr.DataArray) -> dict[str, xr
 
         ret_scipy_params[dist_name] = array
 
+    return ret_scipy_params
+
+
+# TODO: Old -> delete
+def convert_life_time_vehicles(life_time_vehicles: xr.Dataset) -> dict[str, xr.DataArray]:
+    """Convert lifetime vehicles dataset to a more appropriate data format.
+
+    This conversion should probably move to the preprocessing stage after we figure out
+    the exact details of what the output should look like.
+
+    Parameters
+    ----------
+    life_time_vehicles
+        The input life_time_vehicles xarray dataset. It is supposed to be in a very particular format:
+        it contains the parameters for each of the modes. However, the distribution types are not
+        the same for each of the modes. Thus, the distribution types need to be inferred from the
+        names of the parameters that are given. If multiple parameter sets for multiple distributions
+        are given, the Weibull distribution is given preference over the FoldedNormal distribution.
+
+    Returns
+    -------
+        A dictionary that contains a data array for each of the distributions. Given the setup there is
+        an implicit assumption that only one distribution is used for each of the modes. If distribution
+        types change over time, this data structure needs to be adjusted.
+
+    """
+    # Create a dictionary to find which parameters are available for which mode.
+    mode_param = defaultdict(list)
+    for mode, par in life_time_vehicles.data_vars:
+        mode_param[mode].append(par)
+
+    # Create a dictionary that says which modes are tied to which distribution.
+    dist_mode = defaultdict(list)
+    modes_done = set()  # temporary
+    for dist in ALL_DISTRIBUTIONS:
+        for mode, param in mode_param.items():
+            if mode not in modes_done and dist.has_param(param):
+                dist_mode[dist.name].append(mode)
+                modes_done.add(mode)
+
+    # Iterate over all distributions to create a data array for each of them.
+    ret_scipy_params = {}
+    for dist_name, mode_list in dist_mode.items():
+        if len(mode_list) == 0:
+            continue
+        dist = NAME_TO_DIST[dist_name]
+
+        # param_arrays = {}
+        array = xr.DataArray(
+            0.0, dims=("Time", "Type", "ScipyParam"),
+            coords={
+                "Time": life_time_vehicles.coords["year"].to_numpy(),
+                "Type": mode_list,
+                "ScipyParam": dist.variable_scipy_param})
+        for mode in mode_list:
+            orig_param_dict = {}
+            for param in dist.params:
+                orig_param_dict[param] = life_time_vehicles.data_vars[str(mode), param].to_numpy()
+            scipy_params = dist.get_param(orig_param_dict)
+            for cur_scipy_key, cur_scipy_par in scipy_params.items():
+                if cur_scipy_key in dist.variable_scipy_param:
+                    array.loc[:, str(mode), cur_scipy_key] = cur_scipy_par
+                else:
+                    array.attrs[cur_scipy_key] = cur_scipy_par
+        ret_scipy_params[dist_name] = array
     return ret_scipy_params
 
 
