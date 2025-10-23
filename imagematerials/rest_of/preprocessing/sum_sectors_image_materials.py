@@ -1,3 +1,5 @@
+# THIS CODE IS USED TO SUM THE INFLOWS OF MATERIALS IN DIFFERENT SECTORS FOR THE IMAGE MATERIALS DATASET
+# SHOULD BE UNNESSECARY WHEN ALL COORDINATES AND DIMENSIONS ARE THE SAME
 
 from imagematerials.rest_of.const import REGION_TO_CLASS_DICT_IMAGE_MAT_NR
 import prism 
@@ -78,12 +80,14 @@ def sand_in_all_sectors(model_name):
     
     return return_dict
 
-def sum_inflows_for_output(model_name, materials_dict, resource_group, save = True):
+def sum_inflows_for_output(model_name, materials_dict, resource_group, 
+                           save = False, xarray_output = False):
     sand_in_cement_conversion = 0.17 #(silica)
     sand_gravel_in_concrete_conversion = 0.7
     sand_in_glass_conversion = 0.7
 
     total_material_dict = {}
+    total_material_dict_xr = {}
 
     # regions electricity and generation
     inflow_materials_grid = model_name.grid["inflow_materials"].to_array()
@@ -172,26 +176,34 @@ def sum_inflows_for_output(model_name, materials_dict, resource_group, save = Tr
         total_material = total_material.assign_coords(Region=new_regions)
         # to t
         # check if unit available
-        total_material = total_material.pint.to('t')
+ 
+        total_material_pd = total_material.pint.to('t')
         # save as pandas to save as csv
-        total_material = total_material.rename("total_material")
+        total_material_pd = total_material_pd.rename("total_material")
         # write key with a small letter
         key = key.lower()
         # to pandas
-        total_material = total_material.to_dataframe().unstack()
+        total_material_pd = total_material_pd.to_dataframe().unstack()
         # drop unessecary column level index
-        total_material.columns = total_material.columns.droplevel(0)
+        total_material_pd.columns = total_material_pd.columns.droplevel(0)
         # save as csv
         if key == 'sand':
             key = 'sand_gravel_crushed_rock'
-            total_material = total_material.loc[1971:]
+            total_material_pd = total_material_pd.loc[1971:]
         else: 
             pass
         if save == True:
-            total_material.to_csv(f'../data/raw/rest-of/{resource_group}/image_materials_{key}.csv')
+            total_material_pd.to_csv(f'../data/raw/rest-of/{resource_group}/image_materials_{key}.csv')
             print('done', key)
+        else:
+            pass
 
-        total_material_dict[key] = total_material
+        total_material_dict[key] = total_material_pd
+        total_material_dict_xr[key] = total_material
 
-    return total_material_dict
+    if xarray_output == False:
+        return total_material_dict
+    
+    elif xarray_output == True:
+        return total_material_dict_xr
 
