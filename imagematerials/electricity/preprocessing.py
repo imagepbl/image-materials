@@ -764,6 +764,7 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
         # storage_costs_new = storage_costs_new.append(pd.Series(storage_costs_new.loc[storage_costs_new.first_valid_index()]*(1+(2*decline_used.mean())), name=year)).sort_index(axis=0)
         row = pd.DataFrame([storage_costs_new.loc[storage_costs_new.first_valid_index()]*(1+(2*decline_used.mean()))])
         storage_costs_new.loc[year] = row.iloc[0]
+        storage_costs_new.sort_index(axis=0, inplace=True) 
 
     storage_costs_new.sort_index(axis=0, inplace=True) 
     storage_costs_new.loc[1971:2017,'Deep-cycle Lead-Acid'] = storage_costs_new.loc[2018,'Deep-cycle Lead-Acid'] # restore the exception (set to constant 2018 values)
@@ -773,16 +774,17 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     # use the storage price development in the logit model to get market shares
     storage_market_share = MNLogit(storage_costs_new, -0.2) #assumes input of an ordered dataframe with rows as years and columns as technologies, values as prices. Logitpar is the calibrated Logit parameter (usually a nagetive number between 0 and 1)
 
-    # fix the market share of storage technologies before YEAR_START
-    for year in range(YEAR_FIRST_GRID,storage_start):
-        # storage_market_share = storage_market_share.append(pd.Series(storage_market_share.loc[storage_market_share.last_valid_index()], name=year))
-        row = pd.DataFrame([storage_market_share.loc[storage_market_share.first_valid_index()]])
-        storage_market_share.loc[year] = row.iloc[0]
     # fix the market share of storage technologies after 2050
     for year in range(2050+1,YEAR_OUT+1):
         # storage_market_share = storage_market_share.append(pd.Series(storage_market_share.loc[storage_market_share.last_valid_index()], name=year))
         row = pd.DataFrame([storage_market_share.loc[storage_market_share.last_valid_index()]])
         storage_market_share.loc[year] = row.iloc[0]
+    # fix the market share of storage technologies before YEAR_START
+    for year in range(YEAR_FIRST_GRID,YEAR_START):
+        # storage_market_share = storage_market_share.append(pd.Series(storage_market_share.loc[storage_market_share.last_valid_index()], name=year))
+        row = pd.DataFrame([storage_market_share.loc[storage_market_share.first_valid_index()]])
+        storage_market_share.loc[year] = row.iloc[0]
+        
     storage_market_share = storage_market_share.sort_index(axis=0)
     
     # total = storage_market_share.sum(axis=1)

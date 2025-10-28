@@ -2218,8 +2218,8 @@ for year in reversed(range(YEAR_START,storage_start)):
     # storage_costs_new = storage_costs_new.append(pd.Series(storage_costs_new.loc[storage_costs_new.first_valid_index()]*(1+(2*decline_used.mean())), name=year)).sort_index(axis=0)
     row = pd.DataFrame([storage_costs_new.loc[storage_costs_new.first_valid_index()]*(1+(2*decline_used.mean()))])
     storage_costs_new.loc[year] = row.iloc[0]
+    storage_costs_new.sort_index(axis=0, inplace=True) 
 
-storage_costs_new.sort_index(axis=0, inplace=True) 
 storage_costs_new.loc[1971:2017,'Deep-cycle Lead-Acid'] = storage_costs_new.loc[2018,'Deep-cycle Lead-Acid'] # restore the exception (set to constant 2018 values)
 
 
@@ -2227,15 +2227,16 @@ storage_costs_new.loc[1971:2017,'Deep-cycle Lead-Acid'] = storage_costs_new.loc[
 # use the storage price development in the logit model to get market shares
 storage_market_share = MNLogit(storage_costs_new, -0.2) #assumes input of an ordered dataframe with rows as years and columns as technologies, values as prices. Logitpar is the calibrated Logit parameter (usually a nagetive number between 0 and 1)
 
-# fix the market share of storage technologies before YEAR_START
-for year in range(YEAR_FIRST_GRID,storage_start):
-    # storage_market_share = storage_market_share.append(pd.Series(storage_market_share.loc[storage_market_share.last_valid_index()], name=year))
-    row = pd.DataFrame([storage_market_share.loc[storage_market_share.first_valid_index()]])
-    storage_market_share.loc[year] = row.iloc[0]
+
 # fix the market share of storage technologies after 2050
 for year in range(2050+1,YEAR_OUT+1):
     # storage_market_share = storage_market_share.append(pd.Series(storage_market_share.loc[storage_market_share.last_valid_index()], name=year))
     row = pd.DataFrame([storage_market_share.loc[storage_market_share.last_valid_index()]])
+    storage_market_share.loc[year] = row.iloc[0]
+    # fix the market share of storage technologies before YEAR_START
+for year in range(YEAR_FIRST_GRID,YEAR_START):
+    # storage_market_share = storage_market_share.append(pd.Series(storage_market_share.loc[storage_market_share.last_valid_index()], name=year))
+    row = pd.DataFrame([storage_market_share.loc[storage_market_share.first_valid_index()]])
     storage_market_share.loc[year] = row.iloc[0]
 
 storage_market_share = storage_market_share.sort_index(axis=0)
@@ -2243,6 +2244,20 @@ storage_market_share = storage_market_share.sort_index(axis=0)
 # total = storage_market_share.sum(axis=1)
 region_list = list(kilometrage.columns.values)   
 storage.columns = region_list
+
+# TESTS TESTS --------------------------------------------------------
+total = storage_market_share.sum(axis=1)
+df = storage_market_share
+plt.figure(figsize=(12, 8))
+for column in df.columns:
+    plt.plot(df.index, df[column], label=column, linewidth=2)
+plt.xlabel('Year', fontsize=12)
+plt.ylabel('Values', fontsize=12)
+plt.title('Technology Trends Over Time', fontsize=14, fontweight='bold')
+plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()
 
 #----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
@@ -2850,21 +2865,6 @@ prep_data_oth_storage["shares"] = prism.Q_(prep_data_oth_storage["shares"], "sha
 prep_data_oth_storage["set_unit_flexible"] = prism.U_(prep_data_oth_storage["stocks"]) # prism.U_ gives the unit back
 
 
-# TESTS TESTS --------------------------------------------------------
-
-
-total = storage_market_share.sum(axis=1)
-df = storage_market_share
-plt.figure(figsize=(12, 8))
-for column in df.columns:
-    plt.plot(df.index, df[column], label=column, linewidth=2)
-plt.xlabel('Year', fontsize=12)
-plt.ylabel('Values', fontsize=12)
-plt.title('Technology Trends Over Time', fontsize=14, fontweight='bold')
-plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-plt.grid(True, alpha=0.3)
-plt.tight_layout()
-plt.show()
 
 
 ###########################################################################################################
@@ -3039,6 +3039,69 @@ for material in storage_materials.index:
    s_storage_materials.loc[idx[:,:], idx['PHS', material]] = phs_storage_stock.reorder_levels([1,0]).loc[:,idx['PHS',material]]   / 1000000
    o_storage_materials.loc[idx[:,:], idx['PHS', material]] = phs_storage_outflow.reorder_levels([1,0]).loc[:,idx['PHS',material]] / 1000000 
 
+
+#%%% Plot market shares
+
+test_da = prep_data_oth_storage["shares"]
+
+# Example dictionary mapping technologies to subcategories
+tech_map_Sebastiaan = {
+    'NiMH': 'Other',
+    'LFP': 'Lithium-ion',
+    'LMO': 'Lithium-ion',
+    'LTO': 'Lithium-ion',
+    'NMC': 'Lithium-ion',
+    'NCA': 'Lithium-ion',
+    'Lithium Sulfur': 'Advanced Li',
+    'Lithium Ceramic': 'Advanced Li',
+    'Lithium-air': 'Advanced Li',
+    'Flywheel': 'Flywheel',
+    'Compressed Air': 'Compressed Air',
+    'Hydrogen FC': 'Hydrogen',
+    'Zinc-Bromide': 'Flow Batteries',
+    'Vanadium Redox': 'Flow Batteries',
+    'Sodium-Sulfur': 'Molten-salt Batteries',
+    'ZEBRA': 'Molten-salt Batteries',
+    'Deep-cycle Lead-Acid': "Other",
+}
+
+# Color dictionary for categories
+color_map = {
+    'Lithium-ion':      '#F0BA3C',
+    'Advanced Li':      '#EDCD76',
+    'Flywheel':         '#4387F6',
+    'Compressed Air':   '#BABAB8',
+    'Hydrogen':         '#6A26D1',
+    'Flow Batteries':   '#5C55D6',
+    'Molten-salt Batteries': '#31942A',
+    'Other':            '#A72C41',
+}
+category_order = ['Flywheel', 'Compressed Air', 'Lithium-ion', 'Advanced Li', 'Flow Batteries', 'Molten-salt Batteries', 'Hydrogen', 'Other']
+category_order = ['Other', 'Hydrogen','Molten-salt Batteries', 'Flow Batteries', 'Advanced Li', 'Lithium-ion', 'Compressed Air','Flywheel' ]
+
+# Get the types from your DataArray
+types = test_da.Type.values  # da is your xarray.DataArray
+# Map each type to its category
+categories = [tech_map_Sebastiaan[t] for t in types]
+# Assign as a new coordinate or DataArray
+da_grouped = test_da.assign_coords(Category=('Type', categories))
+
+# Sum over technologies within the same category
+category_sum = da_grouped.groupby('Category').sum(dim='Type')
+# Convert to pandas for plotting
+df = category_sum.to_pandas()
+df = df[category_order]
+
+fig, ax = plt.subplots(figsize=(13, 8))
+# Plot stacked bar with defined colors
+df.loc[1990:2060,:].plot.area(ax=ax, stacked=True, color=[color_map[c] for c in df.columns])
+plt.xlabel('Year')  # or 'Cohort'
+plt.ylabel('Share')
+plt.title('Technology Categories over Time')
+plt.legend(title='Category')
+plt.tight_layout()
+fig.savefig(path_test_plots / f"Market_shares.png", dpi=300, bbox_inches='tight')
+plt.show()
 
 
 
