@@ -33,9 +33,7 @@ def stock_tail(stock, YEAR_OUT):
     zero_value = [0 for i in range(0,REGIONS)]
     stock_used = pd.DataFrame(stock).reindex_like(stock)
     stock_used.loc[YEAR_FIRST_GRID] = zero_value  # set all regions to 0 in the year of initial operation
-    stock_new  = stock_used.reindex(list(range(YEAR_FIRST_GRID,YEAR_OUT+1))).interpolate() #TODO: why YEAR:OUT (2060) and not YEAR_START (1971)?
-    # The explanation above is from Sebastiaan and indicates it should be 1971 (which also makes sense), however in his code it is YEAR_OUT (2060)
-    # I think I had indeed some jumps around 1971, maybe this is the explanation
+    stock_new  = stock_used.reindex(list(range(YEAR_FIRST_GRID,YEAR_OUT+1))).interpolate() # only interpolates missing values, so existing values (from 1971 onwards) are kept
     return stock_new
 
 

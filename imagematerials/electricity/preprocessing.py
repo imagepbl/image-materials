@@ -213,8 +213,6 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     assert path_external_data_standard.is_dir()
     assert path_external_data_scenario.is_dir()
 
-    years = YEAR_END - YEAR_START  + 1
-
     idx = pd.IndexSlice   
 
     ###########################################################################################################
@@ -727,7 +725,7 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
 
     # First the lifetime of storage technologies needs to be defined over time, before running the dynamic stock function
     # before 2018
-    for year in reversed(range(YEAR_START,storage_start)):
+    for year in reversed(range(YEAR_FIRST_GRID,storage_start)):
         # storage_lifetime_interpol = pd.concat([storage_lifetime_interpol, pd.Series(storage_lifetime_interpol.loc[storage_lifetime_interpol.first_valid_index()], name=year)])
         row = pd.DataFrame([storage_lifetime_interpol.loc[storage_lifetime_interpol.first_valid_index()]])
         storage_lifetime_interpol.loc[year] = row.iloc[0]
@@ -762,7 +760,7 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
         row = pd.DataFrame([storage_costs_new.loc[storage_costs_new.last_valid_index()] * (1 - decline_used)])
         storage_costs_new.loc[year] = row.iloc[0]
     # for historic price development, assume 2x AVERAGE annual price decline on all technologies, except lead-acid (so that lead-acid gets a relative price advantage from 1970-2018)
-    for year in reversed(range(YEAR_START,storage_start)):
+    for year in reversed(range(YEAR_FIRST_GRID,storage_start)):
         # storage_costs_new = storage_costs_new.append(pd.Series(storage_costs_new.loc[storage_costs_new.first_valid_index()]*(1+(2*decline_used.mean())), name=year)).sort_index(axis=0)
         row = pd.DataFrame([storage_costs_new.loc[storage_costs_new.first_valid_index()]*(1+(2*decline_used.mean()))])
         storage_costs_new.loc[year] = row.iloc[0]
@@ -775,12 +773,18 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     # use the storage price development in the logit model to get market shares
     storage_market_share = MNLogit(storage_costs_new, -0.2) #assumes input of an ordered dataframe with rows as years and columns as technologies, values as prices. Logitpar is the calibrated Logit parameter (usually a nagetive number between 0 and 1)
 
+    # fix the market share of storage technologies before YEAR_START
+    for year in range(YEAR_FIRST_GRID,storage_start):
+        # storage_market_share = storage_market_share.append(pd.Series(storage_market_share.loc[storage_market_share.last_valid_index()], name=year))
+        row = pd.DataFrame([storage_market_share.loc[storage_market_share.first_valid_index()]])
+        storage_market_share.loc[year] = row.iloc[0]
     # fix the market share of storage technologies after 2050
     for year in range(2050+1,YEAR_OUT+1):
         # storage_market_share = storage_market_share.append(pd.Series(storage_market_share.loc[storage_market_share.last_valid_index()], name=year))
         row = pd.DataFrame([storage_market_share.loc[storage_market_share.last_valid_index()]])
         storage_market_share.loc[year] = row.iloc[0]
-
+    storage_market_share = storage_market_share.sort_index(axis=0)
+    
     # total = storage_market_share.sum(axis=1)
     region_list = list(kilometrage.columns.values)   
     storage.columns = region_list
@@ -860,6 +864,11 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     phs_storage_stock_tail = stock_tail(phs_storage.astype(float), YEAR_OUT)
     storage_lifetime_PHS = storage_lifetime['PHS'].reindex(list(range(YEAR_FIRST_GRID,YEAR_OUT+1)), axis=0).interpolate(limit_direction='both')
 
+    # For now: assume now other storage before 1971 -> TODO: check this
+    for year in range(YEAR_FIRST_GRID,YEAR_START):
+        oth_storage.loc[year] = 0
+    oth_storage = oth_storage.sort_index(axis=0)
+
     ###########################################################################################################
     #%%% 2.4.1) Prep_data File
     ###########################################################################################################
@@ -913,7 +922,7 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     prep_data_phs = create_prep_data(results_dict, conversion_table, unit_mapping)
     prep_data_phs["stocks"] = prism.Q_(prep_data_phs["stocks"], "MWh")
     prep_data_phs["material_intensities"] = prism.Q_(prep_data_phs["material_intensities"], "kg/MWh")
-    prep_data_phs["set_unit_flexible"] = prism.U_(prep_data_phs["stocks"]) # prism.U_ gives the unit back
+    prep_data_phs["set_unit_flexible"] = prism.U_(prep_data_phs["stocks"])
 
 
     # Other storage--------------------------------------------------------------------------------------------
@@ -965,7 +974,7 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
 
     results_dict = {
             'oth_storage_stock': oth_storage_stock,
-            'oth_storage_materials': oth_storage_materialintens.sel(Cohort=slice(1971, None)),
+            'oth_storage_materials': oth_storage_materialintens,
             'oth_storage_lifetime_distr': oth_storage_lifetime_distr,
             'oth_storage_shares': storage_market_share
     }

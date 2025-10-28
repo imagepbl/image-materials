@@ -2106,7 +2106,7 @@ gcap_data = gcap_data.iloc[:, :26]
 # ----------------------------------------------------------------------------------------------------------
 
 # Calculations used in both 'vehicle battery storage' and 'other storage'
-YEAR_FIRST = 1907 # first use of pumped storage was in 1907 at the Engeweiher pumped storage facility near Schaffhausen, Switzerland (Mitali et al. 2022)
+# YEAR_FIRST = 1907 # first use of pumped storage was in 1907 at the Engeweiher pumped storage facility near Schaffhausen, Switzerland (Mitali et al. 2022)
 YEAR_START = 1971
 YEAR_END = 2100
 YEAR_OUT = 2100
@@ -2179,7 +2179,7 @@ for cat in list(storage_materials.columns.levels[1]):
 
 # First the lifetime of storage technologies needs to be defined over time, before running the dynamic stock function
 # before 2018
-for year in reversed(range(YEAR_START,storage_start)):
+for year in reversed(range(YEAR_FIRST_GRID,storage_start)):
     # storage_lifetime_interpol = pd.concat([storage_lifetime_interpol, pd.Series(storage_lifetime_interpol.loc[storage_lifetime_interpol.first_valid_index()], name=year)])
     row = pd.DataFrame([storage_lifetime_interpol.loc[storage_lifetime_interpol.first_valid_index()]])
     storage_lifetime_interpol.loc[year] = row.iloc[0]
@@ -2627,12 +2627,12 @@ storage_lifetime_PHS = storage_lifetime['PHS'].reindex(list(range(YEAR_FIRST_GRI
 
 # Test PHS interpolation pre-1971
 regions_to_plot = ["China", "Brazil", "US"]  # adjust to your available columns
-df = phs_storage_stock_tail.loc[:1980,:]  # replace with your actual variable
+df = phs_storage_stock_tail.iloc[:60,:]  # replace with your actual variable
 fig, ax = plt.subplots(figsize=(10, 6))
 for region in regions_to_plot:
     if region in df.columns:
         ax.plot(df.index[:-1], df[region].iloc[:-1], label=region)  # up to before last timestep
-        # ax.plot(phs_storage.index[:-1], phs_storage[region].iloc[:-1], label=region)
+        # ax.plot(phs_storage.index[:60], phs_storage[region].iloc[:60], label=region, linestyle=":")
 ax.set_xlabel("Year")
 ax.set_ylabel("Value")
 ax.set_title("Comparison of Regions")
