@@ -368,7 +368,7 @@ def get_preprocessing_data_gen(base_dir: str, SCEN, VARIANT, YEAR_START, YEAR_EN
     gcap_lifetime_distr = pd.concat([df_mean, df_stdev], axis=1) # Concatenate along columns
 
     # MIs: (years, material) index and technologies as columns -> years as index and (technology, Material) as columns
-    gcap_materials_interpol.index.names = ["Year", "Material"]
+    gcap_materials_interpol.index.names = ["year", "Material"]
     # gcap_materials_interpol = gcap_materials_interpol.loc[:, ~(gcap_materials_interpol == 0.0).all()] # delete empty columns
     gcap_types_materials = gcap_materials_interpol.unstack(level='Material')
 
@@ -490,7 +490,7 @@ df_stdev.columns = [(col, 'stdev') for col in df_stdev.columns]
 gcap_lifetime_distr = pd.concat([df_mean, df_stdev], axis=1) # Concatenate along columns
 
 # MIs: (years, material) index and technologies as columns -> years as index and (technology, Material) as columns
-gcap_materials_interpol.index.names = ["Year", "Material"]
+gcap_materials_interpol.index.names = ["year", "Material"]
 # gcap_materials_interpol = gcap_materials_interpol.loc[:, ~(gcap_materials_interpol == 0.0).all()] # delete empty columns
 gcap_types_materials = gcap_materials_interpol.unstack(level='Material')
 
@@ -2227,11 +2227,18 @@ storage_costs_new.loc[1971:2017,'Deep-cycle Lead-Acid'] = storage_costs_new.loc[
 # use the storage price development in the logit model to get market shares
 storage_market_share = MNLogit(storage_costs_new, -0.2) #assumes input of an ordered dataframe with rows as years and columns as technologies, values as prices. Logitpar is the calibrated Logit parameter (usually a nagetive number between 0 and 1)
 
+# fix the market share of storage technologies before YEAR_START
+for year in range(YEAR_FIRST_GRID,storage_start):
+    # storage_market_share = storage_market_share.append(pd.Series(storage_market_share.loc[storage_market_share.last_valid_index()], name=year))
+    row = pd.DataFrame([storage_market_share.loc[storage_market_share.first_valid_index()]])
+    storage_market_share.loc[year] = row.iloc[0]
 # fix the market share of storage technologies after 2050
 for year in range(2050+1,YEAR_OUT+1):
     # storage_market_share = storage_market_share.append(pd.Series(storage_market_share.loc[storage_market_share.last_valid_index()], name=year))
     row = pd.DataFrame([storage_market_share.loc[storage_market_share.last_valid_index()]])
     storage_market_share.loc[year] = row.iloc[0]
+
+storage_market_share = storage_market_share.sort_index(axis=0)
 
 # total = storage_market_share.sum(axis=1)
 region_list = list(kilometrage.columns.values)   
@@ -2623,6 +2630,12 @@ PHS_kg_perkWh = 26.8   # kg per kWh storage capacity (as weight addition to exis
 phs_storage_stock_tail = stock_tail(phs_storage.astype(float), YEAR_OUT)
 storage_lifetime_PHS = storage_lifetime['PHS'].reindex(list(range(YEAR_FIRST_GRID,YEAR_OUT+1)), axis=0).interpolate(limit_direction='both')
 
+# For now: assume now other storage before 1971 -> TODO: check this
+for year in range(YEAR_FIRST_GRID,YEAR_START):
+    oth_storage.loc[year] = 0
+
+oth_storage = oth_storage.sort_index(axis=0)
+
 #%%%% TESTS TESTS --------------------------------------------------------
 
 # Test PHS interpolation pre-1971
@@ -2734,7 +2747,7 @@ df_stdev = df_mean * STD_LIFETIMES_ELECTR
 df_mean.columns = [(col, 'mean') for col in df_mean.columns] # Rename columns to multi-level tuples
 df_stdev.columns = [(col, 'stdev') for col in df_stdev.columns]
 phs_lifetime_distr = pd.concat([df_mean, df_stdev], axis=1) # Concatenate along columns
-phs_lifetime_distr.index.name = 'Year'
+phs_lifetime_distr.index.name = 'year'
 
 # MIs: (years, material) index and technologies as columns -> years as index and (technology, Material) as columns
 phs_materials = stor_materials_interpol.loc[idx[:,:],'PHS'].unstack() * PHS_kg_perkWh * 1000 # wt% * kg/kWh * 1000 kWh/MWh = kg/MWh
@@ -2789,7 +2802,7 @@ df_stdev = df_mean * STD_LIFETIMES_ELECTR
 df_mean.columns = [(col, 'mean') for col in df_mean.columns] # Rename columns to multi-level tuples
 df_stdev.columns = [(col, 'stdev') for col in df_stdev.columns]
 oth_storage_lifetime_distr = pd.concat([df_mean, df_stdev], axis=1) # Concatenate along columns
-oth_storage_lifetime_distr.index.name = 'Year'
+oth_storage_lifetime_distr.index.name = 'year'
 
 # MIs: (years, material) index and technologies as columns -> years as index and (technology, Material) as columns
 stor_tech = list(storage_lifetime_interpol.columns)
@@ -2824,7 +2837,7 @@ conversion_table = {
 
 results_dict = {
         'oth_storage_stock': oth_storage_stock,
-        'oth_storage_materials': oth_storage_materialintens.sel(Cohort=slice(1971, None)),
+        'oth_storage_materials': oth_storage_materialintens, #.sel(Cohort=slice(1971, None)),
         'oth_storage_lifetime_distr': oth_storage_lifetime_distr,
         'oth_storage_shares': storage_market_share
 }
@@ -3283,7 +3296,7 @@ axes[2, 2].legend(fontsize=s_legend, loc='upper center', bbox_to_anchor=(0.6, -0
 plt.suptitle(f"{scen_folder}: Storage - Stocks: Capacity (MWh)", fontsize=16)
 plt.tight_layout(rect=[0, 0, 1, 0.98])
 region_str = "_".join(regions)
-fig.savefig(path_test_plots / f"Stor_stocks_{region_str}.png", dpi=300, bbox_inches='tight')
+# fig.savefig(path_test_plots / f"Stor_stocks_{region_str}.png", dpi=300, bbox_inches='tight')
 plt.show()
 
 
@@ -3394,7 +3407,7 @@ plt.show()
 da_stocks = main_model_factory_oth.stock_by_cohort#.to_array()
 
 data_all_1 = da_stocks.sum(['Region', 'Cohort'])
-data_all_1 = data_all_1.sel(Time=slice(2020, 2050))
+data_all_1 = data_all_1.sel(Time=slice(1960, 2020))
 
 fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(8, 6))
 linewidth = 2
@@ -4093,7 +4106,7 @@ def get_preprocessing_data_grid(base_dir: str, SCEN, VARIANT, YEAR_START, YEAR_E
             new_col = f"{level} - {typ}"
             expanded_data[new_col] = lifetime_grid_elements[typ]
     lifetime_grid_elements = pd.DataFrame(expanded_data, index=lifetime_grid_elements.index)
-    lifetime_grid_elements.rename_axis('Year', inplace=True)
+    lifetime_grid_elements.rename_axis('year', inplace=True)
 
     # no differentiation between HV, MV & LV lines as well as between aboveground and belowground
     # Types: lines, transformers, substations
@@ -4131,7 +4144,7 @@ def get_preprocessing_data_grid(base_dir: str, SCEN, VARIANT, YEAR_START, YEAR_E
 
     materials_grid_additions_kgperunit            = materials_grid_additions_interpol.copy()
     # material intensities: (years, tech. type) index and materials as columns -> years as index and (tech. type, materials) as columns
-    materials_grid_additions_kgperunit.index.names = ["Year", "Type"]
+    materials_grid_additions_kgperunit.index.names = ["year", "Type"]
     materials_grid_additions_kgperunit             = materials_grid_additions_kgperunit.unstack(level='Type')   # bring tech. type from row index to column header
     materials_grid_additions_kgperunit.columns     = materials_grid_additions_kgperunit.columns.swaplevel(0, 1) # Swap the levels of the MultiIndex columns
     materials_grid_additions_kgperunit             = materials_grid_additions_kgperunit.sort_index(axis=1)
@@ -4145,7 +4158,7 @@ def get_preprocessing_data_grid(base_dir: str, SCEN, VARIANT, YEAR_START, YEAR_E
 
     # Grid MIs ---
     materials_grid_kgperkm              = materials_grid_interpol.copy() # copy the interpolated material intensities
-    materials_grid_kgperkm.index.names  = ["Year", "Type"]
+    materials_grid_kgperkm.index.names  = ["year", "Type"]
     materials_grid_kgperkm              = materials_grid_kgperkm.unstack(level='Type') # bring tech. type from row index to column header
     materials_grid_kgperkm.columns      = materials_grid_kgperkm.columns.swaplevel(0, 1) # Swap the levels of the MultiIndex columns
     materials_grid_kgperkm              = materials_grid_kgperkm.sort_index(axis=1)
@@ -4420,7 +4433,7 @@ for typ in ["Lines", "Transformers", "Substations"]:
         new_col = f"{level} - {typ}"
         expanded_data[new_col] = lifetime_grid_elements[typ]
 lifetime_grid_elements = pd.DataFrame(expanded_data, index=lifetime_grid_elements.index)
-lifetime_grid_elements.rename_axis('Year', inplace=True)
+lifetime_grid_elements.rename_axis('year', inplace=True)
 
 # no differentiation between HV, MV & LV lines as well as between aboveground and belowground
 # Types: lines, transformers, substations
@@ -4464,7 +4477,7 @@ lifetime_grid_distr = pd.concat([df_mean, df_stdev], axis=1) # Concatenate along
 
 materials_grid_additions_kgperunit            = materials_grid_additions_interpol.copy()
 # material intensities: (years, tech. type) index and materials as columns -> years as index and (tech. type, materials) as columns
-materials_grid_additions_kgperunit.index.names = ["Year", "Type"]
+materials_grid_additions_kgperunit.index.names = ["year", "Type"]
 materials_grid_additions_kgperunit             = materials_grid_additions_kgperunit.unstack(level='Type')   # bring tech. type from row index to column header
 materials_grid_additions_kgperunit.columns     = materials_grid_additions_kgperunit.columns.swaplevel(0, 1) # Swap the levels of the MultiIndex columns
 materials_grid_additions_kgperunit             = materials_grid_additions_kgperunit.sort_index(axis=1)
@@ -4478,7 +4491,7 @@ materials_grid_additions_kgperunit.columns = new_columns
 
 # Grid MIs ---
 materials_grid_kgperkm              = materials_grid_interpol.copy() # copy the interpolated material intensities
-materials_grid_kgperkm.index.names  = ["Year", "Type"]
+materials_grid_kgperkm.index.names  = ["year", "Type"]
 materials_grid_kgperkm              = materials_grid_kgperkm.unstack(level='Type') # bring tech. type from row index to column header
 materials_grid_kgperkm.columns      = materials_grid_kgperkm.columns.swaplevel(0, 1) # Swap the levels of the MultiIndex columns
 materials_grid_kgperkm              = materials_grid_kgperkm.sort_index(axis=1)
