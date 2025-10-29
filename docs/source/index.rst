@@ -38,7 +38,9 @@ Documentation Outline
 
    installation
    quickstart
+   models
    api/modules
+   api/models_detail
 
 
 
