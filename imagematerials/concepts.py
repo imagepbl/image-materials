@@ -189,7 +189,7 @@ class KnowledgeGraph():
         keep_coords = []
         new_array = xr.DataArray(0.0, dims=input_array.dims, coords=new_coords)
         if input_array.pint.units:
-            new_array = prism.Q_(new_array, input_array.pint.units)
+            new_array = prism.Q_(new_array, input_array.pint.units) # check if input array had a unit and if so, reapply this unit to new array
         for cur_coord in list(output_coords):
             if cur_coord in input_coords:
                 keep_coords.append(cur_coord)
@@ -207,10 +207,12 @@ class KnowledgeGraph():
             else:
                 # disaggregate, by just taking the value of the parent
                 new_array.loc[{dim: cur_coord}] = input_array.loc[{dim: parent}]
+        # Copy data for all coordinates that exist in both the input_array and output_coords (`keep_coords`) -> only new coordinates are filled through disaggregation logic above
         new_array.loc[{dim: keep_coords}] = input_array.loc[{dim: keep_coords}]
-        # check if input array had a unit and if so, reapply this unit to new array
+        # Preserve metadata 
         new_array.attrs = input_array.attrs.copy()
         new_array.name = input_array.name
+        # new_array.encoding = input_array.encoding.copy() # do wee need this?
 
         return new_array
 
