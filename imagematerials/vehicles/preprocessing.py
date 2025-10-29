@@ -57,10 +57,10 @@ from imagematerials.vehicles.constants import (
     years_range,
     maintenance_lifetime_per_mode,
 )
-from imagematerials.concepts import create_vehicle_graph
+from imagematerials.concepts import create_vehicle_graph, create_region_graph
 from imagematerials.vehicles.modelling_functions import (interpolate, tkms_to_nr_of_vehicles_fixed,  
     scenario_change, apply_change_per_region)
-#from imagematerials.concepts import vehicle_knowledge_graph
+from imagematerials.constants import IMAGE_REGIONS
 
 
 def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_config: dict):
@@ -810,20 +810,23 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
     output_coords_type = [x for x in prep_data["stocks"].Type.values if x not in share_coords] + list(prep_data["shares"].coords["Type"].values)
 
     # Use the shares to get the stocks for each of the subtypes.
-    knowledge_graph = create_vehicle_graph()
-    prep_data["shares"] = knowledge_graph.rebroadcast_xarray(prep_data["shares"], output_coords=region_coords, dim="Region")
-    prep_data["stocks"] = knowledge_graph.rebroadcast_xarray(prep_data["stocks"], output_coords=region_coords, dim="Region")
-    stocks = knowledge_graph.rebroadcast_xarray(preprocessing_results_xarray["stocks"],
+    knowledge_graph_vehicle = create_vehicle_graph()
+    prep_data["shares"] = knowledge_graph_vehicle.rebroadcast_xarray(prep_data["shares"], output_coords=region_coords, dim="Region")
+    prep_data["stocks"] = knowledge_graph_vehicle.rebroadcast_xarray(prep_data["stocks"], output_coords=region_coords, dim="Region")
+    stocks = knowledge_graph_vehicle.rebroadcast_xarray(preprocessing_results_xarray["stocks"],
                                                                                 output_coords_type,
                                                                                 dim="Type",
                                                                                 shares=prep_data["shares"])
     stocks = prism.Q_(stocks, "count")
     preprocessing_results_xarray["stocks"] = stocks
-    prep_data["knowledge_graph"] = knowledge_graph
+    prep_data["knowledge_graph"] = knowledge_graph_vehicle
     prep_data.pop("shares")
     
     prep_data["weights"] = prep_data.pop("vehicle_weights")
     prep_data["set_unit_flexible"] = "count"
+
+    knowledge_graph_region = create_region_graph()
+    prep_data["stocks"] = knowledge_graph_region.rebroadcast_xarray(prep_data["stocks"], output_coords=IMAGE_REGIONS, dim="Region") 
     
     return preprocessing_results_xarray
 

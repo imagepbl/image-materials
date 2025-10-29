@@ -14,6 +14,7 @@ from imagematerials.util import (
     rebroadcast_prep_data,
 )
 from imagematerials.vehicles.preprocessing import preprocess as prep_vhc
+from imagematerials.constants import IMAGE_REGIONS
 
 
 def _get_vehicles_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_scenario_dirs):
@@ -43,7 +44,8 @@ def _get_vehicles_sector(prep_data):
     knowledge_graph = prep_data["knowledge_graph"]
     new_prep_data = rebroadcast_prep_data(prep_data, knowledge_graph, dim="Type",
                                           output_coords=output_coords_type)
-    region_coords = np.sort(prep_data["stocks"].coords["Region"].values.astype(int)).astype(str)
+    # region_coords = np.sort(prep_data["stocks"].coords["Region"].values.astype(int)).astype(str)
+    region_coords = IMAGE_REGIONS
     new_prep_data = rebroadcast_prep_data(new_prep_data, knowledge_graph, dim="Region",
                                           output_coords=region_coords)
 
