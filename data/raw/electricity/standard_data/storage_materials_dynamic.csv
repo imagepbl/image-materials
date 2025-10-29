@@ -1,4 +1,4 @@
-year,wt%,Steel,Aluminium,Concrete,Plastics,Glass,Cu,Nd,Co,Pb
+year,wt%,steel,aluminium,concrete,plastics,glass,copper,neodymium,cobalt,lead
 2000,Flywheel,0.608582773,0.20239317,0,0,0,0.013558201,0.006416159,0,0
 2000,Compressed Air,0.984282243,0.007689705,0,0,0,0.008028052,0,0,0
 2000,Hydrogen FC,0.961674445,0.00471409,0,0,0,0.017677839,0,0,0
