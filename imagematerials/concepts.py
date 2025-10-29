@@ -209,6 +209,7 @@ class KnowledgeGraph():
                 new_array.loc[{dim: cur_coord}] = input_array.loc[{dim: parent}]
         new_array.loc[{dim: keep_coords}] = input_array.loc[{dim: keep_coords}]
         # check if input array had a unit and if so, reapply this unit to new array
+        new_array.attrs = input_array.attrs.copy()
 
         return new_array
 
