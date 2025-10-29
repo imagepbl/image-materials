@@ -2843,6 +2843,12 @@ prep_data_oth_storage["shares"] = prism.Q_(prep_data_oth_storage["shares"], "sha
 prep_data_oth_storage["set_unit_flexible"] = prism.U_(prep_data_oth_storage["stocks"]) # prism.U_ gives the unit back
 
 
+# change region names to IMAGE_REGIONS # TODO: this should be done in hte beginning of preprocessing
+knowledge_graph_region =            create_region_graph()
+prep_data_phs["stocks"] =           knowledge_graph_region.rebroadcast_xarray(prep_data_phs["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
+prep_data_oth_storage["stocks"] =   knowledge_graph_region.rebroadcast_xarray(prep_data_oth_storage["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
+
+
 # TESTS TESTS --------------------------------------------------------
 
 
@@ -4613,6 +4619,10 @@ prep_data_add["material_intensities"] = prism.Q_(prep_data_add["material_intensi
 prep_data_add["set_unit_flexible"] = prism.U_(prep_data_add["stocks"]) # prism.U_ gives the unit back
 
 
+# change region names to IMAGE_REGIONS # TODO: this should be done in hte beginning of preprocessing
+knowledge_graph_region =    create_region_graph()
+prep_data_lines["stocks"] = knowledge_graph_region.rebroadcast_xarray(prep_data_lines["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
+prep_data_add["stocks"] =   knowledge_graph_region.rebroadcast_xarray(prep_data_add["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
 
 #----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
