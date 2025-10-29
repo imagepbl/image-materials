@@ -489,10 +489,10 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
     
 
     # Calculate maintenace material need in kg material per kg vehicle
-    maintenance_material_pd['Li'] = 0
-    maintenance_material_pd['Mn'] = 0
-    maintenance_material_pd['Ni'] = 0
-    maintenance_material_pd['Ti'] = 0
+    maintenance_material_pd['lithium'] = 0
+    maintenance_material_pd['manganese'] = 0
+    maintenance_material_pd['nickel'] = 0
+    maintenance_material_pd['titanium'] = 0
 
     stacked_maintenance_material = maintenance_material_pd.set_index("Type").stack().rename_axis(index=["Type", "material"]).reset_index(name="value")
 

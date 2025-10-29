@@ -91,7 +91,12 @@ def eol_preprocessing(base_dir, circular_economy_scenario_dirs=None):
    
     # renaming material coordinates
     material_rename = {
-        'Cu': 'Copper'
+        'Steel': 'steel',
+        'Concrete': 'concrete',
+        'Wood': 'wood',
+        'Cu': 'Copper',
+        'Aluminium': 'aluminium',
+        'Glass': 'glass'
     }
 
     collection_df['material'] = collection_df['material'].replace(material_rename)
@@ -108,8 +113,8 @@ def eol_preprocessing(base_dir, circular_economy_scenario_dirs=None):
     xr_recycling = recycling_df.set_index(['Time', 'Region','Type', 'material']) \
                     .to_xarray()['value']
     
-    # add Brick and Cement to materials dim, fill w/ 0 and reorder
-    outflows_materials = ['Aluminium', 'Brick', 'Cement', 'Concrete', 'Copper', 'Glass', 'Steel', 'Wood']
+    # add othermaterials dim, fill w/ 0 and reorder
+    outflows_materials = ['aluminium', 'brick', 'cement','cobalt', 'concrete', 'copper', 'glass','lead', 'lithium', 'manganese','neodymium','nickel', 'plastics', 'rubber', 'steel', 'titanium', 'wood']
     xr_collection = xr_collection.reindex(material=outflows_materials, fill_value=0)
     xr_reuse = xr_reuse.reindex(material=outflows_materials, fill_value=0)
     xr_recycling = xr_recycling.reindex(material=outflows_materials, fill_value=0)
