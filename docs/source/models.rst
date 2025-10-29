@@ -1,7 +1,7 @@
 Models 
 ======================
 
-Image materials core functionality relies on the method of dynamic stock modelling. 
+Image materials core functionality relies on the method of dynamic stock modelling. The stock modelling and the supsequent calculation of associated materials stocks and flows are implemented within separate models. Depending on the specific case different models can be chosen and connected. 
 
 This section provides an overview of the models implemented in IMAGE materials. For detailed documentation of each model, please refer to the :doc:`API reference <api/models_detail>`.
 
@@ -14,11 +14,11 @@ This section provides an overview of the models implemented in IMAGE materials. 
 
 Model Overview
 ----------------------
-- :class:`imagematerials.model.GenericStocks`: A class for modeling generic stock dynamics using survival matrices.
-- :class:`imagematerials.model.SharesInflowStocks`: A class for modeling stock dynamics with shares inflow.
-- :class:`imagematerials.model.GenericMaterials`: A class for handling generic materials.         
-- :class:`imagematerials.model.MaterialIntensities`: A class for modeling materials based on material intensities.
 - :class:`imagematerials.factory.Sector`: The main orchestrator class that manages model creation and coordination.
+- :class:`imagematerials.model.GenericStocks`: A class for modeling generic stock dynamics using survival matrices.
+- :class:`imagematerials.model.SharesInflowStocks`: A class for modeling stock dynamics with sub-type shares for the inflow.
+- :class:`imagematerials.model.GenericMaterials`: A class for modeling materials based on weight shares.        
+- :class:`imagematerials.model.MaterialIntensities`: A class for modeling materials based on material intensities.
 - :class:`imagematerials.model.EndOfLife`: A class for modeling end-of-life material flows.
 - :class:`imagematerials.model.RestOf`: A class for modeling rest-of-economy material consumption.
 - :class:`imagematerials.survival.SurvivalMatrix`: A class for computing survival probabilities based on lifetime distributions.
@@ -27,7 +27,7 @@ Model Overview
 Key Concepts
 ----------------------
 
-**Dynamic Stock Modeling**: The foundation of IMAGE materials is dynamic stock modeling, which tracks how stocks (e.g. buildings, vehicles, infrastructure) change over time through inflows, outflows, and aging processes. This relies on :doc:`survival matrices <survival_matrix>` to model how stocks age and exit the system.
+**Dynamic Stock Modeling**: The foundation of IMAGE materials is dynamic stock modeling, which tracks how stocks (e.g. buildings, vehicles, infrastructure) change over time through inflows and outflows via aging processes. This relies on :doc:`survival matrices <survival_matrix>` to model how stocks age and exit the system.
 
 **Cohort-based Tracking**: Stocks are organized by cohorts (age groups), allowing for different properties of the stock over time such as a change in weight or material composition. Each cohort has its own survival characteristics.
 
@@ -78,15 +78,15 @@ Model Description and relationships
 
 **Class description:**
 
-The :class:`GenericStocks <imagematerials.model.GenericStocks>` class provides a flexible framework for modeling stock dynamics. It calculates the initial stock and uses :doc:`survival matrices <survival_matrix>` to determine stock aging and outflows. During simulation, the stock inflow and outflow are calculated based on lifetimes which influence the survival matrix of the stock. For detailed documentation, see :doc:`GenericStocks <api/models_detail>`.
-
-The :class:`SharesInflowStocks <imagematerials.model.SharesInflowStocks>` class extends the GenericStocks class. It is designed for scenarios where stock inflows are influenced by share dynamics, allowing for more complex interactions between different stock types. It is for instance used in the :doc:`electricity <api/electricity>` module. For detailed documentation, see :doc:`SharesInflowStocks <api/models_detail>`.
-
-The :class:`GenericMaterials <imagematerials.model.GenericMaterials>` class is built to manage material properties associated with stocks. It uses the GenericStocks class as its foundation and calculated the material need associated with the inflow, outflow and stock calculated by GenericStocks. For detailed documentation, see :doc:`GenericMaterials <api/models_detail>`.
-
-The :class:`MaterialIntensities <imagematerials.model.MaterialIntensities>` class is an alternative to the GenericMaterials class, focusing on managing material intensities. This is for the standard case where stock weights and material fractions are used to calculate material use. It is for instance used in the :doc:`buildings <api/buildings>` module. For detailed documentation, see :doc:`MaterialIntensities <api/models_detail>`.
-
 The :class:`Factory/Sector <imagematerials.factory.Sector>` class serves as the main orchestrator for model creation and coordination. It manages preprocessing data, coordinates model instantiation, and handles the computational workflow for different sectors. This is the primary entry point for running IMAGE materials models. For detailed documentation, see :doc:`Factory <api/factory>`.
+
+The :class:`GenericStocks <imagematerials.model.GenericStocks>` class provides a flexible framework for modeling stock dynamics. Based on externally defined annual stock levels, it calculates the initial stock and uses :doc:`survival matrices <survival_matrix>` to determine stock aging and outflows. During simulation, the stock inflow and outflow are calculated based on lifetimes which influence the survival matrix of the stock. For detailed documentation, see :doc:`GenericStocks <api/models_detail>`.
+
+The :class:`SharesInflowStocks <imagematerials.model.SharesInflowStocks>` class extends the GenericStocks class. It is designed for scenarios where stock inflows are influenced by sub-type share dynamics, allowing for more complex interactions between different stock types. It is for instance used in the :doc:`electricity <api/electricity>` module. For detailed documentation, see :doc:`SharesInflowStocks <api/models_detail>`.
+
+The :class:`GenericMaterials <imagematerials.model.GenericMaterials>` class is built to manage material properties associated with stocks. It uses the GenericStocks class as its foundation and calculated the material need associated with the inflow, outflow and stock calculated by GenericStocks. It does so on the basis of stock weights and material weight fractions. For detailed documentation, see :doc:`GenericMaterials <api/models_detail>`.
+
+The :class:`MaterialIntensities <imagematerials.model.MaterialIntensities>` class is an alternative to the GenericMaterials class, in case of using material intensities (kg of material / unit of stock). It is for instance used in the :doc:`buildings <api/buildings>` module. For detailed documentation, see :doc:`MaterialIntensities <api/models_detail>`.
 
 The :class:`EndOfLife <imagematerials.model.EndOfLife>` class models end-of-life material flows, including collection, reuse, and recycling processes. It calculates material flows through circular economy pathways and determines virgin material requirements. For detailed documentation, see :doc:`EndOfLife <api/models_detail>`.
 
@@ -101,12 +101,12 @@ The :class:`ScipySurvival <imagematerials.survival.ScipySurvival>` class provide
 **Stock Models:**
 
 - **GenericStocks**: Use when you have straightforward stock dynamics with direct inflow data
-- **SharesInflowStocks**: Use when stock inflows are determined by share dynamics between different stock types, or when you need to model complex interactions between stock categories
+- **SharesInflowStocks**: Use when stock inflows are determined by share dynamics between different stock types
 
 **Material Models:**
 
-- **GenericMaterials**: Use for general material property management when you need flexible material handling capabilities
-- **MaterialIntensities**: Use for standard cases where you have stock weights and material fractions data to calculate material use
+- **GenericMaterials**: Use for standard cases where you have stock weights and material fractions data to calculate material use
+- **MaterialIntensities**: Use for cases where you have material intensities per stock unit to calculate material use
 
 Complete Modeling Workflow
 ----------------------
@@ -120,12 +120,14 @@ A typical IMAGE materials modeling workflow follows these steps:
 5. **Rest-of-Economy**: Use `RestOf` model for sectors not explicitly modeled
 
 **Example Sector Applications:**
+
 - **Vehicles**: Uses the standard `GenericStocks` and `GenericMaterials` models. Since this is the only model that also includes maintenance, the `Maintenance` class can be layered upon this module to also include material flows for maintenance of land transport.
 - **Buildings**: Uses the standard `GenericStocks` and the specific `MaterialIntensities` for material calculations
-- **Electricity**: Uses `SharesInflowStocks` for complex share dynamics in the stock calculation and the standard `GenericMaterials` for material calculations.
+- **Electricity**: Uses both `GenericStocks` and `SharesInflowStocks` for different sub-sectors and the `MaterialIntensities` model for material calculations
 
 
 **Prerequisites:**
+
 - Understanding of dynamic stock modeling concepts
 - Familiarity with cohort-based analysis
 - Basic knowledge of material flow analysis
