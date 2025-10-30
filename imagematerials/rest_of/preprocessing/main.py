@@ -13,6 +13,11 @@ from imagematerials.buildings.preprocessing.population import compute_population
 
 from imagematerials.rest_of.preprocessing.resource_efficiency_measures import adapt_gompertz_regional
 
+from imagematerials.rest_of.preprocessing.regressions_all_materials import (fit_models_all_materials,
+                                                                            make_gompertz_coefs_da, 
+                                                                            mean_historic_other_fraction_consumption_to_xr, 
+                                                                            historic_other_fraction_consumption_to_xr)
+
 def read_gompertz_values(base_directory, scenario: str):
     """
     Reads Gompertz coefficient values from a NetCDF file and adapts them according to the specified scenario.
@@ -104,7 +109,16 @@ def read_image_gdp_cap_data(image_scenario_directory):
     return gdp_per_capita_xr
 
 
-def rest_of_preprocessing(base_directory, image_scenario_directory, scenario: str):
+def rest_of_preprocessing(base_directory, image_scenario_directory, scenario: str, 
+                          refit = False):
+    
+    if refit == True:
+        results = fit_models_all_materials()
+        make_gompertz_coefs_da(results)
+        mean_historic_other_fraction_consumption_to_xr(results)
+        historic_other_fraction_consumption_to_xr(results)
+        print('Materials regression refitted and preprocessing data updated.')
+
     gompertz_values = read_gompertz_values(base_directory, scenario)
     gdp_per_capita = read_image_gdp_cap_data(image_scenario_directory)
     historic_diff_consumption_mean = read_historic_diff_cons_data_mean(base_directory)
