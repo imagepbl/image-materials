@@ -866,7 +866,7 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     phs_storage_stock_tail = stock_tail(phs_storage.astype(float), YEAR_OUT)
     storage_lifetime_PHS = storage_lifetime['PHS'].reindex(list(range(YEAR_FIRST_GRID,YEAR_OUT+1)), axis=0).interpolate(limit_direction='both')
 
-    # For now: assume now other storage before 1971 -> TODO: check this
+    # For now: assume no other storage before 1971 -> TODO: check this
     for year in range(YEAR_FIRST_GRID,YEAR_START):
         oth_storage.loc[year] = 0
     oth_storage = oth_storage.sort_index(axis=0)

@@ -12,7 +12,7 @@ import numpy as np
 from imagematerials.concepts import KnowledgeGraph
 from imagematerials.maintenance import Maintenance
 from imagematerials.survival import ScipySurvival, SurvivalMatrix
-from imagematerials.vehicles.battery import ElectricVehicleBatteries, Battery
+from imagematerials.vehicles.battery import ElectricVehicleBatteries, BatteryMaterials
 
 REGION = prism.Dimension("Region")
 STOCK_TYPE = prism.Dimension("Type")
