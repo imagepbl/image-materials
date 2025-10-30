@@ -8,11 +8,6 @@ from imagematerials.rest_of.metals_projections import (
     aluminium_projection, 
     copper_projection)
 
-from imagematerials.rest_of.water import water_consumption
-
-from imagematerials.rest_of.biomass import biomass_data
-
-from imagematerials.rest_of.fossil_fuels import fossil_fuel_data
 
 from imagematerials.rest_of.nmm_projections import (cement_projection, 
                                                     sand_projections, 
@@ -54,8 +49,8 @@ def fit_models_all_materials(scenarios_list: list = ["SSP2_M_CP"], path_input_da
                                 path_input_data=path_input_data,
                                 path_input_data_image=path_input_data_image)
         # biomass = biomass_data(scenario=scenario)
-        fossil_fuel = fossil_fuel_data(scenario=scenario)
-        water = water_consumption(scenario=scenario)
+        # fossil_fuel = fossil_fuel_data(scenario=scenario)
+        # water = water_consumption(scenario=scenario)
         
         # Store model objects or just their outputs
         results[scenario] = {
