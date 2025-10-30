@@ -62,8 +62,8 @@ def fit_models_all_materials(scenarios_list: list = ["SSP2_M_CP"], path_input_da
             'limestone': limestone,
             'clay': clay,
             # 'biomass': biomass,
-            'fossil_fuel': fossil_fuel,
-            'water': water
+            # 'fossil_fuel': fossil_fuel,
+            # 'water': water
     }
         
     return results
