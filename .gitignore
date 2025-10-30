@@ -1,6 +1,7 @@
 # Intermediate files
 
 examples/*.nc
+examples/*.pkl
 examples/all.prof
 examples/model.html
 scripts/*.nc
@@ -182,6 +183,7 @@ cython_debug/
 
 IMAGE-Mat/output/
 IMAGE-Mat_old_version/
+examples/model_results/
 
 prism/
 pym/
