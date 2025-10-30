@@ -5,11 +5,18 @@ import prism
 
 from pathlib import Path
 
+from imagematerials.constants import IMAGE_REGIONS
+from imagematerials.concepts import create_region_graph
+
 from imagematerials.read_mym import read_mym_df
 from imagematerials.buildings.preprocessing.population import compute_population
 
 from imagematerials.rest_of.preprocessing.resource_efficiency_measures import adapt_gompertz_regional
 
+from imagematerials.rest_of.preprocessing.regressions_all_materials import (fit_models_all_materials,
+                                                                            make_gompertz_coefs_da, 
+                                                                            mean_historic_other_fraction_consumption_to_xr, 
+                                                                            historic_other_fraction_consumption_to_xr)
 
 def read_gompertz_values(base_directory, scenario: str):
     """
@@ -49,12 +56,8 @@ def read_gompertz_values(base_directory, scenario: str):
 
     # # Reorder the data to match the sorted regions
     xr_gompertz = xr_gompertz.sel(Region=sorted(xr_gompertz.coords["Region"].values, key=lambda x: int(x)))
-
-    # if scenario in ["SSP2_VLLO_LifeTech"]:
-        # print('Adapting Gompertz coefficient: a for resource efficiency measures')
-        # xr_gompertz = adapt_gompertz_regional(xr_gompertz, scenario=scenario,
-        #                                       start_implementation_year=2030,
-        #                                       end_implementation_year=2050)
+    knowledge_graph_region = create_region_graph()
+    xr_gompertz = knowledge_graph_region.rebroadcast_xarray(xr_gompertz, output_coords=IMAGE_REGIONS, dim="Region")
 
     return xr_gompertz
 
@@ -65,6 +68,9 @@ def read_historic_diff_cons_data_mean(base_directory):
     diff_consumption_mean = diff_consumption_mean.to_array().isel(variable=0).drop_vars("variable")
     diff_consumption_mean = prism.Q_(diff_consumption_mean, 't')
 
+    knowledge_graph_region = create_region_graph()
+    diff_consumption_mean = knowledge_graph_region.rebroadcast_xarray(diff_consumption_mean, output_coords=IMAGE_REGIONS, dim="Region")
+
     return diff_consumption_mean
 
 
@@ -73,6 +79,9 @@ def read_historic_diff_cons_data(base_directory):
     diff_consumption = xr.open_dataset(base_directory / "rest-of" / "gompertz_values" / "diff_cons_all.nc", engine="netcdf4")
     diff_consumption = diff_consumption.to_array().isel(variable=0).drop_vars("variable")
     diff_consumption = prism.Q_(diff_consumption, 't')
+
+    knowledge_graph_region = create_region_graph()
+    diff_consumption = knowledge_graph_region.rebroadcast_xarray(diff_consumption, output_coords=IMAGE_REGIONS, dim="Region")
 
     return diff_consumption
 
@@ -94,11 +103,22 @@ def read_image_gdp_cap_data(image_scenario_directory):
                 "Region": gdp_per_capita.columns}  # Region coordinates from the DataFrame columns
     )
     gdp_per_capita_xr.coords["Region"]  = [str(x.values) for x in gdp_per_capita_xr.coords["Region"]]
+    knowledge_graph_region = create_region_graph()
+    gdp_per_capita_xr = knowledge_graph_region.rebroadcast_xarray(gdp_per_capita_xr, output_coords=IMAGE_REGIONS, dim="Region")
 
     return gdp_per_capita_xr
 
 
-def rest_of_preprocessing(base_directory, image_scenario_directory, scenario: str):
+def rest_of_preprocessing(base_directory, image_scenario_directory, scenario: str, 
+                          refit = False):
+    
+    if refit == True:
+        results = fit_models_all_materials()
+        make_gompertz_coefs_da(results)
+        mean_historic_other_fraction_consumption_to_xr(results)
+        historic_other_fraction_consumption_to_xr(results)
+        print('Materials regression refitted and preprocessing data updated.')
+
     gompertz_values = read_gompertz_values(base_directory, scenario)
     gdp_per_capita = read_image_gdp_cap_data(image_scenario_directory)
     historic_diff_consumption_mean = read_historic_diff_cons_data_mean(base_directory)
@@ -108,8 +128,8 @@ def rest_of_preprocessing(base_directory, image_scenario_directory, scenario: st
     population = population.sel(Area = 'Total').loc[1971:]
     # drop Area coords
     population = population.drop_vars('Area')
-
-
+    knowledge_graph_region = create_region_graph()
+    population = knowledge_graph_region.rebroadcast_xarray(population, output_coords=IMAGE_REGIONS, dim="Region")
 
     preprocessing_dict = {
         "gompertz_coefs": gompertz_values,

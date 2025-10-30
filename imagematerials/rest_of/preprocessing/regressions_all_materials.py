@@ -120,7 +120,7 @@ def make_gompertz_coefs_da(results_models, material_order=None, region_order=Non
 
     coefs_df = pd.DataFrame(rows)
     coefs_df['Region'] = coefs_df['Region'].map(str).str.replace('class_ ', '')
-    coefs_df['material'] = coefs_df['material'].str.capitalize()
+    coefs_df['material'] = coefs_df['material']
 
     if material_order is None:
         material_order = sorted(coefs_df['material'].unique())
@@ -185,8 +185,6 @@ def mean_historic_other_fraction_consumption_to_xr(results_models):
         diff_cons = diff_cons.rename({'index': 'Region'})
         # replace dimension of coords Region to '1', '2', 3,... instead of class_ 1, class_ 2, ...
         diff_cons['Region'] = diff_cons['Region'].str.replace('class_ ', '')
-        # capitalize material
-        material = material.capitalize()
         diff_cons_all[material] = diff_cons
 
 
@@ -234,8 +232,6 @@ def historic_other_fraction_consumption_to_xr(results_models):
 
         # replace dimension of coords Region to '1', '2', 3,... instead of class_ 1, class_ 2, ...
         diff_cons['Region'] = diff_cons['Region'].str.replace('class_ ', '')
-        # capitalize material
-        material = material.capitalize()
         # extend years to 2100 and fill with np.nan
         all_years = np.arange(1971, 2101)
         diff_cons = diff_cons.reindex(Time=all_years, fill_value=np.nan)
