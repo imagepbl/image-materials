@@ -1,12 +1,12 @@
 import pandas as pd
 import xarray as xr
-import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
-
+from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.eol.constants import SCENARIO_SELECT, start_year, end_year, full_time
 from imagematerials.util import overwrite_future_rates, read_circular_economy_config
- 
+from imagematerials.concepts import create_region_graph
+
 
 # define interpolation method
 def interpolate_eol_rates(
@@ -94,7 +94,7 @@ def eol_preprocessing(base_dir, circular_economy_scenario_dirs=None):
         'Steel': 'steel',
         'Concrete': 'concrete',
         'Wood': 'wood',
-        'Cu': 'Copper',
+        'Cu': 'copper',
         'Aluminium': 'aluminium',
         'Glass': 'glass'
     }
@@ -151,11 +151,18 @@ def eol_preprocessing(base_dir, circular_economy_scenario_dirs=None):
     reuse = interpolate_eol_rates(xr_reuse, anchor_year=2020, target_year=2060, min_value=0, max_value=1, full_time=full_time)
     recycling = interpolate_eol_rates(xr_recycling, anchor_year=2020, target_year=2060, min_value=0, max_value=1, full_time=full_time)
 
+    # convert region coords to str for consistency
     collection.coords["Region"] = [str(x.values) for x in collection.coords["Region"]]
     reuse.coords["Region"] = [str(x.values) for x in reuse.coords["Region"]]
     recycling.coords["Region"] = [str(x.values) for x in recycling.coords["Region"]]
 
-    
+    # convert region names to the standard IMAGE regions
+    knowledge_graph_region = create_region_graph()
+
+    collection  = knowledge_graph_region.rebroadcast_xarray(collection, output_coords=IMAGE_REGIONS, dim="Region")
+    reuse       = knowledge_graph_region.rebroadcast_xarray(reuse, output_coords=IMAGE_REGIONS, dim="Region")
+    recycling   = knowledge_graph_region.rebroadcast_xarray(recycling, output_coords=IMAGE_REGIONS, dim="Region")
+
     return {
         "collection": collection,
         "reuse": reuse,
