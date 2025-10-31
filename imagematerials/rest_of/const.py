@@ -37,6 +37,36 @@ path_figures = "../figures_test"
 def class_num_to_str(num: int):
     return f'class_ {num}'
 
+numeric_region_map = {
+    "CAN" : 'class_ 1',
+    "USA": 'class_ 2',
+    "MEX": 'class_ 3',
+    "RCAM": 'class_ 4',
+    "BRA": 'class_ 5',
+    "RSAM": 'class_ 6',
+    "NAF": 'class_ 7',
+    "WAF": 'class_ 8',
+    "EAF": 'class_ 9',
+    "SAF": 'class_ 10',
+    "WEU": 'class_ 11',
+    "CEU": 'class_ 12',
+    "TUR": 'class_ 13',
+    "UKR": 'class_ 14',
+    "STAN": 'class_ 15',
+    "RUS": 'class_ 16',
+    "ME": 'class_ 17',
+    "INDIA": 'class_ 18',
+    "KOR": 'class_ 19',
+    "CHN": 'class_ 20',
+    "SEAS": 'class_ 21',
+    "INDO": 'class_ 22',
+    "JAP": 'class_ 23',
+    "OCE": 'class_ 24',
+    "RSAS": 'class_ 25',
+    "RSAF": 'class_ 26'
+    }
+
+
 # NRCT
 CLASS_TO_REGION_DICT = {
     'class_ 1': 'Canada',
