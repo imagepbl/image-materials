@@ -1,6 +1,6 @@
 import xarray as xr
 import numpy as np
-
+from pathlib import Path
 from imagematerials.concepts import KnowledgeGraph, Node
 
 from imagematerials.rest_of.const import numeric_region_map
@@ -105,7 +105,8 @@ def sand_gravel_crushed_rock_equivalent(total_inflow: xr.DataArray):
 
 
 
-def save_sum_as_csv(total_inflow: xr.DataArray, material_name: str):
+def save_sum_as_csv(total_inflow: xr.DataArray, material_name: str, 
+                    save_path: Path):
     # detect Region coord name (case variations) and apply mapping
     dim = "Region" if "Region" in total_inflow.coords else "region"
     old_regions = [str(r) for r in total_inflow.coords[dim].values]
@@ -159,7 +160,10 @@ def save_sum_as_csv(total_inflow: xr.DataArray, material_name: str):
     
     assert int(df_pivot.sum().sum()) == int(inflow_compare.sum().sum())
 
+    # save with using the save path and Pathlib
+    save_path = Path(save_path)
+    
     if material_name in ("cement", "sand_gravel_crushed_rock", "concrete"):
-        df_pivot.to_csv(f"../data/raw/rest-of/nmm/image_materials_{material_name}.csv")
+        df_pivot.to_csv(save_path / f"raw/rest-of/nmm/image_materials_{material_name}.csv")
     elif material_name in ("steel", "aluminium", "copper"):
-        df_pivot.to_csv(f"../data/raw/rest-of/metals/image_materials_{material_name}.csv")
+        df_pivot.to_csv(save_path / f"raw/rest-of/metals/image_materials_{material_name}.csv")
