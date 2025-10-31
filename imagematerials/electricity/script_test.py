@@ -2269,12 +2269,12 @@ plt.show()
 
 # kilometrage is defined until 2008, fill 2008 values until 2100 
 kilometrage = kilometrage.reindex(list(range(YEAR_START,YEAR_END))).interpolate(limit_direction='both')
-region_list = list(kilometrage.columns.values)                          # get a list with region names
+region_list = list(kilometrage.columns.values) # get a list with region names
 
 loadfactor = loadfactor_data[['time','DIM_1', 5]].pivot_table(index='time', columns='DIM_1') # loadfactor for cars (in persons per vehicle)
 loadfactor = loadfactor.loc[list(range(YEAR_START,YEAR_END+1))] * LOAD_FACTOR  # car loadfactor is expressed compared to an average global loadfactor from the IMAGE-TIMER-TRAVEL model (original: Girod, 2012; further elaborations by Edelenbosch et al.) 
   
-indexNames = passengerkms_data[ passengerkms_data['DIM_1'] >= 27 ].index
+indexNames = passengerkms_data[passengerkms_data['DIM_1'] >= 27].index
 passengerkms_data.drop(indexNames , inplace=True)
 passengerkms = passengerkms_data[['time','DIM_1', 5]].pivot_table(index='time', columns='DIM_1').loc[list(range(YEAR_START,YEAR_END+1))]
   
@@ -2307,7 +2307,7 @@ else:
    capacity_usable_PHEV = 0.05    # 5% of capacity of PHEV is usable as storage
    capacity_usable_BEV  = 0.10    # 10% of capacity of BEVs is usable as storage
 
-vehicle_kms = passengerkms.loc[:YEAR_OUT] * PKMS_TO_VKMS / loadfactor.loc[:YEAR_OUT]        # conversion from tera-Tkms  
+vehicle_kms = passengerkms.loc[:YEAR_OUT] * PKMS_TO_VKMS / loadfactor.loc[:YEAR_OUT] # conversion from tera-Tkms  
 vehicles_all = vehicle_kms / kilometrage.loc[:YEAR_OUT]
 
 vehicles_PHEV = vehicles_all * PHEV_share.loc[:YEAR_OUT]
@@ -2502,7 +2502,7 @@ start_time = time.time()
 
 # then we use that market share in combination with the stock developments to derive the stock share 
 # Here we use the vehcile stock (number of cars) as a proxy for the development of the battery stock (given that we're calculating the actual battery stock still, and just need to account for the dynamics of purchases to derive te stock share here) 
-EV_inflow_by_tech, EV_stock_cohorts, EV_outflow_cohorts = stock_share_calc(vehicles_EV, market_share_EVs, 'NiMH', ['NiMH', 'LMO', 'NMC', 'NCA', 'LFP', 'Lithium Sulfur', 'Lithium Ceramic ', 'Lithium-air'], storage_lifetime_interpol)
+EV_inflow_by_tech, EV_stock_cohorts, EV_outflow_cohorts = stock_share_calc(vehicles_EV, market_share_EVs, 'NiMH', ['NiMH', 'LMO', 'NMC', 'NCA', 'LFP', 'Lithium Sulfur', 'Lithium Ceramic', 'Lithium-air'], storage_lifetime_interpol)
 # takes ~ 1-2 min to run
 end_time = time.time()
 print(f"Execution time: {end_time - start_time:.4f} seconds")
@@ -2513,7 +2513,7 @@ print(f"Execution time: {end_time - start_time:.4f} seconds")
 ###########################################################################################################
 #
 
-EV_stock =  EV_stock_cohorts.T.groupby(level=0).sum().T   # sum(level) is and groupby(axis) will be deprecated -> transose first with .T (instead of specifying axis), then groupby level, then sum. To get intial shape back, transpose again with .T
+EV_stock =  EV_stock_cohorts.T.groupby(level=0).sum().T   # sum(level) is and groupby(axis) will be deprecated -> transpose first with .T (instead of specifying axis), then groupby level, then sum. To get intial shape back, transpose again with .T
 EV_storage_stock_abs  = EV_stock.groupby(level=1).sum()   # sum over all regions to get the global share of the stock
 EV_storage_inflow_abs = EV_inflow_by_tech.groupby(level=1).sum()  # sum over all regions to get the global share of the inflow
 
