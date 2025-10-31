@@ -1,6 +1,5 @@
 import pandas as pd
 import xarray as xr
-import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 from imagematerials.constants import IMAGE_REGIONS
