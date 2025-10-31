@@ -36,7 +36,6 @@ class ElectricVehicleBatteries_weight(prism.Model):
     def compute_initial_values(self, time: prism.Timeline):
         """
         """
-
         self.inflow_battery_kg = xr.DataArray(
             0.0,
             dims=("Time", "Cohort", "Region", "battery", "Type"),
@@ -45,6 +44,7 @@ class ElectricVehicleBatteries_weight(prism.Model):
                     "Region":    self.Region,
                     "battery":   self.battery,
                     "Type":      self.Type})
+        self.inflow_battery_kg = prism.Q_(self.inflow_battery_kg, "kg")
         
         self.stock_battery_kg = xr.DataArray(
             0.0,
@@ -54,6 +54,7 @@ class ElectricVehicleBatteries_weight(prism.Model):
                     "Region":    self.Region,
                     "battery":   self.battery,
                     "Type":      self.Type})
+        self.stock_battery_kg = prism.Q_(self.stock_battery_kg, "kg")
         
         self.outflow_battery_kg = xr.DataArray(
             0.0,
@@ -63,6 +64,7 @@ class ElectricVehicleBatteries_weight(prism.Model):
                     "Region":    self.Region,
                     "battery":   self.battery,
                     "Type":      self.Type})
+        self.outflow_battery_kg = prism.Q_(self.outflow_battery_kg, "kg")
         
 
     def compute_values(self, time: prism.Time, inflow, stock_by_cohort, outflow_by_cohort):
@@ -76,11 +78,11 @@ class ElectricVehicleBatteries_weight(prism.Model):
         # # battery_per_vehicles is defined for cohort, battery type, vehicle type, and material
         # battery_per_vehicle = self.battery_weights * self.battery_shares * self.battery_materials
         # drop battery dimension to reduce memory usage
-        self.inflow_battery_kg.loc[t] = inflow[t] * self.battery_shares.sel(Cohort = t) * self.battery_weights.sel(Cohort = t) #.sum("Type")
+        self.inflow_battery_kg.loc[t] = inflow[t] * self.battery_shares.sel(Cohort = t) * self.battery_weights.sel(Cohort = t)#.sum("Type")
         # assumption: battery lifetime = vehicle lifetime (no explicit battery stock calculation)
         # cohort dimension calculation done internally by xarray (in that way battery shares of stock are used which are different from inflow shares)
-        self.stock_battery.loc[t] = (stock_by_cohort.loc[t] * self.battery_shares * self.battery_weights).sum("Type") #.sum(["Cohort","battery"])
-        self.outflow_battery.loc[t] = (outflow_by_cohort[t] * self.battery_shares * self.battery_weights).sum("Type") #.sum(["Cohort","battery"])
+        self.stock_battery_kg.loc[t] = (stock_by_cohort.loc[t] * self.battery_shares * self.battery_weights)#.sum("Type") #.sum(["Cohort","battery"])
+        self.outflow_battery_kg.loc[t] = (outflow_by_cohort[t] * self.battery_shares * self.battery_weights)#.sum("Type") #.sum(["Cohort","battery"])
 
 
 

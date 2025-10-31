@@ -2528,8 +2528,8 @@ for tech in EV_storage_stock_abs.columns:
 # EV_storage_inflow_share.to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test'  / 'battery_share_inflow.csv') # Average global car battery share (in inflow) is exported to be used in paper on vehicles
   
 #The global share of the battery technologies in stock is then used to derive the (weihgted) average density (kg/kWh)
-weighted_average_density_stock  = EV_storage_stock_share.mul(storage_density_interpol[EV_battery_list]).sum(axis=1)
-weighted_average_density_inflow = EV_storage_inflow_share.mul(storage_density_interpol[EV_battery_list]).sum(axis=1)
+weighted_average_density_stock  = EV_storage_stock_share.mul(storage_density_interpol.loc[EV_storage_stock_share.index[0], EV_battery_list]).sum(axis=1)
+weighted_average_density_inflow = EV_storage_inflow_share.mul(storage_density_interpol.loc[EV_storage_stock_share.index[0], EV_battery_list]).sum(axis=1)
 
 # weighted_average_density_stock.loc[:YEAR_OUT].to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test'  / 'ev_battery_density_stock.csv')        # Average car battery density (in stock) is exported to be used in paper on vehicles
 # weighted_average_density_inflow.loc[:YEAR_OUT].to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test'  / 'ev_battery_density_inflow.csv')      # Average car battery density (in inflow) is exported to be used in paper on vehicles
@@ -2553,7 +2553,7 @@ for year in list(range(YEAR_START,YEAR_OUT+1)):
         v2g_usable[year] = 1
 v2g_usable = v2g_usable.interpolate()
 
-#total capacity per car connected to v2g (in kWh)
+#total capacity per car connected to v2g (in %)
 max_capacity_BEV = v2g_usable * capacity_usable_BEV  
 max_capacity_PHEV = v2g_usable * capacity_usable_PHEV   
 

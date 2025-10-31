@@ -792,7 +792,7 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
                                       coords={
                                           "Cohort": preprocessing_results_xarray["battery_weights"].coords["Cohort"],
                                            "Type": ["Vehicles"]})
-    preprocessing_results_xarray["battery_weights"] = xr.concat((preprocessing_results_xarray["battery_weights"], xr_default_battery), dim="Type")
+    preprocessing_results_xarray["battery_weights"] = prism.Q_(xr.concat((preprocessing_results_xarray["battery_weights"], xr_default_battery), dim="Type"), "kg")
 
     xr_default_maintenace = xr.DataArray(0.0, dims=("Type", "material"),
                                     coords={
