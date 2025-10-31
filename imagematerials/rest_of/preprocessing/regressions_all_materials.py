@@ -8,11 +8,6 @@ from imagematerials.rest_of.metals_projections import (
     aluminium_projection, 
     copper_projection)
 
-from imagematerials.rest_of.water import water_consumption
-
-from imagematerials.rest_of.biomass import biomass_data
-
-from imagematerials.rest_of.fossil_fuels import fossil_fuel_data
 
 from imagematerials.rest_of.nmm_projections import (cement_projection, 
                                                     sand_projections, 
@@ -54,8 +49,8 @@ def fit_models_all_materials(scenarios_list: list = ["SSP2_M_CP"], path_input_da
                                 path_input_data=path_input_data,
                                 path_input_data_image=path_input_data_image)
         # biomass = biomass_data(scenario=scenario)
-        fossil_fuel = fossil_fuel_data(scenario=scenario)
-        water = water_consumption(scenario=scenario)
+        # fossil_fuel = fossil_fuel_data(scenario=scenario)
+        # water = water_consumption(scenario=scenario)
         
         # Store model objects or just their outputs
         results[scenario] = {
@@ -67,8 +62,8 @@ def fit_models_all_materials(scenarios_list: list = ["SSP2_M_CP"], path_input_da
             'limestone': limestone,
             'clay': clay,
             # 'biomass': biomass,
-            'fossil_fuel': fossil_fuel,
-            'water': water
+            # 'fossil_fuel': fossil_fuel,
+            # 'water': water
     }
         
     return results
@@ -120,7 +115,7 @@ def make_gompertz_coefs_da(results_models, material_order=None, region_order=Non
 
     coefs_df = pd.DataFrame(rows)
     coefs_df['Region'] = coefs_df['Region'].map(str).str.replace('class_ ', '')
-    coefs_df['material'] = coefs_df['material'].str.capitalize()
+    coefs_df['material'] = coefs_df['material']
 
     if material_order is None:
         material_order = sorted(coefs_df['material'].unique())
@@ -185,8 +180,6 @@ def mean_historic_other_fraction_consumption_to_xr(results_models):
         diff_cons = diff_cons.rename({'index': 'Region'})
         # replace dimension of coords Region to '1', '2', 3,... instead of class_ 1, class_ 2, ...
         diff_cons['Region'] = diff_cons['Region'].str.replace('class_ ', '')
-        # capitalize material
-        material = material.capitalize()
         diff_cons_all[material] = diff_cons
 
 
@@ -234,8 +227,6 @@ def historic_other_fraction_consumption_to_xr(results_models):
 
         # replace dimension of coords Region to '1', '2', 3,... instead of class_ 1, class_ 2, ...
         diff_cons['Region'] = diff_cons['Region'].str.replace('class_ ', '')
-        # capitalize material
-        material = material.capitalize()
         # extend years to 2100 and fill with np.nan
         all_years = np.arange(1971, 2101)
         diff_cons = diff_cons.reindex(Time=all_years, fill_value=np.nan)
