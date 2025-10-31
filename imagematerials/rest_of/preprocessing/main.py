@@ -21,7 +21,7 @@ from imagematerials.rest_of.preprocessing.regressions_all_materials import (fit_
 from imagematerials.rest_of.util import sum_inflows_for_all_sectors, save_sum_as_csv
 
 
-def sum_and_save(model_run, list_sum_sectors: list, mfa_data = 'inflow_materials'):
+def sum_and_save(model_run, list_sum_sectors: list, save_path: Path, mfa_data = 'inflow_materials'):
     """
     Sums inflows across specified sectors and saves the results for steel, aluminium, and copper
     Parameters
@@ -43,11 +43,11 @@ def sum_and_save(model_run, list_sum_sectors: list, mfa_data = 'inflow_materials
     total_inflow_combined = sum_inflows_for_all_sectors(model_run, mfa_data, list_sum_sectors)
 
     # save materials
-    save_sum_as_csv(total_inflow_combined, "steel")
-    save_sum_as_csv(total_inflow_combined, "aluminium")
-    save_sum_as_csv(total_inflow_combined, "copper")
-    save_sum_as_csv(total_inflow_combined, "cement")
-    save_sum_as_csv(total_inflow_combined, "sand_gravel_crushed_rock")
+    save_sum_as_csv(total_inflow_combined, "steel", save_path)
+    save_sum_as_csv(total_inflow_combined, "aluminium", save_path)
+    save_sum_as_csv(total_inflow_combined, "copper", save_path)
+    save_sum_as_csv(total_inflow_combined, "cement", save_path)
+    save_sum_as_csv(total_inflow_combined, "sand_gravel_crushed_rock", save_path)
 
     print("Materials saved successfully.")
     return total_inflow_combined
