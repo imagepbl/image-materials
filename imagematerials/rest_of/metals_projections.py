@@ -98,36 +98,31 @@ def steel_projection(scenario: str, path_input_data, path_input_data_image):
                         path_input_data_image=path_input_data_image)
     
     class_1 = ['class_ 1'] 
-
+    class_3 = ['class_ 3', 'class_ 10']
+    class_22  = ['class_ 22']
     high = ['class_ 19', 'class_ 23']
-
     china = ['class_ 20']
-
-    low = ['class_ 2', 'class_ 11' , 'class_ 12', 'class_ 13', 'class_ 24']
-
-    very_low = ["class_ 3", "class_ 5", "class_ 6", "class_ 7", 
-                  "class_ 17", "class_ 18", "class_ 21"]
+    low = ['class_ 2', 'class_ 11' , 'class_ 12', 
+           'class_ 13', 'class_ 24']
+    too_low = ['class_ 4', 'class_ 8', 'class_ 25']
+    very_low = ["class_ 5", "class_ 6", 
+                "class_ 7", "class_ 9", "class_ 17", 
+                "class_ 18", "class_ 21", "class_ 26"]
 
     # trajectory not to forseen, will be fitted with global regression
-    spreaded = ['class_ 10', 'class_ 14', 'class_ 15', 'class_ 16']
-
-    # will be excluded and assigned average diff
-    fit_not_good = ['class_ 5', 'class_ 6', 'class_ 10', 'class_ 14', 
-                    'class_ 15', "class_ 18", "class_ 24"]
-    
-    too_low = ['class_ 4', 'class_ 8', "class_ 9", 
-               'class_ 22', 'class_ 25', "class_ 26"]
-
-    exclude = too_low + fit_not_good
+    spreaded = ['class_ 14', 'class_ 15', 'class_ 16']
+    exclude = spreaded + too_low
 
     # what is in rest will not be fitted because of outliers - will follow global projections       
     rest = all_regions_list_class[:-1]
-    rest = [r for r in rest if r not in (low+class_1+high+very_low+too_low+fit_not_good+china)]
+    rest = [r for r in rest if r not in (low+class_1+high+very_low+too_low+china)]
 
     # for these models a regression will be made
     # all reginos that are not in the high, medium, low will be fitted with the global regression
     steel_grouping = {'all_regions' : all_regions_list_class[:-1],
                       'class_ 1': class_1,
+                      'class_ 3': class_3,
+                      'class_ 22': class_22,
                       'high': high,
                       'china': china,
                       'low': low,
@@ -153,15 +148,19 @@ def steel_projection(scenario: str, path_input_data, path_input_data_image):
     bounds = {
     'all_regions': ([0, 0, 0], [10, 10, 10]),
     'class_ 1': ([0, 0, 0], [10, 10, 10]),
-    'high': ([0, 0, 0], [0.7, 10, 10]),
+    'class_ 3': ([0.3, 2, 2], [0.4, 10, 10]),
+    'class_ 22': ([0, 0, 0], [0.5, 10, 10]),
+    'high': ([0, 0, 0], [10, 10, 10]),
     'china': ([0, 0, 0], [0.5, 10, 10]),
-    'low': ([0, 0, 0], [10, 10, 10]),
+    'low': ([0, 2, 2], [10, 10, 10]),
     'very_low': ([0, 0, 0], [10, 10, 10]),
     'too_low': ([0, 0, 0], [10, 10, 10])}
 
     # enforce that for all groups gompertz model is selected as best fit
     steel.fit_models(best_rmse_models={'all_regions' : 'gompertz model',
                                     'class_ 1': 'gompertz model',
+                                    'class_ 3': 'gompertz model',
+                                    'class_ 22': 'gompertz model',
                                     'high': 'gompertz model',
                                     'china': 'gompertz model',
                                     'low': 'gompertz model',
@@ -169,7 +168,16 @@ def steel_projection(scenario: str, path_input_data, path_input_data_image):
                                     'too_low': 'gompertz model'},
                                     bounds=bounds)  
 
-    steel.remove_regions_with_no_good_fit_from_region_model_match(exclude)
+
+    steel.assign_fit_to_groups_not_fitted(too_low, 
+                                        assign_model='very_low', 
+                                        model_nr=6)
+    
+    steel.assign_fit_to_groups_not_fitted(spreaded, 
+                                        assign_model='all_regions', 
+                                        model_nr=6)
+    
+    steel.remove_regions_with_no_good_fit_from_region_model_match([])
     
     return steel
 
@@ -254,9 +262,6 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
     }
 
     aluminium.fit_models(best_rmse_models, bounds)
-
-
-
 
     # add regions to regions model match that are not in there yet becaused they are fitted to the global average
     for key in IAI_TO_IMAGE_CLASSES.keys():
