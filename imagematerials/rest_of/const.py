@@ -70,36 +70,6 @@ CLASS_TO_REGION_DICT = {
 
 all_regions = list(CLASS_TO_REGION_DICT.values())
 
-CLASS_TO_INDEX_DICT = {
-    'class_ 1': 1,
-    'class_ 2': 2,
-    'class_ 3': 3,
-    'class_ 4': 4,
-    'class_ 5': 5,
-    'class_ 6': 6,
-    'class_ 7': 7,
-    'class_ 8': 8,
-    'class_ 9': 9,
-    'class_ 10': 10,
-    'class_ 11': 11,
-    'class_ 12': 12,
-    'class_ 13': 13,
-    'class_ 14': 14,
-    'class_ 15': 15,
-    'class_ 16': 16,
-    'class_ 17': 17,
-    'class_ 18': 18,
-    'class_ 19': 19,
-    'class_ 20': 20,
-    'class_ 21': 21,
-    'class_ 22': 22,
-    'class_ 23': 23,
-    'class_ 24': 24,
-    'class_ 25': 25,
-    'class_ 26': 26,
-    'class_ 27': 27
-}
-
 REGION_TO_CLASS_DICT = {val: key for (key, val) in CLASS_TO_REGION_DICT.items()}
 
 REGION_TO_CLASS_DICT_IMAGE_MAT = {
@@ -505,74 +475,7 @@ DIM2_sectors_dict = {
     8 : 'total'
     }
 
-colors_country = {
-      'Canada': 'blue',
-      'USA': 'red',
-      'Mexico': 'green',
-      'Rest C. America': 'cyan',
-      'Brazil': 'magenta',
-      'Rest S. America': 'yellow',
-      'N. Africa': 'orange',
-      'W. Africa': 'purple',
-      'E. Africa': 'lime',
-      'South Africa': 'teal',
-      'W. Europe': 'maroon',
-      'C. Europe': 'olive',
-      'Turkey': 'navy',
-      'Ukraine region': 'chocolate',
-      'Kazakhstan region': 'indigo',
-      'Russia': 'peru',
-      'Middle East': 'gold',
-      'India': 'orchid',
-      'Korea': 'sienna',
-      'China': 'steelblue',
-      'SE. Asia': 'crimson',
-      'Indonesia': 'darkcyan',
-      'Japan': 'darkgoldenrod',
-      'Oceania': 'darkgreen',
-      'Rest S. Asia': 'darkmagenta',
-      'Rest S. Africa': 'darkorange',
-      'Global': 'black'
-}
 
-colors_country_group = {
-    'Canada': 'blue',
-    'China': 'red',
-    'Brazil': 'green',
-    'C. Europe': 'green',
-    'Turkey': 'green',
-    'Ukraine region': 'green',
-    'Kazakhstan region': 'green',
-    'Russia': 'green',
-    'Middle East': 'green',
-    'India': 'green',
-    'Korea': 'green',
-    'Indonesia': 'green',
-    'N. Africa': 'green',
-    'SE. Asia': 'green',
-    'Mexico': 'purple',
-    'Rest C. America': 'purple',
-    'Rest S. America': 'purple',
-    'E. Africa': 'purple',
-    'South Africa': 'purple',
-    'W. Africa': 'purple',
-    'Rest S. Asia': 'purple',
-    'Rest S. Africa': 'purple',
-    'USA': 'orange',
-    'Oceania': 'brown',
-    'W. Europe': 'pink',
-    'Japan': 'grey'}
-
-colors_groups = {
-    'canada': 'blue',
-    'china': 'red',
-    'average_regions': 'green',
-    'lower_regions': 'purple',
-    'usa': 'orange',
-    'oceania': 'brown',
-    'w_europe': 'pink',
-    'japan': 'grey'
-}
 #%% weight conversions energy
 
 # https://apps.cer-rec.gc.ca/Conversion/conversion-tables.aspx?GoCTemplateCulture=en-CA unit conversion

@@ -1,7 +1,9 @@
 import xarray as xr
 import numpy as np
 
-def sum_inflows_for_all_sectors(model, get_mfa_data: str):
+from imagematerials.concepts import KnowledgeGraph, Node
+
+def sum_inflows_for_all_sectors(model, get_mfa_data: str, list_sum_sctors: list):
     """
     Aggregate sector inflows into a single DataArray while preserving material and Type coordinates.
 
@@ -25,19 +27,29 @@ def sum_inflows_for_all_sectors(model, get_mfa_data: str):
     - This function does not modify or align the Time coordinate; if sectors use different Time coords,
       align or reindex Time externally (or extend the function to include Time union/reindex).
     """
-    
+    arrays = []
     # get the inflow per sector
-    inflow_buildings = model.buildings.get(get_mfa_data).to_array()
-    inflow_vehicles = model.vehicles.get(get_mfa_data).to_array()
-    inflow_generation = model.generation.get(get_mfa_data).to_array()
-    inflow_grid = model.grid.get(get_mfa_data).to_array()
-    inflow_grid_additional = model.grid_additional.get(get_mfa_data).to_array()
-    inflow_storage_pumped_hydropower = model.storage_pumped_hydropower.get(get_mfa_data).to_array()
-    inflow_storage_other = model.storage_other.get(get_mfa_data).to_array()
-
-    arrays = [inflow_buildings, inflow_vehicles, inflow_generation,
-              inflow_grid, inflow_grid_additional,
-              inflow_storage_pumped_hydropower, inflow_storage_other]
+    if "buildings" in list_sum_sctors:
+        inflow_buildings = model.buildings.get(get_mfa_data).to_array()
+        arrays.append(inflow_buildings)
+    if "vehicles" in list_sum_sctors:
+        inflow_vehicles = model.vehicles.get(get_mfa_data).to_array()
+        arrays.append(inflow_vehicles)
+    if "generation" in list_sum_sctors:
+        inflow_generation = model.generation.get(get_mfa_data).to_array()
+        arrays.append(inflow_generation)
+    if "grid" in list_sum_sctors:
+        inflow_grid = model.grid.get(get_mfa_data).to_array()
+        arrays.append(inflow_grid)
+    if "grid_additional" in list_sum_sctors:
+        inflow_grid_additional = model.grid_additional.get(get_mfa_data).to_array()
+        arrays.append(inflow_grid_additional)
+    if "storage_pumped_hydropower" in list_sum_sctors:
+        inflow_storage_pumped_hydropower = model.storage_pumped_hydropower.get(get_mfa_data).to_array()
+        arrays.append(inflow_storage_pumped_hydropower)
+    if "storage_other" in list_sum_sctors:
+        inflow_storage_other = model.storage_other.get(get_mfa_data).to_array()
+        arrays.append(inflow_storage_other)
 
     # compute union coords
     all_materials = np.unique(np.concatenate([a.coords['material'].values for a in arrays]))
@@ -61,3 +73,33 @@ def sum_inflows_for_all_sectors(model, get_mfa_data: str):
     total_inflow = sum(aligned)
 
     return total_inflow
+
+
+
+def save_sum_as_csv(total_inflow: xr.DataArray, material_name: str):
+    # TODO: for now still use class_ 1, later change to country names
+    # save steel
+    inflow_steel = total_inflow.sel(material=material_name).sum('Type')
+    # convert to tons with pint (this is what the fitting uses)
+    inflow_steel = inflow_steel.pint.to('ton')
+    # save with years as rows and regions as columns
+    inflow_steel.name = f"inflow_{material_name}"
+
+    # detect region dim name
+    region_dim = "Region" if "Region" in inflow_steel.coords else "region"
+    time_dim = "Time" if "Time" in inflow_steel.coords else "time"
+
+    # convert to tidy DataFrame then pivot so index = time and columns = class_ 1..class_26
+    df_tidy = inflow_steel.to_dataframe(name="value").reset_index()
+    df_pivot = df_tidy.pivot(index=time_dim, columns=region_dim, values="value")
+
+    # ensure exact column order and fill missing classes with 0
+    desired = [f"class_ {i}" for i in range(1, 27)]
+    df_pivot = df_pivot.reindex(columns=desired, fill_value=0)
+
+    # name the index column "time" in the CSV header
+    df_pivot.index.name = "time"
+    
+    assert int(df_pivot.sum().sum()) == int(inflow_steel.sum().sum())
+
+    df_pivot.to_csv(f"../data/raw/rest-of/metals/image_materials_{material_name}.csv")
