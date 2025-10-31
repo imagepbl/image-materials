@@ -14,19 +14,9 @@ from imagematerials.util import (
     rebroadcast_prep_data,
 )
 from imagematerials.vehicles.preprocessing import preprocess as prep_vhc
+from imagematerials.eol.preprocessing import eol_preprocessing as prep_eol
+
 from imagematerials.constants import IMAGE_REGIONS
-
-
-def _get_vehicles_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_scenario_dirs):
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
-        circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
-        prep_data = prep_vhc(base_dir, climate_policy_config, circular_economy_config)
-
-    return prep_data
-
 
 def _get_buildings_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_scenario_dirs):
     climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
@@ -38,6 +28,15 @@ def _get_buildings_prep_data(base_dir, climate_policy_scenario_dir, circular_eco
 def _get_buildings_sector(prep_data):
     return Sector("buildings", prep_data)
 
+def _get_vehicles_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_scenario_dirs):
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
+        circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
+        prep_data = prep_vhc(base_dir, climate_policy_config, circular_economy_config)
+
+    return prep_data
 
 def _get_vehicles_sector(prep_data):
     output_coords_type = list(prep_data["stocks"].Type.values)
@@ -52,6 +51,17 @@ def _get_vehicles_sector(prep_data):
     sec_vhc = Sector("vehicles", new_prep_data)
     return sec_vhc
 
+def _get_eol_prep_data(base_dir, circular_economy_scenario_dirs):
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
+        prep_data = prep_eol(base_dir, circular_economy_config)
+
+    return prep_data
+
+def _get_eol_sector(prep_data):
+    return Sector("eol", prep_data)
 
 def get_preprocessing_data(
         sector, base_dir=None,
@@ -108,6 +118,8 @@ def get_preprocessing_data(
         elif sector == "buildings":
             prep_data = _get_buildings_prep_data(base_dir, climate_policy_scenario_dir,
                                                  circular_economy_scenario_dirs)
+        elif sector == "eol":
+            prep_data = _get_eol_prep_data(base_dir,circular_economy_scenario_dirs)
         else:
             raise ValueError(f"Unknown sector {sector}")
         if cache:
@@ -119,4 +131,6 @@ def get_preprocessing_data(
         return _get_vehicles_sector(prep_data)
     elif sector == "buildings":
         return _get_buildings_sector(prep_data)
+    elif sector == "eol":
+        return _get_eol_sector(prep_data)
     raise ValueError(f"Unknown sector {sector}")
