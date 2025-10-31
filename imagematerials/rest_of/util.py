@@ -3,6 +3,8 @@ import numpy as np
 
 from imagematerials.concepts import KnowledgeGraph, Node
 
+from imagematerials.rest_of.const import numeric_region_map
+
 def sum_inflows_for_all_sectors(model, get_mfa_data: str, list_sum_sctors: list):
     """
     Aggregate sector inflows into a single DataArray while preserving material and Type coordinates.
@@ -75,22 +77,77 @@ def sum_inflows_for_all_sectors(model, get_mfa_data: str, list_sum_sctors: list)
     return total_inflow
 
 
+def calculate_cement_equivalent(total_inflow: xr.DataArray):
+        from imagematerials.rest_of.const import cement_in_concrete_factor
+        cement = total_inflow.sel(material = 'cement')
+        concrete = total_inflow.sel(material = 'concrete')
+
+        # convert concrete to cement equivalent
+        cement_in_concrete = concrete * cement_in_concrete_factor
+        cement_in_concrete
+        # change coordinate of material to 'cement'
+        cement_in_concrete = cement_in_concrete.assign_coords(material = 'cement')
+        inflow_material = cement_in_concrete + cement
+        print("summed cement and cement in concrete.")
+        return inflow_material
+
+
+def sand_gravel_crushed_rock_equivalent(total_inflow: xr.DataArray):
+        from imagematerials.rest_of.const import sand_in_cement_conversion, sand_in_glass_conversion
+        inflow_sand_in_cement = calculate_cement_equivalent(total_inflow)*sand_in_cement_conversion
+        inflow_sand_in_glass = total_inflow.sel(material = 'glass') * sand_in_glass_conversion
+        # rename coord material to 'sand'
+        inflow_sand_in_cement = inflow_sand_in_cement.assign_coords(material = 'sand_gravel_crushed_rock')
+        inflow_sand_in_glass = inflow_sand_in_glass.assign_coords(material = 'sand_gravel_crushed_rock')
+        inflow_material = inflow_sand_in_cement + inflow_sand_in_glass
+        print("summed sand in cement and sand in glass.")
+        return inflow_material
+
+
 
 def save_sum_as_csv(total_inflow: xr.DataArray, material_name: str):
+    # detect Region coord name (case variations) and apply mapping
+    dim = "Region" if "Region" in total_inflow.coords else "region"
+    old_regions = [str(r) for r in total_inflow.coords[dim].values]
+
+    # ensure mapping keys are strings
+    map_str = {str(k): v for k, v in numeric_region_map.items()}
+    new_labels = [map_str.get(r, r) for r in old_regions]
+
+    # assign new labels, aggregate duplicates, then ensure class_ 1..class_26 exist
+    total_inflow = total_inflow.assign_coords({dim: ("Region", new_labels)})  # keep dim name consistent
+    total_inflow = total_inflow.groupby(dim).sum()
+
+    desired = [f"class_ {i}" for i in range(1, 27)]
+    total_inflow = total_inflow.reindex({dim: desired}, fill_value=0)
+
     # TODO: for now still use class_ 1, later change to country names
-    # save steel
-    inflow_steel = total_inflow.sel(material=material_name).sum('Type')
+    # save material
+
+    if material_name == "cement":
+        inflow_material = calculate_cement_equivalent(total_inflow)
+
+    if material_name == "sand_gravel_crushed_rock":
+        inflow_material = sand_gravel_crushed_rock_equivalent(total_inflow)
+    
+    else:
+        inflow_material = total_inflow.sel(material=material_name)
+    
+    # reduce Type dimension by summing over it
+    inflow_material = inflow_material.sum('Type')
+    inflow_compare = inflow_material.copy()
+    inflow_compare = inflow_compare.pint.to('ton')
     # convert to tons with pint (this is what the fitting uses)
-    inflow_steel = inflow_steel.pint.to('ton')
+    inflow_material = inflow_material.pint.to('ton')
     # save with years as rows and regions as columns
-    inflow_steel.name = f"inflow_{material_name}"
+    inflow_material.name = f"inflow_{material_name}"
 
     # detect region dim name
-    region_dim = "Region" if "Region" in inflow_steel.coords else "region"
-    time_dim = "Time" if "Time" in inflow_steel.coords else "time"
+    region_dim = "Region" if "Region" in inflow_material.coords else "region"
+    time_dim = "Time" if "Time" in inflow_material.coords else "time"
 
     # convert to tidy DataFrame then pivot so index = time and columns = class_ 1..class_26
-    df_tidy = inflow_steel.to_dataframe(name="value").reset_index()
+    df_tidy = inflow_material.to_dataframe(name="value").reset_index()
     df_pivot = df_tidy.pivot(index=time_dim, columns=region_dim, values="value")
 
     # ensure exact column order and fill missing classes with 0
@@ -100,6 +157,9 @@ def save_sum_as_csv(total_inflow: xr.DataArray, material_name: str):
     # name the index column "time" in the CSV header
     df_pivot.index.name = "time"
     
-    assert int(df_pivot.sum().sum()) == int(inflow_steel.sum().sum())
+    assert int(df_pivot.sum().sum()) == int(inflow_compare.sum().sum())
 
-    df_pivot.to_csv(f"../data/raw/rest-of/metals/image_materials_{material_name}.csv")
+    if material_name in ("cement", "sand_gravel_crushed_rock", "concrete"):
+        df_pivot.to_csv(f"../data/raw/rest-of/nmm/image_materials_{material_name}.csv")
+    elif material_name in ("steel", "aluminium", "copper"):
+        df_pivot.to_csv(f"../data/raw/rest-of/metals/image_materials_{material_name}.csv")
