@@ -98,16 +98,6 @@ if not (path_base / 'imagematerials' / 'electricity' / 'out_test').is_dir():
     (path_base / 'imagematerials' / 'electricity' / 'out_test').mkdir(parents=True)
 
 
-# for dependencies (this is how Sebastiaan had it):
-# YEAR_START = 1971 # start year of historic IMAGE data = start of model period (including stock-development from scratch, which needs to be the oldest year of any vehicle, all stock
-# calculations are initiated in this year, so this has an effect on runtime)
-# YEAR_FIRST_GRID = 1926   # UK Electricity supply act - https://www.bbc.com/news/uk-politics-11619751   
-# YEAR_FIRST = 1807  # first_year_vehicle.values.min()
-# YEAR_END = 2060    # end year of the calculations
-# YEAR_OUT = 2060    # year of output generation = last year of reporting (in the output files) 
-# YEAR_LAST = 2060   # last year available in the IMAGE data-files (which are input to ELMA)
-# YEAR_SWITCH = 1990 # year after which other batteries than lead-acid are allowed
-
 
 # from past.builtins import execfile
 # execfile('read_mym.py')
@@ -2575,7 +2565,7 @@ storage_vehicles = storage_BEV + storage_PHEV
 ###########################################################################################################
 
 # OPTION: NO V2G ---------------------------------------------------------------
-storage_vehicles = pd.DataFrame(0, index=storage.index, columns=storage.columns)  # set vehicle storage to zero when not using V2G
+# storage_vehicles = pd.DataFrame(0, index=storage.index, columns=storage.columns)  # set vehicle storage to zero when not using V2G
 storage_vehicles = storage_vehicles.loc[:YEAR_OUT]
 #-------------------------------------------------------------------------------
 
