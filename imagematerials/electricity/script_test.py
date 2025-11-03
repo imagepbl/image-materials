@@ -61,8 +61,8 @@ from imagematerials.electricity.electr_external_data import (
     df_iea_ni_aps
 )
 SCEN = "SSP2"
-# VARIANT = "VLHO"
-VARIANT = "M_CP"
+VARIANT = "VLHO"
+# VARIANT = "M_CP"
 # VARIANT = "BL"
 # VARIANT = "450"
 # Define paths ----------------------------------------------------------------------
@@ -3880,6 +3880,39 @@ plt.show()
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ###########################################################################################################
 ###########################################################################################################
 #%% 3) TRANSMISSION GRID 
@@ -4259,8 +4292,8 @@ gdp_pc = pd.read_csv(path_external_data_scenario / 'gdp_pc.csv', index_col=0)  #
 
 # Generation capacity (stock & inflow/new) in MW peak capacity, FILES from TIMER
 gcap_data = read_mym_df(path_image_output / 'Gcap.out')
-# gcap_BL_data = read_mym_df('SSP2\\SSP2_BL\\Gcap.out') # baseline scenario? TODO: what is the purpose of reading in the scneario + the baseline?
-gcap_BL_data = read_mym_df(path_image_output / 'Gcap.out')
+gcap_BL_data = read_mym_df(Path(path_base, "data", "raw", "image", "SSP2_M_CP", "EnergyServices", "Gcap.out")) # baseline scenario? TODO: what is the purpose of reading in the scneario + the baseline?
+# gcap_BL_data = read_mym_df(path_image_output / 'Gcap.out')
 
 
 #----------------------------------------------------------------------------------------------------------
@@ -4292,6 +4325,7 @@ gdp_pc.columns = region_list
 # length calculations ----------------------------------------------------------------------------
 
 # only the regional total (peak) generation capacity is used as a proxy for the grid growth (BL to 2016, then BL or 450)
+# TODO: only use scenario data and not additionally baseline??
 gcap_BL_total = gcap_BL.sum(axis=1).unstack()
 gcap_BL_total = gcap_BL_total[region_list]               # re-order columns to the original TIMER order
 gcap_growth = gcap_BL_total / gcap_BL_total.loc[2016]    # define growth according to 2016 as base year

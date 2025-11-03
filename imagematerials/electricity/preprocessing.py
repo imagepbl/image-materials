@@ -222,19 +222,25 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
 
     # 1. External Data --------------------------------------------- 
 
-    grid_length_Hv = pd.read_csv(path_external_data_standard /'grid_length_Hv.csv', index_col=0, names=None).transpose()    # lenght of the High-voltage (Hv) lines in the grid, based on Open Street Map (OSM) analysis (km)
-    ratio_Hv = pd.read_csv(path_external_data_standard / 'Hv_ratio.csv', index_col=0)                                       # Ratio between the length of Medium-voltage (Mv) and Low-voltage (Lv) lines in relation to Hv lines (km Lv /km Hv) & (km Mv/ km Hv)
-    underground_ratio = pd.read_csv(path_external_data_standard / 'underground_ratio.csv', index_col=[0,1])                 # these contain the definition of the constants in the linear function used to determine the relation between income & the percentage of underground power-lines (% underground = mult * gdp/cap + add)
-    grid_additions = pd.read_csv(path_external_data_standard / 'grid_additions.csv', index_col=0)                           # Transformers & substations per km of grid (Hv, Mv & Lv, in units/km)
+    # lenght of the High-voltage (Hv) lines in the grid, based on Open Street Map (OSM) analysis (km)
+    grid_length_Hv      = pd.read_csv(path_external_data_standard /'grid_length_Hv.csv', index_col=0, names=None).transpose()    
+    # Ratio between the length of Medium-voltage (Mv) and Low-voltage (Lv) lines in relation to Hv lines (km Lv /km Hv) & (km Mv/ km Hv)
+    ratio_Hv            = pd.read_csv(path_external_data_standard / 'Hv_ratio.csv', index_col=0)
+    # Regression constants in the linear function used to determine the relation between income & the percentage of underground power-lines (% underground = mult * gdp/cap + add)
+    underground_ratio   = pd.read_csv(path_external_data_standard / 'underground_ratio.csv', index_col=[0,1])
+    # Transformers & substations per km of grid (Hv, Mv & Lv, in units/km)
+    grid_additions      = pd.read_csv(path_external_data_standard / 'grid_additions.csv', index_col=0)
 
 
     # dynamic or scenario-dependent data (lifetimes & material intensity)
 
-    lifetime_grid_elements = pd.read_csv(path_external_data_scenario  / 'operational_lifetime_grid.csv', index_col=0)        # Average lifetime in years of grid elements
+    # Average lifetime in years of grid elements
+    lifetime_grid_elements = pd.read_csv(path_external_data_scenario  / 'operational_lifetime_grid.csv', index_col=0)
 
-    # dynamic material intensity files (kg/km or kg/unit)
-    materials_grid = pd.read_csv(path_external_data_scenario / 'Materials_grid_dynamic.csv', index_col=[0,1])                # Material intensity of grid lines specific material content for Hv, Mv & Lv lines, & specific for underground vs. aboveground lines. (kg/km)
-    materials_grid_additions = pd.read_csv(path_external_data_scenario / 'Materials_grid_additions.csv', index_col=[0,1])    # (not part of the SA yet) Additional infrastructure required for grid connections, such as transformers & substations (material compositin in kg/unit)
+    # Material intensity of grid lines (Hv, Mv & Lv; specific for underground vs. aboveground lines) (kg/km)
+    materials_grid              = pd.read_csv(path_external_data_scenario / 'Materials_grid_dynamic.csv', index_col=[0,1])
+    # Material Intensity for additional infrastructure required for grid connections, such as transformers & substations (kg/unit)
+    materials_grid_additions    = pd.read_csv(path_external_data_scenario / 'Materials_grid_additions.csv', index_col=[0,1])
 
     # IMAGE file: GDP per capita (US-dollar 2005, ppp), used to derive underground-aboveground ratio based on income levels
     gdp_pc = pd.read_csv(path_external_data_scenario / 'gdp_pc.csv', index_col=0)  # TODO: check why it says this is an IMAGE file (why is it .csv?)
@@ -244,8 +250,91 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
 
     # Generation capacity (stock & inflow/new) in MW peak capacity, FILES from TIMER
     gcap_data = read_mym_df(path_image_output / 'GCap.out')
-    # gcap_BL_data = read_mym_df('SSP2\\SSP2_BL\\GCap.out') # baseline scenario? TODO: what is the purpose of reading in the scneario + the baseline?
-    gcap_BL_data = read_mym_df(path_image_output_BL / 'GCap.out')
+    gcap_BL_data = read_mym_df(Path(path_base, "data", "raw", "image", "SSP2_M_CP", "EnergyServices", "Gcap.out")) # baseline scenario? TODO: what is the purpose of reading in the scneario + the baseline?
+    # gcap_BL_data = read_mym_df(path_image_output_BL / 'GCap.out')
+
+
+    ###########################################################################################################
+    # Transform to xarray #
+
+    # knowledge_graph_region = create_region_graph()
+    # knowledge_graph_electr = create_electricity_graph()
+    
+
+    # # Lifetimes -------
+    # values = gcap_lifetime_data["TechnicalLT"].unstack().to_numpy(dtype=float)
+    # # Create coordinates
+    # times = gcap_lifetime_data.index.levels[0].to_numpy()
+    # types = gcap_lifetime_data.index.levels[1].to_numpy()
+    # scipy_params = ["mean", "stdev"]
+    # # Build full array: shape (ScipyParam, Time, Type)
+    # data_array = np.stack([values, np.full_like(values, np.nan)], axis=0)
+    # # Create DataArray
+    # gcap_lifetime_xr = xr.DataArray(
+    #     data_array,
+    #     dims=["DistributionParams", "Cohort", "Type"],
+    #     coords={
+    #         "DistributionParams": scipy_params,
+    #         "Cohort": times,
+    #         "Type": [str(r) for r in types]
+    #     },
+    #     name="Lifetime"
+    # )
+    # gcap_lifetime_xr = prism.Q_(gcap_lifetime_xr, "year")
+    # gcap_lifetime_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_lifetime_xr, output_coords=EPG_TECHNOLOGIES, dim="Type") # convert technology names to the standard names from TIMER
+    # gcap_lifetime_xr = gcap_lifetime_xr.assign_coords(Type=np.array(gcap_lifetime_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
+
+
+    # # Material Intensities -------
+    # # Extract coordinate labels
+    # gcap_materials_data.columns = gcap_materials_data.columns.rename([None, None]) # remove column MultiIndex name "g/MW" as it causes issues when converting to xarray
+    # years = sorted(gcap_materials_data.columns.get_level_values(0).unique())
+    # techs = gcap_materials_data.columns.get_level_values(1).unique()
+    # materials = gcap_materials_data.index
+    # # Convert to 3D array: (Material, Year, Tech)
+    # data_array = gcap_materials_data.to_numpy().reshape(len(materials), len(years), len(techs))
+    # # Build xarray DataArray
+    # gcap_materials_xr = xr.DataArray(
+    #     data_array,
+    #     dims=('material', 'Cohort', 'Type'),
+    #     coords={
+    #         'material': materials,
+    #         'Cohort': years,
+    #         'Type': techs
+    #     },
+    #     name='MaterialIntensities'
+    # )
+    # gcap_materials_xr = prism.Q_(gcap_materials_xr, "g/MW")
+    # gcap_materials_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_materials_xr, output_coords=EPG_TECHNOLOGIES, dim="Type")
+    # gcap_materials_xr = gcap_materials_xr.assign_coords(Type=np.array(gcap_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
+
+
+    # # Gcap ------
+    # gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
+    # gcap_data = gcap_data.loc[gcap_data['time'].isin(range(YEAR_START, YEAR_END + 1)), ['time', 'DIM_1', *range(1, len(EPG_TECHNOLOGIES) + 1)]]  # only keep relevant years and technology columns
+    # # Extract coordinate labels
+    # years = sorted(gcap_data['time'].unique())
+    # regions = sorted(gcap_data['DIM_1'].unique())
+    # techs = list(range(1, len(EPG_TECHNOLOGIES)+1))
+    # # Convert to 3D array: (Year, Region, Tech)
+    # data_array = gcap_data[techs].to_numpy().reshape(len(years), len(regions), len(techs))
+    # # Build xarray DataArray
+    # gcap_xr = xr.DataArray(
+    #     data_array,
+    #     dims=('Time', 'Region', 'Type'),
+    #     coords={
+    #         'Time': years,
+    #         'Region': [str(r) for r in regions],
+    #         'Type': [str(r) for r in techs]
+    #     },
+    #     name='GCap'
+    # )
+    # gcap_xr = prism.Q_(gcap_xr, "MW")
+    # gcap_xr = knowledge_graph_region.rebroadcast_xarray(gcap_xr, output_coords=IMAGE_REGIONS, dim="Region") 
+    # gcap_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_xr, output_coords=EPG_TECHNOLOGIES, dim="Type")
+    # gcap_xr = gcap_xr.assign_coords(Type=np.array(gcap_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
+
+
 
     ###########################################################################################################
     # Prepare model specific variables #
