@@ -249,9 +249,12 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     # 2. IMAGE/TIMER files ---------------------------------------------
 
     # Generation capacity (stock & inflow/new) in MW peak capacity, FILES from TIMER
-    gcap_data = read_mym_df(path_image_output / 'GCap.out')
-    gcap_BL_data = read_mym_df(Path(path_base, "data", "raw", "image", "SSP2_M_CP", "EnergyServices", "Gcap.out")) # baseline scenario? TODO: what is the purpose of reading in the scneario + the baseline?
-    # gcap_BL_data = read_mym_df(path_image_output_BL / 'GCap.out')
+    gcap_data: pd.DataFrame = read_mym_df(path_image_output / 'Gcap.out')
+    gcap_BL_data: pd.DataFrame = read_mym_df(Path(path_base, "data", "raw", "image", "SSP2_M_CP", "EnergyServices", "Gcap.out")) # baseline scenario? TODO: what is the purpose of reading in the scneario + the baseline?
+
+    # GDP per capita (US-dollar 2005, ppp), used to derive underground-aboveground ratio based on income levels
+    gdp_pc: pd.DataFrame = read_mym_df(Path(path_base, "data", "raw", "image", scen_folder, "Socioeconomic", "gdp_pc.scn"))
+
 
 
     ###########################################################################################################

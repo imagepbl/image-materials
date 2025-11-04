@@ -4284,16 +4284,18 @@ lifetime_grid_elements = pd.read_csv(path_external_data_scenario  / 'operational
 materials_grid = pd.read_csv(path_external_data_scenario / 'Materials_grid_dynamic.csv', index_col=[0,1])                # Material intensity of grid lines specific material content for Hv, Mv & Lv lines, & specific for underground vs. aboveground lines. (kg/km)
 materials_grid_additions = pd.read_csv(path_external_data_scenario / 'Materials_grid_additions.csv', index_col=[0,1])    # (not part of the SA yet) Additional infrastructure required for grid connections, such as transformers & substations (material compositin in kg/unit)
 
-# IMAGE file: GDP per capita (US-dollar 2005, ppp), used to derive underground-aboveground ratio based on income levels
-gdp_pc = pd.read_csv(path_external_data_scenario / 'gdp_pc.csv', index_col=0)  # TODO: check why it says this is an IMAGE file (why is it .csv?)
 
 
 # 2. IMAGE/TIMER files ====================================================================================
 
 # Generation capacity (stock & inflow/new) in MW peak capacity, FILES from TIMER
-gcap_data = read_mym_df(path_image_output / 'Gcap.out')
-gcap_BL_data = read_mym_df(Path(path_base, "data", "raw", "image", "SSP2_M_CP", "EnergyServices", "Gcap.out")) # baseline scenario? TODO: what is the purpose of reading in the scneario + the baseline?
+gcap_data: pd.DataFrame = read_mym_df(path_image_output / 'Gcap.out')
+gcap_BL_data: pd.DataFrame = read_mym_df(Path(path_base, "data", "raw", "image", "SSP2_M_CP", "EnergyServices", "Gcap.out")) # baseline scenario? TODO: what is the purpose of reading in the scneario + the baseline?
 # gcap_BL_data = read_mym_df(path_image_output / 'Gcap.out')
+
+# GDP per capita (US-dollar 2005, ppp), used to derive underground-aboveground ratio based on income levels
+# gdp_pc = pd.read_csv(path_external_data_scenario / 'gdp_pc.csv', index_col=0)  
+gdp_pc: pd.DataFrame = read_mym_df(Path(path_base, "data", "raw", "image", scen_folder, "Socioeconomic", "gdp_pc.scn"))
 
 
 #----------------------------------------------------------------------------------------------------------
