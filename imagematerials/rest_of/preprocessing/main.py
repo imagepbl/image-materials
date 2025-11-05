@@ -82,17 +82,12 @@ def read_gompertz_values(base_directory, scenario: str):
 
     if scenario in ["SSP2_VLLO_LifeTech"]:
         print('Using Gompertz coefficients for resource efficiency measures')
-        name = "coef_gompertz_eff.nc"
+        name = "coefs_gompertz_eff.nc"
     else: 
         name = "coefs_gompertz.nc"
 
     xr_gompertz = xr.open_dataset(base_directory / "rest-of" / "gompertz_values" / name, engine="netcdf4")
     xr_gompertz = xr_gompertz.to_array().isel(variable=0).drop_vars("variable")
-
-    # # Reorder the data to match the sorted regions
-    xr_gompertz = xr_gompertz.sel(Region=sorted(xr_gompertz.coords["Region"].values, key=lambda x: int(x)))
-    knowledge_graph_region = create_region_graph()
-    xr_gompertz = knowledge_graph_region.rebroadcast_xarray(xr_gompertz, output_coords=IMAGE_REGIONS, dim="Region")
 
     return xr_gompertz
 
@@ -103,9 +98,6 @@ def read_historic_diff_cons_data_mean(base_directory):
     diff_consumption_mean = diff_consumption_mean.to_array().isel(variable=0).drop_vars("variable")
     diff_consumption_mean = prism.Q_(diff_consumption_mean, 't')
 
-    knowledge_graph_region = create_region_graph()
-    diff_consumption_mean = knowledge_graph_region.rebroadcast_xarray(diff_consumption_mean, output_coords=IMAGE_REGIONS, dim="Region")
-
     return diff_consumption_mean
 
 
@@ -114,9 +106,6 @@ def read_historic_diff_cons_data(base_directory):
     diff_consumption = xr.open_dataset(base_directory / "rest-of" / "gompertz_values" / "diff_cons_all.nc", engine="netcdf4")
     diff_consumption = diff_consumption.to_array().isel(variable=0).drop_vars("variable")
     diff_consumption = prism.Q_(diff_consumption, 't')
-
-    knowledge_graph_region = create_region_graph()
-    diff_consumption = knowledge_graph_region.rebroadcast_xarray(diff_consumption, output_coords=IMAGE_REGIONS, dim="Region")
 
     return diff_consumption
 
