@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+from imagematerials.concepts import create_region_graph
+from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.rest_of.metals_projections import (
     steel_projection, 
     aluminium_projection, 
@@ -142,6 +144,11 @@ def make_gompertz_coefs_da(results_models, material_order=None, region_order=Non
     coefs_da = xr.ones_like(coefs_da) * coefs_da
 
     coefs_da = coefs_da.rename("gompertz_coefs")  # <-- Set a descriptive name
+    # replace
+    
+    # convert region names to the standard IMAGE regions
+    knowledge_graph_region = create_region_graph()
+    coefs_da = knowledge_graph_region.rebroadcast_xarray(coefs_da, output_coords=IMAGE_REGIONS, dim="Region")
 
     # coefs_da now has dims ('Region', 'material', 'coef')
     coefs_da.to_netcdf('../../../data/raw/rest-of/gompertz_values/coefs_gompertz.nc')
@@ -187,6 +194,11 @@ def mean_historic_other_fraction_consumption_to_xr(results_models):
     # sort material alphabetically
     diff_cons_all = diff_cons_all.sortby('material')
     # Save the results to a file
+
+    # convert region names to the standard IMAGE regions
+    knowledge_graph_region = create_region_graph()
+    diff_cons_all = knowledge_graph_region.rebroadcast_xarray(diff_cons_all, output_coords=IMAGE_REGIONS, dim="Region")
+
     diff_cons_all.to_netcdf('../../../data/raw/rest-of/gompertz_values/diff_cons_all_mean.nc')
 
 
@@ -236,6 +248,11 @@ def historic_other_fraction_consumption_to_xr(results_models):
     # sort material alphabetically
     diff_cons_all = diff_cons_all.sortby('material')
     # Save the results to a file
+
+    # convert region names to the standard IMAGE regions
+    knowledge_graph_region = create_region_graph()
+    diff_cons_all = knowledge_graph_region.rebroadcast_xarray(diff_cons_all, output_coords=IMAGE_REGIONS, dim="Region")
+
     diff_cons_all.to_netcdf('../../../data/raw/rest-of/gompertz_values/diff_cons_all.nc')
 
     return diff_cons_all
