@@ -37,6 +37,7 @@ from imagematerials.electricity.constants import (
     SENS_ANALYSIS,
     REGIONS,
     TECH_GEN,
+    EPG_TECHNOLOGIES,
     STD_LIFETIMES_ELECTR,
     MEGA_TO_TERA,
     PKMS_TO_VKMS,
@@ -418,7 +419,7 @@ YEAR_OUT = 2100     # year of output generation = last year of reporting
 # 1. External Data ======================================================================================== 
 
 # lifetimes of Gcap tech (original data according to van Vuuren 2006, PhD Thesis)
-gcap_lifetime = pd.read_csv(path_external_data_scenario / 'LTTechnical_dynamic.csv', index_col=['year','DIM_1'])        
+gcap_lifetime = pd.read_csv(path_external_data_scenario / 'LTTechnical_dynamic.csv', index_col=['Year','DIM_1'])        
 # gcap_lifetime = standardize_index_spelling(gcap_lifetime) # standardize the index name
 # material compositions (generation capacity)
 composition_generation = pd.read_csv(path_external_data_scenario / 'composition_generation.csv',index_col=[0,1]).transpose()  # in gram/MW
@@ -431,6 +432,34 @@ kilometrage = pd.read_csv(path_external_data_scenario / 'kilometrage.csv', index
 # Generation capacity (stock demand per generation technology) in MW peak capacity
 gcap_data = read_mym_df(path_image_output / 'Gcap.out')
 
+# #test ------------------------------------------------------------------------------------------
+
+# knowledge_graph_region = create_region_graph()
+# knowledge_graph_electr = create_electricity_graph()
+# gcap_lifetime_data = gcap_lifetime
+
+# # Lifetimes -------
+# values = gcap_lifetime_data["TechnicalLT"].unstack().to_numpy(dtype=float)
+# # Create coordinates
+# times = gcap_lifetime_data.index.levels[0].to_numpy()
+# types = gcap_lifetime_data.index.levels[1].to_numpy()
+# scipy_params = ["mean", "stdev"]
+# # Build full array: shape (ScipyParam, Time, Type)
+# data_array = np.stack([values, np.full_like(values, np.nan)], axis=0)
+# # Create DataArray
+# gcap_lifetime_xr = xr.DataArray(
+#     data_array,
+#     dims=["DistributionParams", "Cohort", "Type"],
+#     coords={
+#         "DistributionParams": scipy_params,
+#         "Cohort": times,
+#         "Type": [str(r) for r in types]
+#     },
+#     name="Lifetime"
+# )
+# gcap_lifetime_xr = prism.Q_(gcap_lifetime_xr, "year")
+# gcap_lifetime_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_lifetime_xr, output_coords=EPG_TECHNOLOGIES, dim="Type") # convert technology names to the standard names from TIMER
+# gcap_lifetime_xr = gcap_lifetime_xr.assign_coords(Type=np.array(gcap_lifetime_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
 
 #----------------------------------------------------------------------------------------------------------
@@ -542,19 +571,19 @@ simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
 
 sec_electr_gen = Sector("electr_gen", prep_data)
 
-main_model_factory = ModelFactory(
+factory = ModelFactory(
     sec_electr_gen, complete_timeline
     ).add(GenericStocks
     ).add(MaterialIntensities
     ).finish()
 
-main_model_factory.simulate(simulation_timeline)
+factory.simulate(simulation_timeline)
 
 
 
 
 #Tests: Check results
-# list(main_model_factory.elctr_gen)
+# list(factory.elctr_gen)
 
 path_test_plots = Path(path_base, "imagematerials", "electricity", "out_test", scen_folder, "Figures")
 
@@ -564,11 +593,11 @@ path_test_plots = Path(path_base, "imagematerials", "electricity", "out_test", s
 
 
 #================================================================================
-#%%%% Per TECH - per Region - main_model_factory
+#%%%% Per TECH - per Region - factory
 
 regions = ['Brazil', 'C.Europe', 'China'] 
 
-da_stocks = main_model_factory.stocks
+da_stocks = factory.stocks
 
 data_all = da_stocks
 data_all = data_all.sel(Type=data_all.Type != '<EMPTY>')
@@ -631,8 +660,8 @@ plt.show()
 #================================================================================
 #%%%% Sum & Per TECH - World
 
-# da_x = main_model_factory.inflow.to_array().sum('Type')
-da_stocks = main_model_factory.stocks#.to_array()
+# da_x = factory.inflow.to_array().sum('Type')
+da_stocks = factory.stocks#.to_array()
 
 data_all = da_stocks.sel(Type=da_stocks.Type != '<EMPTY>')
 data_all_1 = data_all.sum('Region')
@@ -765,7 +794,7 @@ plt.show()
 
 # Sum over technologies dimension
 
-da_stocks_mat = main_model_factory.stock_by_cohort_materials.copy() #stock_by_cohort_materials
+da_stocks_mat = factory.stock_by_cohort_materials.copy() #stock_by_cohort_materials
 
 data_all = da_stocks_mat
 data_all = data_all.sel(Type=data_all.Type != '<EMPTY>').sum('Type')
@@ -838,7 +867,7 @@ plt.show()
 #================================================================================
 #%%%% SUM over TECHs - world
 
-da_stocks_mat = main_model_factory.stock_by_cohort_materials.copy() #stock_by_cohort_materials
+da_stocks_mat = factory.stock_by_cohort_materials.copy() #stock_by_cohort_materials
 data_all = da_stocks_mat
 data_all = data_all.sel(Type=data_all.Type != '<EMPTY>').sum('Type').sum('Region')
 # data_plot = data_all.pint.to("t") # convert grams to tonnes
@@ -948,7 +977,7 @@ plt.show()
 # }
 
 
-data_all = main_model_factory.stock_by_cohort_materials.copy() #stock_by_cohort_materials
+data_all = factory.stock_by_cohort_materials.copy() #stock_by_cohort_materials
 data_all = data_all.sel(Type=data_all.Type != '<EMPTY>', Time=slice(1971, None)).pint.to("t") # only from 1971 onwards, convert grams to tonnes
 data_all = data_all.sum('Region')
 
@@ -1039,8 +1068,8 @@ plt.show()
 #================================================================================
 #%%%% Per TECH - per Region
 
-# da_x = main_model_factory.inflow.to_array().sum('Type')
-da_inflow = main_model_factory.inflow.to_array()
+# da_x = factory.inflow.to_array().sum('Type')
+da_inflow = factory.inflow.to_array()
 
 data_all = da_inflow
 data_all = data_all.sel(Type=data_all.Type != '<EMPTY>')
@@ -1105,8 +1134,8 @@ plt.show()
 #================================================================================
 #%%%% Sum & Per TECH - World
 
-# da_x = main_model_factory.inflow.to_array().sum('Type')
-da_inflow = main_model_factory.inflow.to_array()
+# da_x = factory.inflow.to_array().sum('Type')
+da_inflow = factory.inflow.to_array()
 
 data_all = da_inflow.sel(Type=da_inflow.Type != '<EMPTY>')
 data_all_1 = data_all.sum('Region')
@@ -1159,7 +1188,7 @@ plt.show()
 #================================================================================
 #%%%% Sum over Tech. - per region
 
-data_all = main_model_factory.inflow_materials.to_array().sum('Type')
+data_all = factory.inflow_materials.to_array().sum('Type')
 
 regions = ['Brazil', 'C.Europe', 'China']  # Brazil and C.Europe
 # regions = da_x.Region.values[:2]  # First 2 regions
@@ -1274,7 +1303,7 @@ plt.show()
 
 
 
-data_all = main_model_factory.inflow_materials.to_array().sum('Type').sum('Region')
+data_all = factory.inflow_materials.to_array().sum('Type').sum('Region')
 types_level1 = [m for m in data_all.material.values if m in ["Steel", "Concrete"]]
 types_level2 = [m for m in data_all.material.values if m in ["Aluminium", "Cu"]]
 types_level3 = [m for m in data_all.material.values if m not in (types_level1 + types_level2)]
@@ -1345,7 +1374,7 @@ plt.show()
 #================================================================================
 #%%%% Per TECH - per Region
 
-da_outflow = main_model_factory.outflow_by_cohort.to_array()
+da_outflow = factory.outflow_by_cohort.to_array()
 
 data_all = da_outflow
 data_all = data_all.sel(Type=data_all.Type != '<EMPTY>').sum('Cohort')
@@ -1410,7 +1439,7 @@ plt.show()
 #================================================================================
 #%%%% Sum & Per TECH - World
 
-da_outflow = main_model_factory.outflow_by_cohort.to_array()
+da_outflow = factory.outflow_by_cohort.to_array()
 
 data_all   = da_outflow.sel(Type=da_inflow.Type != '<EMPTY>')
 data_all_1 = data_all.sum('Cohort').sum('Region')
@@ -1461,7 +1490,7 @@ plt.show()
 #================================================================================
 #%%%% Sum over Tech. - per region
 
-data_all = main_model_factory.outflow_by_cohort_materials.to_array().sum('Type')
+data_all = factory.outflow_by_cohort_materials.to_array().sum('Type')
 
 regions = ['Brazil', 'C.Europe', 'China']  # Brazil and C.Europe
 
@@ -1533,7 +1562,7 @@ plt.show()
 #%%%% Sum over Tech. - World
 
 
-data_all = main_model_factory.outflow_by_cohort_materials.to_array().sum('Type').sum('Region')
+data_all = factory.outflow_by_cohort_materials.to_array().sum('Type').sum('Region')
 types_level1 = [m for m in data_all.material.values if m in ["Steel", "Concrete"]]
 types_level2 = [m for m in data_all.material.values if m in ["Aluminium", "Cu"]]
 types_level3 = [m for m in data_all.material.values if m not in (types_level1 + types_level2)]
@@ -1602,13 +1631,13 @@ type_tech, tech_str = 'Hydro', 'Hydro'
 regions = ["Brazil", "C.Europe", "China"] 
 region = regions[0]
 
-da_stocks = main_model_factory.stocks.sel(Type=type_tech)
-da_inflow = main_model_factory.inflow.to_array().sel(Type=type_tech)
-da_outflow = main_model_factory.outflow_by_cohort.to_array().sel(Type=type_tech).sum('Cohort')
+da_stocks = factory.stocks.sel(Type=type_tech)
+da_inflow = factory.inflow.to_array().sel(Type=type_tech)
+da_outflow = factory.outflow_by_cohort.to_array().sel(Type=type_tech).sum('Cohort')
 
-# da_stocks_mat = main_model_factory.stock_by_cohort_materials.sel(Type=type_tech) #stock_by_cohort_materials
-da_inflow_mat = main_model_factory.inflow_materials.to_array().sel(Type=type_tech) 
-da_outflow_mat = main_model_factory.outflow_by_cohort_materials.to_array().sel(Type=type_tech) 
+# da_stocks_mat = factory.stock_by_cohort_materials.sel(Type=type_tech) #stock_by_cohort_materials
+da_inflow_mat = factory.inflow_materials.to_array().sel(Type=type_tech) 
+da_outflow_mat = factory.outflow_by_cohort_materials.to_array().sel(Type=type_tech) 
 
 da_stocks = da_stocks.sel(Time=slice(1971, None))
 da_inflow = da_inflow.sel(time=slice(1971, None))
@@ -1706,13 +1735,13 @@ type_tech, tech_str = 'Solar PV residential', 'PVres' # name of technology in st
 regions = ["Brazil", "C.Europe", "China"]
 region = regions[1]
 
-da_stocks = main_model_factory.stocks.sel(Type=type_tech)
-da_inflow = main_model_factory.inflow.to_array().sel(Type=type_tech)
-da_outflow = main_model_factory.outflow_by_cohort.to_array().sel(Type=type_tech).sum('Cohort')
+da_stocks = factory.stocks.sel(Type=type_tech)
+da_inflow = factory.inflow.to_array().sel(Type=type_tech)
+da_outflow = factory.outflow_by_cohort.to_array().sel(Type=type_tech).sum('Cohort')
 
-# da_stocks_mat = main_model_factory.stock_by_cohort_materials.sel(Type=type_tech) #stock_by_cohort_materials
-da_inflow_mat = main_model_factory.inflow_materials.to_array().sel(Type=type_tech) 
-da_outflow_mat = main_model_factory.outflow_by_cohort_materials.to_array().sel(Type=type_tech) 
+# da_stocks_mat = factory.stock_by_cohort_materials.sel(Type=type_tech) #stock_by_cohort_materials
+da_inflow_mat = factory.inflow_materials.to_array().sel(Type=type_tech) 
+da_outflow_mat = factory.outflow_by_cohort_materials.to_array().sel(Type=type_tech) 
 
 da_stocks = da_stocks.sel(Time=slice(1971, None))
 da_inflow = da_inflow.sel(time=slice(1971, None))
@@ -1809,13 +1838,13 @@ type_tech, tech_str = 'Hydro', 'Hydro'
 regions = ["Brazil", "C.Europe", "China"] 
 region = regions[2]
 
-da_stocks = main_model_factory.stocks.sel(Type=type_tech)
-da_inflow = main_model_factory.inflow.to_array().sel(Type=type_tech)
-da_outflow = main_model_factory.outflow_by_cohort.to_array().sel(Type=type_tech).sum('Cohort')
+da_stocks = factory.stocks.sel(Type=type_tech)
+da_inflow = factory.inflow.to_array().sel(Type=type_tech)
+da_outflow = factory.outflow_by_cohort.to_array().sel(Type=type_tech).sum('Cohort')
 
-# da_stocks_mat = main_model_factory.stock_by_cohort_materials.sel(Type=type_tech) #stock_by_cohort_materials
-da_inflow_mat = main_model_factory.inflow_materials.to_array().sel(Type=type_tech) 
-da_outflow_mat = main_model_factory.outflow_by_cohort_materials.to_array().sel(Type=type_tech) 
+# da_stocks_mat = factory.stock_by_cohort_materials.sel(Type=type_tech) #stock_by_cohort_materials
+da_inflow_mat = factory.inflow_materials.to_array().sel(Type=type_tech) 
+da_outflow_mat = factory.outflow_by_cohort_materials.to_array().sel(Type=type_tech) 
 
 da_stocks = da_stocks.sel(Time=slice(1971, None))
 da_inflow = da_inflow.sel(time=slice(1971, None))
@@ -2017,14 +2046,14 @@ simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
 
 sec_electr_stor_phs = Sector("electr_stor_phs", prep_data_phs)
 
-main_model_factory_phs = ModelFactory(
+factory_phs = ModelFactory(
     sec_electr_stor_phs, complete_timeline
     ).add(GenericStocks
     ).add(MaterialIntensities
     ).finish()
 
-main_model_factory_phs.simulate(simulation_timeline)
-list(main_model_factory_phs.electr_stor_phs)
+factory_phs.simulate(simulation_timeline)
+list(factory_phs.electr_stor_phs)
 
 # Other Storage ==============================================================================
 time_start = prep_data_oth_storage["stocks"].coords["Time"].min().values
@@ -2033,14 +2062,14 @@ simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
 
 sec_electr_stor_oth = Sector("electr_stor_oth", prep_data_oth_storage, check_coordinates=False)
 
-main_model_factory_oth = ModelFactory(
+factory_oth = ModelFactory(
     sec_electr_stor_oth, complete_timeline
     ).add(SharesInflowStocks
     ).add(MaterialIntensities
     ).finish()
 
-main_model_factory_oth.simulate(simulation_timeline)
-list(main_model_factory_oth.electr_stor_oth)
+factory_oth.simulate(simulation_timeline)
+list(factory_oth.electr_stor_oth)
 
 path_test_plots = Path(path_base, "imagematerials", "electricity", "out_test", scen_folder, "Figures")
 
@@ -2926,14 +2955,14 @@ simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
 
 sec_electr_stor_phs = Sector("electr_stor_phs", prep_data_phs)
 
-main_model_factory_phs = ModelFactory(
+factory_phs = ModelFactory(
     sec_electr_stor_phs, complete_timeline
     ).add(GenericStocks
     ).add(MaterialIntensities
     ).finish()
 
-main_model_factory_phs.simulate(simulation_timeline)
-list(main_model_factory_phs.electr_stor_phs)
+factory_phs.simulate(simulation_timeline)
+list(factory_phs.electr_stor_phs)
 
 
 
@@ -2946,14 +2975,14 @@ simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
 
 sec_electr_stor_oth = Sector("electr_stor_oth", prep_data_oth_storage, check_coordinates=False)
 
-main_model_factory_oth = ModelFactory(
+factory_oth = ModelFactory(
     sec_electr_stor_oth, complete_timeline
     ).add(SharesInflowStocks
     ).add(MaterialIntensities
     ).finish()
 
-main_model_factory_oth.simulate(simulation_timeline)
-list(main_model_factory_oth.electr_stor_oth)
+factory_oth.simulate(simulation_timeline)
+list(factory_oth.electr_stor_oth)
 
 
 
@@ -3050,8 +3079,8 @@ for material in storage_materials.index:
 
 #%%%% Sum & Per TECH - World
 
-# da_x = main_model_factory.inflow.to_array().sum('Type')
-da_stocks = main_model_factory_phs.stocks#.to_array()
+# da_x = factory.inflow.to_array().sum('Type')
+da_stocks = factory_phs.stocks#.to_array()
 
 data_all = da_stocks.sel(Type=da_stocks.Type != '<EMPTY>')
 data_all_1 = data_all.sum('Region')
@@ -3095,7 +3124,7 @@ plt.show()
 #%%%% SUM over TECHs - world
 
 
-da_stocks_mat = main_model_factory_phs.stock_by_cohort_materials.copy() #stock_by_cohort_materials
+da_stocks_mat = factory_phs.stock_by_cohort_materials.copy() #stock_by_cohort_materials
 
 data_all = da_stocks_mat
 # data_all = data_all.sel(Type=data_all.Type != '<EMPTY>').sum('Type')
@@ -3168,7 +3197,7 @@ plt.show()
 #================================================================================
 #%%%% SUM over TECHs - world
 
-da_stocks_mat = main_model_factory_phs.stock_by_cohort_materials.copy()
+da_stocks_mat = factory_phs.stock_by_cohort_materials.copy()
 data_all = da_stocks_mat.sel(Type=da_stocks_mat.Type != '<EMPTY>').sum('Type').sum('Region')
 data_plot = data_all.sel(Time=slice(1971, None)) / 1_000_000  # grams → tonnes
 
@@ -3239,10 +3268,10 @@ DICT_STOR_STYLES = {tech: style_combinations[i] for i, tech in enumerate(technol
 #================================================================================
 #%%%% STOCKS - Per TECH - per Region
 
-da_inflow = main_model_factory_oth.stock_by_cohort.sum('Cohort')
+da_inflow = factory_oth.stock_by_cohort.sum('Cohort')
 data_all = da_inflow.sel(Type=da_inflow.Type != '<EMPTY>').sel(Time=slice(2000, None), Region=regions)
 
-da_inflow_phs = main_model_factory_phs.stock_by_cohort.sum('Cohort').sel(Type='PHS', Time=slice(2000, None), Region=regions)
+da_inflow_phs = factory_phs.stock_by_cohort.sum('Cohort').sel(Type='PHS', Time=slice(2000, None), Region=regions)
 
 regions = ['Brazil', 'C.Europe', 'China'] 
 types = data_all.coords['Type'].values
@@ -3304,8 +3333,8 @@ plt.show()
 
 
 
-# # da_x = main_model_factory.inflow.to_array().sum('Type')
-# da_inflow = main_model_factory_oth.stock_by_cohort.sum('Cohort') #.to_array()
+# # da_x = factory.inflow.to_array().sum('Type')
+# da_inflow = factory_oth.stock_by_cohort.sum('Cohort') #.to_array()
 
 # data_all = da_inflow
 # data_all = data_all.sel(Type=data_all.Type != '<EMPTY>')
@@ -3366,8 +3395,8 @@ plt.show()
 #================================================================================
 #%%%% STOCKS - Bar plot: storage capacity per storage type 
 
-data_oth = main_model_factory_oth.stock_by_cohort.copy()
-data_phs = main_model_factory_phs.stock_by_cohort.copy()
+data_oth = factory_oth.stock_by_cohort.copy()
+data_phs = factory_phs.stock_by_cohort.copy()
 
 storage_subtypes_categories = ["mechanical storage", "lithium batteries", "molten salt and flow batteries", "other"]
 knowledge_graph = create_electricity_graph()
@@ -3406,7 +3435,7 @@ plt.show()
 
 #%%%% STOCKS - Per TECH - World ------------------------------------------------------
 
-da_stocks = main_model_factory_oth.stock_by_cohort#.to_array()
+da_stocks = factory_oth.stock_by_cohort#.to_array()
 
 data_all_1 = da_stocks.sum(['Region', 'Cohort'])
 data_all_1 = data_all_1.sel(Time=slice(2020, 2050))
@@ -3435,8 +3464,8 @@ plt.show()
 
 #%%%% STOCKS - Per TECH Category - World ------------------------------------------------------
 
-data_oth = main_model_factory_oth.stock_by_cohort.copy()
-data_phs = main_model_factory_phs.stock_by_cohort.copy()
+data_oth = factory_oth.stock_by_cohort.copy()
+data_phs = factory_phs.stock_by_cohort.copy()
 
 storage_subtypes_categories = ["mechanical storage", "lithium batteries", "molten salt and flow batteries", "other"]
 knowledge_graph = create_electricity_graph()
@@ -3480,8 +3509,8 @@ plt.show()
 
 #%%%% STOCKS - Total SUM - World ------------------------------------------------------
 
-# da_x = main_model_factory.inflow.to_array().sum('Type')
-da_stocks = main_model_factory_oth.stocks#.to_array()
+# da_x = factory.inflow.to_array().sum('Type')
+da_stocks = factory_oth.stocks#.to_array()
 
 data_all = da_stocks #.sel(Type=da_stocks.Type != '<EMPTY>')
 data_all_1 = data_all.sum('Region')
@@ -3513,9 +3542,9 @@ plt.show()
 #================================================================================
 #%%%% INFLOW - Per TECH - per Region
 
-# da_x = main_model_factory.inflow.to_array().sum('Type')
-da_inflow = main_model_factory_oth.inflow.to_array()
-da_inflow_phs = main_model_factory_phs.inflow.to_array()
+# da_x = factory.inflow.to_array().sum('Type')
+da_inflow = factory_oth.inflow.to_array()
+da_inflow_phs = factory_phs.inflow.to_array()
 
 regions = ['Brazil', 'C.Europe', 'China'] 
 # data_all = xr.concat([da_inflow, da_inflow_phs], dim='Type')
@@ -3586,9 +3615,9 @@ plt.show()
 #================================================================================
 #%%%% INFLOW - Per TECH - World
 
-# da_x = main_model_factory.inflow.to_array().sum('Type')
-da_inflow = main_model_factory_oth.inflow.to_array()
-da_inflow_phs = main_model_factory_phs.inflow.to_array()
+# da_x = factory.inflow.to_array().sum('Type')
+da_inflow = factory_oth.inflow.to_array()
+da_inflow_phs = factory_phs.inflow.to_array()
 
 data_all = da_inflow.sel(Type=da_inflow.Type != '<EMPTY>', time=slice(2000, None)).sum('Region')
 da_inflow_phs = da_inflow_phs.sel(Type='PHS', time=slice(2000, None)).sum('Region')
@@ -3656,8 +3685,8 @@ DICT_STOR_CATEGORY_COLORS_SEBASTIAAN = {
     'other':                           '#F69B58'
 }
 
-data_oth = main_model_factory_oth.stock_by_cohort_materials.copy()
-data_phs = main_model_factory_phs.stock_by_cohort_materials.copy()
+data_oth = factory_oth.stock_by_cohort_materials.copy()
+data_phs = factory_phs.stock_by_cohort_materials.copy()
 
 storage_subtypes_categories = ["mechanical storage", "lithium batteries", "molten salt and flow batteries", "other"]
 knowledge_graph = create_electricity_graph()
@@ -3751,7 +3780,7 @@ print("Ratios to BL (2050):", ratio_steel_BL.values, ratio_aluminium_BL.values, 
 
 # Sum over technologies dimension
 
-da_stocks_mat = main_model_factory_oth.stock_by_cohort_materials.copy() #stock_by_cohort_materials
+da_stocks_mat = factory_oth.stock_by_cohort_materials.copy() #stock_by_cohort_materials
 
 data_all = da_stocks_mat
 data_all = data_all.sel(Type=data_all.Type != '<EMPTY>').sum('Type')
@@ -3824,7 +3853,7 @@ plt.show()
 #================================================================================
 #%%%% MATERIAL STOCKS - SUM over TECHs - world
 
-da_stocks_mat = main_model_factory_oth.stock_by_cohort_materials.copy() #stock_by_cohort_materials
+da_stocks_mat = factory_oth.stock_by_cohort_materials.copy() #stock_by_cohort_materials
 data_all = da_stocks_mat
 data_all = data_all.sel(Type=data_all.Type != '<EMPTY>').sum('Type').sum('Region')
 # data_plot = data_all.pint.to("t") # convert grams to tonnes
@@ -4687,14 +4716,14 @@ simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
 
 sec_electr_grid_lines = Sector("electr_grid_lines", prep_data_lines)
 
-main_model_factory_lines = ModelFactory(
+factory_lines = ModelFactory(
     sec_electr_grid_lines, complete_timeline
     ).add(GenericStocks
     ).add(MaterialIntensities
     ).finish()
 
-main_model_factory_lines.simulate(simulation_timeline)
-list(main_model_factory_lines.electr_grid_lines)
+factory_lines.simulate(simulation_timeline)
+list(factory_lines.electr_grid_lines)
 
 # ADDITIONS -------------------------------------------------------------------------------------
 # prep_data = create_prep_data(results_dict_add, conversion_table, unit_mapping)
@@ -4707,14 +4736,14 @@ simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
 
 sec_electr_grid_add = Sector("electr_grid_add", prep_data_add)
 
-main_model_factory_add = ModelFactory(
+factory_add = ModelFactory(
     sec_electr_grid_add, complete_timeline
     ).add(GenericStocks
     ).add(MaterialIntensities
     ).finish()
 
-main_model_factory_add.simulate(simulation_timeline)
-list(main_model_factory_add.electr_grid_add)
+factory_add.simulate(simulation_timeline)
+list(factory_add.electr_grid_add)
 
 
 
@@ -4744,8 +4773,8 @@ path_test_plots = Path(path_base, "imagematerials", "electricity", "out_test", "
 #%%%% 2 models ---------------------------------------------------
 
 
-data_lines  = main_model_factory_lines.stocks.copy().sum(dim="Region")
-data_add    = main_model_factory_add.stocks.copy().sum(dim="Region")
+data_lines  = factory_lines.stocks.copy().sum(dim="Region")
+data_add    = factory_add.stocks.copy().sum(dim="Region")
 
 # data        = xr.concat([data_lines, data_add], dim='Type')
 # data_plot   = data.sum(dim="Region")
@@ -4799,8 +4828,8 @@ plt.show()
 
 materials = ["steel", "concrete", "aluminium", "copper"]
 
-data_lines  = main_model_factory_lines.stock_by_cohort_materials.copy().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
-data_add    = main_model_factory_add.stock_by_cohort_materials.copy().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
+data_lines  = factory_lines.stock_by_cohort_materials.copy().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
+data_add    = factory_add.stock_by_cohort_materials.copy().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
 
 data        = xr.concat([data_lines, data_add], dim='Type')
 data        = data.sel(Time=slice(1971, None))
@@ -4868,15 +4897,15 @@ plt.show()
 regions = ['Brazil', 'C.Europe', 'China'] 
 threshold = 100_000
 
-data_lines = main_model_factory_lines.inflow.to_array().sel(
+data_lines = factory_lines.inflow.to_array().sel(
     time=slice(1971, None), 
-    Type=main_model_factory_lines.inflow.to_array().Type != '<EMPTY>', 
+    Type=factory_lines.inflow.to_array().Type != '<EMPTY>', 
     Region=regions
 )
 
-data_add = main_model_factory_add.inflow.to_array().sel(
+data_add = factory_add.inflow.to_array().sel(
     time=slice(1971, None), 
-    Type=main_model_factory_add.inflow.to_array().Type != '<EMPTY>', 
+    Type=factory_add.inflow.to_array().Type != '<EMPTY>', 
     Region=regions
 )
 # data        = xr.concat([data_lines, data_add], dim='Type')
@@ -4940,14 +4969,14 @@ plt.show()
 #================================================================================
 #%%%% Sum & Per TECH - World
 
-data_lines = main_model_factory_lines.inflow.to_array().sel(
+data_lines = factory_lines.inflow.to_array().sel(
     time=slice(1971, None), 
-    Type=main_model_factory_lines.inflow.to_array().Type != '<EMPTY>'
+    Type=factory_lines.inflow.to_array().Type != '<EMPTY>'
 ).sum('Region')
 
-data_add = main_model_factory_add.inflow.to_array().sel(
+data_add = factory_add.inflow.to_array().sel(
     time=slice(1971, None), 
-    Type=main_model_factory_add.inflow.to_array().Type != '<EMPTY>'
+    Type=factory_add.inflow.to_array().Type != '<EMPTY>'
 ).sum('Region')
 
 # data        = xr.concat([data_lines, data_add], dim='Type')
@@ -5071,8 +5100,8 @@ df_iea_t_steel = df_iea_t_steel.pint.to("t")  # Convert kg -> t
 
 #%%%% 2 model ---------------------------------------------------
 
-data_lines  = main_model_factory_lines.inflow_materials.to_array().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
-data_add    = main_model_factory_add.inflow_materials.to_array().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
+data_lines  = factory_lines.inflow_materials.to_array().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
+data_add    = factory_add.inflow_materials.to_array().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
 
 data_lines  = data_lines.sel(time=slice(1971, None))
 data_add    = data_add.sel(time=slice(1971, None))
@@ -5132,8 +5161,8 @@ plt.show()
 
 #%%%% 2 model ---------------------------------------------------
 
-data_lines  = main_model_factory_lines.outflow_by_cohort_materials.to_array().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
-data_add    = main_model_factory_add.outflow_by_cohort_materials.to_array().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
+data_lines  = factory_lines.outflow_by_cohort_materials.to_array().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
+data_add    = factory_add.outflow_by_cohort_materials.to_array().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
 
 data_lines  = data_lines.sel(time=slice(1971, None))
 data_add    = data_add.sel(time=slice(1971, None))
@@ -5181,8 +5210,8 @@ plt.show()
 
 materials = ["Steel", "Concrete", "Aluminium", "Cu"]
 
-da_x = main_model_factory.stock_by_cohort_materials.sum('Region')
-da_x_sum = main_model_factory.stock_by_cohort_materials.sum('Region').sum(dim='Type')
+da_x = factory.stock_by_cohort_materials.sum('Region')
+da_x_sum = factory.stock_by_cohort_materials.sum('Region').sum(dim='Type')
 
 lines_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Lines' in t]).sum(dim='Type') # Get group sums by keyword and sum over types (sum over HV, MV and LV (and overground/underground for lines))
 transformers_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Transformers' in t]).sum(dim='Type')
@@ -5214,8 +5243,8 @@ plt.show()
 
 materials = ["Aluminium"]
 
-da_x = main_model_factory.stock_by_cohort_materials.sum('Region')
-da_x_sum = main_model_factory.stock_by_cohort_materials.sum('Region').sum(dim='Type')
+da_x = factory.stock_by_cohort_materials.sum('Region')
+da_x_sum = factory.stock_by_cohort_materials.sum('Region').sum(dim='Type')
 
 lines_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Lines' in t]).sum(dim='Type') # Get group sums by keyword and sum over types (sum over HV, MV and LV (and overground/underground for lines))
 transformers_sum = da_x.sel(Type=[t for t in da_x.Type.values if 'Transformers' in t]).sum(dim='Type')
@@ -5275,9 +5304,9 @@ plt.show()
 ###########################################################################################################
 #%%%%
 
-# da_x = main_model_factory.inflow.to_array()
-da_x = main_model_factory.inflow_materials.to_array()
-da_x = main_model_factory.inflow_materials.to_array().sum('Type')
+# da_x = factory.inflow.to_array()
+da_x = factory.inflow_materials.to_array()
+da_x = factory.inflow_materials.to_array().sum('Type')
 
 regions = da_x.Region.values[:2]  # First 2 regions
 # types_top = da_x.material.values[1:6]   # Types 1–10

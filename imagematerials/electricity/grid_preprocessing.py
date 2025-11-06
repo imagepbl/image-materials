@@ -472,7 +472,7 @@ grid_additions      = pd.read_csv(path_external_data_standard / 'grid_additions.
 # dynamic or scenario-dependent data (lifetimes & material intensity)
 
 # Average lifetime in years of grid elements
-lifetime_grid_elements = pd.read_csv(path_external_data_scenario  / 'operational_lifetime_grid.csv', index_col=0)
+grid_lifetime_data = pd.read_csv(path_external_data_scenario  / 'operational_lifetime_grid.csv', index_col=0)
 
 # Material intensity of grid lines (Hv, Mv & Lv; specific for underground vs. aboveground lines) (kg/km)
 materials_grid              = pd.read_csv(path_external_data_scenario / 'Materials_grid_dynamic.csv', index_col=[0,1])
@@ -486,11 +486,11 @@ materials_grid_additions    = pd.read_csv(path_external_data_scenario / 'Materia
 gcap_data: pd.DataFrame = read_mym_df(path_image_output / 'Gcap.out')
 
 # GDP per capita (US-dollar 2005, ppp), used to derive underground-aboveground ratio based on income levels
-gdp_pc: pd.DataFrame = read_mym_df(Path(path_base, "data", "raw", "image", scen_folder, "Socioeconomic", "gdp_pc.scn"))
+gdp_pc_data: pd.DataFrame = read_mym_df(Path(path_base, "data", "raw", "image", scen_folder, "Socioeconomic", "gdp_pc.scn"))
 
 
 ###########################################################################################################
-# Transform to xarray #
+#%%% Transform to xarray #
 
 knowledge_graph_region = create_region_graph()
 knowledge_graph_electr = create_electricity_graph()
@@ -498,10 +498,8 @@ knowledge_graph_electr = create_electricity_graph()
 # grid_length_Hv -----------
 # drop column name ('km')
 grid_length_hv_data.columns.name = None
-
 # line_types = ["hv_lines_overhead","hv_lines_underground","mv_lines_overhead","mv_lines_underground", "lv_lines_overhead","lv_lines_underground"]   # or whatever list
 line_types = ["HV - Lines - Overhead","HV - Lines - Underground","MV - Lines - Overhead","MV - Lines - Underground", "LV - Lines - Overhead","LV - Lines - Underground"]   # or whatever list
-
 grid_length = xr.DataArray(
     np.full((len(timeline_simulation), len(grid_length_hv_data.columns), len(line_types)), np.nan),
     dims=("Time","Region","Type"),
@@ -510,36 +508,43 @@ grid_length = xr.DataArray(
         "Region": grid_length_hv_data.columns.astype(str),
         "Type": line_types
     },
-    name="grid_length"
+    name="GridLength"
 )
-# fill only the first type
+# fill for now only with the data read in for HV in 2016
 grid_length.loc[dict(Time=2016, Type="HV - Lines - Overhead")] = grid_length_hv_data.values.reshape(-1)
 grid_length = prism.Q_(grid_length, "km")
 grid_length = knowledge_graph_region.rebroadcast_xarray(grid_length, output_coords=IMAGE_REGIONS, dim="Region") # convert region names to the standard names from IMAGE
 
 
 # # Lifetimes -------
-# values = gcap_lifetime_data["TechnicalLT"].unstack().to_numpy(dtype=float)
-# # Create coordinates
-# times = gcap_lifetime_data.index.levels[0].to_numpy()
-# types = gcap_lifetime_data.index.levels[1].to_numpy()
-# scipy_params = ["mean", "stdev"]
-# # Build full array: shape (ScipyParam, Time, Type)
-# data_array = np.stack([values, np.full_like(values, np.nan)], axis=0)
-# # Create DataArray
-# gcap_lifetime_xr = xr.DataArray(
-#     data_array,
-#     dims=["DistributionParams", "Cohort", "Type"],
-#     coords={
-#         "DistributionParams": scipy_params,
-#         "Cohort": times,
-#         "Type": [str(r) for r in types]
-#     },
-#     name="Lifetime"
-# )
-# gcap_lifetime_xr = prism.Q_(gcap_lifetime_xr, "year")
-# gcap_lifetime_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_lifetime_xr, output_coords=EPG_TECHNOLOGIES, dim="Type") # convert technology names to the standard names from TIMER
-# gcap_lifetime_xr = gcap_lifetime_xr.assign_coords(Type=np.array(gcap_lifetime_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
+# data only for lines, substations and transformer -> bring in knowledge_graph format: HV - Lines, MV - Lines, LV - Lines, HV - Transformers, etc.
+expanded_data = {}
+tech_types = []
+for tech in ["Lines", "Transformers", "Substations"]:
+    for level in ["HV", "MV", "LV"]:
+        new_col = f"{level} - {tech}"
+        tech_types.append(new_col)
+        expanded_data[new_col] = grid_lifetime_data[tech]
+grid_lifetime_data = pd.DataFrame(expanded_data, index=grid_lifetime_data.index)
+
+values = grid_lifetime_data.to_numpy(dtype=float)
+# Create coordinates
+times = grid_lifetime_data.index.to_numpy()
+scipy_params = ["mean", "stdev"]
+# Build full array: shape (ScipyParam, Time, Type)
+data_array = np.stack([values, np.full_like(values, np.nan)], axis=0)
+# Create DataArray
+grid_lifetime = xr.DataArray(
+    data_array,
+    dims=["DistributionParams", "Cohort", "Type"],
+    coords={
+        "DistributionParams": scipy_params,
+        "Cohort": times.astype(int),
+        "Type": [str(r) for r in tech_types]
+    },
+    name="Lifetime"
+)
+grid_lifetime = prism.Q_(grid_lifetime, "year")
 
 
 # # Material Intensities -------
@@ -566,31 +571,51 @@ grid_length = knowledge_graph_region.rebroadcast_xarray(grid_length, output_coor
 # gcap_materials_xr = gcap_materials_xr.assign_coords(Type=np.array(gcap_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
 
-# # Gcap ------
-# gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
-# gcap_data = gcap_data.loc[gcap_data['time'].isin(range(YEAR_START, YEAR_END + 1)), ['time', 'DIM_1', *range(1, len(EPG_TECHNOLOGIES) + 1)]]  # only keep relevant years and technology columns
-# # Extract coordinate labels
-# years = sorted(gcap_data['time'].unique())
-# regions = sorted(gcap_data['DIM_1'].unique())
-# techs = list(range(1, len(EPG_TECHNOLOGIES)+1))
-# # Convert to 3D array: (Year, Region, Tech)
-# data_array = gcap_data[techs].to_numpy().reshape(len(years), len(regions), len(techs))
-# # Build xarray DataArray
-# gcap_xr = xr.DataArray(
-#     data_array,
-#     dims=('Time', 'Region', 'Type'),
-#     coords={
-#         'Time': years,
-#         'Region': [str(r) for r in regions],
-#         'Type': [str(r) for r in techs]
-#     },
-#     name='GCap'
-# )
-# gcap_xr = prism.Q_(gcap_xr, "MW")
-# gcap_xr = knowledge_graph_region.rebroadcast_xarray(gcap_xr, output_coords=IMAGE_REGIONS, dim="Region") 
-# gcap_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_xr, output_coords=EPG_TECHNOLOGIES, dim="Type")
-# gcap_xr = gcap_xr.assign_coords(Type=np.array(gcap_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
+# Gcap ------
+gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
+gcap_data = gcap_data.loc[gcap_data['time'].isin(range(YEAR_START, YEAR_END + 1)), ['time', 'DIM_1', *range(1, len(EPG_TECHNOLOGIES) + 1)]]  # only keep relevant years and technology columns
+# Extract coordinate labels
+years = sorted(gcap_data['time'].unique())
+regions = sorted(gcap_data['DIM_1'].unique())
+techs = list(range(1, len(EPG_TECHNOLOGIES)+1))
+# Convert to 3D array: (Year, Region, Tech)
+data_array = gcap_data[techs].to_numpy().reshape(len(years), len(regions), len(techs))
+# Build xarray DataArray
+gcap = xr.DataArray(
+    data_array,
+    dims=('Time', 'Region', 'Type'),
+    coords={
+        'Time': years,
+        'Region': [str(r) for r in regions],
+        'Type': [str(r) for r in techs]
+    },
+    name='GCap'
+)
+gcap = prism.Q_(gcap, "MW")
+gcap = knowledge_graph_region.rebroadcast_xarray(gcap, output_coords=IMAGE_REGIONS, dim="Region") 
+gcap = knowledge_graph_electr.rebroadcast_xarray(gcap, output_coords=EPG_TECHNOLOGIES, dim="Type")
+gcap = gcap.assign_coords(Type=np.array(gcap.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
+
+# GDP ------
+gdp_pc_data = gdp_pc_data.iloc[:, :len(IMAGE_REGIONS)] # exclude empty column (27) and totals (28)
+# Extract coordinate labels
+years = sorted(gdp_pc_data.index)
+regions = sorted(gdp_pc_data.columns)
+# Convert to DD array: (Year, Region, Tech)
+data_array = gdp_pc_data.to_numpy() #.reshape(len(years), len(regions))
+# Build xarray DataArray
+gdp_pc = xr.DataArray(
+    data_array,
+    dims=('Time', 'Region'),
+    coords={
+        'Time': years,
+        'Region': [str(r) for r in regions]
+    },
+    name='GDP'
+)
+gdp_pc = prism.Q_(gdp_pc, "person")
+gdp_pc = knowledge_graph_region.rebroadcast_xarray(gdp_pc, output_coords=IMAGE_REGIONS, dim="Region") 
 
 
 
