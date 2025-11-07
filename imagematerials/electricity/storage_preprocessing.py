@@ -60,6 +60,12 @@ path_base = path_current.parent.parent # base path of the project -> image-mater
 
 path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
 
+path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
+path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scen_folder)
+# test if path_external_data_scenario exists and if not set to standard scenario
+if not path_external_data_scenario.exists():
+    path_external_data_scenario = Path(path_base, "data", "raw", "electricity", STANDARD_SCEN_EXTERNAL_DATA)
+print(f"Path to image output: {path_image_output}")
 
 assert path_image_output.is_dir()
 assert path_external_data_standard.is_dir()
@@ -81,10 +87,6 @@ idx = pd.IndexSlice
 
 # 1. External Data ======================================================================================== 
 
-
-# read in the storage share in 2016 according to IEA (Technology perspectives 2017)
-storage_IEA = pd.read_csv(path_external_data_standard / 'storage_IEA2016.csv', index_col=0)
-
 # read in the storage costs according to IRENA storage report & other sources in the SI
 storage_costs = pd.read_csv(path_external_data_standard / 'storage_cost.csv', index_col=0).transpose()
 
@@ -100,7 +102,7 @@ storage_density = pd.read_csv(path_external_data_standard / 'storage_density_kg_
 #read in the lifetime of storage technologies (in yrs). The lifetime is assumed to be 1.5* the number of cycles divided by the number of days in a year (assuming diurnal use, and 50% extra cycles before replacement, representing continued use below 80% remaining capacity) OR the maximum lifetime in years, which-ever comes first 
 storage_lifetime = pd.read_csv(path_external_data_standard / 'storage_lifetime.csv',index_col=0).transpose()
 
-kilometrage = pd.read_csv(path_external_data_scenario / 'kilometrage.csv', index_col='t')   #annual car mileage in kms/yr, based  mostly  on  Pauliuk  et  al.  (2012a)
+kilometrage = pd.read_csv(path_external_data_scenario / 'kilometrage.csv', index_col='t') #annual car mileage in kms/yr, based  mostly  on  Pauliuk  et  al.  (2012a)
 
 # material compositions (storage) in wt%
 storage_materials = pd.read_csv(path_external_data_standard / 'storage_materials_dynamic.csv',index_col=[0,1]).transpose()  # wt% of total battery weight for various materials, total battery weight is given by the density file above
