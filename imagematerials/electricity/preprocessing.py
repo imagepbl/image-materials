@@ -608,10 +608,6 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
 
     # 1. External Data ======================================================================================== 
 
-
-    # read in the storage share in 2016 according to IEA (Technology perspectives 2017)
-    storage_IEA = pd.read_csv(path_external_data_standard / 'storage_IEA2016.csv', index_col=0)
-
     # read in the storage costs according to IRENA storage report & other sources in the SI
     storage_costs = pd.read_csv(path_external_data_standard / 'storage_cost.csv', index_col=0).transpose()
 

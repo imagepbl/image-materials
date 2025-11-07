@@ -12,6 +12,83 @@ BATTERY_TYPE = prism.Dimension("battery")
 
 
 @prism.interface
+class ElectricVehicleBatteries(prism.Model):
+    """ Calculates # batteries per battery type and their weight
+    """
+
+    # Input data
+    battery_weights: xr.DataArray
+    battery_shares: xr.DataArray
+
+    # Dimensions
+    Region: prism.Coords[REGION]
+    Type: prism.Coords[STOCK_TYPE]
+    battery: prism.Coords[BATTERY_TYPE] 
+    Cohort: prism.Coords[COHORT]
+    Time: prism.Coords[TIME]
+
+    # Data dependencies
+    input_data: tuple[str] = ("battery_shares", "battery_weights",
+                              "stock_by_cohort", "inflow", "outflow_by_cohort") #
+    output_data: tuple[str] = ("inflow_battery_kg","stock_battery_kg","outflow_battery_kg")
+
+    
+    def compute_initial_values(self, time: prism.Timeline):
+        """
+        """
+        self.inflow_battery_kg = xr.DataArray(
+            0.0,
+            dims=("Time", "Cohort", "Region", "battery", "Type"),
+            coords={"Time":      self.Time,
+                    "Cohort":    self.Cohort,
+                    "Region":    self.Region,
+                    "battery":   self.battery,
+                    "Type":      self.Type})
+        self.inflow_battery_kg = prism.Q_(self.inflow_battery_kg, "kg")
+        
+        self.stock_battery_kg = xr.DataArray(
+            0.0,
+            dims=("Time", "Cohort", "Region", "battery", "Type"),
+            coords={"Time":      self.Time,
+                    "Cohort":    self.Cohort,
+                    "Region":    self.Region,
+                    "battery":   self.battery,
+                    "Type":      self.Type})
+        self.stock_battery_kg = prism.Q_(self.stock_battery_kg, "kg")
+        
+        self.outflow_battery_kg = xr.DataArray(
+            0.0,
+            dims=("Time", "Cohort", "Region", "battery", "Type"),
+            coords={"Time":      self.Time,
+                    "Cohort":    self.Cohort,
+                    "Region":    self.Region,
+                    "battery":   self.battery,
+                    "Type":      self.Type})
+        self.outflow_battery_kg = prism.Q_(self.outflow_battery_kg, "kg")
+        
+
+    def compute_values(self, time: prism.Time, inflow, stock_by_cohort, outflow_by_cohort):
+        """
+        
+        """
+         
+        t, dt = time.t, time.dt
+
+
+        # # battery_per_vehicles is defined for cohort, battery type, vehicle type, and material
+        # battery_per_vehicle = self.battery_weights * self.battery_shares * self.battery_materials
+        # drop battery dimension to reduce memory usage
+        self.inflow_battery_kg.loc[t] = inflow[t] * self.battery_shares.sel(Cohort = t) * self.battery_weights.sel(Cohort = t)#.sum("Type")
+        # assumption: battery lifetime = vehicle lifetime (no explicit battery stock calculation)
+        # cohort dimension calculation done internally by xarray (in that way battery shares of stock are used which are different from inflow shares)
+        self.stock_battery_kg.loc[t] = (stock_by_cohort.loc[t] * self.battery_shares * self.battery_weights)#.sum("Type") #.sum(["Cohort","battery"])
+        self.outflow_battery_kg.loc[t] = (outflow_by_cohort[t] * self.battery_shares * self.battery_weights)#.sum("Type") #.sum(["Cohort","battery"])
+
+
+
+
+
+@prism.interface
 class ElectricVehicleBatteries_weight(prism.Model):
     """ Calculates # batteries per battery type and their weight
     """

@@ -24,7 +24,7 @@ from imagematerials.model import GenericMainModel, GenericStocks, SharesInflowSt
 from imagematerials.factory import ModelFactory, Sector
 from imagematerials.concepts import create_electricity_graph, create_region_graph
 from imagematerials.electricity.utils import MNLogit, stock_tail, create_prep_data, stock_share_calc
-
+from imagematerials.vehicles.modelling_functions import interpolate
 
 from imagematerials.constants import IMAGE_REGIONS
 
@@ -106,7 +106,8 @@ storage_lifetime = pd.read_csv(path_external_data_standard / 'storage_lifetime.c
 storage_materials = pd.read_csv(path_external_data_standard / 'storage_materials_dynamic.csv',index_col=[0,1]).transpose()  # wt% of total battery weight for various materials, total battery weight is given by the density file above
 
 # Using the 250 Wh/kg on the kWh of the various batteries a weight (in kg) of the battery per vehicle category is determined
-battery_weights = pd.read_csv(path_external_data_standard / "battery_weights_kg.csv", index_col=[0,1])
+# TODO: where is this data from? kWh per battery type?
+battery_weights_data = pd.read_csv(path_external_data_standard / "battery_weights_kg.csv", index_col=[0,1])
 
 
 
@@ -226,15 +227,22 @@ storage_market_share = storage_market_share.sort_index(axis=0)
 
 #First we calculate the share of the inflow using only a few of the technologies in the storage market share
 #The selection represents only the batteries that are suitable for EV & mobile applications
-EV_battery_list = ['NiMH', 'LMO', 'NMC', 'NCA', 'LFP', 'Lithium Sulfur', 'Lithium Ceramic', 'Lithium-air']
+list_ev_batteries = ['NiMH', 'LMO', 'NMC', 'NCA', 'LFP', 'Lithium Sulfur', 'Lithium Ceramic', 'Lithium-air']
 #normalize the selection of market shares, so that total market share is 1 again (taking the relative share in the selected battery techs)
-market_share_EVs = storage_market_share[EV_battery_list].div(storage_market_share[EV_battery_list].sum(axis=1), axis=0)
+market_share_EVs = storage_market_share[list_ev_batteries].div(storage_market_share[list_ev_batteries].sum(axis=1), axis=0)
+
+
+###################
+# Battery Weights #
+###################
+
+# interpolate & complete series for battery weights, shares & composition
+# too
+battery_weights = interpolate(battery_weights_data.unstack())
 
 
 
-
-
-#%%% EV
+# TODO: make this to an xarray? 
 
 if SENS_ANALYSIS == 'high_stor':
    capacity_usable_PHEV = 0.025   # 2.5% of capacity of PHEV is usable as storage (in the pessimistic sensitivity variant)
@@ -244,10 +252,6 @@ else:
    capacity_usable_BEV  = 0.10    # 10% of capacity of BEVs is usable as storage
 
 
-
-
-
-#%%
 
 
 
@@ -262,10 +266,11 @@ ev_battery_materials = ev_battery_materials.melt(id_vars=["year", "material"], v
 ev_battery_materials = ev_battery_materials.pivot_table(index="year", columns=["technology", "material"], values="value")
 # Ensure proper MultiIndex column names
 ev_battery_materials.columns = pd.MultiIndex.from_tuples(ev_battery_materials.columns, names=["technology", "material"])
-
 xr_ev_battery_materials = dataset_to_array(pandas_to_xarray(ev_battery_materials, unit_mapping), *(["Cohort"], ["Type", "material"],))
+xr_ev_battery_materials = xr_ev_battery_materials.sel(Type=list_ev_batteries)
 xr_storage_density_interpol = dataset_to_array(pandas_to_xarray(storage_density_interpol, unit_mapping), *(["Cohort"], ["Type"],))
-oth_storage_materialintens = xr_ev_battery_materials * xr_storage_density_interpol
+xr_ev_density_interpol = xr_storage_density_interpol.sel(Type=list_ev_batteries)
+# oth_storage_materialintens = xr_ev_battery_materials * xr_storage_density_interpol
 
 
 
@@ -275,21 +280,39 @@ oth_storage_materialintens = xr_ev_battery_materials * xr_storage_density_interp
 
 # Conversion table for all coordinates, to be removed/adapted after input tables are fixed.
 conversion_table = {
-    "oth_storage_stock": (["Time"], ["SuperType", "Region"],),
-    "ev_battery_materials": (["Cohort"], ["Type", "material"],), #SubType
-    "oth_storage_shares": (["Cohort"], ["Type",]) #SubType
+    "battery_shares": (["Cohort"], ["battery"],),
+    "battery_weights": (["Cohort"], ["Type", "SubType"], {"Type": ["Type", "SubType"]}),
+    "ev_battery_materials": (["Cohort"], ["battery", "material"],),
+    "ev_energy_density": (["Cohort"], ["battery"],),
 }
 ## "gcap_materials_interpol": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]})
 
 results_dict = {
-        'oth_storage_stock': oth_storage_stock,
-        'ev_battery_materials': oth_storage_materialintens,
-        'oth_storage_lifetime_distr': oth_storage_lifetime_distr,
-        'oth_storage_shares': storage_market_share
+        'battery_shares': market_share_EVs,
+        'battery_weights': battery_weights,
+        'ev_battery_materials': xr_ev_battery_materials,
+        'ev_energy_density': xr_ev_density_interpol,
 }
 
-prep_data_oth_storage = create_prep_data(results_dict, conversion_table, unit_mapping)
-prep_data_oth_storage["stocks"] = prism.Q_(prep_data_oth_storage["stocks"], "MWh")
-prep_data_oth_storage["material_intensities"] = prism.Q_(prep_data_oth_storage["material_intensities"], "kg/kWh")
-prep_data_oth_storage["shares"] = prism.Q_(prep_data_oth_storage["shares"], "share")
-prep_data_oth_storage["set_unit_flexible"] = prism.U_(prep_data_oth_storage["stocks"]) # prism.U_ gives the unit back
+
+
+
+preprocessing_results_xarray = create_prep_data(results_dict, conversion_table, unit_mapping)
+
+# Set default battery weight to 0 # TODO: do I need this? (Luja has it in vehicles preprocessing)
+# xr_default_battery = xr.DataArray(
+#     0.0, 
+#     dims=("Cohort", "Type"),
+#     coords={
+#         "Cohort": preprocessing_results_xarray["battery_weights"].coords["Cohort"],
+#         "Type": ["Vehicles"]
+#     }
+# )
+# preprocessing_results_xarray["battery_weights"] = prism.Q_(xr.concat((preprocessing_results_xarray["battery_weights"], xr_default_battery), dim="Type"), "kg")
+
+
+# prep_data_oth_storage = create_prep_data(results_dict, conversion_table, unit_mapping)
+# prep_data_oth_storage["stocks"] = prism.Q_(prep_data_oth_storage["stocks"], "MWh")
+# prep_data_oth_storage["material_intensities"] = prism.Q_(prep_data_oth_storage["material_intensities"], "kg/kWh")
+# prep_data_oth_storage["shares"] = prism.Q_(prep_data_oth_storage["shares"], "share")
+# prep_data_oth_storage["set_unit_flexible"] = prism.U_(prep_data_oth_storage["stocks"]) # prism.U_ gives the unit back
