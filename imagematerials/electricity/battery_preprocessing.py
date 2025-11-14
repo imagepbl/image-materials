@@ -87,19 +87,19 @@ idx = pd.IndexSlice
 
 # 1. External Data ======================================================================================== 
 
-# read in the storage costs according to IRENA storage report & other sources in the SI
+# storage costs according to IRENA storage report & other sources in the SI
 storage_costs = pd.read_csv(path_external_data_standard / 'storage_cost.csv', index_col=0).transpose()
 
-# read in the assumed malus & bonus of storage costs (malus for advanced technologies, still under development; bonus for batteries currently used in EVs, we assume that a large volume of used EV batteries will be available and used for dedicated electricity storage, thus lowering costs), only the bonus remains by 2030
+# assumed malus & bonus of storage costs (malus for advanced technologies, still under development; bonus for batteries currently used in EVs, we assume that a large volume of used EV batteries will be available and used for dedicated electricity storage, thus lowering costs), only the bonus remains by 2030
 storage_malus = pd.read_csv(path_external_data_standard / 'storage_malus.csv', index_col=0).transpose()
 
-#read in the assumptions on the long-term price decline after 2050. Prices are in $ct / kWh electricity cycled (the fraction of the annual growth rate (determined based on 2018-2030) that will be applied after 2030, ranging from 0.25 to 1 - 0.25 means the price decline is not expected to continue strongly, while 1 means that the same (2018-2030) annual price decline is also applied between 2030 and 2050)
+# assumptions on the long-term price decline after 2050. Prices are in $ct / kWh electricity cycled (the fraction of the annual growth rate (determined based on 2018-2030) that will be applied after 2030, ranging from 0.25 to 1 - 0.25 means the price decline is not expected to continue strongly, while 1 means that the same (2018-2030) annual price decline is also applied between 2030 and 2050)
 storage_ltdecline = pd.Series(pd.read_csv(path_external_data_standard / 'storage_ltdecline.csv',index_col=0,  header=None).transpose().iloc[0])
 
-#read in the energy density assumptions (kg/kWh storage capacity - mass required to store one unit of energy — more mass per energy = worse performance)
+# energy density assumptions (kg/kWh storage capacity - mass required to store one unit of energy — more mass per energy = worse performance)
 storage_density = pd.read_csv(path_external_data_standard / 'storage_density_kg_per_kwh.csv',index_col=0).transpose()
 
-#read in the lifetime of storage technologies (in yrs). The lifetime is assumed to be 1.5* the number of cycles divided by the number of days in a year (assuming diurnal use, and 50% extra cycles before replacement, representing continued use below 80% remaining capacity) OR the maximum lifetime in years, which-ever comes first 
+# lifetime of storage technologies (in yrs). The lifetime is assumed to be 1.5* the number of cycles divided by the number of days in a year (assuming diurnal use, and 50% extra cycles before replacement, representing continued use below 80% remaining capacity) OR the maximum lifetime in years, which-ever comes first 
 storage_lifetime = pd.read_csv(path_external_data_standard / 'storage_lifetime.csv',index_col=0).transpose()
 
 # material compositions (storage) in wt%
@@ -109,6 +109,17 @@ storage_materials = pd.read_csv(path_external_data_standard / 'storage_materials
 # TODO: where is this data from? kWh per battery type?
 battery_weights_data = pd.read_csv(path_external_data_standard / "battery_weights_kg.csv", index_col=[0,1])
 
+# usable capacity of EV batteries for V2G applications (fraction of the total battery capacity that can be used for V2G)
+if SENS_ANALYSIS == 'high_stor':
+   # pessimistic sensitivity variant (meaning more additional storage is needed) -> smaller fraction of the EV capacities is usable as storage compared to the normal case
+#    capacity_usable_PHEV = 0.025   # 2.5% of capacity of PHEV is usable as storage (in the pessimistic sensitivity variant)
+#    capacity_usable_BEV  = 0.05    # 5  % of capacity of BEVs is usable as storage (in the pessimistic sensitivity variant)
+    ev_capacity_usable_rel = pd.read_csv(path_external_data_standard / 'ev_battery_capacity_usable_for_v2g_variant_high_storage.csv')
+else:
+    ev_capacity_usable_rel = pd.read_csv(path_external_data_standard / 'ev_battery_capacity_usable_for_v2g.csv')
+
+# fraction of EVs available for V2G (considering that not all EVs are capable of bi-directional loading, economic incentives are still missing, and not all owners are willing to provide V2G services)
+ev_fraction_v2g = pd.read_csv(path_external_data_standard / 'ev_fraction_available_for_v2g.csv', index_col=[0])
 
 
 # ##########################################################################################################
@@ -241,6 +252,9 @@ market_share_EVs = storage_market_share[list_ev_batteries].div(storage_market_sh
 battery_weights = interpolate(battery_weights_data.unstack())
 
 
+###################
+# Capacity #
+###################
 
 # TODO: make this to an xarray? 
 
@@ -253,8 +267,44 @@ else:
 
 
 
+# With a pre-determined battery capacity in 2018, we assume an increasing capacity (as an effect of an increased density) based on a fixed weight assumption
+BEV_dynamic_capacity = (weighted_average_density[2018] * BEV_CAPACITY_CURRENT) / weighted_average_density
+PHEV_dynamic_capacity = (weighted_average_density[2018] * PHEV_CAPACITY_CURRENT) / weighted_average_density
+
+# Define the V2G settings over time (assuming slow adoption to the maximum usable capacity)
+year_v2g_start = 2025-1 # -1 leads to usable capacity in 2025
+year_full_capacity = 2040
+v2g_usable = pd.Series(index=list(range(YEAR_START,YEAR_OUT+1)), name='years')    #fraction of the cars ready and willing to use v2g
+for year in list(range(YEAR_START,YEAR_OUT+1)):
+    if (year <= year_v2g_start):
+        v2g_usable[year] = 0
+    elif (year >= year_full_capacity):
+        v2g_usable[year] = 1
+v2g_usable = v2g_usable.interpolate()
+
+#total capacity per car connected to v2g (in %)
+max_capacity_BEV = v2g_usable * capacity_usable_BEV  
+max_capacity_PHEV = v2g_usable * capacity_usable_PHEV   
+
+#usable capacity per car connected to v2g (in kWh)
+usable_capacity_BEV = max_capacity_BEV.mul(BEV_dynamic_capacity[:YEAR_OUT])     
+usable_capacity_PHEV = max_capacity_PHEV.mul(PHEV_dynamic_capacity[:YEAR_OUT])  
 
 
+
+
+# # Vehicle storage in MWh #TODO: move to battery model
+# storage_BEV = storage_PHEV = pd.DataFrame().reindex_like(vehicles_BEV)
+# for region in region_list:
+#     storage_PHEV[region] = vehicles_PHEV[region].mul(usable_capacity_PHEV) /1000
+#     storage_BEV[region] = vehicles_BEV[region].mul(usable_capacity_BEV) /1000
+# storage_vehicles = storage_BEV + storage_PHEV
+
+
+
+########################
+# Material Intensities #
+########################
 # MIs: (years, material) index and technologies as columns -> years as index and (technology, Material) as columns
 
 # 2nd level of the MultiIndex are materials (1971,'Aluminium')
