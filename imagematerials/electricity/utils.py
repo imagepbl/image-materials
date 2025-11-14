@@ -238,6 +238,56 @@ def create_prep_data(results_dict, conversion_table, unit_mapping):
 #     return result_df
 
 
+def logistic(x, L, x0=None):
+    """ Compute logistic-curve values for given x values.
+
+    Parameters
+    ----------
+    x : array-like
+        Input x values (list, numpy array, pandas Series).
+    L : float or np.array (matching shape to x)
+        Maximum value (upper asymptote). If x has multiple columns, L can be either a float (applied to all columns) 
+        or an array with one value per column.
+    k : float
+        Growth rate (steepness of the curve).
+    x0 : float
+        Midpoint (x value where y = L/2). If None, defaults to the mit point of x.
+
+    Returns
+    -------
+    numpy.ndarray
+        Logistic-curve y values corresponding to x.
+    """
+
+    x0 = x0 if x0 is not None else x.iloc[[int(len(x)/2)],:].index[0]
+
+    x_fct = x.iloc[1:-1] # exclude first and last point to keep them fixed
+    delta_x = x_fct.iloc[-1] - x_fct.iloc[0]
+    k = 9 / delta_x # 9 was set by try and error to get a good steepness
+    z = np.clip(-k * (x_fct - x_fct.loc[x0]), -700, 700)  # limit range to avoid overflow
+    y_logistic = L / (1 + np.exp(z))
+    y_logistic.loc[x.index[0]] = x.iloc[0]
+    y_logistic.loc[x.index[-1]] = L
+
+    return y_logistic
+
+
+def quadratic(x):
+    """ Compute quadratic values for given x values.
+
+    Parameters
+    ----------
+    x : array-like
+        Input x values (list, numpy array, pandas Series).
+
+    Returns
+    -------
+    numpy.ndarray
+        Quadratic y values corresponding to x.
+    """
+    return x**2
+
+
 def print_df_info(df, name):
     """
     Prints basic information about a DataFrame, including its shape, columns, and first few index values.

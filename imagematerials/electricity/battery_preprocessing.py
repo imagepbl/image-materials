@@ -11,6 +11,7 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 from matplotlib.ticker import StrMethodFormatter
 from matplotlib.ticker import ScalarFormatter
+from itertools import product
 
 # path_current = Path(__file__).resolve().parent # absolute path of file
 # path_base = path_current.parent.parent # base path of the project -> image-materials
@@ -22,8 +23,8 @@ from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
 from imagematerials.model import GenericMainModel, GenericStocks, SharesInflowStocks, Maintenance, GenericMaterials, MaterialIntensities
 from imagematerials.factory import ModelFactory, Sector
-from imagematerials.concepts import create_electricity_graph, create_region_graph
-from imagematerials.electricity.utils import MNLogit, stock_tail, create_prep_data, stock_share_calc
+from imagematerials.concepts import create_electricity_graph, create_region_graph, create_vehicle_graph
+from imagematerials.electricity.utils import MNLogit, stock_tail, create_prep_data, logistic, quadratic
 from imagematerials.vehicles.modelling_functions import interpolate
 
 from imagematerials.constants import IMAGE_REGIONS
@@ -119,7 +120,7 @@ else:
     ev_capacity_usable_rel = pd.read_csv(path_external_data_standard / 'ev_battery_capacity_usable_for_v2g.csv')
 
 # fraction of EVs available for V2G (considering that not all EVs are capable of bi-directional loading, economic incentives are still missing, and not all owners are willing to provide V2G services)
-ev_fraction_v2g = pd.read_csv(path_external_data_standard / 'ev_fraction_available_for_v2g.csv', index_col=[0])
+ev_fraction_v2g_data = pd.read_csv(path_external_data_standard / 'ev_fraction_available_for_v2g.csv', index_col=[0])
 
 
 # ##########################################################################################################
@@ -253,18 +254,56 @@ battery_weights = interpolate(battery_weights_data.unstack())
 
 
 ###################
-# Capacity #
+#%% Capacity #
 ###################
 
 # TODO: make this to an xarray? 
 
-if SENS_ANALYSIS == 'high_stor':
-   capacity_usable_PHEV = 0.025   # 2.5% of capacity of PHEV is usable as storage (in the pessimistic sensitivity variant)
-   capacity_usable_BEV  = 0.05    # 5  % of capacity of BEVs is usable as storage (in the pessimistic sensitivity variant)
-else: 
-   capacity_usable_PHEV = 0.05    # 5% of capacity of PHEV is usable as storage
-   capacity_usable_BEV  = 0.10    # 10% of capacity of BEVs is usable as storage
+# if SENS_ANALYSIS == 'high_stor':
+#    capacity_usable_PHEV = 0.025   # 2.5% of capacity of PHEV is usable as storage (in the pessimistic sensitivity variant)
+#    capacity_usable_BEV  = 0.05    # 5  % of capacity of BEVs is usable as storage (in the pessimistic sensitivity variant)
+# else: 
+#    capacity_usable_PHEV = 0.05    # 5% of capacity of PHEV is usable as storage
+#    capacity_usable_BEV  = 0.10    # 10% of capacity of BEVs is usable as storage
 
+
+
+
+x = ev_fraction_v2g_data.reindex(range(ev_fraction_v2g_data.index[0],ev_fraction_v2g_data.index[-1]+1)).interpolate(method='linear')
+y = logistic(x, L=x.iloc[-1].values)
+# y = quadratic(x)
+ev_fraction_v2g = ev_fraction_v2g_data.reindex(range(YEAR_FIRST_GRID,YEAR_OUT+1)).interpolate(method='linear') # create dataframe with full index; values before first data points will be Nans, between data points interpolated linearly, after last data point will be last known value
+ev_fraction_v2g.loc[:ev_fraction_v2g_data.index[0]] = 0 # set values before first data point to 0
+ev_fraction_v2g.loc[ev_fraction_v2g_data.index[0]:ev_fraction_v2g_data.index[1]] = y # set values between (originally) first and last data point to quadratic/logistic interpolation
+
+# plt.figure()
+# plt.plot(ev_fraction_v2g_test.loc[2010:2060].index,ev_fraction_v2g_test.loc[2010:2060], label='')
+# plt.scatter(ev_fraction_v2g_test.loc[2023:2026].index,ev_fraction_v2g_test.iloc[:, 0].loc[2023:2026], label='')
+# plt.scatter(ev_fraction_v2g_test.loc[2048:2052].index,ev_fraction_v2g_test.iloc[:, 0].loc[2048:2052], label='')
+
+
+knowledge_graph_vhc = create_vehicle_graph()
+vehicle_subtypes = ["BEV", "FCV", "HEV", "ICE", "PHEV", "Trolley"]
+vehicle_supertypes = ["Cars", "Heavy Freight Trucks", "Light Commercial Vehicles",
+                    "Medium Freight Trucks", "Regular Buses", "Midi Buses"]
+combinations = [f"{super_type} - {sub_type}" for super_type, sub_type in product(vehicle_supertypes, vehicle_subtypes)]
+
+# TODO: have all types
+years = ev_fraction_v2g.index
+techs = ev_fraction_v2g.columns.names
+# Convert to 3D array: (Material, Year, Tech)
+data_array = ev_fraction_v2g.to_numpy()#.reshape(len(materials), len(years), len(techs))
+# Build xarray DataArray
+ev_fraction_v2g_xr = xr.DataArray(
+    data_array,
+    dims=('Time', 'Type'),
+    coords={
+        'Time': years,
+        'Type': techs
+    },
+    name='MaterialIntensities'
+)
+ev_fraction_v2g_xr = prism.Q_(ev_fraction_v2g_xr, "fraction")
 
 
 # With a pre-determined battery capacity in 2018, we assume an increasing capacity (as an effect of an increased density) based on a fixed weight assumption
