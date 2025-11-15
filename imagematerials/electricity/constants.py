@@ -50,35 +50,6 @@ unit_mapping = {
     'MWh': ureg.megawatthour, #added
 }
 
-REGIONS_TIMER = [ # TODO: check if this is true
-    "Canada",
-    "USA",
-    "Mexico",
-    "Rest of Central America",
-    "Brazil",
-    "Rest of South America",
-    "Northern Africa",
-    "Western Africa",
-    "Eastern Africa",
-    "South Africa",
-    "Western Europe",
-    "Central Europe",
-    "Turkey",
-    "Ukraine +",
-    "Asian-Stan",
-    "Russia +",
-    "Middle East",
-    "India +",
-    "Korea",
-    "China +",
-    "Southeastern Asia",
-    "Indonesia +",
-    "Japan",
-    "Oceania",
-    "Rest of South Asia",
-    "Rest of Southern Africa"
-]
-
 #  #regions in the file kilometrage.csv are like this:
 region_list_old  = [
     'Canada',
@@ -208,7 +179,7 @@ LIGHT_COMMERCIAL_VEHICLE_SHARE = 0.04 # TODO: is this even used somewhere?
 BEV_CAPACITY_CURRENT  = 59.6    #kWh current battery capacity of full electric vehicles, see current_specs.xlsx
 PHEV_CAPACITY_CURRENT = 11.2    #kWh current battery capacity of plugin electric vehicles, see current_specs.xlsx
 
-
+EV_BATTERIES = ['NiMH', 'LMO', 'NMC', 'NCA', 'LFP', 'Lithium Sulfur', 'Lithium Ceramic', 'Lithium-air']
 
 # Storage related constants ---------------------------------------------
 

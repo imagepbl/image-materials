@@ -43,6 +43,7 @@ from imagematerials.electricity.constants import (
     LOAD_FACTOR,
     BEV_CAPACITY_CURRENT,
     PHEV_CAPACITY_CURRENT,
+    EV_BATTERIES,
     unit_mapping
 )
 
@@ -242,9 +243,9 @@ storage_market_share = storage_market_share.sort_index(axis=0)
 
 #First we calculate the share of the inflow using only a few of the technologies in the storage market share
 #The selection represents only the batteries that are suitable for EV & mobile applications
-list_ev_batteries = ['NiMH', 'LMO', 'NMC', 'NCA', 'LFP', 'Lithium Sulfur', 'Lithium Ceramic', 'Lithium-air']
+
 #normalize the selection of market shares, so that total market share is 1 again (taking the relative share in the selected battery techs)
-market_share_EVs = storage_market_share[list_ev_batteries].div(storage_market_share[list_ev_batteries].sum(axis=1), axis=0)
+market_share_EVs = storage_market_share[EV_BATTERIES].div(storage_market_share[EV_BATTERIES].sum(axis=1), axis=0)
 
 
 ###################
@@ -260,17 +261,7 @@ battery_weights = interpolate(battery_weights_data.unstack())
 #%% Capacity #
 ###################
 
-# TODO: make this to an xarray? 
-
-# if SENS_ANALYSIS == 'high_stor':
-#    capacity_usable_PHEV = 0.025   # 2.5% of capacity of PHEV is usable as storage (in the pessimistic sensitivity variant)
-#    capacity_usable_BEV  = 0.05    # 5  % of capacity of BEVs is usable as storage (in the pessimistic sensitivity variant)
-# else: 
-#    capacity_usable_PHEV = 0.05    # 5% of capacity of PHEV is usable as storage
-#    capacity_usable_BEV  = 0.10    # 10% of capacity of BEVs is usable as storage
-
-
-
+#%%% 1. EV fraction available for V2G #
 
 x = ev_fraction_v2g_data.reindex(range(ev_fraction_v2g_data.index[0],ev_fraction_v2g_data.index[-1]+1)).interpolate(method='linear')
 y = logistic(x, L=x.iloc[-1].values)
@@ -314,6 +305,7 @@ vhc_fraction_v2g_xr = xr.DataArray(
 )
 vhc_fraction_v2g_xr = prism.Q_(vhc_fraction_v2g_xr, "fraction")
 
+#%%% 2. Dynamic battery capacity #
 
 # With a pre-determined battery capacity in 2018, we assume an increasing capacity (as an effect of an increased density) based on a fixed weight assumption
 BEV_dynamic_capacity = (weighted_average_density[2018] * BEV_CAPACITY_CURRENT) / weighted_average_density
@@ -365,9 +357,9 @@ ev_battery_materials = ev_battery_materials.pivot_table(index="year", columns=["
 # Ensure proper MultiIndex column names
 ev_battery_materials.columns = pd.MultiIndex.from_tuples(ev_battery_materials.columns, names=["technology", "material"])
 xr_ev_battery_materials = dataset_to_array(pandas_to_xarray(ev_battery_materials, unit_mapping), *(["Cohort"], ["Type", "material"],))
-xr_ev_battery_materials = xr_ev_battery_materials.sel(Type=list_ev_batteries)
+xr_ev_battery_materials = xr_ev_battery_materials.sel(Type=EV_BATTERIES)
 xr_storage_density_interpol = dataset_to_array(pandas_to_xarray(storage_density_interpol, unit_mapping), *(["Cohort"], ["Type"],))
-xr_ev_density_interpol = xr_storage_density_interpol.sel(Type=list_ev_batteries)
+xr_ev_density_interpol = xr_storage_density_interpol.sel(Type=EV_BATTERIES)
 # oth_storage_materialintens = xr_ev_battery_materials * xr_storage_density_interpol
 
 
