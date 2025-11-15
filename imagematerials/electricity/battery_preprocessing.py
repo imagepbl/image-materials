@@ -28,7 +28,10 @@ from imagematerials.electricity.utils import MNLogit, stock_tail, create_prep_da
 from imagematerials.vehicles.modelling_functions import interpolate
 
 from imagematerials.constants import IMAGE_REGIONS
-
+from imagematerials.vehicles.constants import (
+    typical_modes,
+    drive_trains
+)
 from imagematerials.electricity.constants import (
     STANDARD_SCEN_EXTERNAL_DATA,
     YEAR_FIRST,
@@ -283,27 +286,33 @@ ev_fraction_v2g.loc[ev_fraction_v2g_data.index[0]:ev_fraction_v2g_data.index[1]]
 
 
 knowledge_graph_vhc = create_vehicle_graph()
-vehicle_subtypes = ["BEV", "FCV", "HEV", "ICE", "PHEV", "Trolley"]
-vehicle_supertypes = ["Cars", "Heavy Freight Trucks", "Light Commercial Vehicles",
-                    "Medium Freight Trucks", "Regular Buses", "Midi Buses"]
-combinations = [f"{super_type} - {sub_type}" for super_type, sub_type in product(vehicle_supertypes, vehicle_subtypes)]
+# create list of all vehicle types (combinations of vehicles type (Cars, Medium Freight Trucks,...) and drive trains (ICE, BEV,...))
+vehicle_list = [f"{super_type} - {sub_type}" for super_type, sub_type in product(typical_modes, drive_trains)]
 
-# TODO: have all types
-years = ev_fraction_v2g.index
-techs = ev_fraction_v2g.columns.names
-# Convert to 3D array: (Material, Year, Tech)
-data_array = ev_fraction_v2g.to_numpy()#.reshape(len(materials), len(years), len(techs))
+# Create an empty expanded df
+vhc_fraction_v2g = pd.DataFrame(index=ev_fraction_v2g.index)
+# transfer the values based on the drive train
+for item in vehicle_list:
+    if item.endswith("BEV"):
+        vhc_fraction_v2g[item] = ev_fraction_v2g["BEV"]
+    elif item.endswith("PHEV"):
+        vhc_fraction_v2g[item] = ev_fraction_v2g["PHEV"]
+    else:
+        vhc_fraction_v2g[item] = 0 # other drive trains are not V2G capable
 # Build xarray DataArray
-ev_fraction_v2g_xr = xr.DataArray(
+years = vhc_fraction_v2g.index.to_numpy()
+techs = vhc_fraction_v2g.columns
+data_array = vhc_fraction_v2g.to_numpy()
+vhc_fraction_v2g_xr = xr.DataArray(
     data_array,
     dims=('Time', 'Type'),
     coords={
         'Time': years,
         'Type': techs
     },
-    name='MaterialIntensities'
+    name='VehicleFractionV2g'
 )
-ev_fraction_v2g_xr = prism.Q_(ev_fraction_v2g_xr, "fraction")
+vhc_fraction_v2g_xr = prism.Q_(vhc_fraction_v2g_xr, "fraction")
 
 
 # With a pre-determined battery capacity in 2018, we assume an increasing capacity (as an effect of an increased density) based on a fixed weight assumption
