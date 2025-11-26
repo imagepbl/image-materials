@@ -29,13 +29,6 @@ imagematerials.distribution module
 ..    :undoc-members:
 ..    :show-inheritance:
 
-imagematerials.stock module
----------------------------
-
-.. automodule:: imagematerials.stock
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
 imagematerials.survival module
 ------------------------------
