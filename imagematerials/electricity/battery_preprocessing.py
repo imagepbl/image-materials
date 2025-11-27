@@ -102,6 +102,7 @@ storage_malus = pd.read_csv(path_external_data_standard / 'storage_malus.csv', i
 storage_ltdecline = pd.Series(pd.read_csv(path_external_data_standard / 'storage_ltdecline.csv',index_col=0,  header=None).transpose().iloc[0])
 
 # energy density assumptions (kg/kWh storage capacity - mass required to store one unit of energy — more mass per energy = worse performance)
+# TODO: read in directly IRENA data?
 storage_density = pd.read_csv(path_external_data_standard / 'storage_density_kg_per_kwh.csv',index_col=0).transpose()
 
 # lifetime of storage technologies (in yrs). The lifetime is assumed to be 1.5* the number of cycles divided by the number of days in a year (assuming diurnal use, and 50% extra cycles before replacement, representing continued use below 80% remaining capacity) OR the maximum lifetime in years, which-ever comes first 
@@ -114,14 +115,14 @@ storage_materials = pd.read_csv(path_external_data_standard / 'storage_materials
 # TODO: where is this data from? kWh per battery type?
 battery_weights_data = pd.read_csv(path_external_data_standard / "battery_weights_kg.csv", index_col=[0,1])
 
-# usable capacity of EV batteries for V2G applications (fraction of the total battery capacity that can be used for V2G)
+# usable capacity of EV batteries for V2G applications (relative: fraction of the total battery capacity that can be used for V2G)
 if SENS_ANALYSIS == 'high_stor':
    # pessimistic sensitivity variant (meaning more additional storage is needed) -> smaller fraction of the EV capacities is usable as storage compared to the normal case
 #    capacity_usable_PHEV = 0.025   # 2.5% of capacity of PHEV is usable as storage (in the pessimistic sensitivity variant)
 #    capacity_usable_BEV  = 0.05    # 5  % of capacity of BEVs is usable as storage (in the pessimistic sensitivity variant)
-    ev_capacity_usable_rel = pd.read_csv(path_external_data_standard / 'ev_battery_capacity_usable_for_v2g_variant_high_storage.csv')
+    ev_capacity_fraction_v2g = pd.read_csv(path_external_data_standard / 'ev_battery_capacity_usable_for_v2g_variant_high_storage.csv')
 else:
-    ev_capacity_usable_rel = pd.read_csv(path_external_data_standard / 'ev_battery_capacity_usable_for_v2g.csv')
+    ev_capacity_fraction_v2g = pd.read_csv(path_external_data_standard / 'ev_battery_capacity_usable_for_v2g.csv')
 
 # fraction of EVs available for V2G (considering that not all EVs are capable of bi-directional loading, economic incentives are still missing, and not all owners are willing to provide V2G services)
 ev_fraction_v2g_data = pd.read_csv(path_external_data_standard / 'ev_fraction_available_for_v2g.csv', index_col=[0])
@@ -131,7 +132,9 @@ ev_fraction_v2g_data = pd.read_csv(path_external_data_standard / 'ev_fraction_av
 # %% Prepare general variables
 # ##########################################################################################################
 
-# Calculations used in both 'vehicle battery storage' and 'other storage'
+# create list of all vehicle types (combinations of vehicles type (Cars, Medium Freight Trucks,...) and drive trains (ICE, BEV,...))
+vehicle_list = [f"{super_type} - {sub_type}" for super_type, sub_type in product(typical_modes, drive_trains)]
+
 
 ##################
 # Interpolations #
@@ -261,7 +264,7 @@ battery_weights = interpolate(battery_weights_data.unstack())
 #%% Capacity #
 ###################
 
-#%%% 1. EV fraction available for V2G #
+#%%% 5. EV fraction available for V2G #
 
 x = ev_fraction_v2g_data.reindex(range(ev_fraction_v2g_data.index[0],ev_fraction_v2g_data.index[-1]+1)).interpolate(method='linear')
 y = logistic(x, L=x.iloc[-1].values)
@@ -275,26 +278,19 @@ ev_fraction_v2g.loc[ev_fraction_v2g_data.index[0]:ev_fraction_v2g_data.index[1]]
 # plt.scatter(ev_fraction_v2g_test.loc[2023:2026].index,ev_fraction_v2g_test.iloc[:, 0].loc[2023:2026], label='')
 # plt.scatter(ev_fraction_v2g_test.loc[2048:2052].index,ev_fraction_v2g_test.iloc[:, 0].loc[2048:2052], label='')
 
-
-knowledge_graph_vhc = create_vehicle_graph()
-# create list of all vehicle types (combinations of vehicles type (Cars, Medium Freight Trucks,...) and drive trains (ICE, BEV,...))
-vehicle_list = [f"{super_type} - {sub_type}" for super_type, sub_type in product(typical_modes, drive_trains)]
-
 # Create an empty expanded df
 vhc_fraction_v2g = pd.DataFrame(index=ev_fraction_v2g.index)
-# transfer the values based on the drive train
-for item in vehicle_list:
-    if item.endswith("BEV"):
-        vhc_fraction_v2g[item] = ev_fraction_v2g["BEV"]
-    elif item.endswith("PHEV"):
-        vhc_fraction_v2g[item] = ev_fraction_v2g["PHEV"]
+# transfer the values for the relevant vehicle types (for now: Cars - BEV and Cars - PHEV)
+for item in vehicle_list: # TODO: is this even necessary? If not all coordinates are defined, maybe they are just ignored in later calculations?
+    if item in ev_fraction_v2g.columns:
+        vhc_fraction_v2g[item] = ev_fraction_v2g[item]
     else:
         vhc_fraction_v2g[item] = 0 # other drive trains are not V2G capable
 # Build xarray DataArray
 years = vhc_fraction_v2g.index.to_numpy()
 techs = vhc_fraction_v2g.columns
 data_array = vhc_fraction_v2g.to_numpy()
-vhc_fraction_v2g_xr = xr.DataArray(
+xr_vhc_fraction_v2g = xr.DataArray(
     data_array,
     dims=('Time', 'Type'),
     coords={
@@ -303,32 +299,49 @@ vhc_fraction_v2g_xr = xr.DataArray(
     },
     name='VehicleFractionV2g'
 )
-vhc_fraction_v2g_xr = prism.Q_(vhc_fraction_v2g_xr, "fraction")
+xr_vhc_fraction_v2g = prism.Q_(xr_vhc_fraction_v2g, "fraction")
+
+#%%% 6. capacity used for V2G
+
+# Build xarray DataArray
+techs = ev_capacity_fraction_v2g.columns
+data_array = ev_capacity_fraction_v2g.to_numpy().ravel()  # flatten to 1D
+xr_capacity_fraction_v2g = xr.DataArray(
+    data_array,
+    dims=('Type'),
+    coords={
+        'Type': techs
+    },
+    name='CapacityFractionV2g'
+)
+xr_capacity_fraction_v2g = prism.Q_(xr_capacity_fraction_v2g, "fraction")
+
+
 
 #%%% 2. Dynamic battery capacity #
 
 # With a pre-determined battery capacity in 2018, we assume an increasing capacity (as an effect of an increased density) based on a fixed weight assumption
-BEV_dynamic_capacity = (weighted_average_density[2018] * BEV_CAPACITY_CURRENT) / weighted_average_density
-PHEV_dynamic_capacity = (weighted_average_density[2018] * PHEV_CAPACITY_CURRENT) / weighted_average_density
+# BEV_dynamic_capacity = (weighted_average_density[2018] * BEV_CAPACITY_CURRENT) / weighted_average_density
+# PHEV_dynamic_capacity = (weighted_average_density[2018] * PHEV_CAPACITY_CURRENT) / weighted_average_density
 
 # Define the V2G settings over time (assuming slow adoption to the maximum usable capacity)
-year_v2g_start = 2025-1 # -1 leads to usable capacity in 2025
-year_full_capacity = 2040
-v2g_usable = pd.Series(index=list(range(YEAR_START,YEAR_OUT+1)), name='years')    #fraction of the cars ready and willing to use v2g
-for year in list(range(YEAR_START,YEAR_OUT+1)):
-    if (year <= year_v2g_start):
-        v2g_usable[year] = 0
-    elif (year >= year_full_capacity):
-        v2g_usable[year] = 1
-v2g_usable = v2g_usable.interpolate()
+# year_v2g_start = 2025-1 # -1 leads to usable capacity in 2025
+# year_full_capacity = 2040
+# v2g_usable = pd.Series(index=list(range(YEAR_START,YEAR_OUT+1)), name='years')    #fraction of the cars ready and willing to use v2g
+# for year in list(range(YEAR_START,YEAR_OUT+1)):
+#     if (year <= year_v2g_start):
+#         v2g_usable[year] = 0
+#     elif (year >= year_full_capacity):
+#         v2g_usable[year] = 1
+# v2g_usable = v2g_usable.interpolate()
 
-#total capacity per car connected to v2g (in %)
-max_capacity_BEV = v2g_usable * capacity_usable_BEV  
-max_capacity_PHEV = v2g_usable * capacity_usable_PHEV   
+# #total capacity per car connected to v2g (in %)
+# max_capacity_BEV = v2g_usable * capacity_usable_BEV  
+# max_capacity_PHEV = v2g_usable * capacity_usable_PHEV   
 
-#usable capacity per car connected to v2g (in kWh)
-usable_capacity_BEV = max_capacity_BEV.mul(BEV_dynamic_capacity[:YEAR_OUT])     
-usable_capacity_PHEV = max_capacity_PHEV.mul(PHEV_dynamic_capacity[:YEAR_OUT])  
+# #usable capacity per car connected to v2g (in kWh)
+# usable_capacity_BEV = max_capacity_BEV.mul(BEV_dynamic_capacity[:YEAR_OUT])     
+# usable_capacity_PHEV = max_capacity_PHEV.mul(PHEV_dynamic_capacity[:YEAR_OUT])  
 
 
 
@@ -374,14 +387,18 @@ conversion_table = {
     "battery_weights": (["Cohort"], ["Type", "SubType"], {"Type": ["Type", "SubType"]}),
     "ev_battery_materials": (["Cohort"], ["battery", "material"],),
     "ev_energy_density": (["Cohort"], ["battery"],),
+    "vhc_fraction_v2g": (["Time"], ["Type"]), # TODO: check if Time coord is ok here
+    "capacity_fraction_v2g": (["Type"]),
 }
 ## "gcap_materials_interpol": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]})
 
 results_dict = {
-        'battery_shares': market_share_EVs,
-        'battery_weights': battery_weights,
-        'ev_battery_materials': xr_ev_battery_materials,
-        'ev_energy_density': xr_ev_density_interpol,
+        "battery_shares": market_share_EVs, # 1
+        "battery_weights": battery_weights, #2
+        "ev_battery_materials": xr_ev_battery_materials, #3
+        "ev_energy_density": xr_ev_density_interpol, #4
+        "vhc_fraction_v2g": xr_vhc_fraction_v2g, #5
+        "capacity_fraction_v2g": xr_capacity_fraction_v2g, #6
 }
 
 
