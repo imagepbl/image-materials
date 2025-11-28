@@ -1,4 +1,4 @@
-#%%
+# %%
 import pandas as pd
 import numpy as np
 import os
@@ -86,24 +86,24 @@ idx = pd.IndexSlice
 
 #----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
-#%%% 2.1) Read in files
+# %% I. Read in files
 ###########################################################################################################
 #----------------------------------------------------------------------------------------------------------
 
 # 1. External Data ======================================================================================== 
 
-# storage costs according to IRENA storage report & other sources in the SI
+# storage costs according to IRENA storage report & other sources in the SI ($ct/kWh electricity cycled)
 storage_costs = pd.read_csv(path_external_data_standard / 'storage_cost.csv', index_col=0).transpose()
 
 # assumed malus & bonus of storage costs (malus for advanced technologies, still under development; bonus for batteries currently used in EVs, we assume that a large volume of used EV batteries will be available and used for dedicated electricity storage, thus lowering costs), only the bonus remains by 2030
-storage_malus = pd.read_csv(path_external_data_standard / 'storage_malus.csv', index_col=0).transpose()
+costs_correction = pd.read_csv(path_external_data_standard / 'storage_malus.csv', index_col=0).transpose()
 
-# assumptions on the long-term price decline after 2050. Prices are in $ct / kWh electricity cycled (the fraction of the annual growth rate (determined based on 2018-2030) that will be applied after 2030, ranging from 0.25 to 1 - 0.25 means the price decline is not expected to continue strongly, while 1 means that the same (2018-2030) annual price decline is also applied between 2030 and 2050)
-storage_ltdecline = pd.Series(pd.read_csv(path_external_data_standard / 'storage_ltdecline.csv',index_col=0,  header=None).transpose().iloc[0])
+# assumptions on the long-term price decline after 2050. the fraction of the annual growth rate (determined based on 2018-2030) that will be applied after 2030, ranging from 0.25 to 1 - 0.25 means the price decline is not expected to continue strongly, while 1 means that the same (2018-2030) annual price decline is also applied between 2030 and 2050)
+costs_decline_longterm = pd.Series(pd.read_csv(path_external_data_standard / 'storage_ltdecline.csv',index_col=0,  header=None).transpose().iloc[0]) 
 
-# energy density assumptions (kg/kWh storage capacity - mass required to store one unit of energy — more mass per energy = worse performance)
+# INVERS energy density (note that the unit is kg/kWh, the invers of energy density: storage capacity - mass required to store one unit of energy —> more mass per energy = worse performance)
 # TODO: read in directly IRENA data?
-storage_density = pd.read_csv(path_external_data_standard / 'storage_density_kg_per_kwh.csv',index_col=0).transpose()
+energy_density = pd.read_csv(path_external_data_standard / 'storage_density_kg_per_kwh.csv',index_col=0).transpose()
 
 # lifetime of storage technologies (in yrs). The lifetime is assumed to be 1.5* the number of cycles divided by the number of days in a year (assuming diurnal use, and 50% extra cycles before replacement, representing continued use below 80% remaining capacity) OR the maximum lifetime in years, which-ever comes first 
 storage_lifetime = pd.read_csv(path_external_data_standard / 'storage_lifetime.csv',index_col=0).transpose()
@@ -132,56 +132,199 @@ ev_fraction_v2g_data = pd.read_csv(path_external_data_standard / 'ev_fraction_av
 # %% Prepare general variables
 # ##########################################################################################################
 
+
+###########################################################################################################
+# %%% Transform to xarray #
+
 # create list of all vehicle types (combinations of vehicles type (Cars, Medium Freight Trucks,...) and drive trains (ICE, BEV,...))
 vehicle_list = [f"{super_type} - {sub_type}" for super_type, sub_type in product(typical_modes, drive_trains)]
 
 
-##################
-# Interpolations #
-##################
+# 1. Market Shares -----------------------------------------------------------------------------
 
-# storage = storage.iloc[:, :26]    # drop global total column and empty (27) column
+# 1.1 storage costs
+years = storage_costs.index.to_numpy()
+techs = storage_costs.columns
+data_array = storage_costs.to_numpy()#.ravel()  # flatten to 1D
+xr_storage_costs = xr.DataArray(
+    data_array,
+    dims=('Cohort', 'Type'),
+    coords={
+        'Cohort': years,
+        'Type': techs
+    },
+    name='StorageCosts'
+)
+xr_storage_costs = prism.Q_(xr_storage_costs, "USDcent/kWh")
 
-# # J: in high storage scenario the storage demand linearly increases between 2021 and 2050 compared to its original value until it is double by 2050, and then remains constant
-# if SENS_ANALYSIS == 'high_stor':
-#     storage_multiplier = storage
-#     for year in range(2021,2051):
-#         storage_multiplier.loc[year] = storage.loc[year] * (1 + (1/30*(year-2020)))
-#     for year in range(2051,YEAR_END+1):
-#         storage_multiplier.loc[year] = storage.loc[year] * 2
+# 1.2 storage costs correction (malus/bonus multiplicative factor) 
+years = costs_correction.index.to_numpy()
+techs = costs_correction.columns
+data_array = costs_correction.to_numpy()#.ravel()  # flatten to 1D
+xr_costs_correction = xr.DataArray(
+    data_array,
+    dims=('Cohort', 'Type'),
+    coords={
+        'Cohort': years,
+        'Type': techs
+    },
+    name='StorageCostsCorrection'
+)
+xr_costs_correction = prism.Q_(xr_costs_correction, "dimensionless")
+
+# 1.3 storage costs longterm decline factor
+techs = costs_decline_longterm.index.to_numpy()
+data_array = costs_decline_longterm.to_numpy()#.ravel()  # flatten to 1D
+xr_costs_decline_longterm = xr.DataArray(
+    data_array,
+    dims=('Type'),
+    coords={
+        'Type': techs
+    },
+    name='StorageCostsDeclineLongterm'
+)
+xr_costs_decline_longterm = prism.Q_(xr_costs_decline_longterm, "fraction")
+
+
+# 3. material intensities -----------------------------------------------------------------------
+storage_materials.columns = storage_materials.columns.rename([None, None]) # remove column MultiIndex name "g/MW" as it causes issues when converting to xarray
+years = sorted(storage_materials.columns.get_level_values(0).unique())
+techs = storage_materials.columns.get_level_values(1).unique()
+materials = storage_materials.index
+# Convert to 3D array: (Material, Year, Tech)
+data_array = storage_materials.to_numpy().reshape(len(materials), len(years), len(techs))
+# Build xarray DataArray
+xr_storage_materials = xr.DataArray(
+    data_array,
+    dims=('material', 'Cohort', 'Type'),
+    coords={
+        'material': materials,
+        'Cohort': years,
+        'Type': techs
+    },
+    name='MaterialFractions'
+)
+xr_storage_materials = prism.Q_(xr_storage_materials, "fraction")
+
+
+# 4. energy density -----------------------------------------------------------------------------
+years = energy_density.index.to_numpy()
+energy_density.columns.name = None # remove header "kg/kWh" to avoid issues
+techs = energy_density.columns
+data_array = energy_density.to_numpy()
+xr_energy_density = xr.DataArray(
+    data_array,
+    dims=('Cohort', 'Type'),
+    coords={
+        'Cohort': years,
+        'Type': techs
+    },
+    name='EnergyDensity'
+)
+xr_energy_density = prism.Q_(xr_energy_density, "kg/kWh")
+
+
+# 5. EV fraction available for V2G --------------------------------------------------------------------
+# For this variable first the interpolations are done and then the conversion to xarray DataArray
+x = ev_fraction_v2g_data.reindex(range(ev_fraction_v2g_data.index[0],ev_fraction_v2g_data.index[-1]+1)).interpolate(method='linear')
+y = logistic(x, L=x.iloc[-1].values)
+# y = quadratic(x)
+ev_fraction_v2g = ev_fraction_v2g_data.reindex(range(YEAR_FIRST_GRID,YEAR_OUT+1)).interpolate(method='linear') # create dataframe with full index; values before first data points will be Nans, between data points interpolated linearly, after last data point will be last known value
+ev_fraction_v2g.loc[:ev_fraction_v2g_data.index[0]] = 0 # set values before first data point to 0
+ev_fraction_v2g.loc[ev_fraction_v2g_data.index[0]:ev_fraction_v2g_data.index[1]] = y # set values between (originally) first and last data point to quadratic/logistic interpolation
+
+# plt.figure()
+# plt.plot(ev_fraction_v2g_test.loc[2010:2060].index,ev_fraction_v2g_test.loc[2010:2060], label='')
+# plt.scatter(ev_fraction_v2g_test.loc[2023:2026].index,ev_fraction_v2g_test.iloc[:, 0].loc[2023:2026], label='')
+# plt.scatter(ev_fraction_v2g_test.loc[2048:2052].index,ev_fraction_v2g_test.iloc[:, 0].loc[2048:2052], label='')
+
+# Create an empty expanded df
+vhc_fraction_v2g = pd.DataFrame(index=ev_fraction_v2g.index)
+# transfer the values for the relevant vehicle types (for now: Cars - BEV and Cars - PHEV)
+for item in vehicle_list: # TODO: is this even necessary? If not all coordinates are defined, maybe they are just ignored in later calculations?
+    if item in ev_fraction_v2g.columns:
+        vhc_fraction_v2g[item] = ev_fraction_v2g[item]
+    else:
+        vhc_fraction_v2g[item] = 0 # other drive trains are not V2G capable
+# Build xarray DataArray
+years = vhc_fraction_v2g.index.to_numpy()
+techs = vhc_fraction_v2g.columns
+data_array = vhc_fraction_v2g.to_numpy()
+xr_vhc_fraction_v2g = xr.DataArray(
+    data_array,
+    dims=('Time', 'Type'),
+    coords={
+        'Time': years,
+        'Type': techs
+    },
+    name='VehicleFractionV2g'
+)
+xr_vhc_fraction_v2g = prism.Q_(xr_vhc_fraction_v2g, "fraction")
+
+# 6. capacity used for V2G -----------------------------------------------------------------------------
+# Build xarray DataArray
+techs = ev_capacity_fraction_v2g.columns
+data_array = ev_capacity_fraction_v2g.to_numpy().ravel()  # flatten to 1D
+xr_capacity_fraction_v2g = xr.DataArray(
+    data_array,
+    dims=('Type'),
+    coords={
+        'Type': techs
+    },
+    name='CapacityFractionV2g'
+)
+xr_capacity_fraction_v2g = prism.Q_(xr_capacity_fraction_v2g, "fraction")
+
+
+
+
+###########################################################################################################
+# %%% Interpolate #
+
+
+# 1. Market Shares -----------------------------------------------------------------------------
+
+
+
+
+
+
+
+# 2. Battery Weights ----------------------------------------------------------------
+battery_weights = interpolate(battery_weights_data.unstack())
 
 
 # turn index to integer for sorting during the next step
 storage_costs.index = storage_costs.index.astype('int64')
-storage_malus.index = storage_malus.index.astype('int64')
-storage_density.index = storage_density.index.astype('int64')
+costs_correction.index = costs_correction.index.astype('int64')
+energy_density.index = energy_density.index.astype('int64')
 
 # to interpolate between 2018 and 2030, first create empty rows (NaN values) 
 storage_start = storage_costs.first_valid_index()
 storage_end =   storage_costs.last_valid_index()
 for i in range(storage_start+1,storage_end):
     storage_costs = pd.concat([storage_costs, pd.DataFrame(index=[i])]) #, ignore_index=True
-    storage_malus = pd.concat([storage_malus, pd.DataFrame(index=[i])])         # mind: the malus needs to be defined for the same years as the cost indications
-    storage_density = pd.concat([storage_density, pd.DataFrame(index=[i])])     # mind: the density needs to be defined for the same years as the cost indications
+    costs_correction = pd.concat([costs_correction, pd.DataFrame(index=[i])])         # mind: the malus needs to be defined for the same years as the cost indications
+    energy_density = pd.concat([energy_density, pd.DataFrame(index=[i])])     # mind: the density needs to be defined for the same years as the cost indications
     
 # then, do the actual interpolation on the sorted dataframes                                                    
 storage_costs_interpol = storage_costs.sort_index(axis=0).interpolate(axis=0)#.index.astype('int64')
-storage_malus_interpol = storage_malus.sort_index(axis=0).interpolate(axis=0)
-storage_density_interpol = storage_density.sort_index(axis=0).interpolate(axis=0)  # density calculation continue with the material calculations
+costs_correction_interpol = costs_correction.sort_index(axis=0).interpolate(axis=0)
+energy_density_interpol = energy_density.sort_index(axis=0).interpolate(axis=0)  # density calculation continue with the material calculations
 
 # energy density ---
 # fix the energy density (kg/kwh) of storage technologies after 2030
 for year in range(2030+1,YEAR_OUT+1):
-    # storage_density_interpol = storage_density_interpol.append(pd.Series(storage_density_interpol.loc[storage_density_interpol.last_valid_index()], name=year))
-    row = storage_density_interpol.loc[[storage_density_interpol.last_valid_index()]]
+    # energy_density_interpol = energy_density_interpol.append(pd.Series(energy_density_interpol.loc[energy_density_interpol.last_valid_index()], name=year))
+    row = energy_density_interpol.loc[[energy_density_interpol.last_valid_index()]]
     row.index = [year]
-    storage_density_interpol = pd.concat([storage_density_interpol, row])
+    energy_density_interpol = pd.concat([energy_density_interpol, row])
 # assumed fixed energy densities before 2018
 for year in reversed(range(YEAR_FIRST_GRID,storage_start)): # was YEAR_SWITCH, storage_start
-    # storage_density_interpol = storage_density_interpol.append(pd.Series(storage_density_interpol.loc[storage_density_interpol.first_valid_index()], name=year)).sort_index(axis=0)
-    row = storage_density_interpol.loc[[storage_density_interpol.first_valid_index()]]
+    # energy_density_interpol = energy_density_interpol.append(pd.Series(energy_density_interpol.loc[energy_density_interpol.first_valid_index()], name=year)).sort_index(axis=0)
+    row = energy_density_interpol.loc[[energy_density_interpol.first_valid_index()]]
     row.index = [year]
-    storage_density_interpol = pd.concat([storage_density_interpol, row]).sort_index(axis=0)
+    energy_density_interpol = pd.concat([energy_density_interpol, row]).sort_index(axis=0)
 
 # storage material intensity ---
 # Interpolate material intensities (dynamic content for gcap & storage technologies between 1926 to 2100, based on data files)
@@ -205,10 +348,10 @@ for cat in list(storage_materials.columns.levels[1]):
 # storage costs ---
 # determine the annual % decline of the costs based on the 2018-2030 data (original, before applying the malus)
 decline = ((storage_costs_interpol.loc[storage_start,:]-storage_costs_interpol.loc[storage_end,:])/(storage_end-storage_start))/storage_costs_interpol.loc[storage_start,:]
-decline_used = decline*storage_ltdecline #TODO: what is happening here? Why?
-# storage_ltdecline is a single number and should describe the long-term decline after 2030 relative to the 2018-2030 decline
+decline_used = decline*costs_decline_longterm #TODO: what is happening here? Why?
+# costs_decline_longterm is a single number and should describe the long-term decline after 2030 relative to the 2018-2030 decline
 
-storage_costs_new = storage_costs_interpol * storage_malus_interpol
+storage_costs_new = storage_costs_interpol * costs_correction_interpol
 # calculate the development from 2030 to 2050 (using annual price decline)
 for year in range(storage_end+1,2050+1):
     # print(year)
@@ -255,67 +398,9 @@ market_share_EVs = storage_market_share[EV_BATTERIES].div(storage_market_share[E
 # Battery Weights #
 ###################
 
-# interpolate & complete series for battery weights, shares & composition
-# too
-battery_weights = interpolate(battery_weights_data.unstack())
-
-
 ###################
 #%% Capacity #
 ###################
-
-#%%% 5. EV fraction available for V2G #
-
-x = ev_fraction_v2g_data.reindex(range(ev_fraction_v2g_data.index[0],ev_fraction_v2g_data.index[-1]+1)).interpolate(method='linear')
-y = logistic(x, L=x.iloc[-1].values)
-# y = quadratic(x)
-ev_fraction_v2g = ev_fraction_v2g_data.reindex(range(YEAR_FIRST_GRID,YEAR_OUT+1)).interpolate(method='linear') # create dataframe with full index; values before first data points will be Nans, between data points interpolated linearly, after last data point will be last known value
-ev_fraction_v2g.loc[:ev_fraction_v2g_data.index[0]] = 0 # set values before first data point to 0
-ev_fraction_v2g.loc[ev_fraction_v2g_data.index[0]:ev_fraction_v2g_data.index[1]] = y # set values between (originally) first and last data point to quadratic/logistic interpolation
-
-# plt.figure()
-# plt.plot(ev_fraction_v2g_test.loc[2010:2060].index,ev_fraction_v2g_test.loc[2010:2060], label='')
-# plt.scatter(ev_fraction_v2g_test.loc[2023:2026].index,ev_fraction_v2g_test.iloc[:, 0].loc[2023:2026], label='')
-# plt.scatter(ev_fraction_v2g_test.loc[2048:2052].index,ev_fraction_v2g_test.iloc[:, 0].loc[2048:2052], label='')
-
-# Create an empty expanded df
-vhc_fraction_v2g = pd.DataFrame(index=ev_fraction_v2g.index)
-# transfer the values for the relevant vehicle types (for now: Cars - BEV and Cars - PHEV)
-for item in vehicle_list: # TODO: is this even necessary? If not all coordinates are defined, maybe they are just ignored in later calculations?
-    if item in ev_fraction_v2g.columns:
-        vhc_fraction_v2g[item] = ev_fraction_v2g[item]
-    else:
-        vhc_fraction_v2g[item] = 0 # other drive trains are not V2G capable
-# Build xarray DataArray
-years = vhc_fraction_v2g.index.to_numpy()
-techs = vhc_fraction_v2g.columns
-data_array = vhc_fraction_v2g.to_numpy()
-xr_vhc_fraction_v2g = xr.DataArray(
-    data_array,
-    dims=('Time', 'Type'),
-    coords={
-        'Time': years,
-        'Type': techs
-    },
-    name='VehicleFractionV2g'
-)
-xr_vhc_fraction_v2g = prism.Q_(xr_vhc_fraction_v2g, "fraction")
-
-#%%% 6. capacity used for V2G
-
-# Build xarray DataArray
-techs = ev_capacity_fraction_v2g.columns
-data_array = ev_capacity_fraction_v2g.to_numpy().ravel()  # flatten to 1D
-xr_capacity_fraction_v2g = xr.DataArray(
-    data_array,
-    dims=('Type'),
-    coords={
-        'Type': techs
-    },
-    name='CapacityFractionV2g'
-)
-xr_capacity_fraction_v2g = prism.Q_(xr_capacity_fraction_v2g, "fraction")
-
 
 
 #%%% 2. Dynamic battery capacity #
@@ -371,9 +456,9 @@ ev_battery_materials = ev_battery_materials.pivot_table(index="year", columns=["
 ev_battery_materials.columns = pd.MultiIndex.from_tuples(ev_battery_materials.columns, names=["technology", "material"])
 xr_ev_battery_materials = dataset_to_array(pandas_to_xarray(ev_battery_materials, unit_mapping), *(["Cohort"], ["Type", "material"],))
 xr_ev_battery_materials = xr_ev_battery_materials.sel(Type=EV_BATTERIES)
-xr_storage_density_interpol = dataset_to_array(pandas_to_xarray(storage_density_interpol, unit_mapping), *(["Cohort"], ["Type"],))
-xr_ev_density_interpol = xr_storage_density_interpol.sel(Type=EV_BATTERIES)
-# oth_storage_materialintens = xr_ev_battery_materials * xr_storage_density_interpol
+xr_energy_density_interpol = dataset_to_array(pandas_to_xarray(energy_density_interpol, unit_mapping), *(["Cohort"], ["Type"],))
+xr_ev_density_interpol = xr_energy_density_interpol.sel(Type=EV_BATTERIES)
+# oth_storage_materialintens = xr_ev_battery_materials * xr_energy_density_interpol
 
 
 
