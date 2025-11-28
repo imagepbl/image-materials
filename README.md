@@ -1,4 +1,4 @@
-# imagematerials [This is a test]
+# imagematerials
 
 ## Overview
 
