@@ -540,7 +540,7 @@ def create_electricity_graph():
     for type in transmission_types:
         electricity_knowledge_graph.add(Node(type, inherits_from="Transmission"))
         for sub_type in transmission_subtypes:
-            electricity_knowledge_graph.add(Node(f"{type} - {sub_type}", inherits_from=type))
+            electricity_knowledge_graph.add(Node(f"{type} - {sub_type}", inherits_from=type)) # dont call it type
             if sub_type == "Lines":
                 for line_subtype in line_subtypes:
                     electricity_knowledge_graph.add(Node(f"{type} - {sub_type} - {line_subtype}", inherits_from=f"{type} - {sub_type}"))

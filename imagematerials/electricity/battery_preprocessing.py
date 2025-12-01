@@ -24,7 +24,7 @@ from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_life
 from imagematerials.model import GenericMainModel, GenericStocks, SharesInflowStocks, Maintenance, GenericMaterials, MaterialIntensities
 from imagematerials.factory import ModelFactory, Sector
 from imagematerials.concepts import create_electricity_graph, create_region_graph, create_vehicle_graph
-from imagematerials.electricity.utils import MNLogit, stock_tail, create_prep_data, logistic, quadratic
+from imagematerials.electricity.utils import MNLogit, stock_tail, create_prep_data, logistic, quadratic, interpolate_xr, add_historic_stock
 from imagematerials.vehicles.modelling_functions import interpolate
 
 from imagematerials.constants import IMAGE_REGIONS
@@ -143,9 +143,9 @@ vehicle_list = [f"{super_type} - {sub_type}" for super_type, sub_type in product
 # 1. Market Shares -----------------------------------------------------------------------------
 
 # 1.1 storage costs
-years = storage_costs.index.to_numpy()
+years = storage_costs.index.astype(int) #.astype(int) to convert years from strings to integers
 techs = storage_costs.columns
-data_array = storage_costs.to_numpy()#.ravel()  # flatten to 1D
+data_array = storage_costs.to_numpy()
 xr_storage_costs = xr.DataArray(
     data_array,
     dims=('Cohort', 'Type'),
@@ -155,12 +155,12 @@ xr_storage_costs = xr.DataArray(
     },
     name='StorageCosts'
 )
-xr_storage_costs = prism.Q_(xr_storage_costs, "USDcent/kWh")
+# xr_storage_costs = prism.Q_(xr_storage_costs, "USD_cent/kWh")
 
 # 1.2 storage costs correction (malus/bonus multiplicative factor) 
-years = costs_correction.index.to_numpy()
+years = costs_correction.index.astype(int)
 techs = costs_correction.columns
-data_array = costs_correction.to_numpy()#.ravel()  # flatten to 1D
+data_array = costs_correction.to_numpy()
 xr_costs_correction = xr.DataArray(
     data_array,
     dims=('Cohort', 'Type'),
@@ -173,11 +173,11 @@ xr_costs_correction = xr.DataArray(
 xr_costs_correction = prism.Q_(xr_costs_correction, "dimensionless")
 
 # 1.3 storage costs longterm decline factor
-techs = costs_decline_longterm.index.to_numpy()
-data_array = costs_decline_longterm.to_numpy()#.ravel()  # flatten to 1D
+techs = costs_decline_longterm.index.rename(None)
+data_array = costs_decline_longterm.to_numpy()
 xr_costs_decline_longterm = xr.DataArray(
     data_array,
-    dims=('Type'),
+    dims=('Type',),
     coords={
         'Type': techs
     },
@@ -185,6 +185,7 @@ xr_costs_decline_longterm = xr.DataArray(
 )
 xr_costs_decline_longterm = prism.Q_(xr_costs_decline_longterm, "fraction")
 
+# 2. battery weigths: first some formatting and then conversion to xarray DataArray (see below)
 
 # 3. material intensities -----------------------------------------------------------------------
 storage_materials.columns = storage_materials.columns.rename([None, None]) # remove column MultiIndex name "g/MW" as it causes issues when converting to xarray
@@ -208,7 +209,7 @@ xr_storage_materials = prism.Q_(xr_storage_materials, "fraction")
 
 
 # 4. energy density -----------------------------------------------------------------------------
-years = energy_density.index.to_numpy()
+years = energy_density.index.astype(int)
 energy_density.columns.name = None # remove header "kg/kWh" to avoid issues
 techs = energy_density.columns
 data_array = energy_density.to_numpy()
@@ -247,7 +248,7 @@ for item in vehicle_list: # TODO: is this even necessary? If not all coordinates
     else:
         vhc_fraction_v2g[item] = 0 # other drive trains are not V2G capable
 # Build xarray DataArray
-years = vhc_fraction_v2g.index.to_numpy()
+years = vhc_fraction_v2g.index.astype(int).rename(None)
 techs = vhc_fraction_v2g.columns
 data_array = vhc_fraction_v2g.to_numpy()
 xr_vhc_fraction_v2g = xr.DataArray(
@@ -284,63 +285,87 @@ xr_capacity_fraction_v2g = prism.Q_(xr_capacity_fraction_v2g, "fraction")
 
 # 1. Market Shares -----------------------------------------------------------------------------
 
+xr_storage_costs_interp     = interpolate_xr(xr_storage_costs, xr_storage_costs.Cohort.values[0], xr_storage_costs.Cohort.values[-1])
+xr_costs_correction_interp  = interpolate_xr(xr_costs_correction, xr_costs_correction.Cohort.values[0], xr_costs_correction.Cohort.values[-1])
+
+# determine the annual % decline of the costs based on the 2018-2030 data (original, before applying the malus)
+t_start = xr_storage_costs_interp.Cohort.values[0]
+t_end   = xr_storage_costs_interp.Cohort.values[-1]
+decline = (((xr_storage_costs_interp.loc[t_start,:]-xr_storage_costs_interp.loc[t_end,:])/(t_end-t_start))/xr_storage_costs_interp.loc[t_start,:]).drop_vars('Cohort')
+decline_used = decline*costs_decline_longterm #TODO: what is happening here? Why?
+# costs_decline_longterm is a single number and should describe the long-term decline after 2030 relative to the 2018-2030 decline
+
+storage_costs_new = storage_costs_interpol * costs_correction_interpol
 
 
+xr_storage_costs.sel(
+    Type=['Flywheel', 'Compressed Air']
+).plot.scatter(x='Cohort')
 
+xr_storage_costs_i.sel(
+    Type=['Flywheel', 'Compressed Air']
+).plot.scatter(x='Cohort')
 
 
 
 # 2. Battery Weights ----------------------------------------------------------------
 battery_weights = interpolate(battery_weights_data.unstack())
 
+# 3. Material Intensities ----------------------------------------------------------------
+xr_storage_materials_interp = interpolate_xr(xr_storage_materials, YEAR_FIRST_GRID, YEAR_OUT)
 
+#  4. Energy Density ----------------------------------------------------------------
+xr_energy_density_interp = interpolate_xr(xr_energy_density, YEAR_FIRST_GRID, YEAR_OUT)
+
+
+#%%%% old
 # turn index to integer for sorting during the next step
-storage_costs.index = storage_costs.index.astype('int64')
-costs_correction.index = costs_correction.index.astype('int64')
-energy_density.index = energy_density.index.astype('int64')
+# storage_costs.index = storage_costs.index.astype('int64')
+# costs_correction.index = costs_correction.index.astype('int64')
+# energy_density.index = energy_density.index.astype('int64')
 
 # to interpolate between 2018 and 2030, first create empty rows (NaN values) 
-storage_start = storage_costs.first_valid_index()
-storage_end =   storage_costs.last_valid_index()
-for i in range(storage_start+1,storage_end):
-    storage_costs = pd.concat([storage_costs, pd.DataFrame(index=[i])]) #, ignore_index=True
-    costs_correction = pd.concat([costs_correction, pd.DataFrame(index=[i])])         # mind: the malus needs to be defined for the same years as the cost indications
-    energy_density = pd.concat([energy_density, pd.DataFrame(index=[i])])     # mind: the density needs to be defined for the same years as the cost indications
+# storage_start = storage_costs.first_valid_index()
+# storage_end =   storage_costs.last_valid_index()
+# for i in range(storage_start+1,storage_end):
+#     storage_costs = pd.concat([storage_costs, pd.DataFrame(index=[i])]) #, ignore_index=True
+#     costs_correction = pd.concat([costs_correction, pd.DataFrame(index=[i])])         # mind: the malus needs to be defined for the same years as the cost indications
+#     energy_density = pd.concat([energy_density, pd.DataFrame(index=[i])])     # mind: the density needs to be defined for the same years as the cost indications
     
 # then, do the actual interpolation on the sorted dataframes                                                    
-storage_costs_interpol = storage_costs.sort_index(axis=0).interpolate(axis=0)#.index.astype('int64')
-costs_correction_interpol = costs_correction.sort_index(axis=0).interpolate(axis=0)
-energy_density_interpol = energy_density.sort_index(axis=0).interpolate(axis=0)  # density calculation continue with the material calculations
+# storage_costs_interpol = storage_costs.sort_index(axis=0).interpolate(axis=0)#.index.astype('int64')
+# costs_correction_interpol = costs_correction.sort_index(axis=0).interpolate(axis=0)
+# energy_density_interpol = energy_density.sort_index(axis=0).interpolate(axis=0)  # density calculation continue with the material calculations
 
 # energy density ---
 # fix the energy density (kg/kwh) of storage technologies after 2030
-for year in range(2030+1,YEAR_OUT+1):
-    # energy_density_interpol = energy_density_interpol.append(pd.Series(energy_density_interpol.loc[energy_density_interpol.last_valid_index()], name=year))
-    row = energy_density_interpol.loc[[energy_density_interpol.last_valid_index()]]
-    row.index = [year]
-    energy_density_interpol = pd.concat([energy_density_interpol, row])
-# assumed fixed energy densities before 2018
-for year in reversed(range(YEAR_FIRST_GRID,storage_start)): # was YEAR_SWITCH, storage_start
-    # energy_density_interpol = energy_density_interpol.append(pd.Series(energy_density_interpol.loc[energy_density_interpol.first_valid_index()], name=year)).sort_index(axis=0)
-    row = energy_density_interpol.loc[[energy_density_interpol.first_valid_index()]]
-    row.index = [year]
-    energy_density_interpol = pd.concat([energy_density_interpol, row]).sort_index(axis=0)
+# for year in range(2030+1,YEAR_OUT+1):
+#     # energy_density_interpol = energy_density_interpol.append(pd.Series(energy_density_interpol.loc[energy_density_interpol.last_valid_index()], name=year))
+#     row = energy_density_interpol.loc[[energy_density_interpol.last_valid_index()]]
+#     row.index = [year]
+#     energy_density_interpol = pd.concat([energy_density_interpol, row])
+# # assumed fixed energy densities before 2018
+# for year in reversed(range(YEAR_FIRST_GRID,storage_start)): # was YEAR_SWITCH, storage_start
+#     # energy_density_interpol = energy_density_interpol.append(pd.Series(energy_density_interpol.loc[energy_density_interpol.first_valid_index()], name=year)).sort_index(axis=0)
+#     row = energy_density_interpol.loc[[energy_density_interpol.first_valid_index()]]
+#     row.index = [year]
+#     energy_density_interpol = pd.concat([energy_density_interpol, row]).sort_index(axis=0)
 
 # storage material intensity ---
 # Interpolate material intensities (dynamic content for gcap & storage technologies between 1926 to 2100, based on data files)
-index = pd.MultiIndex.from_product([list(range(YEAR_FIRST_GRID, YEAR_OUT+1)), list(storage_materials.index)])
-stor_materials_interpol = pd.DataFrame(index=index, columns=storage_materials.columns.levels[1])
-# material intensities for storage
-for cat in list(storage_materials.columns.levels[1]):
-    stor_materials_1st   = storage_materials.loc[:,idx[storage_materials.columns[0][0],cat]]
-    stor_materials_interpol.loc[idx[YEAR_FIRST_GRID ,:],cat] = stor_materials_1st.to_numpy()  # set the first year (1926) values to the first available values in the dataset (for the year 2000) 
-    stor_materials_interpol.loc[idx[storage_materials.columns.levels[0].min(),:],cat] = storage_materials.loc[:, idx[storage_materials.columns.levels[0].min(),cat]].to_numpy() # set the middle year (2000) values to the first available values in the dataset (for the year 2000) 
-    stor_materials_interpol.loc[idx[storage_materials.columns.levels[0].max(),:],cat] = storage_materials.loc[:, idx[storage_materials.columns.levels[0].max(),cat]].to_numpy() # set the last year (2100) values to the last available values in the dataset (for the year 2050) 
-    stor_materials_interpol.loc[idx[:,:],cat] = stor_materials_interpol.loc[idx[:,:],cat].unstack().astype('float64').interpolate().stack()
+# index = pd.MultiIndex.from_product([list(range(YEAR_FIRST_GRID, YEAR_OUT+1)), list(storage_materials.index)])
+# stor_materials_interpol = pd.DataFrame(index=index, columns=storage_materials.columns.levels[1])
+# # material intensities for storage
+# for cat in list(storage_materials.columns.levels[1]):
+#     stor_materials_1st   = storage_materials.loc[:,idx[storage_materials.columns[0][0],cat]]
+#     stor_materials_interpol.loc[idx[YEAR_FIRST_GRID ,:],cat] = stor_materials_1st.to_numpy()  # set the first year (1926) values to the first available values in the dataset (for the year 2000) 
+#     stor_materials_interpol.loc[idx[storage_materials.columns.levels[0].min(),:],cat] = storage_materials.loc[:, idx[storage_materials.columns.levels[0].min(),cat]].to_numpy() # set the middle year (2000) values to the first available values in the dataset (for the year 2000) 
+#     stor_materials_interpol.loc[idx[storage_materials.columns.levels[0].max(),:],cat] = storage_materials.loc[:, idx[storage_materials.columns.levels[0].max(),cat]].to_numpy() # set the last year (2100) values to the last available values in the dataset (for the year 2050) 
+#     stor_materials_interpol.loc[idx[:,:],cat] = stor_materials_interpol.loc[idx[:,:],cat].unstack().astype('float64').interpolate().stack()
 
 
 #################
-# Market Shares #
+#%%%% Market Shares #
 #################
 
 # Determine MARKET SHARE of the storage capacity using a multi-nomial logit function

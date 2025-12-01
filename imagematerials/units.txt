@@ -4,4 +4,4 @@ meter = [length] = m
 
 share = 1 = ratio = fraction
 
-USD = [currency] = 100 USDcent
+USD = [currency] = 100 * USD_cent

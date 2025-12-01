@@ -6,6 +6,9 @@ import math
 import matplotlib.pyplot as plt
 import scipy.stats
 import prism
+import warnings
+from pint.errors import UnitStrippedWarning
+
 
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
 from imagematerials.concepts import create_electricity_graph
@@ -96,8 +99,7 @@ def add_historic_stock(da_stock, year_start=1920, interp_method="linear"):
 
 
 def interpolate_xr(data_array, t_start, t_end, interp_method = 'linear'):
-    """
-    Interpolate an xarray.DataArray over a continuous time range and 
+    """ Interpolate an xarray.DataArray over a continuous time range and 
     extend its boundary values beyond the available data to span t_start - t_end.
 
     The function performs (linear) interpolation between all existing time 
@@ -119,6 +121,10 @@ def interpolate_xr(data_array, t_start, t_end, interp_method = 'linear'):
     -------
     xarray.DataArray
         DataArray interpolated across the full range from `t_start` to `t_end`
+    
+    Note:
+    Units are temporarily stripped during interpolation but are reattached
+    before returning the result. The corresponding warning is suppressed.
     """
 
     # Determine which dimension to use
@@ -133,7 +139,9 @@ def interpolate_xr(data_array, t_start, t_end, interp_method = 'linear'):
     new_range = np.arange(t_start, t_end + 1)
 
     # Interpolate linearly
-    da_interp = data_array.interp({dim: new_range}, method = interp_method)
+    with warnings.catch_warnings(): # suppress warning
+        warnings.simplefilter("ignore", UnitStrippedWarning)
+        da_interp = data_array.interp({dim: new_range}, method = interp_method)
 
     # Fill values outside original range
     da_interp.loc[{dim: slice(None, coord_values.min())}] = da_interp.sel({dim: coord_values.min()})
