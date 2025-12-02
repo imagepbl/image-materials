@@ -213,7 +213,8 @@ def summarize_prep_data(data):
         elif isinstance(array, KnowledgeGraph):
             continue
         elif isinstance(array, pint.Unit):
-            all_summary[data_name] = str(array)
+            continue
+            #all_summary[data_name] = str(array)
         elif array is None:
             all_summary[data_name] = array
         elif isinstance(array, str):

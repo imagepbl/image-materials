@@ -31,7 +31,7 @@ if __name__ == "__main__":
                                         climate_policy_scenario_dir=climate_policy_scenario_dir,
                                         standard_scenario=scen_folder)
     summary_elc = summarize_prep_data(elc_sector.prep_data)
-    summary_elc_json = _listify(summary_elc)
+    #summary_elc_json = _listify(summary_elc)
 
     with open(Path("tests", "data", "electricity_summary.json"), "w", encoding="utf8") as handle:
-        json.dump(summary_elc_json, handle)
+        json.dump(summary_elc, handle)

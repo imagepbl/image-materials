@@ -97,6 +97,7 @@ def test_electricity_prep(elc_summary, key_list, expected):
         assert np.allclose(data["data"], expected["data"]), (
             f"Name: {data['name']}, New: {np.sum(data['data'])}, Old: {np.sum(expected['data'])}")
 
+
 def _check_data_same(orig_data, new_data, name=""):
     assert type(orig_data) is type(new_data)
     if isinstance(orig_data, dict):
@@ -122,7 +123,7 @@ def _check_data_same(orig_data, new_data, name=""):
     for coord in orig_data.coords:
         assert all(orig_data[coord] == new_data[coord])
 
-@mark.parametrize("prep_data_name", ["vhc_prep_data", "bld_prep_data"])
+@mark.parametrize("prep_data_name", ["vhc_prep_data", "bld_prep_data","elc_prep_data"])
 def test_save_load_netcdf(prep_data_name, request, tmpdir):
     prep_data = request.getfixturevalue(prep_data_name)
     netcdf_fp = tmpdir / "test.netcdf"
