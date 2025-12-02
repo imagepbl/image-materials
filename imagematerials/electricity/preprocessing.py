@@ -36,14 +36,15 @@ from imagematerials.electricity.constants import (
 ###########################################################################################################
 def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
-    path_image_output = Path(path_base, "image", scenario, "EnergyServices")
-    path_external_data_standard = Path(path_base, "electricity", "standard_data")
+    #path_image_output = Path(path_base, "image", scenario, "EnergyServices")
+    #path_external_data_standard = Path(path_base, "electricity", "standard_data")
     path_external_data_scenario = Path(path_base, "electricity", scenario)
     # test if path_external_data_scenario exists and if not set to standard scenario
     if not path_external_data_scenario.exists():
         path_external_data_scenario = Path(path_base, "electricity", STANDARD_SCEN_EXTERNAL_DATA)
-    assert path_image_output.is_dir()
-    assert path_external_data_standard.is_dir()
+
+    #assert path_image_output.is_dir()
+    #assert path_external_data_standard.is_dir()
     assert path_external_data_scenario.is_dir()
 
     ###########################################################################################################
@@ -120,7 +121,7 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, scen
 
     # Gcap ------
     gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
-    gcap_data = gcap_data.loc[gcap_data['time'].isin(range(YEAR_START, YEAR_END + 1)), ['time', 'DIM_1', *range(1, len(EPG_TECHNOLOGIES) + 1)]]  # only keep relevant years and technology columns
+    gcap_data = gcap_data.loc[gcap_data['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', *range(1, len(EPG_TECHNOLOGIES) + 1)]]  # only keep relevant years and technology columns
     # Extract coordinate labels
     years = sorted(gcap_data['time'].unique())
     regions = sorted(gcap_data['DIM_1'].unique())
@@ -148,9 +149,9 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, scen
 
     # interpolate_xr: The lifetimes & material intensities are only given for specific years (2020 and 2050), so we linearly interpolate to get values for the years 2020-2050.
     # The values before 2020 are kept constant at the 2020 level, and the values after 2050 are kept constant at the 2050 level.
-    gcap_lifetime_xr_interp = interpolate_xr(gcap_lifetime_xr, YEAR_FIRST_GRID, YEAR_OUT)
+    gcap_lifetime_xr_interp = interpolate_xr(gcap_lifetime_xr, YEAR_FIRST_GRID, year_out)
     gcap_lifetime_xr_interp.loc[dict(DistributionParams="stdev")] = gcap_lifetime_xr_interp.loc[dict(DistributionParams="mean")] * STD_LIFETIMES_ELECTR
-    gcap_materials_xr_interp = interpolate_xr(gcap_materials_xr, YEAR_FIRST_GRID, YEAR_OUT)
+    gcap_materials_xr_interp = interpolate_xr(gcap_materials_xr, YEAR_FIRST_GRID, year_out)
 
     # The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
     gcap_lifetime_xr_interp = convert_lifetime(gcap_lifetime_xr_interp)
