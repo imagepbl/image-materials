@@ -79,8 +79,8 @@ labels_pas = ["bicycle", "rail_reg", "rail_hst", "midi_bus", "reg_bus",
 labels_fre = ["inland_shipping", "rail_freight", "LCV", "MFT", "HFT",
               "air_freight", "sea_shipping_small", "sea_shipping_med",
               "sea_shipping_large", "sea_shipping_vl"]
-labels_materials = ["Steel", "Aluminium", "Cu", "Plastics", "Glass", "Ti",
-                    "Wood", "Rubber", "Li", "Co", "Ni", "Mn", "Nd", "Pb"]
+labels_materials = ["steel", "aluminium", "copper", "plastics", "glass", "titanium",
+                    "wood", "rubber", "lithium", "cobalt", "nickel", "manganese", "neodymium", "lead"]
 labels_ev_batt = ["NiMH", "LMO", "NMC", "NCA", "LFP", "Lithium Sulfur",
                   "Lithium Ceramic", "Lithium-air"]
 
