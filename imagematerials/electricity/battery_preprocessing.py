@@ -81,7 +81,8 @@ assert path_external_data_scenario.is_dir()
 if not (path_base / 'imagematerials' / 'electricity' / 'out_test').is_dir():
     (path_base / 'imagematerials' / 'electricity' / 'out_test').mkdir(parents=True)
 
-
+prism.unit_registry.load_definitions(path_base / "imagematerials" / "units.txt")
+# C:\Users\Judit\PhD\Coding\image-materials\imagematerials\units.txt
 idx = pd.IndexSlice   
 
 #----------------------------------------------------------------------------------------------------------
@@ -155,7 +156,7 @@ xr_storage_costs = xr.DataArray(
     },
     name='StorageCosts'
 )
-# xr_storage_costs = prism.Q_(xr_storage_costs, "USD_cent/kWh")
+xr_storage_costs = prism.Q_(xr_storage_costs, "USD_cent/kWh")
 
 # 1.2 storage costs correction (malus/bonus multiplicative factor) 
 years = costs_correction.index.astype(int)
@@ -291,12 +292,12 @@ xr_costs_correction_interp  = interpolate_xr(xr_costs_correction, xr_costs_corre
 # determine the annual % decline of the costs based on the 2018-2030 data (original, before applying the malus)
 t_start = xr_storage_costs_interp.Cohort.values[0]
 t_end   = xr_storage_costs_interp.Cohort.values[-1]
-decline = (((xr_storage_costs_interp.loc[t_start,:]-xr_storage_costs_interp.loc[t_end,:])/(t_end-t_start))/xr_storage_costs_interp.loc[t_start,:]).drop_vars('Cohort')
+cost_decline = (((xr_storage_costs_interp.loc[t_start,:]-xr_storage_costs_interp.loc[t_end,:])/(t_end-t_start))/xr_storage_costs_interp.loc[t_start,:]).drop_vars('Cohort')
 decline_used = decline*costs_decline_longterm #TODO: what is happening here? Why?
 # costs_decline_longterm is a single number and should describe the long-term decline after 2030 relative to the 2018-2030 decline
 
-storage_costs_new = storage_costs_interpol * costs_correction_interpol
-
+# storage_costs_new = storage_costs_interpol * costs_correction_interpol
+xr_storage_costs_cor = xr_storage_costs_interp * xr_costs_correction_interp
 
 xr_storage_costs.sel(
     Type=['Flywheel', 'Compressed Air']
@@ -385,7 +386,7 @@ for year in range(storage_end+1,2050+1):
     row = pd.DataFrame([storage_costs_new.loc[storage_costs_new.last_valid_index()] * (1 - decline_used)])
     storage_costs_new.loc[year] = row.iloc[0]
 # for historic price development, assume 2x AVERAGE annual price decline on all technologies, except lead-acid (so that lead-acid gets a relative price advantage from 1970-2018)
-for year in reversed(range(YEAR_FIRST_GRID,storage_start)):
+for year in reversed(range(YEAR_START,storage_start)):
     # storage_costs_new = storage_costs_new.append(pd.Series(storage_costs_new.loc[storage_costs_new.first_valid_index()]*(1+(2*decline_used.mean())), name=year)).sort_index(axis=0)
     row = pd.DataFrame([storage_costs_new.loc[storage_costs_new.first_valid_index()]*(1+(2*decline_used.mean()))])
     storage_costs_new.loc[year] = row.iloc[0]
@@ -470,19 +471,19 @@ market_share_EVs = storage_market_share[EV_BATTERIES].div(storage_market_share[E
 ########################
 # MIs: (years, material) index and technologies as columns -> years as index and (technology, Material) as columns
 
-# 2nd level of the MultiIndex are materials (1971,'Aluminium')
-ev_battery_materials = stor_materials_interpol.copy()
-ev_battery_materials.index.names = ["year", "material"]  # assign names
-ev_battery_materials = ev_battery_materials.reset_index(level=["year", "material"])
-# Pivot so we get (technology, material) as columns, years as index
-ev_battery_materials = ev_battery_materials.melt(id_vars=["year", "material"], var_name="technology", value_name="value")
-ev_battery_materials = ev_battery_materials.pivot_table(index="year", columns=["technology", "material"], values="value")
-# Ensure proper MultiIndex column names
-ev_battery_materials.columns = pd.MultiIndex.from_tuples(ev_battery_materials.columns, names=["technology", "material"])
-xr_ev_battery_materials = dataset_to_array(pandas_to_xarray(ev_battery_materials, unit_mapping), *(["Cohort"], ["Type", "material"],))
-xr_ev_battery_materials = xr_ev_battery_materials.sel(Type=EV_BATTERIES)
-xr_energy_density_interpol = dataset_to_array(pandas_to_xarray(energy_density_interpol, unit_mapping), *(["Cohort"], ["Type"],))
-xr_ev_density_interpol = xr_energy_density_interpol.sel(Type=EV_BATTERIES)
+# # 2nd level of the MultiIndex are materials (1971,'Aluminium')
+# ev_battery_materials = stor_materials_interpol.copy()
+# ev_battery_materials.index.names = ["year", "material"]  # assign names
+# ev_battery_materials = ev_battery_materials.reset_index(level=["year", "material"])
+# # Pivot so we get (technology, material) as columns, years as index
+# ev_battery_materials = ev_battery_materials.melt(id_vars=["year", "material"], var_name="technology", value_name="value")
+# ev_battery_materials = ev_battery_materials.pivot_table(index="year", columns=["technology", "material"], values="value")
+# # Ensure proper MultiIndex column names
+# ev_battery_materials.columns = pd.MultiIndex.from_tuples(ev_battery_materials.columns, names=["technology", "material"])
+# xr_ev_battery_materials = dataset_to_array(pandas_to_xarray(ev_battery_materials, unit_mapping), *(["Cohort"], ["Type", "material"],))
+# xr_ev_battery_materials = xr_ev_battery_materials.sel(Type=EV_BATTERIES)
+# xr_energy_density_interpol = dataset_to_array(pandas_to_xarray(energy_density_interpol, unit_mapping), *(["Cohort"], ["Type"],))
+# xr_ev_density_interpol = xr_energy_density_interpol.sel(Type=EV_BATTERIES)
 # oth_storage_materialintens = xr_ev_battery_materials * xr_energy_density_interpol
 
 
