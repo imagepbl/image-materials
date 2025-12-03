@@ -7,6 +7,8 @@ import numpy as np
 from imagematerials.buildings.preprocessing.main import buildings_preprocessing as prep_bld
 from imagematerials.vehicles.preprocessing import preprocess as prep_vhc
 from imagematerials.eol.preprocessing import eol_preprocessing as prep_eol
+from imagematerials.electricity.preprocessing import get_preprocessing_data_gen as prep_elc
+
 
 from imagematerials.factory import Sector
 from imagematerials.util import (
@@ -17,7 +19,6 @@ from imagematerials.util import (
     rebroadcast_prep_data,
 )
 from imagematerials.constants import IMAGE_REGIONS
-
 
 
 def _get_vehicles_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_scenario_dirs):
