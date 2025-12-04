@@ -223,6 +223,7 @@ def _summarize_array(array):
     for drop_coor in array.coords.keys():
         sum_over = set(x for x in list(array.coords.keys())) - set({drop_coor})
         summary = array.sum(sum_over)
+        summary.attrs = array.attrs
         all_summary[drop_coor] = _listify(summary.to_dict())
     return all_summary
 
