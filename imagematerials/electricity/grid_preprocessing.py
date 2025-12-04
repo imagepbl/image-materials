@@ -33,6 +33,7 @@ from imagematerials.electricity.constants import (
     SENS_ANALYSIS,
     REGIONS,
     TECH_GEN,
+    EPG_TECHNOLOGIES,
     STD_LIFETIMES_ELECTR,
     MEGA_TO_TERA,
     PKMS_TO_VKMS,
@@ -626,28 +627,51 @@ gdp_pc = knowledge_graph_region.rebroadcast_xarray(gdp_pc, output_coords=IMAGE_R
 ###########################################################################################################
 #----------------------------------------------------------------------------------------------------------
 
-gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
-gcap = pd.pivot_table(gcap_data[gcap_data['time'].isin(list(range(YEAR_START,YEAR_END+1)))], index=['time','DIM_1'], values=list(range(1,TECH_GEN+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (28));  the last column in gcap_data (= totals) is now removed
+# regional total (peak) generation capacity is used as a proxy for the grid growth
+gcap_total = gcap.sum(dim='Type')
+gcap_growth = gcap_total / gcap_total.loc[2016]        # define growth according to 2016 as base year
 
 
-region_list = list(grid_length_Hv.columns.values)
-material_list = list(materials_grid.columns.values)
+# above: done, below: in progress -----------------------------------------------------------------------------------------
+
+# Hv length (in kms) is region-specific. However, we use a single ratio between the length of Hv and Mv networks, the same applies to Lv networks
+xr_ratio_Hv = ratio_Hv.to_xarray()
+xr_ratio_Hv = xr_ratio_Hv.rename_dims({'km/km': 'Region'}) # Rename the dimension
+xr_ratio_Hv = xr_ratio_Hv.rename({'km/km': 'Region'}) # Rename the coordinate
+xr_ratio_Hv["HV to MV"] = prism.Q_(xr_ratio_Hv["HV to MV"], "km/km")
+xr_ratio_Hv["HV to LV"] = prism.Q_(xr_ratio_Hv["HV to LV"], "km/km")
+xr_ratio_Hv = knowledge_graph_region.rebroadcast_xarray(xr_ratio_Hv, output_coords=IMAGE_REGIONS, dim="Region") 
+
+grid_length_Mv = grid_length_Hv.mul(ratio_Hv['HV to MV'])
+grid_length_Lv = grid_length_Hv.mul(ratio_Hv['HV to LV'])
+
+
+
+
+# below: old ====================================================================================================
+
+# gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
+# gcap = pd.pivot_table(gcap_data[gcap_data['time'].isin(list(range(YEAR_START,YEAR_END+1)))], index=['time','DIM_1'], values=list(range(1,TECH_GEN+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (28));  the last column in gcap_data (= totals) is now removed
+
+
+# region_list = list(grid_length_Hv.columns.values)
+# material_list = list(materials_grid.columns.values)
 
 # renaming multi-index dataframe: generation capacity, based on the regions in grid_length_Hv & technologies as given
-gcap_techlist = ['Solar PV', 'Solar Decentral', 'CSP', 'Wind onshore', 'Wind offshore', 'Wave', 'Hydro', 'Other Renewables', 'Geothermal', 'Hydrogen', 'Nuclear', '<EMPTY>', 'Conv. Coal', 'Conv. Oil', 'Conv. Natural Gas', 'Waste', 'IGCC', 'OGCC', 'NG CC', 'Biomass CC', 'Coal + CCS', 'Oil/Coal + CCS', 'Natural Gas + CCS', 'Biomass + CCS', 'CHP Coal', 'CHP Oil', 'CHP Natural Gas', 'CHP Biomass', 'CHP Coal + CCS', 'CHP Oil + CCS', 'CHP Natural Gas + CCS', 'CHP Biomass + CCS', 'CHP Geothermal', 'CHP Hydrogen']
-gcap.index = pd.MultiIndex.from_product([list(range(YEAR_START,YEAR_END+1)), region_list], names=['years', 'regions'])
-gcap.columns = gcap_techlist
+# gcap_techlist = ['Solar PV', 'Solar Decentral', 'CSP', 'Wind onshore', 'Wind offshore', 'Wave', 'Hydro', 'Other Renewables', 'Geothermal', 'Hydrogen', 'Nuclear', '<EMPTY>', 'Conv. Coal', 'Conv. Oil', 'Conv. Natural Gas', 'Waste', 'IGCC', 'OGCC', 'NG CC', 'Biomass CC', 'Coal + CCS', 'Oil/Coal + CCS', 'Natural Gas + CCS', 'Biomass + CCS', 'CHP Coal', 'CHP Oil', 'CHP Natural Gas', 'CHP Biomass', 'CHP Coal + CCS', 'CHP Oil + CCS', 'CHP Natural Gas + CCS', 'CHP Biomass + CCS', 'CHP Geothermal', 'CHP Hydrogen']
+# gcap.index = pd.MultiIndex.from_product([list(range(YEAR_START,YEAR_END+1)), region_list], names=['years', 'regions'])
+# gcap.columns = gcap_techlist
 
-gdp_pc = gdp_pc.iloc[:, :len(IMAGE_REGIONS)] # exclude empty column (27) and totals (28)
-gdp_pc.columns = region_list
+# gdp_pc = gdp_pc.iloc[:, :len(IMAGE_REGIONS)] # exclude empty column (27) and totals (28)
+# gdp_pc.columns = region_list
 
 
 # length calculations ----------------------------------------------------------------------------
 
 # regional total (peak) generation capacity is used as a proxy for the grid growth 
-gcap_total = gcap.sum(axis=1).unstack()
-gcap_total = gcap_total[region_list]                     # re-order columns to the original TIMER order
-gcap_growth = gcap_total / gcap_total.loc[2016]        # define growth according to 2016 as base year
+# gcap_total = gcap.sum(axis=1).unstack()
+# gcap_total = gcap_total[region_list]                     # re-order columns to the original TIMER order
+# gcap_growth = gcap_total / gcap_total.loc[2016]        # define growth according to 2016 as base year
 
 
 # Hv length (in kms) is region-specific. However, we use a single ratio between the length of Hv and Mv networks, the same applies to Lv networks 
