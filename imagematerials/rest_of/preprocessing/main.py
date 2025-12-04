@@ -5,10 +5,52 @@ import prism
 
 from pathlib import Path
 
+from imagematerials.constants import IMAGE_REGIONS
+from imagematerials.concepts import create_region_graph
+
 from imagematerials.read_mym import read_mym_df
 from imagematerials.buildings.preprocessing.population import compute_population
 
 from imagematerials.rest_of.preprocessing.resource_efficiency_measures import adapt_gompertz_regional
+
+from imagematerials.rest_of.preprocessing.regressions_all_materials import (fit_models_all_materials,
+                                                                            make_gompertz_coefs_da, 
+                                                                            mean_historic_other_fraction_consumption_to_xr, 
+                                                                            historic_other_fraction_consumption_to_xr)
+
+from imagematerials.rest_of.util import sum_inflows_for_all_sectors, save_sum_as_csv
+
+
+def sum_and_save(model_run, list_sum_sectors: list, save_path: Path, mfa_data = 'inflow_materials'):
+    """
+    Sums inflows across specified sectors and saves the results for steel, aluminium, and copper
+    Parameters
+    ----------
+    model_run :
+        ImageMaterials model instance providing sector attributes (buildings, vehicles, generation, grid, ...)
+        each exposing `.get(get_mfa_data).to_array()` returning an xarray.DataArray.
+    list_sum_sectors : list
+        List of sector names to include in the sum (e.g. ["buildings", "vehicles", "generation", "grid"]).
+    mfa_data : str, optional
+        Key/name of the MFA data to extract from each sector (default is 'inflow_materials').
+        Could also be stock, or outflow_materials.
+    Returns
+    -------
+    xarray.DataArray
+        Elementwise sum of the sector inflows for the specified sectors.
+    """
+
+    total_inflow_combined = sum_inflows_for_all_sectors(model_run, mfa_data, list_sum_sectors)
+
+    # save materials
+    save_sum_as_csv(total_inflow_combined, "steel", save_path)
+    save_sum_as_csv(total_inflow_combined, "aluminium", save_path)
+    save_sum_as_csv(total_inflow_combined, "copper", save_path)
+    save_sum_as_csv(total_inflow_combined, "cement", save_path)
+    save_sum_as_csv(total_inflow_combined, "sand_gravel_crushed_rock", save_path)
+
+    print("Materials saved successfully.")
+    return total_inflow_combined
 
 
 def read_gompertz_values(base_directory, scenario: str):
@@ -38,17 +80,14 @@ def read_gompertz_values(base_directory, scenario: str):
     - The function expects regions to be numeric strings for sorting.
     """
 
-    xr_gompertz = xr.open_dataset(base_directory / "rest-of" / "gompertz_values" / "coefs_gompertz.nc", engine="netcdf4")
-    xr_gompertz = xr_gompertz.to_array().isel(variable=0).drop_vars("variable")
-
-    # # Reorder the data to match the sorted regions
-    xr_gompertz = xr_gompertz.sel(Region=sorted(xr_gompertz.coords["Region"].values, key=lambda x: int(x)))
-
     if scenario in ["SSP2_VLLO_LifeTech"]:
-        xr_gompertz = adapt_gompertz_regional(xr_gompertz, scenario=scenario,
-                                              start_implementation_year=2030,
-                                              end_implementation_year=2050)
+        print('Using Gompertz coefficients for resource efficiency measures')
+        name = "coefs_gompertz_eff.nc"
+    else: 
+        name = "coefs_gompertz.nc"
 
+    xr_gompertz = xr.open_dataset(base_directory / "rest-of" / "gompertz_values" / name, engine="netcdf4")
+    xr_gompertz = xr_gompertz.to_array().isel(variable=0).drop_vars("variable")
 
     return xr_gompertz
 
@@ -88,11 +127,22 @@ def read_image_gdp_cap_data(image_scenario_directory):
                 "Region": gdp_per_capita.columns}  # Region coordinates from the DataFrame columns
     )
     gdp_per_capita_xr.coords["Region"]  = [str(x.values) for x in gdp_per_capita_xr.coords["Region"]]
+    knowledge_graph_region = create_region_graph()
+    gdp_per_capita_xr = knowledge_graph_region.rebroadcast_xarray(gdp_per_capita_xr, output_coords=IMAGE_REGIONS, dim="Region")
 
     return gdp_per_capita_xr
 
 
-def rest_of_preprocessing(base_directory, image_scenario_directory, scenario: str):
+def rest_of_preprocessing(base_directory, image_scenario_directory, scenario: str, 
+                          refit = False):
+    
+    if refit == True:
+        results = fit_models_all_materials()
+        make_gompertz_coefs_da(results)
+        mean_historic_other_fraction_consumption_to_xr(results)
+        historic_other_fraction_consumption_to_xr(results)
+        print('Materials regression refitted and preprocessing data updated.')
+
     gompertz_values = read_gompertz_values(base_directory, scenario)
     gdp_per_capita = read_image_gdp_cap_data(image_scenario_directory)
     historic_diff_consumption_mean = read_historic_diff_cons_data_mean(base_directory)
@@ -102,8 +152,8 @@ def rest_of_preprocessing(base_directory, image_scenario_directory, scenario: st
     population = population.sel(Area = 'Total').loc[1971:]
     # drop Area coords
     population = population.drop_vars('Area')
-
-
+    knowledge_graph_region = create_region_graph()
+    population = knowledge_graph_region.rebroadcast_xarray(population, output_coords=IMAGE_REGIONS, dim="Region")
 
     preprocessing_dict = {
         "gompertz_coefs": gompertz_values,

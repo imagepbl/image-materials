@@ -189,7 +189,7 @@ class KnowledgeGraph():
         keep_coords = []
         new_array = xr.DataArray(0.0, dims=input_array.dims, coords=new_coords)
         if input_array.pint.units:
-            new_array = prism.Q_(new_array, input_array.pint.units)
+            new_array = prism.Q_(new_array, input_array.pint.units) # check if input array had a unit and if so, reapply this unit to new array
         for cur_coord in list(output_coords):
             if cur_coord in input_coords:
                 keep_coords.append(cur_coord)
@@ -207,8 +207,12 @@ class KnowledgeGraph():
             else:
                 # disaggregate, by just taking the value of the parent
                 new_array.loc[{dim: cur_coord}] = input_array.loc[{dim: parent}]
+        # Copy data for all coordinates that exist in both the input_array and output_coords (`keep_coords`) -> only new coordinates are filled through disaggregation logic above
         new_array.loc[{dim: keep_coords}] = input_array.loc[{dim: keep_coords}]
-        # check if input array had a unit and if so, reapply this unit to new array
+        # Preserve metadata 
+        new_array.attrs = input_array.attrs.copy()
+        new_array.name = input_array.name
+        # new_array.encoding = input_array.encoding.copy() # do wee need this?
 
         return new_array
 
@@ -324,6 +328,48 @@ def create_building_graph():
     return building_knowledge_graph
 
 
+def create_class_region_graph():
+    #TODO move to seperate file
+    
+    class_region_knowledge_graph = KnowledgeGraph()
+
+    # Add numeric region nodes first with full synonyms
+    numeric_region_map = {
+        "class_ 1": ["Canada", "CAN"],
+        "class_ 2": ["USA", "US"],
+        "class_ 3": ["Mexico", "MEX"],
+        "class_ 4": ["Rest of Central America", "RCAM", "Rest C.Am."],
+        "class_ 5": ["Brazil", "BRA"],
+        "class_ 6": ["Rest of South America", "RSAM", "Rest S.Am."],
+        "class_ 7": ["Northern Africa", "NAF", "N.Africa"],
+        "class_ 8": ["Western Africa", "WAF", "W.Africa"],
+        "class_ 9": ["Eastern Africa", "EAF", "E.Africa"],
+        "class_ 10": ["South Africa", "SAF"],
+        "class_ 11": ["Western Europe", "WEU", "W.Europe"],
+        "class_ 12": ["Central Europe", "CEU", "C.Europe"],
+        "class_ 13": ["Turkey", "TUR"],
+        "class_ 14": ["Ukraine +", "UKR", "Ukraine"],
+        "class_ 15": ["Asian-Stan", "STAN", "Stan"],
+        "class_ 16": ["Russia +", "RUS", "Russia"],
+        "class_ 17": ["Middle East", "ME", "M.East"],
+        "class_ 18": ["India +", "INDIA", "India"],
+        "class_ 19": ["Korea", "KOR"],
+        "class_ 20": ["China +", "CHN", "China"],
+        "class_ 21": ["Southeastern Asia", "SEAS", "SE.Asia"],
+        "class_ 22": ["Indonesia +", "INDO", "Indonesia"],
+        "class_ 23": ["Japan", "JAP"],
+        "class_ 24": ["Oceania", "OCE"],
+        "class_ 25": ["Rest of South Asia", "RSAS", "Rest S.Asia"],
+        "class_ 26": ["Rest of Southern Africa", "RSAF", "Rest S.Africa"]
+    }
+
+    for number, synonyms in numeric_region_map.items():
+        inherits_from = None
+        class_region_knowledge_graph.add(Node(number, synonyms=synonyms, inherits_from=inherits_from))
+
+    return class_region_knowledge_graph
+
+
 def create_region_graph():
     #TODO move to seperate file
     
@@ -388,20 +434,112 @@ def create_region_graph():
 
 knowledge_graph = KnowledgeGraph(*create_building_graph()._items, *create_vehicle_graph()._items)
 
+
+
 def create_electricity_graph():
+    """
+    Constructs and returns a hierarchical knowledge graph representing the electricity system for the subsystems:
+    generation, transmission, and storage components.
+
+    The function builds a structured ontology using `KnowledgeGraph` and `Node` objects to
+    define relationships between electricity-related entities. It organizes technologies and
+    infrastructure into supertype and subtype categories.
+
+    Structure:
+
+    Electricity
+    ├── Generation
+    │   ├── Solar PV
+    │   ├── Conv. Coal
+    │   ├── ...
+    │   └── CHP Biomass + CCS
+    │
+    ├── Transmission
+    │   ├── High Voltage (HV)
+    │   │   ├── Lines
+    │   │   │   ├── Overhead
+    │   │   │   └── Underground
+    │   │   ├── Substations
+    │   │   └── Transformers
+    │   ├── Medium Voltage (MV)
+    │   │   ├── ...
+    │   └── Low Voltage (LV)
+    │       ├── ...
+    │
+    └── Storage
+        ├── PHS
+        ├── V2G-Batteries
+        └── Other Storage
+            ├── mechanical storage
+            │   ├── Flywheel
+            │   └── Compressed Air
+            ├── lithium batteries
+            │   ├── LMO
+            │   ├── ...
+            │   └── Lithium-air
+            ├── molten salt and flow batteries
+            │   ├── Zinc-Bromide
+            │   ├── ...
+            └── other
+                ├── Hydrogen FC
+                ├── NiMH
+                └── Deep-cycle Lead-Acid
+
+
+    Returns:
+        KnowledgeGraph: A fully constructed knowledge graph object describing the
+        electricity system hierarchy.
+
+    Notes:
+        - `V2G-Batteries` (Vehicle-to-Grid) could later be linked to vehicle systems.
+        - The graph currently does not include sub-technologies (e.g. different PV techologies) for generation types, but
+          placeholders are present for future expansion.
+    """
 
     # Generation ======================================================================================
-    generation_supertypes = ["Solar PV", "Solar PV residential", "CSP", "Wind onshore", "Wind offshore", 
-                        "Wave", "Hydro", "Other Renewables", "Geothermal","Hydrogen power", "Nuclear", "Conv. Coal",
-                        "Conv. Oil", "Conv. Natural Gas","Waste", "IGCC", "OGCC", "NG CC", "Biomass CC",
-                        "Coal + CCS", "Oil/Coal + CCS", "Natural Gas + CCS", "Biomass + CCS",
-                        "CHP Coal", "CHP Oil", "CHP Natural Gas", "CHP Biomass","CHP Geothermal", "CHP Hydrogen",
-                        "CHP Coal + CCS", "CHP Oil + CCS", "CHP Natural Gas + CCS", "CHP Biomass + CCS"]
+    
+    numeric_generation_map = {
+        "1": ["Solar PV", "SPV"],               # Solar PV power (central)
+        "2": ["Solar PV residential", "SPVR"],  # Solar PV power (decentral/residential)
+        "3": ["CSP"],                           # Concentrated Solar Power 
+        "4": ["Wind onshore", "WON"],           # Onshore wind power
+        "5": ["Wind offshore", "WOFF"],         # Offshore wind power
+        "6": ["Wave", "WAVE"],                  # Wave power
+        "7": ["Hydro", "HYD"],                  # Hydro power
+        "8": ["Other Renewables", "OREN"],      # Other renewables (tidal and geothermal power)
+        "9": ["Geothermal", "GEO"],             # Geothermal power
+        "10": ["Hydrogen power", "H2P"],        # Hydrogen to power
+        "11": ["Nuclear", "NUC"],               # Nuclear
+        "12": ["<EMPTY>", "FREE12"],            # Free spot
+        "13": ["Conv. Coal", "ClST"],           # Coal steam turbine
+        "14": ["Conv. Oil", "OlST"],            # Oil steam turbine
+        "15": ["Conv. Natural Gas", "NGOT"],    # NG open cycle turbine
+        "16": ["Waste", "BioST"],               # Biomass steam turbine
+        "17": ["IGCC"],                         # Integrated gasification combined cycle
+        "18": ["OGCC", "OlCC"],                 # Oil combined cycle
+        "19": ["NG CC", "NGCC"],                # NG combined cycle
+        "20": ["Biomass CC", "BioCC"],          # Biomass combined cycle
+        "21": ["Coal + CCS", "ClCS"],           # Coal carbon capture and storage
+        "22": ["Oil/Coal + CCS", "OlCS"],       # Oil carbon capture and storage
+        "23": ["Natural Gas + CCS", "NGCS"],    # NG carbon capture and storage
+        "24": ["Biomass + CCS", "BioCS"],       # Biomass carbon capture and storage
+        "25": ["CHP Coal", "ClCHP"],            # Coal combined heat and power
+        "26": ["CHP Oil", "OlCHP"],             # Oil combined heat and power
+        "27": ["CHP Natural Gas", "NGCHP"],     # NG combined heat and power
+        "28": ["CHP Biomass", "BioCHP"],        # Biomass combined heat and power
+        "29": ["CHP Coal + CCS", "ClCHPCS"],    # Coal combined heat and power carbon capture and storage
+        "30": ["CHP Oil + CCS", "OlCHPCS"],     # Oil combined heat and power carbon capture and storage
+        "31": ["CHP Natural Gas + CCS", "NGCHPCS"], # NG combined heat and power carbon capture and storage
+        "32": ["CHP Biomass + CCS", "BioCHPCS"],    # Biomass combined heat and power carbon capture and storage
+        "33": ["CHP Geothermal", "GeoCHP"],         # Geothermal combined heat and power
+        "34": ["CHP Hydrogen", "H2CHP"]             # Hydrogen combined heat and power
+    }
+
 
     electricity_knowledge_graph = KnowledgeGraph(Node("Electricity"))
     electricity_knowledge_graph.add(Node("Generation", inherits_from="Electricity"))
-    for supertype in generation_supertypes:
-        electricity_knowledge_graph.add(Node(supertype, inherits_from="Generation"))
+    for number, synonyms in numeric_generation_map.items():
+        electricity_knowledge_graph.add(Node(number, synonyms=synonyms, inherits_from="Generation"))
 
     # # Sub-Technologies --------------------------
 
@@ -458,6 +596,7 @@ def create_electricity_graph():
     storage_supertypes = ["PHS", "V2G-Batteries", "Other Storage"] # Pumped Hydro Storage, Vehicle-to-Grid Batteries
     # Storage calculations follow a 3 tiered structure: Demand is filled first with PHS, then with (anyway available) V2G-Batteries, and 
     # the residual demand with Other Storage
+    storage_subtypes_categories = ["mechanical storage", "lithium batteries", "molten salt and flow batteries", "other"]
     storage_subtypes = ["Flywheel", "Compressed Air", "Hydrogen FC", "NiMH", "Deep-cycle Lead-Acid", "LMO",
                         "NMC", "NCA", "LFP", "LTO", "Zinc-Bromide", "Vanadium Redox", "Sodium-Sulfur", "ZEBRA",
                         "Lithium Sulfur", "Lithium Ceramic", "Lithium-air"]
@@ -466,9 +605,17 @@ def create_electricity_graph():
 
     for supertype in storage_supertypes:
         electricity_knowledge_graph.add(Node(supertype, inherits_from="Storage"))
-    # TODO: V2G Batteries are also related to Vehicles + Add V2G-Batteries subtypes?
-    for subtype in storage_subtypes:
-        electricity_knowledge_graph.add(Node(subtype, inherits_from="Other Storage"))
+    # TODO: V2G Batteries are also related to Vehicles + Add V2G-Batteries subtypes? Problem with that is, that these are the same sub types as for Other Storage, how to do this?
+    for subtype_category in storage_subtypes_categories:
+        electricity_knowledge_graph.add(Node(subtype_category, inherits_from="Other Storage"))
+    for subtype in ["Flywheel", "Compressed Air"]:
+        electricity_knowledge_graph.add(Node(subtype, inherits_from="mechanical storage"))
+    for subtype in ["LMO","NMC", "NCA", "LFP", "LTO","Lithium Sulfur", "Lithium Ceramic", "Lithium-air"]:
+        electricity_knowledge_graph.add(Node(subtype, inherits_from="lithium batteries"))
+    for subtype in ["Zinc-Bromide", "Vanadium Redox", "Sodium-Sulfur", "ZEBRA"]:
+        electricity_knowledge_graph.add(Node(subtype, inherits_from="molten salt and flow batteries"))
+    for subtype in ["Hydrogen FC", "NiMH", "Deep-cycle Lead-Acid"]:
+        electricity_knowledge_graph.add(Node(subtype, inherits_from="other"))
     
 
     return electricity_knowledge_graph

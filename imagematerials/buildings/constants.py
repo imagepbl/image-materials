@@ -1,3 +1,9 @@
+"""Module containing the constants used for the buildings sector.
+
+This module will probably be (partly) deprecated at some point in favor of configuration
+files and/or default values.
+"""
+
 import xarray as xr
 import numpy as np
 

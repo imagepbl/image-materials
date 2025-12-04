@@ -4,6 +4,8 @@ from pathlib import Path
 import xarray as xr
 import numpy as np
 
+from imagematerials.constants import IMAGE_REGIONS
+
 from imagematerials.buildings.constants import SCENARIO_SELECT
 from imagematerials.buildings.preprocessing.floorspace import (
     compute_average_m2_capita,
@@ -19,6 +21,7 @@ from imagematerials.buildings.preprocessing.materials import (
 )
 from imagematerials.buildings.preprocessing.population import compute_population
 from imagematerials.concepts import create_building_graph
+from imagematerials.concepts import create_region_graph
 
 from imagematerials.buildings.preprocessing.circular_economy_measures import apply_circular_economy_commercial_floorspace
 
@@ -73,13 +76,22 @@ def buildings_preprocessing(base_directory, climate_policy_config: dict,
     mat_intensities_comm = compute_mat_intensities_commercial(database_directory, circular_economy_config)
     mat_intensities_res = compute_mat_intensities_residential(database_directory, circular_economy_config)
     mat_intensities = xr.concat((mat_intensities_res, mat_intensities_comm), dim="Type")
-    knowledge_graph = create_building_graph()
-    mat_intensities = knowledge_graph.rebroadcast_xarray(
+    knowledge_graph_buildings = create_building_graph()
+    mat_intensities = knowledge_graph_buildings.rebroadcast_xarray(
                             mat_intensities, floorspace.coords["Type"].values)
     
     #TODO remove this quick fix
     region_coords = np.sort(floorspace.coords["Region"].values.astype(int)).astype(str)
-    floorspace = knowledge_graph.rebroadcast_xarray(floorspace, region_coords, dim ="Region")
+    floorspace = knowledge_graph_buildings.rebroadcast_xarray(floorspace, region_coords, dim ="Region")
+
+    
+    # convert region names to the standard IMAGE regions
+    knowledge_graph_region = create_region_graph()
+
+    floorspace = knowledge_graph_region.rebroadcast_xarray(floorspace, output_coords=IMAGE_REGIONS, dim="Region")
+    for key, value in lifetimes.items():
+        lifetimes[key] = knowledge_graph_region.rebroadcast_xarray(value, output_coords=IMAGE_REGIONS, dim="Region")
+    mat_intensities = knowledge_graph_region.rebroadcast_xarray(mat_intensities, output_coords=IMAGE_REGIONS, dim="Region")
 
     return {"stocks": floorspace, "lifetimes": lifetimes, "material_intensities": mat_intensities,
-            "knowledge_graph": knowledge_graph, "set_unit_flexible": str(floorspace.pint.units)}
+            "knowledge_graph": knowledge_graph_buildings, "set_unit_flexible": str(floorspace.pint.units)}

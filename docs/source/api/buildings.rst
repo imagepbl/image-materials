@@ -1,6 +1,7 @@
 imagematerials buildings package
 ================================
 
+.. currentmodule:: imagematerials.buildings
 
 buildings.constants module
 --------------------------
@@ -30,14 +31,6 @@ buildings.preprocessing.lifetimes module
 ----------------------------------------
 
 .. automodule:: imagematerials.buildings.preprocessing.lifetimes
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-buildings.constants module
-----------------------------------------
-
-.. automodule:: imagematerials.buildings.constants
    :members:
    :undoc-members:
    :show-inheritance:

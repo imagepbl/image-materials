@@ -1,6 +1,7 @@
 import numpy as np
 import xarray as xr
 
+
 def adapt_gompertz_regional(xr_gompertz, scenario: str, 
                             start_implementation_year=2030,
                             end_implementation_year=2100):
@@ -84,40 +85,4 @@ def adapt_gompertz_regional(xr_gompertz, scenario: str,
                         xr_gompertz.loc[dict(coef='a', material=material, Region=region, Time=year)] = max(target_a, lowest_a)
     
     print("gompertz scaling applied for scenario:", scenario)
-    return xr_gompertz
-
-
-def simple_scaling_a_gompertz(xr_gompertz, 
-                              efficiency_improvement=0.1,
-                              start_implementation_year=2030,
-                              end_implementation_year=2100):
-    """
-    Apply simple scaling to the Gompertz parameters.
-
-    Parameters
-    ----------
-    xr_gompertz : xarray.DataArray
-        The Gompertz parameters.
-    start_implementation_year : int
-        The start year for the implementation of the scaling.
-    end_implementation_year : int
-        The end year for the implementation of the scaling.
-
-    Returns
-    -------
-    xarray.DataArray
-        The scaled Gompertz parameters.
-    """
-    years = xr_gompertz.coords['Time'].values
-    # Create scaling factor
-    scaling = xr.DataArray(
-        np.where(years < start_implementation_year, 1.0, 1.0 - efficiency_improvement * (years - start_implementation_year) / (end_implementation_year - start_implementation_year)),
-        dims="Time",
-        coords={"Time": years}
-    )
-    scaling = scaling.clip(min=1-efficiency_improvement)  # Ensure minimum is 1 - efficiency_improvement
-    # Apply scaling to the alpha coefficient (per capita demand) 
-    xr_gompertz.loc[dict(coef='a')] = xr_gompertz.sel(coef='a') * scaling
-
-    print("simple gompertz scaling applied")
     return xr_gompertz

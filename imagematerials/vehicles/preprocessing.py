@@ -21,6 +21,7 @@ from imagematerials.read_mym import read_mym_df
 from imagematerials.util import (
     dataset_to_array, 
     pandas_to_xarray,
+    convert_lifetime,
 )
 from imagematerials.vehicles.constants import (
     END_YEAR,
@@ -56,10 +57,10 @@ from imagematerials.vehicles.constants import (
     years_range,
     maintenance_lifetime_per_mode,
 )
-from imagematerials.concepts import create_vehicle_graph
+from imagematerials.concepts import create_vehicle_graph, create_region_graph
 from imagematerials.vehicles.modelling_functions import (interpolate, tkms_to_nr_of_vehicles_fixed,  
     scenario_change, apply_change_per_region)
-#from imagematerials.concepts import vehicle_knowledge_graph
+from imagematerials.constants import IMAGE_REGIONS
 
 
 def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_config: dict):
@@ -488,10 +489,10 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
     
 
     # Calculate maintenace material need in kg material per kg vehicle
-    maintenance_material_pd['Li'] = 0
-    maintenance_material_pd['Mn'] = 0
-    maintenance_material_pd['Ni'] = 0
-    maintenance_material_pd['Ti'] = 0
+    maintenance_material_pd['lithium'] = 0
+    maintenance_material_pd['manganese'] = 0
+    maintenance_material_pd['nickel'] = 0
+    maintenance_material_pd['titanium'] = 0
 
     stacked_maintenance_material = maintenance_material_pd.set_index("Type").stack().rename_axis(index=["Type", "material"]).reset_index(name="value")
 
@@ -770,7 +771,7 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
             if df_name_simple not in df_name_list:
                 preprocessing_results_xarray[df_name[:-8]] = preprocessing_results_xarray.pop(df_name)
 
-    preprocessing_results_xarray["lifetimes"] = convert_life_time_vehicles(preprocessing_results_xarray["lifetimes"])
+    preprocessing_results_xarray["lifetimes"] = convert_lifetime(preprocessing_results_xarray["lifetimes"])
     preprocessing_results_xarray["stocks"] = preprocessing_results_xarray.pop("total_nr_vehicles")
     preprocessing_results_xarray["shares"] = preprocessing_results_xarray.pop("vehicle_shares")
 
@@ -809,87 +810,27 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
     output_coords_type = [x for x in prep_data["stocks"].Type.values if x not in share_coords] + list(prep_data["shares"].coords["Type"].values)
 
     # Use the shares to get the stocks for each of the subtypes.
-    knowledge_graph = create_vehicle_graph()
-    prep_data["shares"] = knowledge_graph.rebroadcast_xarray(prep_data["shares"], output_coords=region_coords, dim="Region")
-    prep_data["stocks"] = knowledge_graph.rebroadcast_xarray(prep_data["stocks"], output_coords=region_coords, dim="Region")
-    stocks = knowledge_graph.rebroadcast_xarray(preprocessing_results_xarray["stocks"],
+    knowledge_graph_vehicle = create_vehicle_graph()
+    prep_data["shares"] = knowledge_graph_vehicle.rebroadcast_xarray(prep_data["shares"], output_coords=region_coords, dim="Region")
+    prep_data["stocks"] = knowledge_graph_vehicle.rebroadcast_xarray(prep_data["stocks"], output_coords=region_coords, dim="Region")
+    stocks = knowledge_graph_vehicle.rebroadcast_xarray(preprocessing_results_xarray["stocks"],
                                                                                 output_coords_type,
                                                                                 dim="Type",
                                                                                 shares=prep_data["shares"])
     stocks = prism.Q_(stocks, "count")
     preprocessing_results_xarray["stocks"] = stocks
-    prep_data["knowledge_graph"] = knowledge_graph
+    prep_data["knowledge_graph"] = knowledge_graph_vehicle
     prep_data.pop("shares")
     
     prep_data["weights"] = prep_data.pop("vehicle_weights")
     prep_data["set_unit_flexible"] = "count"
+
+    knowledge_graph_region = create_region_graph()
+    prep_data["stocks"] = knowledge_graph_region.rebroadcast_xarray(prep_data["stocks"], output_coords=IMAGE_REGIONS, dim="Region") 
     
     return preprocessing_results_xarray
 
 
-
-def convert_life_time_vehicles(life_time_vehicles: xr.Dataset) -> dict[str, xr.DataArray]:
-    """Convert lifetime vehicles dataset to a more appropriate data format.
-
-    This conversion should probably move to the preprocessing stage after we figure out
-    the exact details of what the output should look like.
-
-    Parameters
-    ----------
-    life_time_vehicles
-        The input life_time_vehicles xarray dataset. It is supposed to be in a very particular format:
-        it contains the parameters for each of the modes. However, the distribution types are not
-        the same for each of the modes. Thus, the distribution types need to be inferred from the
-        names of the parameters that are given. If multiple parameter sets for multiple distributions
-        are given, the Weibull distribution is given preference over the FoldedNormal distribution.
-
-    Returns
-    -------
-        A dictionary that contains a data array for each of the distributions. Given the setup there is
-        an implicit assumption that only one distribution is used for each of the modes. If distribution
-        types change over time, this data structure needs to be adjusted.
-
-    """
-    # Create a dictionary to find which parameters are available for which mode.
-    mode_param = defaultdict(list)
-    for mode, par in life_time_vehicles.data_vars:
-        mode_param[mode].append(par)
-
-    # Create a dictionary that says which modes are tied to which distribution.
-    dist_mode = defaultdict(list)
-    modes_done = set()  # temporary
-    for dist in ALL_DISTRIBUTIONS:
-        for mode, param in mode_param.items():
-            if mode not in modes_done and dist.has_param(param):
-                dist_mode[dist.name].append(mode)
-                modes_done.add(mode)
-
-    # Iterate over all distributions to create a data array for each of them.
-    ret_scipy_params = {}
-    for dist_name, mode_list in dist_mode.items():
-        if len(mode_list) == 0:
-            continue
-        dist = NAME_TO_DIST[dist_name]
-
-        # param_arrays = {}
-        array = xr.DataArray(
-            0.0, dims=("Time", "Type", "ScipyParam"),
-            coords={
-                "Time": life_time_vehicles.coords["year"].to_numpy(),
-                "Type": mode_list,
-                "ScipyParam": dist.variable_scipy_param})
-        for mode in mode_list:
-            orig_param_dict = {}
-            for param in dist.params:
-                orig_param_dict[param] = life_time_vehicles.data_vars[str(mode), param].to_numpy()
-            scipy_params = dist.get_param(orig_param_dict)
-            for cur_scipy_key, cur_scipy_par in scipy_params.items():
-                if cur_scipy_key in dist.variable_scipy_param:
-                    array.loc[:, str(mode), cur_scipy_key] = cur_scipy_par
-                else:
-                    array.attrs[cur_scipy_key] = cur_scipy_par
-        ret_scipy_params[dist_name] = array
-    return ret_scipy_params
 
 
 # %%

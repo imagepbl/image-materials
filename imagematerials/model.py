@@ -679,14 +679,17 @@ class EndOfLife(prism.Model):
         #   'generation':[], 
         #   'grid':[],
         #   'storage': []
+        
 
         }
+        materials = ['aluminium', 'brick', 'cement', 'cobalt', 'concrete', 'copper', 'glass',
+        'lead', 'lithium', 'manganese', 'neodymium', 'nickel', 'plastics',
+        'rubber', 'steel', 'titanium', 'wood']
+
         self.sum_outflow[t] = prism.Q_(0.0, 'kg')
         for outflow in outflow_by_cohort_materials:
-
             outflow_t = outflow[t] 
 
-            
             for supertype, subtypes in type_dict.items():
                 if subtypes[0] not in outflow_t.coords["Type"]:
                     continue
@@ -701,14 +704,15 @@ class EndOfLife(prism.Model):
                 reusable_materials = collected_materials*reuse.loc[input_coords]
                 remaining_materials = collected_materials-reusable_materials                        # non-reused but collected waste
                 recyclable_materials = remaining_materials*recycling.loc[input_coords]
-                losses_materials = sum_outflow-collected_materials                                  # non-collected waste
-                losses_materials = losses_materials+remaining_materials-recyclable_materials        # non-reused/recycled but collected waste
+                losses_materials = (sum_outflow-collected_materials                                 # non-collected waste
+               +remaining_materials-recyclable_materials)                                           # non-reused/recycled but collected waste
 
                 self.collected_materials[t].loc[coords] = collected_materials
                 self.reusable_materials[t].loc[coords] = reusable_materials
                 self.remaining_materials[t].loc[coords] = remaining_materials
                 self.recyclable_materials[t].loc[coords] = recyclable_materials
                 self.losses_materials[t].loc[coords] = losses_materials
+        
 
         for inflow in inflow_materials:
             inflow_t = inflow[t]
@@ -717,6 +721,10 @@ class EndOfLife(prism.Model):
                     continue
                 sum_inflow = inflow_t.sel(Type=subtypes).sum("Type")
 
+
+                # --- harmonize coordinates ---
+                sum_inflow = sum_inflow.reindex_like(collection, fill_value=0)
+            
                 coords = {"Type": supertype, "material": sum_inflow.coords["material"], "Region": sum_inflow.coords["Region"]}
                 input_coords = {"Time":t, "Type":supertype}
 
@@ -727,6 +735,7 @@ class EndOfLife(prism.Model):
                     0,
                     sum_inflow - reusable_materials - recyclable_materials
                 )
+                virgin_materials = virgin_materials.reindex_like(self.virgin_materials[t], fill_value=0)
                 self.virgin_materials[t].loc[coords] = virgin_materials
 
 @prism.interface
@@ -771,6 +780,7 @@ class RestOf(prism.Model):
             
             # Create a mask of where values are nan
             mask = np.isnan(self.inflow_materials_rest.loc[t])
+           
             # Use the mask to fill nans with historic_diff_consumption
             # Align historic_diff_consumption to the same dims/order as inflow_materials_rest
 
