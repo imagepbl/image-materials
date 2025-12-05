@@ -19,7 +19,7 @@ from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_life
 from imagematerials.model import GenericMainModel, GenericStocks, SharesInflowStocks, Maintenance, GenericMaterials, MaterialIntensities
 from imagematerials.factory import ModelFactory, Sector
 from imagematerials.concepts import create_electricity_graph, create_region_graph
-from imagematerials.electricity.utils import MNLogit, stock_tail, create_prep_data, stock_share_calc
+from imagematerials.electricity.utils import MNLogit, stock_tail, create_prep_data, stock_share_calc,add_historic_stock
 
 from imagematerials.constants import (
     IMAGE_REGIONS,
@@ -34,6 +34,7 @@ from imagematerials.electricity.constants import (
     REGIONS,
     TECH_GEN,
     EPG_TECHNOLOGIES,
+    EPG_TECHNOLOGIES_VRE,
     STD_LIFETIMES_ELECTR,
     MEGA_TO_TERA,
     PKMS_TO_VKMS,
@@ -497,8 +498,7 @@ knowledge_graph_region = create_region_graph()
 knowledge_graph_electr = create_electricity_graph()
 
 # grid_length_Hv -----------
-# drop column name ('km')
-grid_length_hv_data.columns.name = None
+grid_length_hv_data.columns.name = None # drop column name ('km')
 # line_types = ["hv_lines_overhead","hv_lines_underground","mv_lines_overhead","mv_lines_underground", "lv_lines_overhead","lv_lines_underground"]   # or whatever list
 line_types = ["HV - Lines - Overhead","HV - Lines - Underground","MV - Lines - Overhead","MV - Lines - Underground", "LV - Lines - Overhead","LV - Lines - Underground"]   # or whatever list
 grid_length = xr.DataArray(
@@ -511,8 +511,8 @@ grid_length = xr.DataArray(
     },
     name="GridLength"
 )
-# fill for now only with the data read in for HV in 2016
-grid_length.loc[dict(Time=2016, Type="HV - Lines - Overhead")] = grid_length_hv_data.values.reshape(-1)
+# fill all years with the data read in for HV in 2016, as they will be later scaled by multiplying with a growth factor relative to the year 2016
+grid_length.loc[{"Time":slice(YEAR_START, YEAR_END), "Type":"HV - Lines - Overhead"}] = grid_length_hv_data.values.reshape(-1)
 grid_length = prism.Q_(grid_length, "km")
 grid_length = knowledge_graph_region.rebroadcast_xarray(grid_length, output_coords=IMAGE_REGIONS, dim="Region") # convert region names to the standard names from IMAGE
 
@@ -597,7 +597,6 @@ gcap = knowledge_graph_region.rebroadcast_xarray(gcap, output_coords=IMAGE_REGIO
 gcap = knowledge_graph_electr.rebroadcast_xarray(gcap, output_coords=EPG_TECHNOLOGIES, dim="Type")
 gcap = gcap.assign_coords(Type=np.array(gcap.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
-
 # GDP ------
 gdp_pc_data = gdp_pc_data.iloc[:, :len(IMAGE_REGIONS)] # exclude empty column (27) and totals (28)
 # Extract coordinate labels
@@ -613,12 +612,24 @@ gdp_pc = xr.DataArray(
         'Time': years,
         'Region': [str(r) for r in regions]
     },
-    name='GDP'
+    name='GDPPerCapita'
 )
-gdp_pc = prism.Q_(gdp_pc, "person")
+gdp_pc = prism.Q_(gdp_pc, "USD/person")
 gdp_pc = knowledge_graph_region.rebroadcast_xarray(gdp_pc, output_coords=IMAGE_REGIONS, dim="Region") 
 
 
+# line ratios ------
+# region specific ratio between the length of Hv and Mv and LV networks
+ds_ratio_Hv = ratio_Hv.to_xarray()
+ds_ratio_Hv = ds_ratio_Hv.swap_dims({'km/km': 'Region'}) # change the dimension
+ds_ratio_Hv = ds_ratio_Hv.rename({'km/km': 'Region'}) # rename the coordinate
+ds_ratio_Hv = ds_ratio_Hv.set_index(Region='Region')
+ds_ratio_Hv["HV to MV"] = prism.Q_(ds_ratio_Hv["HV to MV"], "km/km")
+ds_ratio_Hv["HV to LV"] = prism.Q_(ds_ratio_Hv["HV to LV"], "km/km")
+ds_ratio_Hv = xr.Dataset({ # rebroadcast both xarrays in dataset to IMAGE regions
+    name: knowledge_graph_region.rebroadcast_xarray(da, output_coords=IMAGE_REGIONS, dim="Region")
+    for name, da in ds_ratio_Hv.data_vars.items()
+}, attrs=ds_ratio_Hv.attrs)
 
 
 #----------------------------------------------------------------------------------------------------------
@@ -631,19 +642,83 @@ gdp_pc = knowledge_graph_region.rebroadcast_xarray(gdp_pc, output_coords=IMAGE_R
 gcap_total = gcap.sum(dim='Type')
 gcap_growth = gcap_total / gcap_total.loc[2016]        # define growth according to 2016 as base year
 
+# TODO: NOT WORKING, check here:
+grid_growth = gcap_growth.expand_dims(Type=["HV - Lines - Overhead","MV - Lines - Overhead","LV - Lines - Overhead"]).copy()
+grid_growth_expanded = grid_growth.broadcast_like(grid_length)
+# --------------
+
+# for HV lines: additional growth is presumed after 2020 based on the fraction of variable renewable energy (vre) generation capacity (solar & wind) (used to be only in the sensitivity variant, but now used in the base case as well)
+vre_fraction = gcap.sel(Type=EPG_TECHNOLOGIES_VRE).sum(dim='Type') / gcap_total
+# Compute additional/reduced growth
+add_growth = vre_fraction * 1             # if value is e.g. 0.2 = 20% additional HV lines per doubling of vre gcap
+red_growth = (1 - vre_fraction) * 0.7     
+add_growth = add_growth.where(add_growth.Time >= 2020, 0)  # Set pre-2020 values to 0
+red_growth = red_growth.where(red_growth.Time >= 2020, 0)
+# Create a ramp factor (line length addition/reduction is gradually introduced from 2020 towards 2050)
+ramp_factor = xr.DataArray(
+    np.clip((add_growth.Time - 2020) / 30, 0, 1),
+    coords={"Time": add_growth.Time},
+    dims=["Time"]
+)
+add_growth = add_growth * ramp_factor # Apply ramp factor
+red_growth = red_growth * ramp_factor
+grid_growth.loc[{"Type": "HV - Lines - Overhead"}] = grid_growth.loc[{"Type": "HV - Lines - Overhead"}] + add_growth - red_growth
+
+# TODO: NOT WORKING, check here:
+# calculate extend of MV and LV networks in 2016 based on Hv network and fixed ratios
+grid_length.loc[{"Type": "MV - Lines - Overhead"}] = grid_length.loc[{"Type": "HV - Lines - Overhead"}] * ds_ratio_Hv["HV to MV"]
+grid_length.loc[{"Type": "LV - Lines - Overhead"}] = grid_length.loc[{"Type": "HV - Lines - Overhead"}] * ds_ratio_Hv["HV to LV"]
+# scale line lengths based on growth factors
+grid_length = grid_length * knowledge_graph_electr.rebroadcast_xarray(grid_growth, output_coords=["HV - Lines - Overhead","MV - Lines - Overhead","LV - Lines - Overhead"], dim="Type")
+
+# Calculate Line-Underground fraction: fraction_under = mult * gdp_pc + add
+# underground vs. aboveground fraction (%) based on static ratios (the Hv length is the aboveground fraction according to Open Street Maps, we add the underground fractions for 3 voltage networks)
+# Based on new insights from Kalt et al. 2021, we adjust the underground ratios downwards for non-European regions
+test = underground_ratio.to_xarray()
+
+lines_above_below_fraction = xr.full_like(grid_length, np.nan).rename("FractionUndergroundAboveground")
+
+gdp_pc_unitless = gdp_pc.pint.dequantify() #work-around for now
+for region in IMAGE_REGIONS:
+    if region in ['WEU','CEU']:
+        select_proxy = 'Europe'
+    else:
+        select_proxy = 'Other'
+
+    lines_above_below_fraction.loc[{"Region": region, "Type": "HV - Lines - Underground"}] = gdp_pc_unitless.sel(Region=region) * underground_ratio.loc[idx[select_proxy,'mult'],'HV'] + underground_ratio.loc[idx[select_proxy,'add'],'HV']
+
+    # ratio_Hv_under[region] = gdp_pc[region] * underground_ratio.loc[idx[select_proxy,'mult'],'HV'] + underground_ratio.loc[idx[select_proxy,'add'],'HV']
+    # ratio_Mv_under[region] = gdp_pc[region] * underground_ratio.loc[idx[select_proxy,'mult'],'MV'] + underground_ratio.loc[idx[select_proxy,'add'],'MV']
+    # ratio_Lv_under[region] = gdp_pc[region] * underground_ratio.loc[idx[select_proxy,'mult'],'LV'] + underground_ratio.loc[idx[select_proxy,'add'],'LV']
+
+
 
 # above: done, below: in progress -----------------------------------------------------------------------------------------
 
-# Hv length (in kms) is region-specific. However, we use a single ratio between the length of Hv and Mv networks, the same applies to Lv networks
-xr_ratio_Hv = ratio_Hv.to_xarray()
-xr_ratio_Hv = xr_ratio_Hv.rename_dims({'km/km': 'Region'}) # Rename the dimension
-xr_ratio_Hv = xr_ratio_Hv.rename({'km/km': 'Region'}) # Rename the coordinate
-xr_ratio_Hv["HV to MV"] = prism.Q_(xr_ratio_Hv["HV to MV"], "km/km")
-xr_ratio_Hv["HV to LV"] = prism.Q_(xr_ratio_Hv["HV to LV"], "km/km")
-xr_ratio_Hv = knowledge_graph_region.rebroadcast_xarray(xr_ratio_Hv, output_coords=IMAGE_REGIONS, dim="Region") 
+# define underground vs. aboveground fraction (%) based on static ratios (the Hv length is the aboveground fraction according to Open Street Maps, we add the underground fractions for 3 voltage networks)
+# Based on new insights from Kalt et al. 2021, we adjust the underground ratios downwards for non-European regions
+ratio_Hv_under = pd.DataFrame(index=gdp_pc.index, columns=gdp_pc.columns)
+ratio_Mv_under = pd.DataFrame(index=gdp_pc.index, columns=gdp_pc.columns)
+ratio_Lv_under = pd.DataFrame(index=gdp_pc.index, columns=gdp_pc.columns)
 
-grid_length_Mv = grid_length_Hv.mul(ratio_Hv['HV to MV'])
-grid_length_Lv = grid_length_Hv.mul(ratio_Hv['HV to LV'])
+for region in region_list:
+    if region in ['W.Europe','C.Europe']:
+        select_proxy = 'Europe'
+    else:
+        select_proxy = 'Other'
+    #print(str(region) + ': ' + select_proxy)
+    ratio_Hv_under[region] = gdp_pc[region] * underground_ratio.loc[idx[select_proxy,'mult'],'HV'] + underground_ratio.loc[idx[select_proxy,'add'],'HV']
+    ratio_Mv_under[region] = gdp_pc[region] * underground_ratio.loc[idx[select_proxy,'mult'],'MV'] + underground_ratio.loc[idx[select_proxy,'add'],'MV']
+    ratio_Lv_under[region] = gdp_pc[region] * underground_ratio.loc[idx[select_proxy,'mult'],'LV'] + underground_ratio.loc[idx[select_proxy,'add'],'LV']
+
+# maximize linear ratio at 100 & minimize at 0 (%)
+ratio_Hv_under = ratio_Hv_under.apply(lambda x: [y if y >= 0 else 0 for y in x])                     
+ratio_Hv_under = ratio_Hv_under.apply(lambda x: [y if y <= 100 else 100 for y in x])  
+ratio_Mv_under = ratio_Mv_under.apply(lambda x: [y if y >= 0 else 0 for y in x])  
+ratio_Mv_under = ratio_Mv_under.apply(lambda x: [y if y <= 100 else 100 for y in x])  
+ratio_Lv_under = ratio_Lv_under.apply(lambda x: [y if y >= 0 else 0 for y in x])  
+ratio_Lv_under = ratio_Lv_under.apply(lambda x: [y if y <= 100 else 100 for y in x])
+
 
 
 
@@ -675,29 +750,29 @@ grid_length_Lv = grid_length_Hv.mul(ratio_Hv['HV to LV'])
 
 
 # Hv length (in kms) is region-specific. However, we use a single ratio between the length of Hv and Mv networks, the same applies to Lv networks 
-grid_length_Mv = grid_length_Hv.mul(ratio_Hv['HV to MV'])
-grid_length_Lv = grid_length_Hv.mul(ratio_Hv['HV to LV'])
+# grid_length_Mv = grid_length_Hv.mul(ratio_Hv['HV to MV'])
+# grid_length_Lv = grid_length_Hv.mul(ratio_Hv['HV to LV'])
 
 # define grid length over time (fixed in 2016, growth according to gcap)
-grid_length_Hv_time = pd.DataFrame().reindex_like(gcap_total)
-grid_length_Mv_time = pd.DataFrame().reindex_like(gcap_total)
-grid_length_Lv_time = pd.DataFrame().reindex_like(gcap_total)
+# grid_length_Hv_time = pd.DataFrame().reindex_like(gcap_total)
+# grid_length_Mv_time = pd.DataFrame().reindex_like(gcap_total)
+# grid_length_Lv_time = pd.DataFrame().reindex_like(gcap_total)
 
 #implement growth correction (sensitivity variant)
-if SENS_ANALYSIS == 'high_grid':
-    # in the sensitivity variant, additional growth is presumed after 2020 based on the fraction of variable renewable energy (vre) generation capacity (solar & wind)
-    vre_fraction = gcap[['Solar PV', 'CSP', 'Wind onshore', 'Wind offshore']].sum(axis=1).unstack().divide(gcap.sum(axis=1).unstack())
-    add_growth = vre_fraction * 1                  # 0.2 = 20% additional HV lines per doubling of vre gcap
-    red_growth = (1-vre_fraction) * 0.7            # 0.2 = 20% less HV lines per doubling of baseline gcap
-    add_growth.loc[list(range(1971,2020+1)),:] = 0  # pre 2020, additional HV grid growth is 0, afterwards the additional line length is gradually introduced (towards 2050)
-    red_growth.loc[list(range(1971,2020+1)),:] = 0  # pre 2020, reduction of HV grid growth is 0, afterwards the line length reduction is gradually introduced (towards 2050)
-    for year in range(2020,2050+1):
-        add_growth.loc[year] = add_growth.loc[year] * (1/30*(year-2020)) 
-        red_growth.loc[year] = red_growth.loc[year] * (1/30*(year-2020)) 
+# if SENS_ANALYSIS == 'high_grid':
+#     # in the sensitivity variant, additional growth is presumed after 2020 based on the fraction of variable renewable energy (vre) generation capacity (solar & wind)
+#     vre_fraction = gcap[['Solar PV', 'CSP', 'Wind onshore', 'Wind offshore']].sum(axis=1).unstack().divide(gcap.sum(axis=1).unstack())
+#     add_growth = vre_fraction * 1                  # 0.2 = 20% additional HV lines per doubling of vre gcap
+#     red_growth = (1-vre_fraction) * 0.7            # 0.2 = 20% less HV lines per doubling of baseline gcap
+#     add_growth.loc[list(range(1971,2020+1)),:] = 0  # pre 2020, additional HV grid growth is 0, afterwards the additional line length is gradually introduced (towards 2050)
+#     red_growth.loc[list(range(1971,2020+1)),:] = 0  # pre 2020, reduction of HV grid growth is 0, afterwards the line length reduction is gradually introduced (towards 2050)
+#     for year in range(2020,2050+1):
+#         add_growth.loc[year] = add_growth.loc[year] * (1/30*(year-2020)) 
+#         red_growth.loc[year] = red_growth.loc[year] * (1/30*(year-2020)) 
 
-    gcap_growth_HV = gcap_growth.add(add_growth.reindex_like(gcap_growth)).subtract(red_growth.reindex_like(gcap_growth))
-else: 
-    gcap_growth_HV = gcap_growth
+#     gcap_growth_HV = gcap_growth.add(add_growth.reindex_like(gcap_growth)).subtract(red_growth.reindex_like(gcap_growth))
+# else: 
+#     gcap_growth_HV = gcap_growth
 
 for year in range(YEAR_START, YEAR_END+1):
    grid_length_Hv_time.loc[year] = gcap_growth_HV.loc[year].mul(grid_length_Hv.loc['2016'])

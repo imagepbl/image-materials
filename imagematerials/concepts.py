@@ -541,13 +541,13 @@ def create_electricity_graph():
     line_subtypes = ["Overhead", "Underground"]
   
     electricity_knowledge_graph.add(Node("Transmission", inherits_from="Electricity"))
-    for type in transmission_types:
-        electricity_knowledge_graph.add(Node(type, inherits_from="Transmission"))
+    for t_type in transmission_types:
+        electricity_knowledge_graph.add(Node(t_type, inherits_from="Transmission"))
         for sub_type in transmission_subtypes:
-            electricity_knowledge_graph.add(Node(f"{type} - {sub_type}", inherits_from=type))
+            electricity_knowledge_graph.add(Node(f"{t_type} - {sub_type}", inherits_from=t_type))
             if sub_type == "Lines":
                 for line_subtype in line_subtypes:
-                    electricity_knowledge_graph.add(Node(f"{type} - {sub_type} - {line_subtype}", inherits_from=f"{type} - {sub_type}"))
+                    electricity_knowledge_graph.add(Node(f"{t_type} - {sub_type} - {line_subtype}", inherits_from=f"{t_type} - {sub_type}"))
 
 
     # Storage ======================================================================================

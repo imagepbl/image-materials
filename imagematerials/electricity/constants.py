@@ -119,7 +119,7 @@ GEN_TYPES_SEBASTIAAN = ["Solar PV", "Solar PV residential", "CSP", "Wind onshore
                         "Coal + CCS", "Oil/Coal + CCS", "Natural Gas + CCS", "Biomass + CCS",
                         "CHP Coal", "CHP Oil", "CHP Natural Gas", "CHP Biomass",
                         "CHP Coal + CCS", "CHP Oil + CCS", "CHP Natural Gas + CCS", "CHP Biomass + CCS", "CHP Geothermal", "CHP Hydrogen"]
-# names of generation technologies as in TIMER model - TODO: check if these are correct
+# names of generation technologies as in TIMER model
 EPG_TECHNOLOGIES = [
     "SPV",
     "SPVR",
@@ -155,6 +155,14 @@ EPG_TECHNOLOGIES = [
     "BioCHPCS",
     "GeoCHP",
     "H2CHP"
+]
+
+EPG_TECHNOLOGIES_VRE = [
+    "SPV",
+    "SPVR",
+    "WON",
+    "WOFF",
+    # "WAVE", #?
 ]
 
 
