@@ -30,7 +30,8 @@ def elc_sector():
     scen_folder = SCEN + "_" + VARIANT
     climate_policy_scenario_dir = Path(path_base, "image", scen_folder)
     return get_preprocessing_data("electricity", base_dir=path_base,
-                                  climate_policy_scenario_dir=climate_policy_scenario_dir)
+                                  climate_policy_scenario_dir=climate_policy_scenario_dir,
+                                  standard_scenario=scen_folder)
 
 @pytest.fixture(scope="session")
 def elc_prep_data(elc_sector):
