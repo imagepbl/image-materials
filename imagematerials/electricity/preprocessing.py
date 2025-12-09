@@ -36,15 +36,11 @@ from imagematerials.electricity.constants import (
 ###########################################################################################################
 def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
-    #path_image_output = Path(path_base, "image", scenario, "EnergyServices")
-    #path_external_data_standard = Path(path_base, "electricity", "standard_data")
     path_external_data_scenario = Path(path_base, "electricity", scenario)
     # test if path_external_data_scenario exists and if not set to standard scenario
     if not path_external_data_scenario.exists():
         path_external_data_scenario = Path(path_base, "electricity", STANDARD_SCEN_EXTERNAL_DATA)
 
-    #assert path_image_output.is_dir()
-    #assert path_external_data_standard.is_dir()
     assert path_external_data_scenario.is_dir()
 
     ###########################################################################################################
@@ -60,7 +56,6 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, scen
 
     # 2. IMAGE/TIMER files -----------------------------------------
     # Generation capacity (stock demand per generation technology) in MW peak capacity
-    #gcap_data = read_mym_df(path_image_output / 'Gcap.out')
     gcap_data = read_mym_df(
         climate_policy_config["config_file_path"] /
         climate_policy_config["data_files"]['GCap']
@@ -117,7 +112,6 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, scen
     gcap_materials_xr = prism.Q_(gcap_materials_xr, "g/MW")
     gcap_materials_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_materials_xr, output_coords=EPG_TECHNOLOGIES, dim="Type")
     gcap_materials_xr = gcap_materials_xr.assign_coords(Type=np.array(gcap_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
-
 
     # Gcap ------
     gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies

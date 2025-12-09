@@ -214,7 +214,6 @@ def summarize_prep_data(data):
             continue
         elif isinstance(array, pint.Unit):
             continue
-            #all_summary[data_name] = str(array)
         elif array is None:
             all_summary[data_name] = array
         elif isinstance(array, str):
