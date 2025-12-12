@@ -159,7 +159,7 @@ EPG_TECHNOLOGIES = [
 
 EPG_TECHNOLOGIES_VRE = [
     "SPV",
-    "SPVR",
+    # "SPVR", #?
     "WON",
     "WOFF",
     # "WAVE", #?

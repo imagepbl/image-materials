@@ -291,16 +291,6 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     gcap_total = gcap_total[region_list]                     # re-order columns to the original TIMER order
     gcap_growth.loc[2016:YEAR_END] = gcap_total.loc[2016:YEAR_END] / gcap_total.loc[2016]        # define growth according to 2016 as base year
 
-    # in the sensitivity variant, additional growth is presumed after 2020 based on the fraction of variable renewable energy (vre) generation capacity (solar & wind)
-    vre_fraction = gcap[['Solar PV', 'CSP', 'Wind onshore', 'Wind offshore']].sum(axis=1).unstack().divide(gcap.sum(axis=1).unstack())
-    add_growth = vre_fraction * 1                  # 0.2 = 20% additional HV lines per doubling of vre gcap
-    red_growth = (1-vre_fraction) * 0.7            # 0.2 = 20% less HV lines per doubling of baseline gcap
-    add_growth.loc[list(range(1971,2020+1)),:] = 0  # pre 2020, additional HV grid growth is 0, afterwards the additional line length is gradually introduced (towards 2050)
-    red_growth.loc[list(range(1971,2020+1)),:] = 0  # pre 2020, reduction of HV grid growth is 0, afterwards the line length reduction is gradually introduced (towards 2050)
-    for year in range(2020,2050+1):
-        add_growth.loc[year] = add_growth.loc[year] * (1/30*(year-2020)) 
-        red_growth.loc[year] = red_growth.loc[year] * (1/30*(year-2020)) 
-
     # Hv length (in kms) is region-specific. However, we use a single ratio between the length of Hv and Mv networks, the same applies to Lv networks 
     grid_length_Mv = grid_length_Hv.mul(ratio_Hv['HV to MV'])
     grid_length_Lv = grid_length_Hv.mul(ratio_Hv['HV to LV'])
@@ -312,6 +302,15 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
 
     #implement growth correction (sensitivity variant)
     if SENS_ANALYSIS == 'high_grid':
+        # in the sensitivity variant, additional growth is presumed after 2020 based on the fraction of variable renewable energy (vre) generation capacity (solar & wind)
+        vre_fraction = gcap[['Solar PV', 'CSP', 'Wind onshore', 'Wind offshore']].sum(axis=1).unstack().divide(gcap.sum(axis=1).unstack())
+        add_growth = vre_fraction * 1                  # 0.2 = 20% additional HV lines per doubling of vre gcap
+        red_growth = (1-vre_fraction) * 0.7            # 0.2 = 20% less HV lines per doubling of baseline gcap
+        add_growth.loc[list(range(1971,2020+1)),:] = 0  # pre 2020, additional HV grid growth is 0, afterwards the additional line length is gradually introduced (towards 2050)
+        red_growth.loc[list(range(1971,2020+1)),:] = 0  # pre 2020, reduction of HV grid growth is 0, afterwards the line length reduction is gradually introduced (towards 2050)
+        for year in range(2020,2050+1):
+            add_growth.loc[year] = add_growth.loc[year] * (1/30*(year-2020)) 
+            red_growth.loc[year] = red_growth.loc[year] * (1/30*(year-2020)) 
         gcap_growth_HV = gcap_growth.add(add_growth.reindex_like(gcap_growth)).subtract(red_growth.reindex_like(gcap_growth))
     else: 
         gcap_growth_HV = gcap_growth

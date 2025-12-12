@@ -204,6 +204,88 @@ def create_prep_data(results_dict, conversion_table, unit_mapping):
     return prep_data
 
 
+# for testing, move later to a plotting utils file in analysis repository
+def flexible_plot_1panel(
+    da: xr.DataArray,
+    x_dim: str,
+    varying_dims: list,
+    fixed: dict = None,
+    figsize=(8, 5),
+    plot_type = 'line' # 'line' or 'scatter'
+):
+    """
+    da          : xarray.DataArray
+    x_dim       : dimension to use on the x axis (e.g. 'Time' or 'Cohort')
+    varying_dims: list of dims that define separate lines (e.g. ['Type', 'Region'])
+    fixed       : dict of {dim: value or list} to filter (e.g. {'Type': [1, 2], 'Region': 5})
+
+    use as e.g.:
+    flexible_plot_1panel(
+        da=grid_length,
+        x_dim="Time",
+        varying_dims=["Type", "Region"],
+        fixed={"Type": [1, 2], "Region": [0, 3]},
+        plot_type='scatter'
+    )
+    """
+    
+    # 1. Apply filtering
+    if fixed:
+        for dim, sel in fixed.items():
+            # da = da.sel({dim: sel})
+            # Convert to list
+            if not isinstance(sel, (list, tuple)):
+                sel = [sel]
+
+            coord_vals = da.coords[dim].values
+
+            # If the requested values exist as labels → use sel
+            if all(v in coord_vals for v in sel):
+                da = da.sel({dim: sel})
+            else:
+                # Otherwise interpret as positional integers → use isel
+                da = da.isel({dim: sel})
+    
+    # 2. Ensure requested dims exist
+    for d in varying_dims + [x_dim]:
+        if d not in da.dims:
+            raise ValueError(f"Dimension '{d}' missing in DataArray")
+
+    # 3. Collapse all varying dims into a combined index
+    if varying_dims:
+        da_plot = da.stack(curve=varying_dims)
+    else:
+        da_plot = da
+
+    # 4. Prepare y-axis label with units (if present)
+    units = None
+    if hasattr(da.data, "units"):               # pint quantity
+        units = str(da.data.units)
+    else:                                       # normal xarray units
+        units = da.attrs.get("units", None)
+
+    if units:
+        y_label = f"{da.name or ''} [{units}]"
+    else:
+        y_label = da.name or ""
+
+    # 5. Plot
+    plt.figure(figsize=figsize)
+    for curve in da_plot.curve.values:
+        sub = da_plot.sel(curve=curve)
+        label = ", ".join(f"{dim}={val}" for dim, val in zip(varying_dims, curve))
+        if plot_type == 'scatter':
+            plt.scatter(sub[x_dim], sub.values, label=label)
+        else:
+            plt.plot(sub[x_dim], sub.values, label=label)
+
+    plt.xlabel(x_dim)
+    plt.ylabel(y_label)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
 # def materials_grid_additions_to_kgperkm(materials_df, additions_df):
 #     """
 #     Vectorized approach to transform the materials DataFrame by multiplying each row with the corresponding values from the additions DataFrame.
