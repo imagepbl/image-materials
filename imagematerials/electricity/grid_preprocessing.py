@@ -736,6 +736,8 @@ for level in ["HV", "MV", "LV"]:
 
 
 grid_lifetime_interp = interpolate_xr(grid_lifetime, YEAR_FIRST_GRID, YEAR_OUT)
+materials_lines_interp = interpolate_xr(materials_lines, YEAR_FIRST_GRID, YEAR_OUT)
+materials_additions_interp = interpolate_xr(materials_additions, YEAR_FIRST_GRID, YEAR_OUT)
 
 grid_lines_interp = add_historic_stock(grid_lines, YEAR_FIRST_GRID)
 grid_additions_interp = add_historic_stock(grid_additions, YEAR_FIRST_GRID)
@@ -749,6 +751,14 @@ flexible_plot_1panel(
     x_dim="Time",
     varying_dims=["Type", "Region"],
     fixed={"Type": [1, 2, 3, 4,5], "Region": [3]}, #
+    plot_type='scatter'
+)
+
+flexible_plot_1panel(
+    da=materials_lines_interp,
+    x_dim="Time",
+    varying_dims=["Type", "materials"],
+    fixed={"Type": [1, 2], "materials": [3, 4,5]}, #
     plot_type='scatter'
 )
 
@@ -874,23 +884,23 @@ flexible_plot_1panel(
 ##################
 
 # Interpolate material intensities (dynamic content from 1926 to 2100, based on data files)
-index                             = pd.MultiIndex.from_product([list(range(YEAR_FIRST_GRID,YEAR_END+1)), list(materials_grid.index.levels[1])])
-materials_grid_interpol           = pd.DataFrame(index=index, columns=materials_grid.columns)
-materials_grid_additions_interpol = pd.DataFrame(index=pd.MultiIndex.from_product([list(range(YEAR_FIRST_GRID,YEAR_END+1)), list(materials_grid_additions.index.levels[1])]), columns=materials_grid_additions.columns)
+# index                             = pd.MultiIndex.from_product([list(range(YEAR_FIRST_GRID,YEAR_END+1)), list(materials_grid.index.levels[1])])
+# materials_grid_interpol           = pd.DataFrame(index=index, columns=materials_grid.columns)
+# materials_grid_additions_interpol = pd.DataFrame(index=pd.MultiIndex.from_product([list(range(YEAR_FIRST_GRID,YEAR_END+1)), list(materials_grid_additions.index.levels[1])]), columns=materials_grid_additions.columns)
 
-for cat in list(materials_grid.index.levels[1]):
-   materials_grid_1st   = materials_grid.loc[idx[materials_grid.index[0][0], cat],:]
-   materials_grid_interpol.loc[idx[YEAR_FIRST_GRID ,cat],:] = materials_grid_1st                # set the first year (1926) values to the first available values in the dataset (for the year 2000) 
-   materials_grid_interpol.loc[idx[materials_grid.index.levels[0].min(),cat],:] = materials_grid.loc[idx[materials_grid.index.levels[0].min(),cat],:]                # set the middle year (2000) values to the first available values in the dataset (for the year 2000) 
-   materials_grid_interpol.loc[idx[materials_grid.index.levels[0].max(),cat],:] = materials_grid.loc[idx[materials_grid.index.levels[0].max(),cat],:]                # set the last year (2100) values to the last available values in the dataset (for the year 2050) 
-   materials_grid_interpol.loc[idx[:,cat],:] = materials_grid_interpol.loc[idx[:,cat],:].astype('float32').reindex(list(range(YEAR_FIRST_GRID,YEAR_END+1)), level=0).interpolate()
+# for cat in list(materials_grid.index.levels[1]):
+#    materials_grid_1st   = materials_grid.loc[idx[materials_grid.index[0][0], cat],:]
+#    materials_grid_interpol.loc[idx[YEAR_FIRST_GRID ,cat],:] = materials_grid_1st                # set the first year (1926) values to the first available values in the dataset (for the year 2000) 
+#    materials_grid_interpol.loc[idx[materials_grid.index.levels[0].min(),cat],:] = materials_grid.loc[idx[materials_grid.index.levels[0].min(),cat],:]                # set the middle year (2000) values to the first available values in the dataset (for the year 2000) 
+#    materials_grid_interpol.loc[idx[materials_grid.index.levels[0].max(),cat],:] = materials_grid.loc[idx[materials_grid.index.levels[0].max(),cat],:]                # set the last year (2100) values to the last available values in the dataset (for the year 2050) 
+#    materials_grid_interpol.loc[idx[:,cat],:] = materials_grid_interpol.loc[idx[:,cat],:].astype('float32').reindex(list(range(YEAR_FIRST_GRID,YEAR_END+1)), level=0).interpolate()
 
-for cat in list(materials_grid_additions.index.levels[1]):
-   materials_grid_additions_1st   = materials_grid_additions.loc[idx[materials_grid_additions.index[0][0], cat],:]
-   materials_grid_additions_interpol.loc[idx[YEAR_FIRST_GRID ,cat],:] = materials_grid_additions_1st          # set the first year (1926) values to the first available values in the dataset (for the year 2000) 
-   materials_grid_additions_interpol.loc[idx[materials_grid_additions.index.levels[0].min(),cat],:] = materials_grid_additions.loc[idx[materials_grid_additions.index.levels[0].min(),cat],:]                # set the middle year (2000) values to the first available values in the dataset (for the year 2000) 
-   materials_grid_additions_interpol.loc[idx[materials_grid_additions.index.levels[0].max(),cat],:] = materials_grid_additions.loc[idx[materials_grid_additions.index.levels[0].max(),cat],:]                # set the last year (2100) values to the last available values in the dataset (for the year 2050) 
-   materials_grid_additions_interpol.loc[idx[:,cat],:] = materials_grid_additions_interpol.loc[idx[:,cat],:].astype('float32').reindex(list(range(YEAR_FIRST_GRID,YEAR_END+1)), level=0).interpolate()
+# for cat in list(materials_grid_additions.index.levels[1]):
+#    materials_grid_additions_1st   = materials_grid_additions.loc[idx[materials_grid_additions.index[0][0], cat],:]
+#    materials_grid_additions_interpol.loc[idx[YEAR_FIRST_GRID ,cat],:] = materials_grid_additions_1st          # set the first year (1926) values to the first available values in the dataset (for the year 2000) 
+#    materials_grid_additions_interpol.loc[idx[materials_grid_additions.index.levels[0].min(),cat],:] = materials_grid_additions.loc[idx[materials_grid_additions.index.levels[0].min(),cat],:]                # set the middle year (2000) values to the first available values in the dataset (for the year 2000) 
+#    materials_grid_additions_interpol.loc[idx[materials_grid_additions.index.levels[0].max(),cat],:] = materials_grid_additions.loc[idx[materials_grid_additions.index.levels[0].max(),cat],:]                # set the last year (2100) values to the last available values in the dataset (for the year 2050) 
+#    materials_grid_additions_interpol.loc[idx[:,cat],:] = materials_grid_additions_interpol.loc[idx[:,cat],:].astype('float32').reindex(list(range(YEAR_FIRST_GRID,YEAR_END+1)), level=0).interpolate()
 
 
 # call the stock_tail function on all lines, substations & transformers, to add historic stock tail between 1926 & 1971
@@ -961,33 +971,33 @@ for cat in list(materials_grid_additions.index.levels[1]):
 # ], names=materials_grid_additions_kgperkm.columns.names)
 # materials_grid_additions_kgperkm.columns = new_columns
 
-materials_grid_additions_kgperunit            = materials_grid_additions_interpol.copy()
-# material intensities: (years, tech. type) index and materials as columns -> years as index and (tech. type, materials) as columns
-materials_grid_additions_kgperunit.index.names = ["Year", "Type"]
-materials_grid_additions_kgperunit             = materials_grid_additions_kgperunit.unstack(level='Type')   # bring tech. type from row index to column header
-materials_grid_additions_kgperunit.columns     = materials_grid_additions_kgperunit.columns.swaplevel(0, 1) # Swap the levels of the MultiIndex columns
-materials_grid_additions_kgperunit             = materials_grid_additions_kgperunit.sort_index(axis=1)
-# rename columns to match knowledge graph
-new_level_0 = [col.replace(' ', ' - ', 1) for col in materials_grid_additions_kgperunit.columns.get_level_values(0)]
-new_columns = pd.MultiIndex.from_arrays([
-    new_level_0,
-    materials_grid_additions_kgperunit.columns.get_level_values(1)
-], names=materials_grid_additions_kgperunit.columns.names)
-materials_grid_additions_kgperunit.columns = new_columns
+# materials_grid_additions_kgperunit            = materials_grid_additions_interpol.copy()
+# # material intensities: (years, tech. type) index and materials as columns -> years as index and (tech. type, materials) as columns
+# materials_grid_additions_kgperunit.index.names = ["Year", "Type"]
+# materials_grid_additions_kgperunit             = materials_grid_additions_kgperunit.unstack(level='Type')   # bring tech. type from row index to column header
+# materials_grid_additions_kgperunit.columns     = materials_grid_additions_kgperunit.columns.swaplevel(0, 1) # Swap the levels of the MultiIndex columns
+# materials_grid_additions_kgperunit             = materials_grid_additions_kgperunit.sort_index(axis=1)
+# # rename columns to match knowledge graph
+# new_level_0 = [col.replace(' ', ' - ', 1) for col in materials_grid_additions_kgperunit.columns.get_level_values(0)]
+# new_columns = pd.MultiIndex.from_arrays([
+#     new_level_0,
+#     materials_grid_additions_kgperunit.columns.get_level_values(1)
+# ], names=materials_grid_additions_kgperunit.columns.names)
+# materials_grid_additions_kgperunit.columns = new_columns
 
-# Grid MIs ---
-materials_grid_kgperkm              = materials_grid_interpol.copy() # copy the interpolated material intensities
-materials_grid_kgperkm.index.names  = ["Year", "Type"]
-materials_grid_kgperkm              = materials_grid_kgperkm.unstack(level='Type') # bring tech. type from row index to column header
-materials_grid_kgperkm.columns      = materials_grid_kgperkm.columns.swaplevel(0, 1) # Swap the levels of the MultiIndex columns
-materials_grid_kgperkm              = materials_grid_kgperkm.sort_index(axis=1)
-# rename columns to match knowledge graph
-new_level_0 = [col.replace(' ', ' - Lines - ', 1) for col in materials_grid_kgperkm.columns.get_level_values(0)]
-new_columns = pd.MultiIndex.from_arrays([
-    new_level_0,
-    materials_grid_kgperkm.columns.get_level_values(1)
-], names=materials_grid_kgperkm.columns.names)
-materials_grid_kgperkm.columns = new_columns
+# # Grid MIs ---
+# materials_grid_kgperkm              = materials_grid_interpol.copy() # copy the interpolated material intensities
+# materials_grid_kgperkm.index.names  = ["Year", "Type"]
+# materials_grid_kgperkm              = materials_grid_kgperkm.unstack(level='Type') # bring tech. type from row index to column header
+# materials_grid_kgperkm.columns      = materials_grid_kgperkm.columns.swaplevel(0, 1) # Swap the levels of the MultiIndex columns
+# materials_grid_kgperkm              = materials_grid_kgperkm.sort_index(axis=1)
+# # rename columns to match knowledge graph
+# new_level_0 = [col.replace(' ', ' - Lines - ', 1) for col in materials_grid_kgperkm.columns.get_level_values(0)]
+# new_columns = pd.MultiIndex.from_arrays([
+#     new_level_0,
+#     materials_grid_kgperkm.columns.get_level_values(1)
+# ], names=materials_grid_kgperkm.columns.names)
+# materials_grid_kgperkm.columns = new_columns
 
 # # print_df_info(materials_grid_kgperkm, "Materials Grid kg/km")
 # # print_df_info(materials_grid_additions_kgperkm, "Materials Grid Additions kg/km")
@@ -1013,29 +1023,29 @@ materials_grid_kgperkm.columns = new_columns
 # grid_stock = pd.concat(grid_dict, axis=1) # Concatenate with keys to create MultiIndex ('Name', 'Region')
 # grid_stock = grid_stock.sort_index(axis=1)
 
-grid_dict_add = dict({
-        'HV - Substations':         grid_subst_Hv_new,
-        'HV - Transformers':        grid_trans_Hv_new,
-        'MV - Substations':         grid_subst_Mv_new,
-        'MV - Transformers':        grid_trans_Mv_new,
-        'LV - Substations':         grid_subst_Lv_new,
-        'LV - Transformers':        grid_trans_Lv_new
-    })
+# grid_dict_add = dict({
+#         'HV - Substations':         grid_subst_Hv_new,
+#         'HV - Transformers':        grid_trans_Hv_new,
+#         'MV - Substations':         grid_subst_Mv_new,
+#         'MV - Transformers':        grid_trans_Mv_new,
+#         'LV - Substations':         grid_subst_Lv_new,
+#         'LV - Transformers':        grid_trans_Lv_new
+#     })
 
-grid_dict_lines = dict({
-        'HV - Lines - Overhead':    grid_length_Hv_above_new,
-        'HV - Lines - Underground': grid_length_Hv_under_new,
-        'MV - Lines - Overhead':    grid_length_Mv_above_new,
-        'MV - Lines - Underground': grid_length_Mv_under_new,
-        'LV - Lines - Overhead':    grid_length_Lv_above_new,
-        'LV - Lines - Underground': grid_length_Lv_under_new,
-    })
+# grid_dict_lines = dict({
+#         'HV - Lines - Overhead':    grid_length_Hv_above_new,
+#         'HV - Lines - Underground': grid_length_Hv_under_new,
+#         'MV - Lines - Overhead':    grid_length_Mv_above_new,
+#         'MV - Lines - Underground': grid_length_Mv_under_new,
+#         'LV - Lines - Overhead':    grid_length_Lv_above_new,
+#         'LV - Lines - Underground': grid_length_Lv_under_new,
+#     })
     
-grid_stock_lines = pd.concat(grid_dict_lines, axis=1) # Concatenate with keys to create MultiIndex ('Name', 'Region')
-grid_stock_lines = grid_stock_lines.sort_index(axis=1)
+# grid_stock_lines = pd.concat(grid_dict_lines, axis=1) # Concatenate with keys to create MultiIndex ('Name', 'Region')
+# grid_stock_lines = grid_stock_lines.sort_index(axis=1)
 
-grid_stock_add = pd.concat(grid_dict_add, axis=1) # Concatenate with keys to create MultiIndex ('Name', 'Region')
-grid_stock_add = grid_stock_add.sort_index(axis=1)
+# grid_stock_add = pd.concat(grid_dict_add, axis=1) # Concatenate with keys to create MultiIndex ('Name', 'Region')
+# grid_stock_add = grid_stock_add.sort_index(axis=1)
 
 #----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
