@@ -34,3 +34,11 @@ buildings.preprocessing.lifetimes module
    :members:
    :undoc-members:
    :show-inheritance:
+
+buildings.preprocessing.circular_economy_measures module
+--------------------------------------------------------
+
+.. automodule:: imagematerials.buildings.preprocessing.circular_economy_measures
+   :members:
+   :undoc-members:
+   :show-inheritance:
