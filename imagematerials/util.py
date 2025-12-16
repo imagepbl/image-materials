@@ -8,6 +8,7 @@ import numpy as np
 import xarray as xr
 import warnings
 import prism
+import pint
 
 if sys.version_info < (3, 11):
     import tomli as tomllib
@@ -201,6 +202,7 @@ def import_from_netcdf(in_fp) -> dict:
             prep_data_dict[key] = KnowledgeGraph.from_dataarray(prep_data_dict[key])
     return prep_data_dict
 
+
 def summarize_prep_data(data):
     all_summary = {}
     for data_name, array in data.items():
@@ -210,6 +212,8 @@ def summarize_prep_data(data):
             all_summary[data_name] = _summarize_array(array)
         elif isinstance(array, KnowledgeGraph):
             continue
+        elif isinstance(array, pint.Unit):
+            continue
         elif array is None:
             all_summary[data_name] = array
         elif isinstance(array, str):
@@ -218,20 +222,24 @@ def summarize_prep_data(data):
             raise ValueError(f"Cannot compare data with name '{data_name}' with type {type(array)}")
     return all_summary
 
+
 def _summarize_array(array):
     all_summary = {}
     for drop_coor in array.coords.keys():
         sum_over = set(x for x in list(array.coords.keys())) - set({drop_coor})
         summary = array.sum(sum_over)
+        summary.attrs = array.attrs
         all_summary[drop_coor] = _listify(summary.to_dict())
     return all_summary
 
+
 def _listify(data):
     if isinstance(data, dict):
-        return {key: _listify(value) for key, value in data.items()}
+        return {str(key): _listify(value) for key, value in data.items()}
     elif isinstance(data, tuple):
         return list(data)
     return data
+
 
 def rebroadcast_prep_data(prep_data, knowledge_graph, dim, output_coords):
     new_prep_data = {}
