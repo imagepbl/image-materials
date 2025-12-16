@@ -569,23 +569,24 @@ grid_lifetime = prism.Q_(grid_lifetime, "year")
 # # Material Intensities -------
 
 # Lines ---
-materials_lines = materials_lines_data.reset_index().rename(columns={'year': 'Time', 'kg/km': 'Type'})
+materials_lines = materials_lines_data.reset_index().rename(columns={'year': 'Cohort', 'kg/km': 'Type'})
 # turn "HV Overhead" -> "HV - Lines - Overhead"
 materials_lines['Type'] = materials_lines['Type'].str.split(n=1).apply(lambda x: f"{x[0]} - Lines - {x[1]}")
 # convert to xarray: material columns become a new 'materials' dimension
-materials_lines = materials_lines.set_index(['Time', 'Type']).to_xarray()
+materials_lines = materials_lines.set_index(['Cohort', 'Type']).to_xarray()
 materials_lines = materials_lines.to_array(dim='materials').rename("GridMaterialsLines")
-materials_lines = materials_lines.transpose('Time', 'Type', 'materials') # reorder dimensions
+materials_lines = materials_lines.transpose('Cohort', 'Type', 'materials') # reorder dimensions
 materials_lines = prism.Q_(materials_lines, "kg/km")
+materials_lines = materials_lines.reindex(Type=grid_lines.Type)  # ensure same order of types as in stock dataarray
 
 # Additions ---
-materials_additions = materials_additions_data.reset_index().rename(columns={'year': 'Time', 'kg/unit': 'Type'})
+materials_additions = materials_additions_data.reset_index().rename(columns={'year': 'Cohort', 'kg/unit': 'Type'})
 # turn "HV Overhead" -> "HV - Lines - Overhead"
 materials_additions['Type'] = materials_additions['Type'].str.split(n=1).apply(lambda x: f"{x[0]} - {x[1]}")
 # convert to xarray: material columns become a new 'materials' dimension
-materials_additions = materials_additions.set_index(['Time', 'Type']).to_xarray()
+materials_additions = materials_additions.set_index(['Cohort', 'Type']).to_xarray()
 materials_additions = materials_additions.to_array(dim='materials').rename("GridMaterialsAdditions")
-materials_additions = materials_additions.transpose('Time', 'Type', 'materials') # reorder dimensions
+materials_additions = materials_additions.transpose('Cohort', 'Type', 'materials') # reorder dimensions
 materials_additions = prism.Q_(materials_additions, "kg/count")
 
 
@@ -754,23 +755,9 @@ flexible_plot_1panel(
     plot_type='scatter'
 )
 
-flexible_plot_1panel(
-    da=materials_lines_interp,
-    x_dim="Time",
-    varying_dims=["Type", "materials"],
-    fixed={"Type": [1, 2], "materials": [3, 4,5]}, #
-    plot_type='scatter'
-)
-
-# above: done, below: in progress -----------------------------------------------------------------------------------------
 
 
-
-
-
-
-
-# below: old ====================================================================================================
+#%%%% below: old ====================================================================================================
 
 # gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
 # gcap = pd.pivot_table(gcap_data[gcap_data['time'].isin(list(range(YEAR_START,YEAR_END+1)))], index=['time','DIM_1'], values=list(range(1,TECH_GEN+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (28));  the last column in gcap_data (= totals) is now removed
@@ -1054,6 +1041,11 @@ flexible_plot_1panel(
 #----------------------------------------------------------------------------------------------------------
 
 
+
+
+
+# OLD --------------------------------------------------------------------------------------------------
+
 ureg = pint.UnitRegistry(force_ndarray_like=True)
 # Define the units for each dimension
 unit_mapping = { # TODO: move to constants.py
@@ -1129,29 +1121,48 @@ prep_data_add["stocks"] =   knowledge_graph_region.rebroadcast_xarray(prep_data_
 #----------------------------------------------------------------------------------------------------------
 
 
-prep_data_lines, prep_data_add = get_preprocessing_data_grid(path_base, SCEN, VARIANT, YEAR_START, YEAR_END, YEAR_OUT)
+# prep_data_lines, prep_data_add = get_preprocessing_data_grid(path_base, SCEN, VARIANT, YEAR_START, YEAR_END, YEAR_OUT)
 
-# LINES ----------------------------------------------------
+#%%%% LINES ----------------------------------------------------
 # prep_data = create_prep_data(results_dict_lines, conversion_table, unit_mapping)
 
+
+
+# The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
+grid_lifetime_interp = convert_lifetime(grid_lifetime_interp)
+
+
+ # bring preprocessing data into a generic format for the model
+prep_data_lines = {}
+prep_data_lines["lifetimes"] = grid_lifetime_interp
+prep_data_lines["stocks"] = grid_lines_interp
+prep_data_lines["material_intensities"] = materials_lines_interp
+prep_data_lines["knowledge_graph"] = create_electricity_graph()
+prep_data_lines["set_unit_flexible"] = prism.U_(prep_data_lines["stocks"]) # add unit (prism.U_ gives the unit back)
+# set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
+
+
+
+
 # # Define the complete timeline, including historic tail
-time_start = prep_data["stocks"].coords["Time"].min().values
+time_start = prep_data_lines["stocks"].coords["Time"].min().values
 complete_timeline = prism.Timeline(time_start, YEAR_END, 1)
 simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
 
 
 sec_electr_grid_lines = Sector("electr_grid_lines", prep_data_lines)
-
-main_model_factory_lines = ModelFactory(
+factory_lines = ModelFactory(
     sec_electr_grid_lines, complete_timeline
     ).add(GenericStocks
     ).add(MaterialIntensities
     ).finish()
 
-main_model_factory_lines.simulate(simulation_timeline)
-list(main_model_factory_lines.electr_grid_lines)
+factory_lines.simulate(simulation_timeline)
+list(factory_lines.electr_grid_lines)
 
-# ADDITIONS -------------------------------------------------------------------------------------
+
+
+#%%%% ADDITIONS -------------------------------------------------------------------------------------
 # prep_data = create_prep_data(results_dict_add, conversion_table, unit_mapping)
 
 # # Define the complete timeline, including historic tail
