@@ -184,12 +184,12 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
 
     # scen_folder = SCEN + "_" + VARIANT
     # path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
-    path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
-    path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scenario)
+    path_external_data_standard = Path(path_base,  "electricity", "standard_data")
+    path_external_data_scenario = Path(path_base,  "electricity", scenario)
     
     # test if path_external_data_scenario exists and if not set to standard scenario
     if not path_external_data_scenario.exists():
-        path_external_data_scenario = Path(path_base, "data", "raw", "electricity", STANDARD_SCEN_EXTERNAL_DATA)
+        path_external_data_scenario = Path(path_base, "electricity", STANDARD_SCEN_EXTERNAL_DATA)
 
     # scen_BL_folder = SCEN + "_M_CP"  # baseline scenario
     # path_image_output_BL = Path(path_base, "data", "raw", "image", scen_BL_folder, "EnergyServices")
