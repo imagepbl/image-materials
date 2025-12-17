@@ -7,7 +7,9 @@ import numpy as np
 from imagematerials.buildings.preprocessing.main import buildings_preprocessing as prep_bld
 from imagematerials.vehicles.preprocessing import preprocess as prep_vhc
 from imagematerials.eol.preprocessing import eol_preprocessing as prep_eol
-from imagematerials.electricity.preprocessing import get_preprocessing_data_gen as prep_elc
+from imagematerials.electricity.preprocessing import get_preprocessing_data_gen as prep_elc_gen
+from imagematerials.electricity.preprocessing import get_preprocessing_data_grid as prep_elc_grid
+from imagematerials.electricity.preprocessing import get_preprocessing_data_stor as prep_elc_stor
 
 
 from imagematerials.factory import Sector
@@ -36,9 +38,27 @@ def _get_electricity_prep_data(base_dir, climate_policy_scenario_dir, scenario, 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
-        prep_data = prep_elc(base_dir, climate_policy_config, scenario, year_start, year_end, year_out)
-
+        prep_data_gen = prep_elc_gen(base_dir, climate_policy_config, scenario, year_start, year_end, year_out)
+        prep_data_grid_lines = prep_elc_grid(base_dir, climate_policy_config, scenario, year_start, year_end, year_out)
+        prep_data_grid_add = prep_elc_grid(base_dir, climate_policy_config, scenario, year_start, year_end, year_out)
+        # prep_data_stor_phs = prep_elc_stor(base_dir, climate_policy_config, scenario, year_start, year_end, year_out)
+        # prep_data_stor_other = prep_elc_stor(base_dir, climate_policy_config, scenario, year_start, year_end, year_out)
+        
+        prep_data = {
+            "prep_data_gen": prep_data_gen,
+            "prep_data_grid_lines": prep_data_grid_lines,
+            "prep_data_grid_add": prep_data_grid_add,
+            # "prep_data_stor_phs": prep_data_stor_phs,
+            # "prep_data_stor_other": prep_data_stor_other
+        }
     return prep_data
+
+def _get_buildings_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_scenario_dirs):
+    climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
+    circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
+    prep_data = prep_bld(base_dir, climate_policy_config, circular_economy_config)
+    return prep_data
+
 
 def _get_vehicles_sector(prep_data):
     output_coords_type = list(prep_data["stocks"].Type.values)
@@ -55,22 +75,22 @@ def _get_vehicles_sector(prep_data):
 
 
 def _get_electricity_sector(prep_data):
-    output_coords_type = list(prep_data["stocks"].Type.values)
-    knowledge_graph = prep_data["knowledge_graph"]
-    new_prep_data = rebroadcast_prep_data(prep_data, knowledge_graph, dim="Type",
-                                          output_coords=output_coords_type)
-    region_coords = np.sort(prep_data["stocks"].coords["Region"].values).astype(str)
-    new_prep_data = rebroadcast_prep_data(new_prep_data, knowledge_graph, dim="Region",
-                                          output_coords=region_coords)
 
-    sec_elec = Sector("electricity", new_prep_data)
-    return sec_elec
+    # sec_elc = Sector("electricity", prep_data)
+    sec_elc_gen = Sector("elc_gen", prep_data["prep_data_gen"])
+    sec_elc_grid_lines = Sector("elc_grid_lines", prep_data["prep_data_grid_lines"])
+    sec_elc_grid_add = Sector("elc_grid_add", prep_data["prep_data_grid_add"])
 
-def _get_buildings_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_scenario_dirs):
-    climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
-    circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
-    prep_data = prep_bld(base_dir, climate_policy_config, circular_economy_config)
-    return prep_data
+    sec_elc = {
+        "sec_elc_gen": sec_elc_gen,
+        "sec_elc_grid_lines": sec_elc_grid_lines,
+        "sec_elc_grid_add": sec_elc_grid_add,
+        # "sec_elc_stor_phs": sec_elc_stor_phs,
+        # "sec_elc_stor_other": sec_elc_stor_other
+    }
+
+    return sec_elc
+
 
 def _get_buildings_sector(prep_data):
     return Sector("buildings", prep_data)
