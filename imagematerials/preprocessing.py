@@ -33,14 +33,15 @@ def _get_vehicles_prep_data(base_dir, climate_policy_scenario_dir, circular_econ
 
     return prep_data
 
-def _get_electricity_prep_data(base_dir, climate_policy_scenario_dir, scenario, year_start, year_end, year_out):
+def _get_electricity_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_scenario_dirs, scenario, year_start, year_end, year_out):
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
-        prep_data_gen = prep_elc_gen(base_dir, climate_policy_config, scenario, year_start, year_end, year_out)
-        prep_data_grid_lines = prep_elc_grid(base_dir, climate_policy_config, scenario, year_start, year_end, year_out)
-        prep_data_grid_add = prep_elc_grid(base_dir, climate_policy_config, scenario, year_start, year_end, year_out)
+        circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
+        prep_data_gen = prep_elc_gen(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
+        prep_data_grid_lines = prep_elc_grid(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
+        prep_data_grid_add = prep_elc_grid(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
         # prep_data_stor_phs = prep_elc_stor(base_dir, climate_policy_config, scenario, year_start, year_end, year_out)
         # prep_data_stor_other = prep_elc_stor(base_dir, climate_policy_config, scenario, year_start, year_end, year_out)
         
@@ -81,13 +82,14 @@ def _get_electricity_sector(prep_data):
     sec_elc_grid_lines = Sector("elc_grid_lines", prep_data["prep_data_grid_lines"])
     sec_elc_grid_add = Sector("elc_grid_add", prep_data["prep_data_grid_add"])
 
-    sec_elc = {
-        "sec_elc_gen": sec_elc_gen,
-        "sec_elc_grid_lines": sec_elc_grid_lines,
-        "sec_elc_grid_add": sec_elc_grid_add,
-        # "sec_elc_stor_phs": sec_elc_stor_phs,
-        # "sec_elc_stor_other": sec_elc_stor_other
-    }
+    # sec_elc = {
+    #     "sec_elc_gen": sec_elc_gen,
+    #     "sec_elc_grid_lines": sec_elc_grid_lines,
+    #     "sec_elc_grid_add": sec_elc_grid_add,
+    #     # "sec_elc_stor_phs": sec_elc_stor_phs,
+    #     # "sec_elc_stor_other": sec_elc_stor_other
+    # }
+    sec_elc = [sec_elc_gen, sec_elc_grid_lines, sec_elc_grid_add]
 
     return sec_elc
 
@@ -176,6 +178,7 @@ def get_preprocessing_data(
                                                  circular_economy_scenario_dirs)
         elif sector == "electricity":
             prep_data = _get_electricity_prep_data(base_dir, climate_policy_scenario_dir,
+                                                   circular_economy_scenario_dirs,
                                                    standard_scenario,
                                                    year_start,
                                                    year_end,

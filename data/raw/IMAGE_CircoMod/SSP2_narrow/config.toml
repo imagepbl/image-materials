@@ -1,5 +1,5 @@
 [data_files]
-GCap = 'GCap.out'
+GCap = 'EnergyServices/GCap.out'
 residential_floorspace = 'EnergyServices/res_FloorSpace.out'
 transport.freight.Tkm = 'EnergyServices/trp_frgt_Tkm.out'
 transport.freight.Vshare_HvyTruck = 'EnergyServices/trp_frgt_Vshare_HvyTruck.out'

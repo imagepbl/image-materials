@@ -34,7 +34,7 @@ from imagematerials.electricity.constants import (
 #%% 1) Generation 
 ###########################################################################################################
 ###########################################################################################################
-def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
     path_external_data_scenario = Path(path_base, "electricity", scenario)
     # test if path_external_data_scenario exists and if not set to standard scenario
@@ -180,27 +180,27 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, scen
 ###########################################################################################################
 ###########################################################################################################
 
-def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_END, YEAR_OUT): #, climate_policy_config: dict, circular_economy_config: dict
+def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
-    scen_folder = SCEN + "_" + VARIANT
-    path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
+    # scen_folder = SCEN + "_" + VARIANT
+    # path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
     path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
-    path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scen_folder)
+    path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scenario)
     
     # test if path_external_data_scenario exists and if not set to standard scenario
     if not path_external_data_scenario.exists():
         path_external_data_scenario = Path(path_base, "data", "raw", "electricity", STANDARD_SCEN_EXTERNAL_DATA)
 
-    scen_BL_folder = SCEN + "_M_CP"  # baseline scenario
-    path_image_output_BL = Path(path_base, "data", "raw", "image", scen_BL_folder, "EnergyServices")
+    # scen_BL_folder = SCEN + "_M_CP"  # baseline scenario
+    # path_image_output_BL = Path(path_base, "data", "raw", "image", scen_BL_folder, "EnergyServices")
     # TODO: check if this is necessary (shouldn't historical periode anyway be the same for all scenarios?)
     # + if it is, should the baseline scenario be given as a parameter or can it be inferred from the scenario name?
 
-    assert path_image_output.is_dir()
+    # assert path_image_output.is_dir()
     assert path_external_data_standard.is_dir()
     assert path_external_data_scenario.is_dir()
 
-    years = YEAR_END - YEAR_START  + 1
+    # years = YEAR_END - YEAR_START  + 1
 
     idx = pd.IndexSlice   
 
@@ -230,31 +230,32 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     # 2. IMAGE/TIMER files ---------------------------------------------
 
     # Generation capacity (stock & inflow/new) in MW peak capacity, FILES from TIMER
-    gcap_data = read_mym_df(path_image_output / 'GCap.out')
+    # gcap_data = read_mym_df(path_image_output / 'GCap.out')
+    gcap_data = read_mym_df(climate_policy_config["config_file_path"] / climate_policy_config["data_files"]['GCap'])
     # gcap_BL_data = read_mym_df('SSP2\\SSP2_BL\\GCap.out') # baseline scenario? TODO: what is the purpose of reading in the scneario + the baseline?
-    gcap_BL_data = read_mym_df(path_image_output_BL / 'GCap.out')
+    gcap_BL_data = gcap_data.copy() # obsolete in later versions
 
     ###########################################################################################################
     # Prepare model specific variables #
 
     gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
-    gcap = pd.pivot_table(gcap_data[gcap_data['time'].isin(list(range(YEAR_START,YEAR_END+1)))], index=['time','DIM_1'], values=list(range(1,len(EPG_TECHNOLOGIES)+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (28));  the last column in gcap_data (= totals) is now removed
+    gcap = pd.pivot_table(gcap_data[gcap_data['time'].isin(list(range(year_start,year_end+1)))], index=['time','DIM_1'], values=list(range(1,len(EPG_TECHNOLOGIES)+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (28));  the last column in gcap_data (= totals) is now removed
 
     gcap_BL_data = gcap_BL_data.loc[~gcap_BL_data['DIM_1'].isin([27,28])]    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
-    gcap_BL = pd.pivot_table(gcap_BL_data[gcap_BL_data['time'].isin(list(range(YEAR_START,YEAR_END+1)))], index=['time','DIM_1'], values=list(range(1,len(EPG_TECHNOLOGIES)+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (28));  the last column in gcap_data (= totals) is now removed
+    gcap_BL = pd.pivot_table(gcap_BL_data[gcap_BL_data['time'].isin(list(range(year_start,year_end+1)))], index=['time','DIM_1'], values=list(range(1,len(EPG_TECHNOLOGIES)+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (28));  the last column in gcap_data (= totals) is now removed
 
     region_list = list(grid_length_Hv.columns.values)
     material_list = list(materials_grid.columns.values)
 
     # renaming multi-index dataframe: generation capacity, based on the regions in grid_length_Hv & technologies as given
     gcap_techlist = ['Solar PV', 'Solar Decentral', 'CSP', 'Wind onshore', 'Wind offshore', 'Wave', 'Hydro', 'Other Renewables', 'Geothermal', 'Hydrogen', 'Nuclear', '<EMPTY>', 'Conv. Coal', 'Conv. Oil', 'Conv. Natural Gas', 'Waste', 'IGCC', 'OGCC', 'NG CC', 'Biomass CC', 'Coal + CCS', 'Oil/Coal + CCS', 'Natural Gas + CCS', 'Biomass + CCS', 'CHP Coal', 'CHP Oil', 'CHP Natural Gas', 'CHP Biomass', 'CHP Coal + CCS', 'CHP Oil + CCS', 'CHP Natural Gas + CCS', 'CHP Biomass + CCS', 'CHP Geothermal', 'CHP Hydrogen']
-    gcap.index = pd.MultiIndex.from_product([list(range(YEAR_START,YEAR_END+1)), region_list], names=['years', 'regions'])
-    gcap_BL.index = pd.MultiIndex.from_product([list(range(YEAR_START,YEAR_END+1)), region_list], names=['years', 'regions'])
+    gcap.index = pd.MultiIndex.from_product([list(range(year_start,year_end+1)), region_list], names=['years', 'regions'])
+    gcap_BL.index = pd.MultiIndex.from_product([list(range(year_start,year_end+1)), region_list], names=['years', 'regions'])
     gcap.columns = gcap_techlist
     gcap_BL.columns = gcap_techlist
 
     gdp_pc.columns = region_list
-    # gdp_pc = gdp_pc.drop([1970]).drop(list(range(YEAR_END+1,YEAR_LAST+1)))
+    # gdp_pc = gdp_pc.drop([1970]).drop(list(range(year_end+1,YEAR_LAST+1)))
 
 
     # length calculations ----------------------------------------------------------------------------
@@ -265,7 +266,7 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     gcap_growth = gcap_BL_total / gcap_BL_total.loc[2016]    # define growth according to 2016 as base year
     gcap_total = gcap.sum(axis=1).unstack()
     gcap_total = gcap_total[region_list]                     # re-order columns to the original TIMER order
-    gcap_growth.loc[2016:YEAR_END] = gcap_total.loc[2016:YEAR_END] / gcap_total.loc[2016]        # define growth according to 2016 as base year
+    gcap_growth.loc[2016:year_end] = gcap_total.loc[2016:year_end] / gcap_total.loc[2016]        # define growth according to 2016 as base year
 
     # in the sensitivity variant, additional growth is presumed after 2020 based on the fraction of variable renewable energy (vre) generation capacity (solar & wind)
     vre_fraction = gcap[['Solar PV', 'CSP', 'Wind onshore', 'Wind offshore']].sum(axis=1).unstack().divide(gcap.sum(axis=1).unstack())
@@ -292,7 +293,7 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     else: 
         gcap_growth_HV = gcap_growth
 
-    for year in range(YEAR_START, YEAR_END+1):
+    for year in range(year_start, year_end+1):
         grid_length_Hv_time.loc[year] = gcap_growth_HV.loc[year].mul(grid_length_Hv.loc['2016'])
         grid_length_Mv_time.loc[year] = gcap_growth.loc[year].mul(grid_length_Mv.loc['2016'])
         grid_length_Lv_time.loc[year] = gcap_growth.loc[year].mul(grid_length_Lv.loc['2016'])
@@ -353,37 +354,37 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     ##################
 
     # Interpolate material intensities (dynamic content from 1926 to 2100, based on data files)
-    index                             = pd.MultiIndex.from_product([list(range(YEAR_FIRST_GRID,YEAR_END+1)), list(materials_grid.index.levels[1])])
+    index                             = pd.MultiIndex.from_product([list(range(YEAR_FIRST_GRID,year_end+1)), list(materials_grid.index.levels[1])])
     materials_grid_interpol           = pd.DataFrame(index=index, columns=materials_grid.columns)
-    materials_grid_additions_interpol = pd.DataFrame(index=pd.MultiIndex.from_product([list(range(YEAR_FIRST_GRID,YEAR_END+1)), list(materials_grid_additions.index.levels[1])]), columns=materials_grid_additions.columns)
+    materials_grid_additions_interpol = pd.DataFrame(index=pd.MultiIndex.from_product([list(range(YEAR_FIRST_GRID,year_end+1)), list(materials_grid_additions.index.levels[1])]), columns=materials_grid_additions.columns)
 
     for cat in list(materials_grid.index.levels[1]):
         materials_grid_1st   = materials_grid.loc[idx[materials_grid.index[0][0], cat],:]
         materials_grid_interpol.loc[idx[YEAR_FIRST_GRID ,cat],:] = materials_grid_1st                # set the first year (1926) values to the first available values in the dataset (for the year 2000) 
         materials_grid_interpol.loc[idx[materials_grid.index.levels[0].min(),cat],:] = materials_grid.loc[idx[materials_grid.index.levels[0].min(),cat],:]                # set the middle year (2000) values to the first available values in the dataset (for the year 2000) 
         materials_grid_interpol.loc[idx[materials_grid.index.levels[0].max(),cat],:] = materials_grid.loc[idx[materials_grid.index.levels[0].max(),cat],:]                # set the last year (2100) values to the last available values in the dataset (for the year 2050) 
-        materials_grid_interpol.loc[idx[:,cat],:] = materials_grid_interpol.loc[idx[:,cat],:].astype('float32').reindex(list(range(YEAR_FIRST_GRID,YEAR_END+1)), level=0).interpolate()
+        materials_grid_interpol.loc[idx[:,cat],:] = materials_grid_interpol.loc[idx[:,cat],:].astype('float32').reindex(list(range(YEAR_FIRST_GRID,year_end+1)), level=0).interpolate()
 
     for cat in list(materials_grid_additions.index.levels[1]):
         materials_grid_additions_1st   = materials_grid_additions.loc[idx[materials_grid_additions.index[0][0], cat],:]
         materials_grid_additions_interpol.loc[idx[YEAR_FIRST_GRID ,cat],:] = materials_grid_additions_1st          # set the first year (1926) values to the first available values in the dataset (for the year 2000) 
         materials_grid_additions_interpol.loc[idx[materials_grid_additions.index.levels[0].min(),cat],:] = materials_grid_additions.loc[idx[materials_grid_additions.index.levels[0].min(),cat],:]                # set the middle year (2000) values to the first available values in the dataset (for the year 2000) 
         materials_grid_additions_interpol.loc[idx[materials_grid_additions.index.levels[0].max(),cat],:] = materials_grid_additions.loc[idx[materials_grid_additions.index.levels[0].max(),cat],:]                # set the last year (2100) values to the last available values in the dataset (for the year 2050) 
-        materials_grid_additions_interpol.loc[idx[:,cat],:] = materials_grid_additions_interpol.loc[idx[:,cat],:].astype('float32').reindex(list(range(YEAR_FIRST_GRID,YEAR_END+1)), level=0).interpolate()
+        materials_grid_additions_interpol.loc[idx[:,cat],:] = materials_grid_additions_interpol.loc[idx[:,cat],:].astype('float32').reindex(list(range(YEAR_FIRST_GRID,year_end+1)), level=0).interpolate()
 
     # call the stock_tail function on all lines, substations & transformers, to add historic stock tail between 1926 & 1971
-    grid_length_Hv_above_new = stock_tail(grid_length_Hv_above, YEAR_OUT) # km
-    grid_length_Mv_above_new = stock_tail(grid_length_Mv_above, YEAR_OUT) # km
-    grid_length_Lv_above_new = stock_tail(grid_length_Lv_above, YEAR_OUT) # km
-    grid_length_Hv_under_new = stock_tail(grid_length_Hv_under, YEAR_OUT) # km 
-    grid_length_Mv_under_new = stock_tail(grid_length_Mv_under, YEAR_OUT) # km
-    grid_length_Lv_under_new = stock_tail(grid_length_Lv_under, YEAR_OUT) # km
-    grid_subst_Hv_new = stock_tail(grid_subst_Hv, YEAR_OUT)               # units
-    grid_subst_Mv_new = stock_tail(grid_subst_Mv, YEAR_OUT)               # units
-    grid_subst_Lv_new = stock_tail(grid_subst_Lv, YEAR_OUT)               # units
-    grid_trans_Hv_new = stock_tail(grid_trans_Hv, YEAR_OUT)               # units
-    grid_trans_Mv_new = stock_tail(grid_trans_Mv, YEAR_OUT)               # units
-    grid_trans_Lv_new = stock_tail(grid_trans_Lv, YEAR_OUT)               # units
+    grid_length_Hv_above_new = stock_tail(grid_length_Hv_above, year_out) # km
+    grid_length_Mv_above_new = stock_tail(grid_length_Mv_above, year_out) # km
+    grid_length_Lv_above_new = stock_tail(grid_length_Lv_above, year_out) # km
+    grid_length_Hv_under_new = stock_tail(grid_length_Hv_under, year_out) # km 
+    grid_length_Mv_under_new = stock_tail(grid_length_Mv_under, year_out) # km
+    grid_length_Lv_under_new = stock_tail(grid_length_Lv_under, year_out) # km
+    grid_subst_Hv_new = stock_tail(grid_subst_Hv, year_out)               # units
+    grid_subst_Mv_new = stock_tail(grid_subst_Mv, year_out)               # units
+    grid_subst_Lv_new = stock_tail(grid_subst_Lv, year_out)               # units
+    grid_trans_Hv_new = stock_tail(grid_trans_Hv, year_out)               # units
+    grid_trans_Mv_new = stock_tail(grid_trans_Mv, year_out)               # units
+    grid_trans_Lv_new = stock_tail(grid_trans_Lv, year_out)               # units
 
 
     #############
@@ -402,8 +403,8 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     # no differentiation between HV, MV & LV lines as well as between aboveground and belowground
     # Types: lines, transformers, substations
     lifetime_grid_elements.loc[YEAR_FIRST_GRID,:]  = lifetime_grid_elements.loc[lifetime_grid_elements.first_valid_index(),:]
-    lifetime_grid_elements.loc[YEAR_OUT,:]         = lifetime_grid_elements.loc[lifetime_grid_elements.last_valid_index(),:]
-    lifetime_grid_elements                         = lifetime_grid_elements.reindex(list(range(YEAR_FIRST_GRID, YEAR_OUT+1))).interpolate()
+    lifetime_grid_elements.loc[year_out,:]         = lifetime_grid_elements.loc[lifetime_grid_elements.last_valid_index(),:]
+    lifetime_grid_elements                         = lifetime_grid_elements.reindex(list(range(YEAR_FIRST_GRID, year_out+1))).interpolate()
     # TODO: check why lifetime for lines is interpoltaed from 2020 - 40yrs to 2050 - 48 yrs and then back to 2060 - 40 yrs -> should stay at 48 yrs?
     df_mean = lifetime_grid_elements.copy()
     df_stdev = df_mean * STD_LIFETIMES_ELECTR
