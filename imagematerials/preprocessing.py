@@ -40,8 +40,7 @@ def _get_electricity_prep_data(base_dir, climate_policy_scenario_dir, circular_e
         climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
         circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
         prep_data_gen = prep_elc_gen(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
-        prep_data_grid_lines = prep_elc_grid(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
-        prep_data_grid_add = prep_elc_grid(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
+        prep_data_grid_lines, prep_data_grid_add = prep_elc_grid(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
         # prep_data_stor_phs = prep_elc_stor(base_dir, climate_policy_config, scenario, year_start, year_end, year_out)
         # prep_data_stor_other = prep_elc_stor(base_dir, climate_policy_config, scenario, year_start, year_end, year_out)
         
