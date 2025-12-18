@@ -34,7 +34,7 @@ from imagematerials.electricity.constants import (
 #%% 1) Generation 
 ###########################################################################################################
 ###########################################################################################################
-def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
     path_external_data_scenario = Path(path_base, "electricity", scenario)
     # test if path_external_data_scenario exists and if not set to standard scenario
@@ -180,27 +180,25 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, scen
 ###########################################################################################################
 ###########################################################################################################
 
-def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_END, YEAR_OUT): #, climate_policy_config: dict, circular_economy_config: dict
+def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
-    scen_folder = SCEN + "_" + VARIANT
-    path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
-    path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
-    path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scen_folder)
+    # scen_folder = SCEN + "_" + VARIANT
+    # path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
+    path_external_data_standard = Path(path_base,  "electricity", "standard_data")
+    path_external_data_scenario = Path(path_base,  "electricity", scenario)
     
     # test if path_external_data_scenario exists and if not set to standard scenario
     if not path_external_data_scenario.exists():
-        path_external_data_scenario = Path(path_base, "data", "raw", "electricity", STANDARD_SCEN_EXTERNAL_DATA)
+        path_external_data_scenario = Path(path_base, "electricity", STANDARD_SCEN_EXTERNAL_DATA)
 
-    scen_BL_folder = SCEN + "_M_CP"  # baseline scenario
-    path_image_output_BL = Path(path_base, "data", "raw", "image", scen_BL_folder, "EnergyServices")
+    # scen_BL_folder = SCEN + "_M_CP"  # baseline scenario
+    # path_image_output_BL = Path(path_base, "data", "raw", "image", scen_BL_folder, "EnergyServices")
     # TODO: check if this is necessary (shouldn't historical periode anyway be the same for all scenarios?)
     # + if it is, should the baseline scenario be given as a parameter or can it be inferred from the scenario name?
 
-    assert path_image_output.is_dir()
+    # assert path_image_output.is_dir()
     assert path_external_data_standard.is_dir()
     assert path_external_data_scenario.is_dir()
-
-    years = YEAR_END - YEAR_START  + 1
 
     idx = pd.IndexSlice   
 
@@ -230,31 +228,32 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     # 2. IMAGE/TIMER files ---------------------------------------------
 
     # Generation capacity (stock & inflow/new) in MW peak capacity, FILES from TIMER
-    gcap_data = read_mym_df(path_image_output / 'GCap.out')
+    # gcap_data = read_mym_df(path_image_output / 'GCap.out')
+    gcap_data = read_mym_df(climate_policy_config["config_file_path"] / climate_policy_config["data_files"]['GCap'])
     # gcap_BL_data = read_mym_df('SSP2\\SSP2_BL\\GCap.out') # baseline scenario? TODO: what is the purpose of reading in the scneario + the baseline?
-    gcap_BL_data = read_mym_df(path_image_output_BL / 'GCap.out')
+    gcap_BL_data = gcap_data.copy() # obsolete in later versions
 
     ###########################################################################################################
     # Prepare model specific variables #
 
     gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
-    gcap = pd.pivot_table(gcap_data[gcap_data['time'].isin(list(range(YEAR_START,YEAR_END+1)))], index=['time','DIM_1'], values=list(range(1,len(EPG_TECHNOLOGIES)+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (28));  the last column in gcap_data (= totals) is now removed
+    gcap = pd.pivot_table(gcap_data[gcap_data['time'].isin(list(range(year_start,year_end+1)))], index=['time','DIM_1'], values=list(range(1,len(EPG_TECHNOLOGIES)+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (28));  the last column in gcap_data (= totals) is now removed
 
     gcap_BL_data = gcap_BL_data.loc[~gcap_BL_data['DIM_1'].isin([27,28])]    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
-    gcap_BL = pd.pivot_table(gcap_BL_data[gcap_BL_data['time'].isin(list(range(YEAR_START,YEAR_END+1)))], index=['time','DIM_1'], values=list(range(1,len(EPG_TECHNOLOGIES)+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (28));  the last column in gcap_data (= totals) is now removed
+    gcap_BL = pd.pivot_table(gcap_BL_data[gcap_BL_data['time'].isin(list(range(year_start,year_end+1)))], index=['time','DIM_1'], values=list(range(1,len(EPG_TECHNOLOGIES)+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (28));  the last column in gcap_data (= totals) is now removed
 
     region_list = list(grid_length_Hv.columns.values)
     material_list = list(materials_grid.columns.values)
 
     # renaming multi-index dataframe: generation capacity, based on the regions in grid_length_Hv & technologies as given
     gcap_techlist = ['Solar PV', 'Solar Decentral', 'CSP', 'Wind onshore', 'Wind offshore', 'Wave', 'Hydro', 'Other Renewables', 'Geothermal', 'Hydrogen', 'Nuclear', '<EMPTY>', 'Conv. Coal', 'Conv. Oil', 'Conv. Natural Gas', 'Waste', 'IGCC', 'OGCC', 'NG CC', 'Biomass CC', 'Coal + CCS', 'Oil/Coal + CCS', 'Natural Gas + CCS', 'Biomass + CCS', 'CHP Coal', 'CHP Oil', 'CHP Natural Gas', 'CHP Biomass', 'CHP Coal + CCS', 'CHP Oil + CCS', 'CHP Natural Gas + CCS', 'CHP Biomass + CCS', 'CHP Geothermal', 'CHP Hydrogen']
-    gcap.index = pd.MultiIndex.from_product([list(range(YEAR_START,YEAR_END+1)), region_list], names=['years', 'regions'])
-    gcap_BL.index = pd.MultiIndex.from_product([list(range(YEAR_START,YEAR_END+1)), region_list], names=['years', 'regions'])
+    gcap.index = pd.MultiIndex.from_product([list(range(year_start,year_end+1)), region_list], names=['years', 'regions'])
+    gcap_BL.index = pd.MultiIndex.from_product([list(range(year_start,year_end+1)), region_list], names=['years', 'regions'])
     gcap.columns = gcap_techlist
     gcap_BL.columns = gcap_techlist
 
     gdp_pc.columns = region_list
-    # gdp_pc = gdp_pc.drop([1970]).drop(list(range(YEAR_END+1,YEAR_LAST+1)))
+    # gdp_pc = gdp_pc.drop([1970]).drop(list(range(year_end+1,YEAR_LAST+1)))
 
 
     # length calculations ----------------------------------------------------------------------------
@@ -265,7 +264,7 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     gcap_growth = gcap_BL_total / gcap_BL_total.loc[2016]    # define growth according to 2016 as base year
     gcap_total = gcap.sum(axis=1).unstack()
     gcap_total = gcap_total[region_list]                     # re-order columns to the original TIMER order
-    gcap_growth.loc[2016:YEAR_END] = gcap_total.loc[2016:YEAR_END] / gcap_total.loc[2016]        # define growth according to 2016 as base year
+    gcap_growth.loc[2016:year_end] = gcap_total.loc[2016:year_end] / gcap_total.loc[2016]        # define growth according to 2016 as base year
 
     # in the sensitivity variant, additional growth is presumed after 2020 based on the fraction of variable renewable energy (vre) generation capacity (solar & wind)
     vre_fraction = gcap[['Solar PV', 'CSP', 'Wind onshore', 'Wind offshore']].sum(axis=1).unstack().divide(gcap.sum(axis=1).unstack())
@@ -292,7 +291,7 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     else: 
         gcap_growth_HV = gcap_growth
 
-    for year in range(YEAR_START, YEAR_END+1):
+    for year in range(year_start, year_end+1):
         grid_length_Hv_time.loc[year] = gcap_growth_HV.loc[year].mul(grid_length_Hv.loc['2016'])
         grid_length_Mv_time.loc[year] = gcap_growth.loc[year].mul(grid_length_Mv.loc['2016'])
         grid_length_Lv_time.loc[year] = gcap_growth.loc[year].mul(grid_length_Lv.loc['2016'])
@@ -353,37 +352,37 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     ##################
 
     # Interpolate material intensities (dynamic content from 1926 to 2100, based on data files)
-    index                             = pd.MultiIndex.from_product([list(range(YEAR_FIRST_GRID,YEAR_END+1)), list(materials_grid.index.levels[1])])
+    index                             = pd.MultiIndex.from_product([list(range(YEAR_FIRST_GRID,year_end+1)), list(materials_grid.index.levels[1])])
     materials_grid_interpol           = pd.DataFrame(index=index, columns=materials_grid.columns)
-    materials_grid_additions_interpol = pd.DataFrame(index=pd.MultiIndex.from_product([list(range(YEAR_FIRST_GRID,YEAR_END+1)), list(materials_grid_additions.index.levels[1])]), columns=materials_grid_additions.columns)
+    materials_grid_additions_interpol = pd.DataFrame(index=pd.MultiIndex.from_product([list(range(YEAR_FIRST_GRID,year_end+1)), list(materials_grid_additions.index.levels[1])]), columns=materials_grid_additions.columns)
 
     for cat in list(materials_grid.index.levels[1]):
         materials_grid_1st   = materials_grid.loc[idx[materials_grid.index[0][0], cat],:]
         materials_grid_interpol.loc[idx[YEAR_FIRST_GRID ,cat],:] = materials_grid_1st                # set the first year (1926) values to the first available values in the dataset (for the year 2000) 
         materials_grid_interpol.loc[idx[materials_grid.index.levels[0].min(),cat],:] = materials_grid.loc[idx[materials_grid.index.levels[0].min(),cat],:]                # set the middle year (2000) values to the first available values in the dataset (for the year 2000) 
         materials_grid_interpol.loc[idx[materials_grid.index.levels[0].max(),cat],:] = materials_grid.loc[idx[materials_grid.index.levels[0].max(),cat],:]                # set the last year (2100) values to the last available values in the dataset (for the year 2050) 
-        materials_grid_interpol.loc[idx[:,cat],:] = materials_grid_interpol.loc[idx[:,cat],:].astype('float32').reindex(list(range(YEAR_FIRST_GRID,YEAR_END+1)), level=0).interpolate()
+        materials_grid_interpol.loc[idx[:,cat],:] = materials_grid_interpol.loc[idx[:,cat],:].astype('float32').reindex(list(range(YEAR_FIRST_GRID,year_end+1)), level=0).interpolate()
 
     for cat in list(materials_grid_additions.index.levels[1]):
         materials_grid_additions_1st   = materials_grid_additions.loc[idx[materials_grid_additions.index[0][0], cat],:]
         materials_grid_additions_interpol.loc[idx[YEAR_FIRST_GRID ,cat],:] = materials_grid_additions_1st          # set the first year (1926) values to the first available values in the dataset (for the year 2000) 
         materials_grid_additions_interpol.loc[idx[materials_grid_additions.index.levels[0].min(),cat],:] = materials_grid_additions.loc[idx[materials_grid_additions.index.levels[0].min(),cat],:]                # set the middle year (2000) values to the first available values in the dataset (for the year 2000) 
         materials_grid_additions_interpol.loc[idx[materials_grid_additions.index.levels[0].max(),cat],:] = materials_grid_additions.loc[idx[materials_grid_additions.index.levels[0].max(),cat],:]                # set the last year (2100) values to the last available values in the dataset (for the year 2050) 
-        materials_grid_additions_interpol.loc[idx[:,cat],:] = materials_grid_additions_interpol.loc[idx[:,cat],:].astype('float32').reindex(list(range(YEAR_FIRST_GRID,YEAR_END+1)), level=0).interpolate()
+        materials_grid_additions_interpol.loc[idx[:,cat],:] = materials_grid_additions_interpol.loc[idx[:,cat],:].astype('float32').reindex(list(range(YEAR_FIRST_GRID,year_end+1)), level=0).interpolate()
 
     # call the stock_tail function on all lines, substations & transformers, to add historic stock tail between 1926 & 1971
-    grid_length_Hv_above_new = stock_tail(grid_length_Hv_above, YEAR_OUT) # km
-    grid_length_Mv_above_new = stock_tail(grid_length_Mv_above, YEAR_OUT) # km
-    grid_length_Lv_above_new = stock_tail(grid_length_Lv_above, YEAR_OUT) # km
-    grid_length_Hv_under_new = stock_tail(grid_length_Hv_under, YEAR_OUT) # km 
-    grid_length_Mv_under_new = stock_tail(grid_length_Mv_under, YEAR_OUT) # km
-    grid_length_Lv_under_new = stock_tail(grid_length_Lv_under, YEAR_OUT) # km
-    grid_subst_Hv_new = stock_tail(grid_subst_Hv, YEAR_OUT)               # units
-    grid_subst_Mv_new = stock_tail(grid_subst_Mv, YEAR_OUT)               # units
-    grid_subst_Lv_new = stock_tail(grid_subst_Lv, YEAR_OUT)               # units
-    grid_trans_Hv_new = stock_tail(grid_trans_Hv, YEAR_OUT)               # units
-    grid_trans_Mv_new = stock_tail(grid_trans_Mv, YEAR_OUT)               # units
-    grid_trans_Lv_new = stock_tail(grid_trans_Lv, YEAR_OUT)               # units
+    grid_length_Hv_above_new = stock_tail(grid_length_Hv_above, year_out) # km
+    grid_length_Mv_above_new = stock_tail(grid_length_Mv_above, year_out) # km
+    grid_length_Lv_above_new = stock_tail(grid_length_Lv_above, year_out) # km
+    grid_length_Hv_under_new = stock_tail(grid_length_Hv_under, year_out) # km 
+    grid_length_Mv_under_new = stock_tail(grid_length_Mv_under, year_out) # km
+    grid_length_Lv_under_new = stock_tail(grid_length_Lv_under, year_out) # km
+    grid_subst_Hv_new = stock_tail(grid_subst_Hv, year_out)               # units
+    grid_subst_Mv_new = stock_tail(grid_subst_Mv, year_out)               # units
+    grid_subst_Lv_new = stock_tail(grid_subst_Lv, year_out)               # units
+    grid_trans_Hv_new = stock_tail(grid_trans_Hv, year_out)               # units
+    grid_trans_Mv_new = stock_tail(grid_trans_Mv, year_out)               # units
+    grid_trans_Lv_new = stock_tail(grid_trans_Lv, year_out)               # units
 
 
     #############
@@ -402,8 +401,8 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     # no differentiation between HV, MV & LV lines as well as between aboveground and belowground
     # Types: lines, transformers, substations
     lifetime_grid_elements.loc[YEAR_FIRST_GRID,:]  = lifetime_grid_elements.loc[lifetime_grid_elements.first_valid_index(),:]
-    lifetime_grid_elements.loc[YEAR_OUT,:]         = lifetime_grid_elements.loc[lifetime_grid_elements.last_valid_index(),:]
-    lifetime_grid_elements                         = lifetime_grid_elements.reindex(list(range(YEAR_FIRST_GRID, YEAR_OUT+1))).interpolate()
+    lifetime_grid_elements.loc[year_out,:]         = lifetime_grid_elements.loc[lifetime_grid_elements.last_valid_index(),:]
+    lifetime_grid_elements                         = lifetime_grid_elements.reindex(list(range(YEAR_FIRST_GRID, year_out+1))).interpolate()
     # TODO: check why lifetime for lines is interpoltaed from 2020 - 40yrs to 2050 - 48 yrs and then back to 2060 - 40 yrs -> should stay at 48 yrs?
     df_mean = lifetime_grid_elements.copy()
     df_stdev = df_mean * STD_LIFETIMES_ELECTR
@@ -521,7 +520,7 @@ def get_preprocessing_data_grid(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
 
 
 
-def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_END, YEAR_OUT): #, climate_policy_config: dict, circular_economy_config: dict
+def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
     """Preprocess electricity storage data and creates "prep_data" suitable for stock modelling using IMAGE-Materials.
 
     It does so for the two sub-sectors:
@@ -540,16 +539,20 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     Parameters
     ----------
     path_base : str
-        Base directory of the project where the data structure is located.
-    SCEN : str
-        Scenario name (e.g., "SSP2").
-    VARIANT : str
-        Variant of the scenario (e.g., "M_CP", "VLHO").
-    YEAR_START : int
+        Base directory of the project where the data structure is located (image-materials/data/raw/).
+    scenario : str
+        Scenario name (e.g., "SSP2_M_CP").
+    climate_policy_config : dict
+        Dictionary created from a scenario-specific config.toml file.
+        Contains all TOML entries ("data_files" mapping) plus a path:
+        - "config_file_path": pathlib.Path to the scenario directory (e.g. SSP2_M_CP) containing config.toml and all referenced
+        output subfolders. 
+        Used to construct full paths to scenario output files, e.g. read_mym_df(climate_policy_config["config_file_path"]/climate_policy_config["data_files"]["variable_x"]).
+    year_start : int
         First simulation year for data processing (e.g., 1971).
-    YEAR_END : int
+    year_end : int
         Last year for data interpolation (used for intermediate computations).
-    YEAR_OUT : int
+    year_out : int
         Final output year for the results (e.g., 2100).
 
     Returns
@@ -577,17 +580,16 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
 
     """
 
-    scen_folder = SCEN + "_" + VARIANT
-    path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
-    path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
-    path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scen_folder) #test
+    # path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
+    path_external_data_standard = Path(path_base, "electricity", "standard_data")
+    path_external_data_scenario = Path(path_base, "electricity", scenario) #test
 
     # test if path_external_data_scenario exists and if not set to standard scenario
     if not path_external_data_scenario.exists():
-        path_external_data_scenario = Path(path_base, "data", "raw", "electricity", STANDARD_SCEN_EXTERNAL_DATA)
+        path_external_data_scenario = Path(path_base, "electricity", STANDARD_SCEN_EXTERNAL_DATA)
 
-    print(f"Path to image output: {path_image_output}")
-    assert path_image_output.is_dir()
+    # print(f"Path to image output: {path_image_output}")
+    # assert path_image_output.is_dir()
     assert path_external_data_standard.is_dir()
     assert path_external_data_scenario.is_dir()
 
@@ -633,13 +635,15 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     # 2. IMAGE/TIMER files ====================================================================================
 
     # read TIMER installed storage capacity (MWh, reservoir)
-    storage = read_mym_df(path_image_output.joinpath("StorResTot.out"))   #storage capacity in MWh (reservoir, so energy capacity, not power capacity, the latter is used later on in the pumped hydro storage calculations)
-        
+    # storage = read_mym_df(path_image_output.joinpath("StorResTot.out"))   #storage capacity in MWh (reservoir, so energy capacity, not power capacity, the latter is used later on in the pumped hydro storage calculations)
+    storage = read_mym_df(climate_policy_config["config_file_path"] / climate_policy_config["data_files"]['StorResTot'])
+
     #storage capacity in MW (power capacity), to compare it to Pumped hydro storage projections (also given in MW, power capacity)
-    storage_power = read_mym_df(path_image_output / 'StorCapTot.out')  
+    # storage_power = read_mym_df(path_image_output / 'StorCapTot.out')  
+    storage_power = read_mym_df(climate_policy_config["config_file_path"] / climate_policy_config["data_files"]['StorCapTot'])
 
     # Generation capacity (stock & inflow/new) in MW peak capacity, FILES from TIMER
-    gcap_data = read_mym_df(path_image_output / 'Gcap.out') # needed to get hydro power for storage
+    gcap_data = read_mym_df(climate_policy_config["config_file_path"] / climate_policy_config["data_files"]['GCap']) # needed to get hydro power for storage
     gcap_data = gcap_data.iloc[:, :26]
 
 
@@ -662,7 +666,7 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
         storage_multiplier = storage
         for year in range(2021,2051):
             storage_multiplier.loc[year] = storage.loc[year] * (1 + (1/30*(year-2020)))
-        for year in range(2051,YEAR_END+1):
+        for year in range(2051,year_end+1):
             storage_multiplier.loc[year] = storage.loc[year] * 2
 
 
@@ -689,7 +693,7 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
 
     # energy density ---
     # fix the energy density (kg/kwh) of storage technologies after 2030
-    for year in range(2030+1,YEAR_OUT+1):
+    for year in range(2030+1,year_out+1):
         # storage_density_interpol = storage_density_interpol.append(pd.Series(storage_density_interpol.loc[storage_density_interpol.last_valid_index()], name=year))
         row = storage_density_interpol.loc[[storage_density_interpol.last_valid_index()]]
         row.index = [year]
@@ -703,7 +707,7 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
 
     # storage material intensity ---
     # Interpolate material intensities (dynamic content for gcap & storage technologies between 1926 to 2100, based on data files)
-    index = pd.MultiIndex.from_product([list(range(YEAR_FIRST_GRID, YEAR_OUT+1)), list(storage_materials.index)])
+    index = pd.MultiIndex.from_product([list(range(YEAR_FIRST_GRID, year_out+1)), list(storage_materials.index)])
     stor_materials_interpol = pd.DataFrame(index=index, columns=storage_materials.columns.levels[1])
     # material intensities for storage
     for cat in list(storage_materials.columns.levels[1]):
@@ -719,12 +723,12 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
 
     # First the lifetime of storage technologies needs to be defined over time, before running the dynamic stock function
     # before 2018
-    for year in reversed(range(YEAR_START,storage_start)):
+    for year in reversed(range(year_start,storage_start)):
         # storage_lifetime_interpol = pd.concat([storage_lifetime_interpol, pd.Series(storage_lifetime_interpol.loc[storage_lifetime_interpol.first_valid_index()], name=year)])
         row = pd.DataFrame([storage_lifetime_interpol.loc[storage_lifetime_interpol.first_valid_index()]])
         storage_lifetime_interpol.loc[year] = row.iloc[0]
     # after 2030
-    for year in range(2030+1,YEAR_OUT+1):
+    for year in range(2030+1,year_out+1):
         # storage_lifetime_interpol = pd.concat([storage_lifetime_interpol, pd.Series(storage_lifetime_interpol.loc[storage_lifetime_interpol.last_valid_index()], name=year)])
         row = pd.DataFrame([storage_lifetime_interpol.loc[storage_lifetime_interpol.last_valid_index()]])
         storage_lifetime_interpol.loc[year] = row.iloc[0]
@@ -754,7 +758,7 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
         row = pd.DataFrame([storage_costs_new.loc[storage_costs_new.last_valid_index()] * (1 - decline_used)])
         storage_costs_new.loc[year] = row.iloc[0]
     # for historic price development, assume 2x AVERAGE annual price decline on all technologies, except lead-acid (so that lead-acid gets a relative price advantage from 1970-2018)
-    for year in reversed(range(YEAR_START,storage_start)):
+    for year in reversed(range(year_start,storage_start)):
         # storage_costs_new = storage_costs_new.append(pd.Series(storage_costs_new.loc[storage_costs_new.first_valid_index()]*(1+(2*decline_used.mean())), name=year)).sort_index(axis=0)
         row = pd.DataFrame([storage_costs_new.loc[storage_costs_new.first_valid_index()]*(1+(2*decline_used.mean()))])
         storage_costs_new.loc[year] = row.iloc[0]
@@ -768,7 +772,7 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     storage_market_share = MNLogit(storage_costs_new, -0.2) #assumes input of an ordered dataframe with rows as years and columns as technologies, values as prices. Logitpar is the calibrated Logit parameter (usually a nagetive number between 0 and 1)
 
     # fix the market share of storage technologies after 2050
-    for year in range(2050+1,YEAR_OUT+1):
+    for year in range(2050+1,year_out+1):
         # storage_market_share = storage_market_share.append(pd.Series(storage_market_share.loc[storage_market_share.last_valid_index()], name=year))
         row = pd.DataFrame([storage_market_share.loc[storage_market_share.last_valid_index()]])
         storage_market_share.loc[year] = row.iloc[0]
@@ -783,7 +787,7 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     # OPTION: NO V2G ---------------------------------------------------------------
     # TODO: this is a temporary solution, until the coupling with the vehicle sector and the battery module calculations are implemented/integrated
     storage_vehicles = pd.DataFrame(0, index=storage.index, columns=storage.columns)  # set vehicle storage to zero when not using V2G
-    storage_vehicles = storage_vehicles.loc[:YEAR_OUT]
+    storage_vehicles = storage_vehicles.loc[:year_out]
     #-------------------------------------------------------------------------------
 
     # Take the TIMER Hydro-dam capacity (MW) & compare it to Pumped hydro capacity (MW) projections from the International Hydropower Association
@@ -792,13 +796,13 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
     Gcap_hydro = Gcap_hydro.iloc[:, :26]
     region_list = list(kilometrage.columns.values)  # get a list with region names
     Gcap_hydro.columns = region_list
-    Gcap_hydro = Gcap_hydro.loc[:YEAR_OUT]
+    Gcap_hydro = Gcap_hydro.loc[:year_out]
 
     # storage capacity in MW (power capacity), to compare it to Pumped hydro storage projections (also given in MW, power capacity)              
     # storage_power.drop(storage_power.iloc[:, -2:], inplace = True, axis = 1) # error prone
     storage_power = storage_power.iloc[:, :26]  
     storage_power.columns = region_list
-    storage_power = storage_power.loc[:YEAR_OUT]
+    storage_power = storage_power.loc[:year_out]
 
     #Disaggregate the Pumped hydro-storgae projections to 26 IMAGE regions according to the relative Hydro-dam power capacity (also MW) within 5 regions reported by the IHA (international Hydropwer Association)
     phs_regions = [[10,11],[19],[1],[22],[0,2,3,4,5,6,7,8,9,12,13,14,15,16,17,18,20,21,23,24,25]]   # subregions in IHA data for Europe, China, US, Japan, RoW, MIND: region refers to IMAGE region MINUS 1
@@ -814,13 +818,13 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
 
     # Then fill the years after 2030 (end of IHA projections) according to the Gcap annual growth rate (assuming a fixed percentage of Hydro dams will be built with Pumped hydro capabilities after )
     if SENS_ANALYSIS == 'high_stor':
-        phs_projections_IMAGE.loc[2030:YEAR_OUT] =  phs_projections_IMAGE.loc[2030] * (Gcap_hydro.loc[2030:YEAR_OUT]/Gcap_hydro.loc[2030:YEAR_OUT])  # no growth after 2030 in the high_stor sensitivity variant
+        phs_projections_IMAGE.loc[2030:year_out] =  phs_projections_IMAGE.loc[2030] * (Gcap_hydro.loc[2030:year_out]/Gcap_hydro.loc[2030:year_out])  # no growth after 2030 in the high_stor sensitivity variant
     else:
-        phs_projections_IMAGE.loc[2030:YEAR_OUT] =  phs_projections_IMAGE.loc[2030] * (Gcap_hydro.loc[2030:YEAR_OUT]/Gcap_hydro.loc[2030])
+        phs_projections_IMAGE.loc[2030:year_out] =  phs_projections_IMAGE.loc[2030] * (Gcap_hydro.loc[2030:year_out]/Gcap_hydro.loc[2030])
 
     # Calculate the fractions of the storage capacity that is provided through pumped hydro-storage, electric vehicles or other storage (larger than 1 means the capacity superseeds the demand for energy storage, in terms of power in MW or enery in MWh) 
-    phs_storage_fraction = phs_projections_IMAGE.divide(storage_power.loc[:YEAR_OUT]).clip(upper=1) # the phs storage fraction deployed to fulfill storage demand, both phs & storage_power here are expressed in MW
-    storage_remaining = storage.loc[:YEAR_OUT] * (1 - phs_storage_fraction)
+    phs_storage_fraction = phs_projections_IMAGE.divide(storage_power.loc[:year_out]).clip(upper=1) # the phs storage fraction deployed to fulfill storage demand, both phs & storage_power here are expressed in MW
+    storage_remaining = storage.loc[:year_out] * (1 - phs_storage_fraction)
 
     if SENS_ANALYSIS == 'high_stor':
         oth_storage_fraction = 0.5 * storage_remaining 
@@ -829,16 +833,16 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
         evs_storage_fraction = 1 - (phs_storage_fraction + oth_storage_fraction)     # electric vehicle storage (BEV + PHEV) capacity and total storage demand are expressed as MWh
     else: 
         oth_storage_fraction = (storage_remaining - storage_vehicles).clip(lower=0)    
-        oth_storage_fraction = oth_storage_fraction.divide(storage.loc[:YEAR_OUT]).where(oth_storage_fraction > 0, 0).clip(lower=0)      
+        oth_storage_fraction = oth_storage_fraction.divide(storage.loc[:year_out]).where(oth_storage_fraction > 0, 0).clip(lower=0)      
         evs_storage_fraction = 1 - (phs_storage_fraction + oth_storage_fraction)     # electric vehicle storage (BEV + PHEV) capacity and total storage demand are expressed as MWh
     
     checksum = phs_storage_fraction + evs_storage_fraction + oth_storage_fraction   # should be 1 for all fields
 
     # absolute storage capacity (MWh)
-    phs_storage_theoretical = phs_projections_IMAGE.divide(storage_power) * storage.loc[:YEAR_OUT] # ??? theoretically available PHS storage (MWh; fraction * total) only used in the graphs that show surplus capacity
-    phs_storage = phs_storage_fraction * storage.loc[:YEAR_OUT]
-    evs_storage = evs_storage_fraction * storage.loc[:YEAR_OUT]
-    oth_storage = oth_storage_fraction * storage.loc[:YEAR_OUT]
+    phs_storage_theoretical = phs_projections_IMAGE.divide(storage_power) * storage.loc[:year_out] # ??? theoretically available PHS storage (MWh; fraction * total) only used in the graphs that show surplus capacity
+    phs_storage = phs_storage_fraction * storage.loc[:year_out]
+    evs_storage = evs_storage_fraction * storage.loc[:year_out]
+    oth_storage = oth_storage_fraction * storage.loc[:year_out]
 
     #output for Main text figure 2 (storage reservoir, in MWh for 3 storage types)
     storage_out_phs = pd.concat([phs_storage], keys=['phs'], names=['type']) 
@@ -849,8 +853,8 @@ def get_preprocessing_data_stor(path_base: str, SCEN, VARIANT, YEAR_START, YEAR_
 
     # derive inflow & outflow (in MWh) for PHS, for later use in the material calculations 
     PHS_kg_perkWh = 26.8   # kg per kWh storage capacity (as weight addition to existing hydro plants to make them pumped) 
-    phs_storage_stock_tail = stock_tail(phs_storage.astype(float), YEAR_OUT)
-    storage_lifetime_PHS = storage_lifetime['PHS'].reindex(list(range(YEAR_FIRST_GRID,YEAR_OUT+1)), axis=0).interpolate(limit_direction='both')
+    phs_storage_stock_tail = stock_tail(phs_storage.astype(float), year_out)
+    storage_lifetime_PHS = storage_lifetime['PHS'].reindex(list(range(YEAR_FIRST_GRID,year_out+1)), axis=0).interpolate(limit_direction='both')
 
     ###########################################################################################################
     #%%% 2.4.1) Prep_data File
