@@ -535,6 +535,7 @@ grid_additions = xr.DataArray(
 )
 grid_additions = prism.Q_(grid_additions, "count")
 
+
 # # Lifetimes -------
 # data only for lines, substations and transformer -> bring in knowledge_graph format: HV - Lines, MV - Lines, LV - Lines, HV - Transformers, etc.
 expanded_data = {}
@@ -572,10 +573,10 @@ grid_lifetime = prism.Q_(grid_lifetime, "year")
 materials_lines = materials_lines_data.reset_index().rename(columns={'year': 'Cohort', 'kg/km': 'Type'})
 # turn "HV Overhead" -> "HV - Lines - Overhead"
 materials_lines['Type'] = materials_lines['Type'].str.split(n=1).apply(lambda x: f"{x[0]} - Lines - {x[1]}")
-# convert to xarray: material columns become a new 'materials' dimension
+# convert to xarray: material columns become a new 'material' dimension
 materials_lines = materials_lines.set_index(['Cohort', 'Type']).to_xarray()
-materials_lines = materials_lines.to_array(dim='materials').rename("GridMaterialsLines")
-materials_lines = materials_lines.transpose('Cohort', 'Type', 'materials') # reorder dimensions
+materials_lines = materials_lines.to_array(dim='material').rename("GridMaterialsLines")
+materials_lines = materials_lines.transpose('Cohort', 'Type', 'material') # reorder dimensions
 materials_lines = prism.Q_(materials_lines, "kg/km")
 materials_lines = materials_lines.reindex(Type=grid_lines.Type)  # ensure same order of types as in stock dataarray
 
@@ -583,11 +584,12 @@ materials_lines = materials_lines.reindex(Type=grid_lines.Type)  # ensure same o
 materials_additions = materials_additions_data.reset_index().rename(columns={'year': 'Cohort', 'kg/unit': 'Type'})
 # turn "HV Overhead" -> "HV - Lines - Overhead"
 materials_additions['Type'] = materials_additions['Type'].str.split(n=1).apply(lambda x: f"{x[0]} - {x[1]}")
-# convert to xarray: material columns become a new 'materials' dimension
+# convert to xarray: material columns become a new 'material' dimension
 materials_additions = materials_additions.set_index(['Cohort', 'Type']).to_xarray()
-materials_additions = materials_additions.to_array(dim='materials').rename("GridMaterialsAdditions")
-materials_additions = materials_additions.transpose('Cohort', 'Type', 'materials') # reorder dimensions
+materials_additions = materials_additions.to_array(dim='material').rename("GridMaterialsAdditions")
+materials_additions = materials_additions.transpose('Cohort', 'Type', 'material') # reorder dimensions
 materials_additions = prism.Q_(materials_additions, "kg/count")
+materials_additions = materials_additions.reindex(Type=grid_additions.Type)  # ensure same order of types as in stock dataarray
 
 
 # # Gcap ------
@@ -747,13 +749,13 @@ grid_additions_interp = add_historic_stock(grid_additions, YEAR_FIRST_GRID)
 
 
 
-flexible_plot_1panel(
-    da=grid_additions_interp,
-    x_dim="Time",
-    varying_dims=["Type", "Region"],
-    fixed={"Type": [1, 2, 3, 4,5], "Region": [3]}, #
-    plot_type='scatter'
-)
+# flexible_plot_1panel(
+#     da=grid_additions_interp,
+#     x_dim="Time",
+#     varying_dims=["Type", "Region"],
+#     fixed={"Type": [1, 2, 3, 4,5], "Region": [3]}, #
+#     plot_type='scatter'
+# )
 
 
 
@@ -1041,24 +1043,44 @@ flexible_plot_1panel(
 #----------------------------------------------------------------------------------------------------------
 
 
+# The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
+grid_lifetime_interp = convert_lifetime(grid_lifetime_interp)
+
+
+# bring preprocessing data into a generic format for the model
+prep_data_lines = {}
+prep_data_lines["lifetimes"] = grid_lifetime_interp
+prep_data_lines["stocks"] = grid_lines_interp
+prep_data_lines["material_intensities"] = materials_lines_interp
+prep_data_lines["knowledge_graph"] = create_electricity_graph()
+prep_data_lines["set_unit_flexible"] = prism.U_(prep_data_lines["stocks"]) # add unit (prism.U_ gives the unit back)
+# set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
+
+prep_data_additions = {}
+prep_data_additions["lifetimes"] = grid_lifetime_interp
+prep_data_additions["stocks"] = grid_additions_interp
+prep_data_additions["material_intensities"] = materials_additions_interp
+prep_data_additions["knowledge_graph"] = create_electricity_graph()
+prep_data_additions["set_unit_flexible"] = prism.U_(prep_data_additions["stocks"]) # add unit (prism.U_ gives the unit back)
+
 
 
 
 # OLD --------------------------------------------------------------------------------------------------
 
-ureg = pint.UnitRegistry(force_ndarray_like=True)
+# ureg = pint.UnitRegistry(force_ndarray_like=True)
 # Define the units for each dimension
-unit_mapping = { # TODO: move to constants.py
-    'time': ureg.year,
-    'year': ureg.year,
-    'Year': ureg.year,
-    'kg': ureg.kilogram,
-    'yr': ureg.year,
-    '%': ureg.percent,
-    't': ureg.tonne,
-    'MW': ureg.megawatt, #added
-    'GW': ureg.gigawatt, #added
-}
+# unit_mapping = { # TODO: move to constants.py
+#     'time': ureg.year,
+#     'year': ureg.year,
+#     'Year': ureg.year,
+#     'kg': ureg.kilogram,
+#     'yr': ureg.year,
+#     '%': ureg.percent,
+#     't': ureg.tonne,
+#     'MW': ureg.megawatt, #added
+#     'GW': ureg.gigawatt, #added
+# }
 
 # Conversion table for all coordinates, to be removed/adapted after input tables are fixed.
 # conversion_table = {
@@ -1067,14 +1089,14 @@ unit_mapping = { # TODO: move to constants.py
 #     # "gcap_materials_interpol": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]})
 # }
 
-conversion_table = {
-    "grid_stock_lines": (["Time"], ["Type", "Region"],),
-    "materials_grid_kgperkm": (["Cohort"], ["Type", "material"],),
-    "grid_stock_add": (["Time"], ["Type", "Region"],),
-    "materials_grid_add_kgperunit": (["Cohort"], ["Type", "material"],),
-    "grid_stock": (["Time"], ["Type", "Region"],), # TODO: delete
-    "materials_grid_combined_kgperkm": (["Cohort"], ["Type", "material"],) # TODO: delete
-}
+# conversion_table = {
+#     "grid_stock_lines": (["Time"], ["Type", "Region"],),
+#     "materials_grid_kgperkm": (["Cohort"], ["Type", "material"],),
+#     "grid_stock_add": (["Time"], ["Type", "Region"],),
+#     "materials_grid_add_kgperunit": (["Cohort"], ["Type", "material"],),
+#     "grid_stock": (["Time"], ["Type", "Region"],), # TODO: delete
+#     "materials_grid_combined_kgperkm": (["Cohort"], ["Type", "material"],) # TODO: delete
+# }
 
 
 
@@ -1082,36 +1104,36 @@ conversion_table = {
 #         'grid_stock': grid_stock,
 #         'materials_grid_combined_kgperkm': materials_grid_combined_kgperkm,
 #         'lifetime_grid_distr': lifetime_grid_distr,
+# # }
+# results_dict_lines = {
+#         'grid_stock_lines': grid_stock_lines,
+#         'materials_grid_kgperkm': materials_grid_kgperkm,
+#         'lifetime_grid_distr': lifetime_grid_distr,
 # }
-results_dict_lines = {
-        'grid_stock_lines': grid_stock_lines,
-        'materials_grid_kgperkm': materials_grid_kgperkm,
-        'lifetime_grid_distr': lifetime_grid_distr,
-}
-results_dict_add = {
-        'grid_stock_add': grid_stock_add,
-        'materials_grid_add_kgperunit': materials_grid_additions_kgperunit,
-        'lifetime_grid_distr': lifetime_grid_distr,
-}
+# results_dict_add = {
+#         'grid_stock_add': grid_stock_add,
+#         'materials_grid_add_kgperunit': materials_grid_additions_kgperunit,
+#         'lifetime_grid_distr': lifetime_grid_distr,
+# }
 
 
-prep_data_lines = create_prep_data(results_dict_lines, conversion_table, unit_mapping)
-prep_data_add = create_prep_data(results_dict_add, conversion_table, unit_mapping)
+# prep_data_lines = create_prep_data(results_dict_lines, conversion_table, unit_mapping)
+# prep_data_add = create_prep_data(results_dict_add, conversion_table, unit_mapping)
 
-prep_data_lines["stocks"] = prism.Q_(prep_data_lines["stocks"], "km")
-prep_data_lines["material_intensities"] = prism.Q_(prep_data_lines["material_intensities"], "kg/km")
-prep_data_lines["set_unit_flexible"] = prism.U_(prep_data_lines["stocks"]) # prism.U_ gives the unit back
-# set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
+# prep_data_lines["stocks"] = prism.Q_(prep_data_lines["stocks"], "km")
+# prep_data_lines["material_intensities"] = prism.Q_(prep_data_lines["material_intensities"], "kg/km")
+# prep_data_lines["set_unit_flexible"] = prism.U_(prep_data_lines["stocks"]) # prism.U_ gives the unit back
+# # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
 
-prep_data_add["stocks"] = prism.Q_(prep_data_add["stocks"], "count")
-prep_data_add["material_intensities"] = prism.Q_(prep_data_add["material_intensities"], "kg/count")
-prep_data_add["set_unit_flexible"] = prism.U_(prep_data_add["stocks"]) # prism.U_ gives the unit back
+# prep_data_add["stocks"] = prism.Q_(prep_data_add["stocks"], "count")
+# prep_data_add["material_intensities"] = prism.Q_(prep_data_add["material_intensities"], "kg/count")
+# prep_data_add["set_unit_flexible"] = prism.U_(prep_data_add["stocks"]) # prism.U_ gives the unit back
 
 
 # change region names to IMAGE_REGIONS # TODO: this should be done in hte beginning of preprocessing
-knowledge_graph_region =    create_region_graph()
-prep_data_lines["stocks"] = knowledge_graph_region.rebroadcast_xarray(prep_data_lines["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
-prep_data_add["stocks"] =   knowledge_graph_region.rebroadcast_xarray(prep_data_add["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
+# knowledge_graph_region =    create_region_graph()
+# prep_data_lines["stocks"] = knowledge_graph_region.rebroadcast_xarray(prep_data_lines["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
+# prep_data_add["stocks"] =   knowledge_graph_region.rebroadcast_xarray(prep_data_add["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
 
 #----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
@@ -1128,37 +1150,26 @@ prep_data_add["stocks"] =   knowledge_graph_region.rebroadcast_xarray(prep_data_
 
 
 
-# The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
-grid_lifetime_interp = convert_lifetime(grid_lifetime_interp)
-
-
- # bring preprocessing data into a generic format for the model
-prep_data_lines = {}
-prep_data_lines["lifetimes"] = grid_lifetime_interp
-prep_data_lines["stocks"] = grid_lines_interp
-prep_data_lines["material_intensities"] = materials_lines_interp
-prep_data_lines["knowledge_graph"] = create_electricity_graph()
-prep_data_lines["set_unit_flexible"] = prism.U_(prep_data_lines["stocks"]) # add unit (prism.U_ gives the unit back)
-# set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
-
 
 
 
 # # Define the complete timeline, including historic tail
 time_start = prep_data_lines["stocks"].coords["Time"].min().values
-complete_timeline = prism.Timeline(time_start, YEAR_END, 1)
+complete_timeline = prism.Timeline(time_start, YEAR_END, 1) #YEAR_END
 simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
 
 
-sec_electr_grid_lines = Sector("electr_grid_lines", prep_data_lines)
+sec_electr_grid_lines = Sector("elc_grid_lines", prep_data_lines)
 factory_lines = ModelFactory(
     sec_electr_grid_lines, complete_timeline
     ).add(GenericStocks
     ).add(MaterialIntensities
-    ).finish()
+    )
 
-factory_lines.simulate(simulation_timeline)
-list(factory_lines.electr_grid_lines)
+model_lines = factory_lines.finish()
+
+model_lines.simulate(simulation_timeline)
+list(model_lines.elc_grid_lines)
 
 
 
@@ -1166,22 +1177,23 @@ list(factory_lines.electr_grid_lines)
 # prep_data = create_prep_data(results_dict_add, conversion_table, unit_mapping)
 
 # # Define the complete timeline, including historic tail
-time_start = prep_data["stocks"].coords["Time"].min().values
+time_start = prep_data_additions["stocks"].coords["Time"].min().values
 complete_timeline = prism.Timeline(time_start, YEAR_END, 1)
 simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
 
 
-sec_electr_grid_add = Sector("electr_grid_add", prep_data_add)
+sec_electr_grid_add = Sector("elc_grid_add", prep_data_additions)
 
-main_model_factory_add = ModelFactory(
+factory_add = ModelFactory(
     sec_electr_grid_add, complete_timeline
     ).add(GenericStocks
     ).add(MaterialIntensities
-    ).finish()
+    )
 
-main_model_factory_add.simulate(simulation_timeline)
-list(main_model_factory_add.electr_grid_add)
+model_add = factory_add.finish()
 
+model_add.simulate(simulation_timeline)
+list(model_add.elc_grid_add)
 
 
 # Define the coordinates of all dimensions.
@@ -1209,8 +1221,8 @@ path_test_plots = Path(path_base, "imagematerials", "electricity", "out_test", "
 #%%%% 2 models ---------------------------------------------------
 
 
-data_lines  = main_model_factory_lines.stocks.copy().sum(dim="Region")
-data_add    = main_model_factory_add.stocks.copy().sum(dim="Region")
+data_lines  = model_lines.stocks.copy().sum(dim="Region")
+data_add    = model_add.stocks.copy().sum(dim="Region")
 
 # data        = xr.concat([data_lines, data_add], dim='Type')
 # data_plot   = data.sum(dim="Region")
@@ -1264,8 +1276,8 @@ plt.show()
 
 materials = ["steel", "concrete", "aluminium", "copper"]
 
-data_lines  = main_model_factory_lines.stock_by_cohort_materials.copy().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
-data_add    = main_model_factory_add.stock_by_cohort_materials.copy().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
+data_lines  = model_lines.stock_by_cohort_materials.copy().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
+data_add    = model_add.stock_by_cohort_materials.copy().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
 
 data        = xr.concat([data_lines, data_add], dim='Type')
 data        = data.sel(Time=slice(1971, None))
@@ -1305,7 +1317,7 @@ for i, mat in enumerate(materials):
     axes[i].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
     axes[i].set_title(f"{mat}")
     axes[i].set_xlabel(" ")
-    axes[i].set_ylabel("Inflow [t]", fontsize=s_label)
+    axes[i].set_ylabel("Stock [t]", fontsize=s_label)
     axes[i].legend()
 
 axes[-1].set_xlabel("Time", fontsize=s_label)
@@ -1314,7 +1326,7 @@ plt.suptitle(f"{scen_folder}: Electricity Grid Stocks Materials", fontsize=16)
 plt.tight_layout()
 # fig.savefig(path_test_plots / "Grid_stocks-materials_world.svg")
 # fig.savefig(path_test_plots / "Grid_stocks-materials_world_1971.pdf")
-fig.savefig(path_test_plots / "Grid_stocks-materials_world_1971.png")
+# fig.savefig(path_test_plots / "Grid_stocks-materials_world_1971.png")
 # fig.savefig(path_test_plots / "Grid_stocks-materials_world_1971.svg")
 plt.show()
 
@@ -1332,8 +1344,8 @@ materials = ["steel", "concrete", "aluminium", "copper"]
 
 #%%%% 2 model ---------------------------------------------------
 
-data_lines  = main_model_factory_lines.inflow_materials.to_array().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
-data_add    = main_model_factory_add.inflow_materials.to_array().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
+data_lines  = model_lines.inflow_materials.to_array().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
+data_add    = model_add.inflow_materials.to_array().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
 
 data_lines  = data_lines.sel(time=slice(1971, None))
 data_add    = data_add.sel(time=slice(1971, None))
@@ -1382,7 +1394,7 @@ plt.suptitle(f"{scen_folder}: Electricity Grid Inflow Materials", fontsize=16)
 plt.tight_layout()
 # fig.savefig(path_test_plots / "Grid_inflow-materials_world.svg")
 # fig.savefig(path_test_plots / "Grid_inflow-materials_world_1971.pdf")
-fig.savefig(path_test_plots / "Grid_inflow-materials_world_1971.png")
+# fig.savefig(path_test_plots / "Grid_inflow-materials_world_1971.png")
 # fig.savefig(path_test_plots / "Grid_inflow-materials_world_1971.svg")
 plt.show()
 
