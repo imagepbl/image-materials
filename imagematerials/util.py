@@ -654,3 +654,29 @@ def overwrite_future_rates(arr: xr.DataArray, target_year: int, supertypes: list
             raise ValueError(f"'{material}' not found in DataArray.")
         result.loc[{"Time": target_year,"Type": supertypes, "material": material}] = new_value
     return result
+
+def reindex_material(sector, materials):
+    """
+    Reindex the 'material' coordinate of a sector's data to match a given list of materials.
+    Parameters
+    ----------
+    sector : xr.DataArray or xr.Dataset (e.g., electricity sector)
+        The sector data to be reindexed.
+    materials : list
+        The list of materials to reindex to.
+    Returns
+    -------
+        The reindexed sector data.
+    """
+    if isinstance(sector, xr.DataArray):                                    # check if it's a DataArray
+        if "material" in sector.coords:                                     # only reindex if material coord exists
+            return sector.reindex(material=materials, fill_value=0)         # reindex and fill missing materials with 0
+        return sector
+
+    if isinstance(sector, xr.Dataset):                                      # check if it's a Dataset                   
+        return sector.map(                                                  # apply reindexing to each DataArray in the Dataset
+            lambda da: da.reindex(material=materials, fill_value=0)         # only if material coord exists
+            if "material" in da.coords else da                              
+        )
+
+    return sector
