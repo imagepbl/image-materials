@@ -42,8 +42,8 @@ def vehicles_preprocessing(base_directory: str, climate_policy_config: dict,
     # Create vehicle knowledge graph
     knowledge_graph_vehicle = create_vehicle_graph()
 
-    # Collect results (turn into return statement upon completion of refactor)
-    new_results = {
+    # Collect results
+    return {
         "battery_materials": get_battery_materials(scenario_data_directory),
         "battery_shares": get_battery_shares(general_data_directory),
         "battery_weights": get_battery_weights(scenario_data_directory),
@@ -58,21 +58,3 @@ def vehicles_preprocessing(base_directory: str, climate_policy_config: dict,
                                circular_economy_config),
         "set_unit_flexible": "count"
     }
-
-    # Reproduce old situation
-    old_preprocessing_results = preprocess(base_directory, climate_policy_config, circular_economy_config)
-
-    # Compare old and new outcomes
-    old_summ = summarize_prep_data(old_preprocessing_results)
-    new_summ = summarize_prep_data(new_results)
-    # Check for each key, uncomment as refactor progresses
-    assert old_summ["battery_materials"] == new_summ["battery_materials"]
-    assert old_summ["battery_shares"] == new_summ["battery_shares"]
-    assert old_summ["battery_weights"] == new_summ["battery_weights"]
-    assert old_summ["lifetimes"] == new_summ["lifetimes"]
-    assert old_summ["maintenance_material_fractions"] == new_summ["maintenance_material_fractions"]
-    assert old_summ["material_fractions"] == new_summ["material_fractions"]
-    assert old_summ["stocks"] == new_summ["stocks"]
-    assert old_summ["weights"] == new_summ["weights"]
-
-    return old_preprocessing_results
