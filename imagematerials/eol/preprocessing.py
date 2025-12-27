@@ -114,7 +114,7 @@ def eol_preprocessing(base_dir, circular_economy_scenario_dirs=None):
                     .to_xarray()['value']
     
     # add othermaterials dim, fill w/ 0 and reorder
-    outflows_materials = ['aluminium', 'brick', 'cement','cobalt', 'concrete', 'copper', 'glass','lead', 'lithium', 'manganese','neodymium','nickel', 'plastics', 'rubber', 'steel', 'titanium', 'wood']
+    outflows_materials = ['aluminium', 'brick', 'cement','cobalt', 'concrete', 'copper', 'glass','lead', 'lithium', 'manganese','neodymium','nickel', 'plastics', 'rubber', 'steel', 'tantalum', 'titanium', 'wood']
     xr_collection = xr_collection.reindex(material=outflows_materials, fill_value=0)
     xr_reuse = xr_reuse.reindex(material=outflows_materials, fill_value=0)
     xr_recycling = xr_recycling.reindex(material=outflows_materials, fill_value=0)

@@ -38,12 +38,17 @@ Documentation Outline
 
    installation
    quickstart
+   models
    api/modules
+   api/models_detail
 
 
 
 This documentation is designed to help you easily navigate and find the information you need. It is organized into the following four sections:
 
+:doc:`whatisimagematerials`
+^^^^^^^^^^^^^^^^^^
+The :doc:`whatisimagematerials` is ...
 
 :doc:`installation`
 ^^^^^^^^^^^^^^^^^^^
