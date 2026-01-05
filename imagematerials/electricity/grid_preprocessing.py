@@ -759,297 +759,19 @@ grid_additions_interp = add_historic_stock(grid_additions, YEAR_FIRST_GRID)
 
 
 
-#%%%% below: old ====================================================================================================
-
-# gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]    # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
-# gcap = pd.pivot_table(gcap_data[gcap_data['time'].isin(list(range(YEAR_START,YEAR_END+1)))], index=['time','DIM_1'], values=list(range(1,TECH_GEN+1)))  #gcap as multi-index (index = years & regions (26); columns = technologies (28));  the last column in gcap_data (= totals) is now removed
-
-
-# region_list = list(grid_length_Hv.columns.values)
-# material_list = list(materials_grid.columns.values)
-
-# renaming multi-index dataframe: generation capacity, based on the regions in grid_length_Hv & technologies as given
-# gcap_techlist = ['Solar PV', 'Solar Decentral', 'CSP', 'Wind onshore', 'Wind offshore', 'Wave', 'Hydro', 'Other Renewables', 'Geothermal', 'Hydrogen', 'Nuclear', '<EMPTY>', 'Conv. Coal', 'Conv. Oil', 'Conv. Natural Gas', 'Waste', 'IGCC', 'OGCC', 'NG CC', 'Biomass CC', 'Coal + CCS', 'Oil/Coal + CCS', 'Natural Gas + CCS', 'Biomass + CCS', 'CHP Coal', 'CHP Oil', 'CHP Natural Gas', 'CHP Biomass', 'CHP Coal + CCS', 'CHP Oil + CCS', 'CHP Natural Gas + CCS', 'CHP Biomass + CCS', 'CHP Geothermal', 'CHP Hydrogen']
-# gcap.index = pd.MultiIndex.from_product([list(range(YEAR_START,YEAR_END+1)), region_list], names=['years', 'regions'])
-# gcap.columns = gcap_techlist
-
-# gdp_pc = gdp_pc.iloc[:, :len(IMAGE_REGIONS)] # exclude empty column (27) and totals (28)
-# gdp_pc.columns = region_list
-
-
-# length calculations ----------------------------------------------------------------------------
-
-# regional total (peak) generation capacity is used as a proxy for the grid growth 
-# gcap_total = gcap.sum(axis=1).unstack()
-# gcap_total = gcap_total[region_list]                     # re-order columns to the original TIMER order
-# gcap_growth = gcap_total / gcap_total.loc[2016]        # define growth according to 2016 as base year
-
-
-# Hv length (in kms) is region-specific. However, we use a single ratio between the length of Hv and Mv networks, the same applies to Lv networks 
-# grid_length_Mv = grid_length_Hv.mul(ratio_hv['HV to MV'])
-# grid_length_Lv = grid_length_Hv.mul(ratio_hv['HV to LV'])
-
-# define grid length over time (fixed in 2016, growth according to gcap)
-# grid_length_Hv_time = pd.DataFrame().reindex_like(gcap_total)
-# grid_length_Mv_time = pd.DataFrame().reindex_like(gcap_total)
-# grid_length_Lv_time = pd.DataFrame().reindex_like(gcap_total)
-
-#implement growth correction (sensitivity variant)
-# if SENS_ANALYSIS == 'high_grid':
-#     # in the sensitivity variant, additional growth is presumed after 2020 based on the fraction of variable renewable energy (vre) generation capacity (solar & wind)
-#     vre_fraction = gcap[['Solar PV', 'CSP', 'Wind onshore', 'Wind offshore']].sum(axis=1).unstack().divide(gcap.sum(axis=1).unstack())
-#     add_growth = vre_fraction * 1                  # 0.2 = 20% additional HV lines per doubling of vre gcap
-#     red_growth = (1-vre_fraction) * 0.7            # 0.2 = 20% less HV lines per doubling of baseline gcap
-#     add_growth.loc[list(range(1971,2020+1)),:] = 0  # pre 2020, additional HV grid growth is 0, afterwards the additional line length is gradually introduced (towards 2050)
-#     red_growth.loc[list(range(1971,2020+1)),:] = 0  # pre 2020, reduction of HV grid growth is 0, afterwards the line length reduction is gradually introduced (towards 2050)
-#     for year in range(2020,2050+1):
-#         add_growth.loc[year] = add_growth.loc[year] * (1/30*(year-2020)) 
-#         red_growth.loc[year] = red_growth.loc[year] * (1/30*(year-2020)) 
-
-#     gcap_growth_HV = gcap_growth.add(add_growth.reindex_like(gcap_growth)).subtract(red_growth.reindex_like(gcap_growth))
-# else: 
-#     gcap_growth_HV = gcap_growth
-
-# for year in range(YEAR_START, YEAR_END+1):
-#    grid_length_Hv_time.loc[year] = gcap_growth_HV.loc[year].mul(grid_length_Hv.loc['2016'])
-#    grid_length_Mv_time.loc[year] = gcap_growth.loc[year].mul(grid_length_Mv.loc['2016'])
-#    grid_length_Lv_time.loc[year] = gcap_growth.loc[year].mul(grid_length_Lv.loc['2016'])
-
-# # define underground vs. aboveground fraction (%) based on static ratios (the Hv length is the aboveground fraction according to Open Street Maps, we add the underground fractions for 3 voltage networks)
-# # Based on new insights from Kalt et al. 2021, we adjust the underground ratios downwards for non-European regions
-# ratio_hv_under = pd.DataFrame(index=gdp_pc.index, columns=gdp_pc.columns)
-# ratio_Mv_under = pd.DataFrame(index=gdp_pc.index, columns=gdp_pc.columns)
-# ratio_Lv_under = pd.DataFrame(index=gdp_pc.index, columns=gdp_pc.columns)
-
-# for region in region_list:
-#     if region in ['W.Europe','C.Europe']:
-#         select_proxy = 'Europe'
-#     else:
-#         select_proxy = 'Other'
-#     #print(str(region) + ': ' + select_proxy)
-#     ratio_hv_under[region] = gdp_pc[region] * underground_ratio.loc[idx[select_proxy,'mult'],'HV'] + underground_ratio.loc[idx[select_proxy,'add'],'HV']
-#     ratio_Mv_under[region] = gdp_pc[region] * underground_ratio.loc[idx[select_proxy,'mult'],'MV'] + underground_ratio.loc[idx[select_proxy,'add'],'MV']
-#     ratio_Lv_under[region] = gdp_pc[region] * underground_ratio.loc[idx[select_proxy,'mult'],'LV'] + underground_ratio.loc[idx[select_proxy,'add'],'LV']
-
-# # maximize linear ratio at 100 & minimize at 0 (%)
-# ratio_hv_under = ratio_hv_under.apply(lambda x: [y if y >= 0 else 0 for y in x])                     
-# ratio_hv_under = ratio_hv_under.apply(lambda x: [y if y <= 100 else 100 for y in x])  
-# ratio_Mv_under = ratio_Mv_under.apply(lambda x: [y if y >= 0 else 0 for y in x])  
-# ratio_Mv_under = ratio_Mv_under.apply(lambda x: [y if y <= 100 else 100 for y in x])  
-# ratio_Lv_under = ratio_Lv_under.apply(lambda x: [y if y >= 0 else 0 for y in x])  
-# ratio_Lv_under = ratio_Lv_under.apply(lambda x: [y if y <= 100 else 100 for y in x])
-
-# MIND! the HV lines found in OSM (+national sources) are considered as the total of the aboveground line length + the underground line length
-# grid_length_Hv_total = grid_length_Hv_time   # assuming the length from OSM IS the abovegrond fraction
-# grid_length_Hv_above = grid_length_Hv_total * (1 - (ratio_hv_under/100)) 
-# grid_length_Hv_under = grid_length_Hv_total * ratio_hv_under/100
-
-# out for main text figure 2
-# grid_length_HV_out_a = pd.concat([grid_length_Hv_above], keys=['aboveground'], names=['type']) 
-# grid_length_HV_out_u = pd.concat([grid_length_Hv_under], keys=['underground'], names=['type']) 
-# grid_length_HV_out   = pd.concat([grid_length_HV_out_a, grid_length_HV_out_u])
-# grid_length_HV_out.to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test' / 'grid_length_HV_km.csv') # in km
-
-# grid_length_Mv_above = grid_length_Mv_time * (1 - ratio_Mv_under/100)
-# grid_length_Mv_under = grid_length_Mv_time * ratio_Mv_under/100
-# grid_length_Mv_total = grid_length_Mv_above + grid_length_Mv_under
-
-# grid_length_Lv_above = grid_length_Lv_time * (1 - ratio_Lv_under/100)
-# grid_length_Lv_under = grid_length_Lv_time * ratio_Lv_under/100
-# grid_length_Lv_total = grid_length_Lv_above + grid_length_Lv_under
-
-# grid_subst_Hv = grid_length_Hv_total.mul(grid_additions.loc['Substations','HV'])        # number of substations on HV network
-# grid_subst_Mv = grid_length_Mv_total.mul(grid_additions.loc['Substations','MV'])        # # of substations
-# grid_subst_Lv = grid_length_Lv_total.mul(grid_additions.loc['Substations','LV'])        # # of substations
-# grid_trans_Hv = grid_length_Hv_total.mul(grid_additions.loc['Transformers','HV'])       # number of transformers on the HV network
-# grid_trans_Mv = grid_length_Mv_total.mul(grid_additions.loc['Transformers','MV'])       # # of transformers
-# grid_trans_Lv = grid_length_Lv_total.mul(grid_additions.loc['Transformers','LV'])       # # of transformers
-
-
-
-
-##################
-# Interpolations #
-##################
-
-# Interpolate material intensities (dynamic content from 1926 to 2100, based on data files)
-# index                             = pd.MultiIndex.from_product([list(range(YEAR_FIRST_GRID,YEAR_END+1)), list(materials_grid.index.levels[1])])
-# materials_grid_interpol           = pd.DataFrame(index=index, columns=materials_grid.columns)
-# materials_grid_additions_interpol = pd.DataFrame(index=pd.MultiIndex.from_product([list(range(YEAR_FIRST_GRID,YEAR_END+1)), list(materials_grid_additions.index.levels[1])]), columns=materials_grid_additions.columns)
-
-# for cat in list(materials_grid.index.levels[1]):
-#    materials_grid_1st   = materials_grid.loc[idx[materials_grid.index[0][0], cat],:]
-#    materials_grid_interpol.loc[idx[YEAR_FIRST_GRID ,cat],:] = materials_grid_1st                # set the first year (1926) values to the first available values in the dataset (for the year 2000) 
-#    materials_grid_interpol.loc[idx[materials_grid.index.levels[0].min(),cat],:] = materials_grid.loc[idx[materials_grid.index.levels[0].min(),cat],:]                # set the middle year (2000) values to the first available values in the dataset (for the year 2000) 
-#    materials_grid_interpol.loc[idx[materials_grid.index.levels[0].max(),cat],:] = materials_grid.loc[idx[materials_grid.index.levels[0].max(),cat],:]                # set the last year (2100) values to the last available values in the dataset (for the year 2050) 
-#    materials_grid_interpol.loc[idx[:,cat],:] = materials_grid_interpol.loc[idx[:,cat],:].astype('float32').reindex(list(range(YEAR_FIRST_GRID,YEAR_END+1)), level=0).interpolate()
-
-# for cat in list(materials_grid_additions.index.levels[1]):
-#    materials_grid_additions_1st   = materials_grid_additions.loc[idx[materials_grid_additions.index[0][0], cat],:]
-#    materials_grid_additions_interpol.loc[idx[YEAR_FIRST_GRID ,cat],:] = materials_grid_additions_1st          # set the first year (1926) values to the first available values in the dataset (for the year 2000) 
-#    materials_grid_additions_interpol.loc[idx[materials_grid_additions.index.levels[0].min(),cat],:] = materials_grid_additions.loc[idx[materials_grid_additions.index.levels[0].min(),cat],:]                # set the middle year (2000) values to the first available values in the dataset (for the year 2000) 
-#    materials_grid_additions_interpol.loc[idx[materials_grid_additions.index.levels[0].max(),cat],:] = materials_grid_additions.loc[idx[materials_grid_additions.index.levels[0].max(),cat],:]                # set the last year (2100) values to the last available values in the dataset (for the year 2050) 
-#    materials_grid_additions_interpol.loc[idx[:,cat],:] = materials_grid_additions_interpol.loc[idx[:,cat],:].astype('float32').reindex(list(range(YEAR_FIRST_GRID,YEAR_END+1)), level=0).interpolate()
-
-
-# call the stock_tail function on all lines, substations & transformers, to add historic stock tail between 1926 & 1971
-# grid_length_Hv_above_new = stock_tail(grid_length_Hv_above, YEAR_OUT) # km
-# grid_length_Mv_above_new = stock_tail(grid_length_Mv_above, YEAR_OUT) # km
-# grid_length_Lv_above_new = stock_tail(grid_length_Lv_above, YEAR_OUT) # km
-# grid_length_Hv_under_new = stock_tail(grid_length_Hv_under, YEAR_OUT) # km 
-# grid_length_Mv_under_new = stock_tail(grid_length_Mv_under, YEAR_OUT) # km
-# grid_length_Lv_under_new = stock_tail(grid_length_Lv_under, YEAR_OUT) # km
-# grid_subst_Hv_new = stock_tail(grid_subst_Hv, YEAR_OUT)               # units
-# grid_subst_Mv_new = stock_tail(grid_subst_Mv, YEAR_OUT)               # units
-# grid_subst_Lv_new = stock_tail(grid_subst_Lv, YEAR_OUT)               # units
-# grid_trans_Hv_new = stock_tail(grid_trans_Hv, YEAR_OUT)               # units
-# grid_trans_Mv_new = stock_tail(grid_trans_Mv, YEAR_OUT)               # units
-# grid_trans_Lv_new = stock_tail(grid_trans_Lv, YEAR_OUT)               # units
-
-
-#############
-# Lifetimes #
-#############
-
-# data only for lines, substations and transformer -> bring in knowledge_graph format: HV - Lines, MV - Lines, LV - Lines, HV - Transformers, etc.
-# expanded_data = {}
-# for typ in ["Lines", "Transformers", "Substations"]:
-#     for level in ["HV", "MV", "LV"]:
-#         new_col = f"{level} - {typ}"
-#         expanded_data[new_col] = lifetime_grid_elements[typ]
-# lifetime_grid_elements = pd.DataFrame(expanded_data, index=lifetime_grid_elements.index)
-# lifetime_grid_elements.rename_axis('Year', inplace=True)
-
-# # no differentiation between HV, MV & LV lines as well as between aboveground and belowground
-# # Types: lines, transformers, substations
-# lifetime_grid_elements.loc[YEAR_FIRST_GRID,:]  = lifetime_grid_elements.loc[lifetime_grid_elements.first_valid_index(),:]
-# lifetime_grid_elements.loc[YEAR_OUT,:]         = lifetime_grid_elements.loc[lifetime_grid_elements.last_valid_index(),:]
-# lifetime_grid_elements                         = lifetime_grid_elements.reindex(list(range(YEAR_FIRST_GRID, YEAR_OUT+1))).interpolate()
-# TODO: check why lifetime for lines is interpoltaed from 2020 - 40yrs to 2050 - 48 yrs and then back to 2060 - 40 yrs -> should stay at 48 yrs?
-
-
-#######################################################################################################
-#%%%% NEW
-
-# lifetimes
-# df_mean = lifetime_grid_elements.copy()
-# df_stdev = df_mean * STD_LIFETIMES_ELECTR
-# df_mean.columns = [(col, 'mean') for col in df_mean.columns] # Rename columns to multi-level tuples
-# df_stdev.columns = [(col, 'stdev') for col in df_stdev.columns]
-# lifetime_grid_distr = pd.concat([df_mean, df_stdev], axis=1) # Concatenate along columns
-
-
-# Materials
-
-# harmonize units of MI -> then materials_grid and materials_grid_additions can be merged in one dataframe
-# NOT POSSIBLE - separate stock modelling necessary
-
-# Grid Additions MIs ---
-# # for substations and transformer we multiply the MI (kg/unit of substation or transformer) with the number of substations or transformers per kilometer of grid length
-# materials_grid_additions_kgperkm             = materials_grid_additions_to_kgperkm(materials_grid_additions_interpol, grid_additions)
-# # material intensities: (years, tech. type) index and materials as columns -> years as index and (tech. type, materials) as columns
-# materials_grid_additions_kgperkm.index.names = ["Year", "Type"]
-# materials_grid_additions_kgperkm             = materials_grid_additions_kgperkm.unstack(level='Type')   # bring tech. type from row index to column header
-# materials_grid_additions_kgperkm.columns     = materials_grid_additions_kgperkm.columns.swaplevel(0, 1) # Swap the levels of the MultiIndex columns
-# materials_grid_additions_kgperkm             = materials_grid_additions_kgperkm.sort_index(axis=1)
-# # rename columns to match knowledge graph
-# new_level_0 = [col.replace(' ', ' - ', 1) for col in materials_grid_additions_kgperkm.columns.get_level_values(0)]
-# new_columns = pd.MultiIndex.from_arrays([
-#     new_level_0,
-#     materials_grid_additions_kgperkm.columns.get_level_values(1)
-# ], names=materials_grid_additions_kgperkm.columns.names)
-# materials_grid_additions_kgperkm.columns = new_columns
-
-# materials_grid_additions_kgperunit            = materials_grid_additions_interpol.copy()
-# # material intensities: (years, tech. type) index and materials as columns -> years as index and (tech. type, materials) as columns
-# materials_grid_additions_kgperunit.index.names = ["Year", "Type"]
-# materials_grid_additions_kgperunit             = materials_grid_additions_kgperunit.unstack(level='Type')   # bring tech. type from row index to column header
-# materials_grid_additions_kgperunit.columns     = materials_grid_additions_kgperunit.columns.swaplevel(0, 1) # Swap the levels of the MultiIndex columns
-# materials_grid_additions_kgperunit             = materials_grid_additions_kgperunit.sort_index(axis=1)
-# # rename columns to match knowledge graph
-# new_level_0 = [col.replace(' ', ' - ', 1) for col in materials_grid_additions_kgperunit.columns.get_level_values(0)]
-# new_columns = pd.MultiIndex.from_arrays([
-#     new_level_0,
-#     materials_grid_additions_kgperunit.columns.get_level_values(1)
-# ], names=materials_grid_additions_kgperunit.columns.names)
-# materials_grid_additions_kgperunit.columns = new_columns
-
-# # Grid MIs ---
-# materials_grid_kgperkm              = materials_grid_interpol.copy() # copy the interpolated material intensities
-# materials_grid_kgperkm.index.names  = ["Year", "Type"]
-# materials_grid_kgperkm              = materials_grid_kgperkm.unstack(level='Type') # bring tech. type from row index to column header
-# materials_grid_kgperkm.columns      = materials_grid_kgperkm.columns.swaplevel(0, 1) # Swap the levels of the MultiIndex columns
-# materials_grid_kgperkm              = materials_grid_kgperkm.sort_index(axis=1)
-# # rename columns to match knowledge graph
-# new_level_0 = [col.replace(' ', ' - Lines - ', 1) for col in materials_grid_kgperkm.columns.get_level_values(0)]
-# new_columns = pd.MultiIndex.from_arrays([
-#     new_level_0,
-#     materials_grid_kgperkm.columns.get_level_values(1)
-# ], names=materials_grid_kgperkm.columns.names)
-# materials_grid_kgperkm.columns = new_columns
-
-# # print_df_info(materials_grid_kgperkm, "Materials Grid kg/km")
-# # print_df_info(materials_grid_additions_kgperkm, "Materials Grid Additions kg/km")
-
-# materials_grid_combined_kgperkm = pd.concat([materials_grid_kgperkm, materials_grid_additions_kgperkm], axis=1) # 
-
-
-# # Stocks
-# grid_dict = dict({
-#         'HV - Lines - Overhead':    grid_length_Hv_above_new,
-#         'HV - Lines - Underground': grid_length_Hv_under_new,
-#         'HV - Substations':         grid_subst_Hv_new,
-#         'HV - Transformers':        grid_trans_Hv_new,
-#         'MV - Lines - Overhead':    grid_length_Mv_above_new,
-#         'MV - Lines - Underground': grid_length_Mv_under_new,
-#         'MV - Substations':         grid_subst_Mv_new,
-#         'MV - Transformers':        grid_trans_Mv_new,
-#         'LV - Lines - Overhead':    grid_length_Lv_above_new,
-#         'LV - Lines - Underground': grid_length_Lv_under_new,
-#         'LV - Substations':         grid_subst_Lv_new,
-#         'LV - Transformers':        grid_trans_Lv_new
-#     })
-# grid_stock = pd.concat(grid_dict, axis=1) # Concatenate with keys to create MultiIndex ('Name', 'Region')
-# grid_stock = grid_stock.sort_index(axis=1)
-
-# grid_dict_add = dict({
-#         'HV - Substations':         grid_subst_Hv_new,
-#         'HV - Transformers':        grid_trans_Hv_new,
-#         'MV - Substations':         grid_subst_Mv_new,
-#         'MV - Transformers':        grid_trans_Mv_new,
-#         'LV - Substations':         grid_subst_Lv_new,
-#         'LV - Transformers':        grid_trans_Lv_new
-#     })
-
-# grid_dict_lines = dict({
-#         'HV - Lines - Overhead':    grid_length_Hv_above_new,
-#         'HV - Lines - Underground': grid_length_Hv_under_new,
-#         'MV - Lines - Overhead':    grid_length_Mv_above_new,
-#         'MV - Lines - Underground': grid_length_Mv_under_new,
-#         'LV - Lines - Overhead':    grid_length_Lv_above_new,
-#         'LV - Lines - Underground': grid_length_Lv_under_new,
-#     })
-    
-# grid_stock_lines = pd.concat(grid_dict_lines, axis=1) # Concatenate with keys to create MultiIndex ('Name', 'Region')
-# grid_stock_lines = grid_stock_lines.sort_index(axis=1)
-
-# grid_stock_add = pd.concat(grid_dict_add, axis=1) # Concatenate with keys to create MultiIndex ('Name', 'Region')
-# grid_stock_add = grid_stock_add.sort_index(axis=1)
-
-#----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
 #%%% 3.3) Prep_data File
 ###########################################################################################################
-#----------------------------------------------------------------------------------------------------------
 
-
-# The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
-grid_lifetime_interp = convert_lifetime(grid_lifetime_interp)
+# calculate standard deviation as a fixed fraction of the mean lifetime
+grid_lifetime_interp.loc[{"DistributionParams": "stdev"}] = grid_lifetime_interp.sel({"DistributionParams": "mean"}) * STD_LIFETIMES_ELECTR
+# the lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
+grid_lifetime_interp_conv = convert_lifetime(grid_lifetime_interp)
 
 
 # bring preprocessing data into a generic format for the model
 prep_data_lines = {}
-prep_data_lines["lifetimes"] = grid_lifetime_interp
+prep_data_lines["lifetimes"] = grid_lifetime_interp_conv
 prep_data_lines["stocks"] = grid_lines_interp
 prep_data_lines["material_intensities"] = materials_lines_interp
 prep_data_lines["knowledge_graph"] = create_electricity_graph()
@@ -1057,83 +779,13 @@ prep_data_lines["set_unit_flexible"] = prism.U_(prep_data_lines["stocks"]) # add
 # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
 
 prep_data_additions = {}
-prep_data_additions["lifetimes"] = grid_lifetime_interp
+prep_data_additions["lifetimes"] = grid_lifetime_interp_conv
 prep_data_additions["stocks"] = grid_additions_interp
 prep_data_additions["material_intensities"] = materials_additions_interp
 prep_data_additions["knowledge_graph"] = create_electricity_graph()
 prep_data_additions["set_unit_flexible"] = prism.U_(prep_data_additions["stocks"]) # add unit (prism.U_ gives the unit back)
 
 
-
-
-# OLD --------------------------------------------------------------------------------------------------
-
-# ureg = pint.UnitRegistry(force_ndarray_like=True)
-# Define the units for each dimension
-# unit_mapping = { # TODO: move to constants.py
-#     'time': ureg.year,
-#     'year': ureg.year,
-#     'Year': ureg.year,
-#     'kg': ureg.kilogram,
-#     'yr': ureg.year,
-#     '%': ureg.percent,
-#     't': ureg.tonne,
-#     'MW': ureg.megawatt, #added
-#     'GW': ureg.gigawatt, #added
-# }
-
-# Conversion table for all coordinates, to be removed/adapted after input tables are fixed.
-# conversion_table = {
-#     "grid_stock": (["Time"], ["Type", "Region"],),
-#     "materials_grid_combined_kgperkm": (["Cohort"], ["Type", "material"],)
-#     # "gcap_materials_interpol": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]})
-# }
-
-# conversion_table = {
-#     "grid_stock_lines": (["Time"], ["Type", "Region"],),
-#     "materials_grid_kgperkm": (["Cohort"], ["Type", "material"],),
-#     "grid_stock_add": (["Time"], ["Type", "Region"],),
-#     "materials_grid_add_kgperunit": (["Cohort"], ["Type", "material"],),
-#     "grid_stock": (["Time"], ["Type", "Region"],), # TODO: delete
-#     "materials_grid_combined_kgperkm": (["Cohort"], ["Type", "material"],) # TODO: delete
-# }
-
-
-
-# results_dict = {
-#         'grid_stock': grid_stock,
-#         'materials_grid_combined_kgperkm': materials_grid_combined_kgperkm,
-#         'lifetime_grid_distr': lifetime_grid_distr,
-# # }
-# results_dict_lines = {
-#         'grid_stock_lines': grid_stock_lines,
-#         'materials_grid_kgperkm': materials_grid_kgperkm,
-#         'lifetime_grid_distr': lifetime_grid_distr,
-# }
-# results_dict_add = {
-#         'grid_stock_add': grid_stock_add,
-#         'materials_grid_add_kgperunit': materials_grid_additions_kgperunit,
-#         'lifetime_grid_distr': lifetime_grid_distr,
-# }
-
-
-# prep_data_lines = create_prep_data(results_dict_lines, conversion_table, unit_mapping)
-# prep_data_add = create_prep_data(results_dict_add, conversion_table, unit_mapping)
-
-# prep_data_lines["stocks"] = prism.Q_(prep_data_lines["stocks"], "km")
-# prep_data_lines["material_intensities"] = prism.Q_(prep_data_lines["material_intensities"], "kg/km")
-# prep_data_lines["set_unit_flexible"] = prism.U_(prep_data_lines["stocks"]) # prism.U_ gives the unit back
-# # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
-
-# prep_data_add["stocks"] = prism.Q_(prep_data_add["stocks"], "count")
-# prep_data_add["material_intensities"] = prism.Q_(prep_data_add["material_intensities"], "kg/count")
-# prep_data_add["set_unit_flexible"] = prism.U_(prep_data_add["stocks"]) # prism.U_ gives the unit back
-
-
-# change region names to IMAGE_REGIONS # TODO: this should be done in hte beginning of preprocessing
-# knowledge_graph_region =    create_region_graph()
-# prep_data_lines["stocks"] = knowledge_graph_region.rebroadcast_xarray(prep_data_lines["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
-# prep_data_add["stocks"] =   knowledge_graph_region.rebroadcast_xarray(prep_data_add["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
 
 #----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
@@ -1220,9 +872,11 @@ path_test_plots = Path(path_base, "imagematerials", "electricity", "out_test", "
 
 #%%%% 2 models ---------------------------------------------------
 
-
 data_lines  = model_lines.stocks.copy().sum(dim="Region")
 data_add    = model_add.stocks.copy().sum(dim="Region")
+
+data_lines        = data_lines.sel(Time=slice(1925, 2060))
+data_add          = data_add.sel(Time=slice(1925, 2060))
 
 # data        = xr.concat([data_lines, data_add], dim='Type')
 # data_plot   = data.sum(dim="Region")
@@ -1266,6 +920,62 @@ plt.tight_layout()
 plt.show()
 
 
+
+###########################################################################################################
+#%%% Inflow 
+###########################################################################################################
+
+#%%%% 2 models ---------------------------------------------------
+
+type_variable = "inflow" 
+data_lines  = model_lines.inflow.to_array().copy().sum(dim="Region")
+data_add    = model_add.inflow.to_array().copy().sum(dim="Region")
+
+data_lines        = data_lines.sel(time=slice(1925, 2060))
+data_add          = data_add.sel(time=slice(1925, 2060))
+
+# data        = xr.concat([data_lines, data_add], dim='Type')
+# data_plot   = data.sum(dim="Region")
+
+types_top    = ['HV - Lines - Overhead', 'HV - Lines - Underground', 'MV - Lines - Overhead', 'MV - Lines - Underground', 
+                'LV - Lines - Overhead', 'LV - Lines - Underground'] #, 'LV - Transformers', 'LV - Substations',
+types_bottom = ['HV - Substations', 'HV - Transformers', 'MV - Substations', 'MV - Transformers']
+
+
+
+fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(14, 8))
+linewidth = 2
+s_legend = 12
+s_label = 14
+
+# Top row:
+for t in types_top:
+    line, = axes[0].plot(data_lines.time, data_lines.sel(Type=t), label=t, color=DICT_GRID_STYLES_2[t][0], linestyle=DICT_GRID_STYLES_2[t][1], linewidth=linewidth)
+
+axes[0].set_ylabel(f"{type_variable} (# counts/km)", fontsize=s_label)
+axes[0].grid(alpha=0.3, linestyle='--')
+axes[0].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+axes[0].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+axes[0].legend(loc='upper left', fontsize=s_legend) #handles=handles, labels=labels, 
+
+# Bottom row:
+for t in types_bottom:
+    axes[1].plot(data_add.time, data_add.sel(Type=t), label=t, color=DICT_GRID_STYLES_2[t][0], linestyle=DICT_GRID_STYLES_2[t][1], linewidth=linewidth)
+
+axes[1].set_xlabel("Time", fontsize=s_label)
+axes[1].set_ylabel(f"{type_variable} (# counts)", fontsize=s_label)
+axes[1].grid(alpha=0.3, linestyle='--')
+axes[1].ticklabel_format(style='sci', axis='y', scilimits=(0, 0)) # Scientific notation for y-axis
+axes[1].tick_params(axis='both', which='major', labelsize=s_legend) # set font size of axis ticks
+axes[1].legend(loc='upper left', fontsize=s_legend)
+
+plt.suptitle(f"{scen_folder}: Electricity Grid - {type_variable}", fontsize=16)
+
+plt.tight_layout()
+# fig.savefig(path_test_plots / "Grid_stocks_world.png", dpi=300)
+plt.show()
+
+
 ###########################################################################################################
 #%%% Stocks Materials
 ###########################################################################################################
@@ -1280,7 +990,7 @@ data_lines  = model_lines.stock_by_cohort_materials.copy().sum(dim="Region").pin
 data_add    = model_add.stock_by_cohort_materials.copy().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
 
 data        = xr.concat([data_lines, data_add], dim='Type')
-data        = data.sel(Time=slice(1971, None))
+data        = data.sel(Time=slice(1971, 2060))
 
 data_sum    = data.sum(dim='Type')
 
@@ -1347,8 +1057,8 @@ materials = ["steel", "concrete", "aluminium", "copper"]
 data_lines  = model_lines.inflow_materials.to_array().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
 data_add    = model_add.inflow_materials.to_array().sum(dim="Region").pint.to("t")  # Convert kg -> tonnes
 
-data_lines  = data_lines.sel(time=slice(1971, None))
-data_add    = data_add.sel(time=slice(1971, None))
+data_lines  = data_lines.sel(time=slice(1971, 2060))
+data_add    = data_add.sel(time=slice(1971, 2060))
 data        = xr.concat([data_lines, data_add], dim='Type')
 data_sum    = data.sum(dim='Type')
 
