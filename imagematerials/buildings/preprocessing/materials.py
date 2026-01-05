@@ -1,7 +1,8 @@
 """Preprocessing module for the material intensities."""
+from pathlib import Path
+
 import pandas as pd
 import prism
-from pathlib import Path
 
 from imagematerials.buildings.constants import END_YEAR, HIST_YEAR
 from imagematerials.buildings.preprocessing.circular_economy_measures import (
@@ -24,7 +25,7 @@ def compute_mat_intensities_residential(database_dir: Path,
     """
     # Building_materials; unit: kg/m2; meaning: the average material use per square meter
     # (by building type, by region & by area)
-    building_materials = pd.read_csv(database_dir / 'Building_materials_rasmi.csv', index_col = [0,1,2]) 
+    building_materials = pd.read_csv(database_dir / 'Building_materials_rasmi.csv', index_col = [0,1,2])
 
     if 'resource_efficient' in circular_economy_config.keys():
         building_materials = pd.read_csv(database_dir / 'Building_materials_rasmi_resource_efficient.csv', index_col = [0,1,2])   # Building_materials; unit: kg/m2; meaning: the average material use per square meter (by building type, by region & by area)

@@ -1,16 +1,10 @@
-from pathlib import Path
 
-import numpy as np
-import pandas as pd
-import xarray as xr
-import prism
 from importlib.resources import files
 
+import pandas as pd
+import prism
+import xarray as xr
 
-from imagematerials.buildings.constants import (
-    urban_share_1820)
-
-from imagematerials.util import dataset_to_array
 from imagematerials.read_mym import read_mym_df
 
 prism.unit_registry.load_definitions(files("imagematerials") / "units.txt")
@@ -55,7 +49,7 @@ def compute_total_population(image_directory, base_directory):
     historic_pop = pd.read_csv(base_directory / 'buildings' / 'standard_data' / 'historic_population.csv', index_col=0, header = 0)
     historic_pop = historic_pop.loc[:1971] / 1000 # unit conversion
 
-    # interpolate for missing years 
+    # interpolate for missing years
     historic_pop = historic_pop.reindex(range(historic_pop.index.min(), historic_pop.index.max() + 1)).interpolate(method="linear") # with cubic interpolation we see a drop at 1700
 
     # regionalize data to IMAGE regions accoring to 1971 regionalization
@@ -81,9 +75,9 @@ def compute_total_population(image_directory, base_directory):
     )
 
 
-    return regionalized_total_pop_history_future_xr, regionalized_total_pop_history_future 
+    return regionalized_total_pop_history_future_xr, regionalized_total_pop_history_future
 
-    
+
 
 def compute_rur_urb_pop(image_directory, base_directory):
     (_, regionalized_total_pop_history_future) = compute_total_population(image_directory, base_directory)
@@ -109,8 +103,8 @@ def compute_rur_urb_pop(image_directory, base_directory):
 
     urban_pop_total = urban_share*regionalized_total_pop_history_future
     rural_pop_total = rural_share*regionalized_total_pop_history_future
-    
+
     urban_pop_total = urban_pop_total.rename_axis(index = "Time", columns = "Region")
     rural_pop_total = rural_pop_total.rename_axis(index = "Time", columns = "Region")
-    
+
     return urban_pop_total, rural_pop_total

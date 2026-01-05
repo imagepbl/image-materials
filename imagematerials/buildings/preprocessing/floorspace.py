@@ -1,12 +1,12 @@
 """Module for floorspace calculations for the buildings."""
 import math
+from importlib.resources import files
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import xarray as xr
 import prism
-from pathlib import Path
-from importlib.resources import files
+import xarray as xr
 
 from imagematerials.buildings.constants import (
     END_YEAR,
@@ -19,13 +19,12 @@ from imagematerials.buildings.constants import (
     REGIONS_RANGE,
     START_YEAR,
     YEARS,
-    SCENARIO_SELECT
 )
-from imagematerials.buildings.preprocessing.circular_economy_measures import ce_measures_residential_housing
-
+from imagematerials.buildings.preprocessing.circular_economy_measures import (
+    ce_measures_residential_housing,
+)
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, merge_dims
-
 
 prism.unit_registry.load_definitions(files("imagematerials") / "units.txt")
 
@@ -81,7 +80,7 @@ def get_service_value_added(image_directory: Path) -> pd.DataFrame:
     # extrapolate to 1970, therefore first add empty 1970 value with nans
     service_value_added.loc[1970] = np.nan
     # TODO cubic does not work, replaced with linear for now, Sebastiaans code had cubic, seems like now just value from 1971 is copied
-    service_value_added = service_value_added.sort_index().interpolate(method='linear', limit_direction="both") 
+    service_value_added = service_value_added.sort_index().interpolate(method='linear', limit_direction="both")
 
     return service_value_added
 
@@ -151,7 +150,7 @@ def extrapolate_floorspace(floorspace_image: xr.DataArray,
         coords=interp_coor
     )
 
-    # Average global annual decline in floorspace/cap in %, rural: 1%; urban 1.2%;  commercial: 1.26-2.18% /yr 
+    # Average global annual decline in floorspace/cap in %, rural: 1%; urban 1.2%;  commercial: 1.26-2.18% /yr
     avg_trend_1971_1981 = trend_1971_1981.mean(["Time", "Region"])
 
     # Find minimum or maximum values in the original IMAGE data
@@ -190,7 +189,7 @@ def get_floorspace_urban_rural(image_directory: Path) -> pd.DataFrame:
     # load IMAGE data-files (MyM file format)
     floorspace: pd.DataFrame = read_mym_df(image_directory.joinpath("EnergyServices", "res_FloorSpace.out"))
     floorspace = floorspace[['time','DIM_1',2,3]].rename(columns={"DIM_1": "Region", 'time':'t', 2:'Urban', 3:'Rural'})
-    # the other columns are average per capita floorspace per quintile (we also exclude the average per capita floorspace of the total population in column 1, 
+    # the other columns are average per capita floorspace per quintile (we also exclude the average per capita floorspace of the total population in column 1,
     # because we use the urban & rural specific totals)
     floorspace = floorspace[floorspace.Region != REGIONS + 1] #removing region 27
     floorspace = floorspace[floorspace['t'].isin(list(range(START_YEAR, END_YEAR+1)))]
@@ -317,7 +316,7 @@ def compute_housing_type(database_directory: Path) -> xr.DataArray:
         Shares per housing type.
 
     """
-    housing_type_data: pd.DataFrame = pd.read_csv(database_directory.joinpath('Housing_type_dynamic.csv'), index_col = [0,1,2]) 
+    housing_type_data: pd.DataFrame = pd.read_csv(database_directory.joinpath('Housing_type_dynamic.csv'), index_col = [0,1,2])
     # also interpolate housing type data
     index_ht = pd.MultiIndex.from_product([list(range(HIST_YEAR, END_YEAR + 1)),
                                         list(range(1,REGIONS + 1)),
@@ -357,7 +356,7 @@ def compute_average_m2_capita(base_directory: Path) -> xr.DataArray:
 
     """
     cap_fp = base_directory.joinpath('buildings', 'files_DB','Average_m2_per_cap.csv')
-    average_m2_capita_df: pd.DataFrame = pd.read_csv(cap_fp, index_col = [0,1]) 
+    average_m2_capita_df: pd.DataFrame = pd.read_csv(cap_fp, index_col = [0,1])
     column_mapping = {'1': 'Detached', '2': 'Semi-detached', '3': 'Appartment', '4': 'High-rise'}
     average_m2_capita_df.rename(columns=column_mapping, inplace=True)
     average_m2_capita = dataset_to_array(average_m2_capita_df.to_xarray(), ["Region", "Area"], ["Type"])

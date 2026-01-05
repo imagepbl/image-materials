@@ -75,7 +75,7 @@ def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray,
         #     residential_scenario_settings_xr_mapped = region_knowledge_graph.rebroadcast_xarray(residential_scenario_settings_xr, output_coords=regions_mapped, dim="Region")
 
         #     total_m2_housing_per_cap = apply_change_per_region(
-        #         total_m2_housing_per_cap, base_year, target_year, 
+        #         total_m2_housing_per_cap, base_year, target_year,
         #         residential_scenario_settings_xr_mapped, implementation_rate)
         #     print("implemented 'narrow' for Residential Buildings")
 
@@ -261,7 +261,7 @@ def circular_economy_measures_material_intensities_commercial(xr_mat_comm_intens
 
         # only apply for those present in TOML; others pass through unchanged
         if mat in mat_changes:
-            change_dict = mat_changes[mat] 
+            change_dict = mat_changes[mat]
             raw = xr.DataArray(
                 list(change_dict.values()),
                 coords={"Region": list(change_dict.keys())},
