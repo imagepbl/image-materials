@@ -123,11 +123,6 @@ def get_preprocessing_data_grid(base_dir: str, SCEN, VARIANT, year_start, year_e
     if not path_external_data_scenario.exists():
         path_external_data_scenario = Path(path_base, "data", "raw", "electricity", STANDARD_SCEN_EXTERNAL_DATA)
 
-    scen_BL_folder = SCEN + "_M_CP"  # baseline scenario
-    path_image_output_BL = Path(path_base, "data", "raw", "image", scen_BL_folder, "EnergyServices")
-    # TODO: check if this is necessary (shouldn't historical periode anyway be the same for all scenarios?)
-    # + if it is, should the baseline scenario be given as a parameter or can it be inferred from the scenario name?
-
     assert path_image_output.is_dir()
     assert path_external_data_standard.is_dir()
     assert path_external_data_scenario.is_dir()
@@ -151,7 +146,6 @@ def get_preprocessing_data_grid(base_dir: str, SCEN, VARIANT, year_start, year_e
 
     # Average lifetime in years of grid elements
     grid_lifetime_data     = pd.read_csv(path_external_data_scenario  / 'operational_lifetime_grid.csv', index_col=0)
-
     # Material intensity of grid lines (Hv, Mv & Lv; specific for underground vs. aboveground lines) (kg/km)
     materials_lines_data        = pd.read_csv(path_external_data_scenario / 'Materials_grid_dynamic.csv', index_col=[0,1])
     # Material Intensity for additional infrastructure required for grid connections, such as transformers & substations (kg/unit)
@@ -162,7 +156,6 @@ def get_preprocessing_data_grid(base_dir: str, SCEN, VARIANT, year_start, year_e
 
     # Generation capacity (stock & inflow/new) in MW peak capacity, FILES from TIMER
     gcap_data: pd.DataFrame     = read_mym_df(path_image_output / 'Gcap.out')
-
     # GDP per capita (US-dollar 2005, ppp), used to derive underground-aboveground ratio based on income levels
     gdp_pc_data: pd.DataFrame   = read_mym_df(Path(path_base, "data", "raw", "image", scen_folder, "Socioeconomic", "gdp_pc.scn"))
     
@@ -172,6 +165,7 @@ def get_preprocessing_data_grid(base_dir: str, SCEN, VARIANT, year_start, year_e
 
     knowledge_graph_region = create_region_graph()
     knowledge_graph_electr = create_electricity_graph()
+
 
     # # Grid Lines -----------
     grid_length_hv_data.columns.name = None # drop column name ('km')
@@ -192,7 +186,6 @@ def get_preprocessing_data_grid(base_dir: str, SCEN, VARIANT, year_start, year_e
     grid_lines.loc[{"Time":slice(year_start, year_end), "Type":"HV - Lines - Overhead"}] = grid_length_hv_data.values.reshape(-1)
     grid_lines = prism.Q_(grid_lines, "km")
     grid_lines = knowledge_graph_region.rebroadcast_xarray(grid_lines, output_coords=IMAGE_REGIONS, dim="Region") # convert region names to the standard names from IMAGE
-
 
 
     # # Grid Additions -----------
@@ -292,6 +285,7 @@ def get_preprocessing_data_grid(base_dir: str, SCEN, VARIANT, year_start, year_e
     gcap = knowledge_graph_electr.rebroadcast_xarray(gcap, output_coords=EPG_TECHNOLOGIES, dim="Type")
     gcap = gcap.assign_coords(Type=np.array(gcap.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
+
     # # GDP ------
     gdp_pc_data = gdp_pc_data.iloc[:, :len(IMAGE_REGIONS)] # exclude empty column (27) and totals (28)
     # Extract coordinate labels
@@ -330,33 +324,63 @@ def get_preprocessing_data_grid(base_dir: str, SCEN, VARIANT, year_start, year_e
     ###########################################################################################################
     # Calculate variables #
     
+    def calculate_grid_growth(gcap, grid_lines):
+        # regional total (peak) generation capacity is used as a proxy for the grid growth
+        gcap_total = gcap.sum(dim='Type')
+        gcap_growth = gcap_total / gcap_total.loc[2016]        # define growth according to 2016 as base year
+
+        # copy growth factor for all voltage levels (overhead)
+        grid_growth = gcap_growth.expand_dims(Type=["HV - Lines - Overhead","MV - Lines - Overhead","LV - Lines - Overhead"]).copy()
+        # add coordinates for underground lines to match grid length dataarray (set to NaN, as underground lines are later calculated based on aboveground lines & fixed ratios)
+        grid_growth_expanded = grid_growth.broadcast_like(grid_lines).copy().rename("GridGrowthFactor")
+
+        # for HV lines: additional growth is presumed after 2020 based on the fraction of variable renewable energy (vre) generation capacity (solar & wind) (used to be only in the sensitivity variant, but now used in the base case as well)
+        vre_fraction = gcap.sel(Type=EPG_TECHNOLOGIES_VRE).sum(dim='Type') / gcap_total
+        # Compute additional/reduced growth
+        add_growth = vre_fraction * 1             # if value is e.g. 0.2 = 20% additional HV lines per doubling of vre gcap
+        red_growth = (1 - vre_fraction) * 0.7     
+        add_growth = add_growth.where(add_growth.Time >= 2020, 0)  # Set pre-2020 values to 0
+        red_growth = red_growth.where(red_growth.Time >= 2020, 0)
+        # Create a ramp factor (line length addition/reduction is gradually introduced from 2020 towards 2050)
+        ramp_factor = xr.DataArray(
+            np.clip((add_growth.Time - 2020) / 30, 0, 1),
+            coords={"Time": add_growth.Time},
+            dims=["Time"]
+        )
+        add_growth = add_growth * ramp_factor # Apply ramp factor
+        red_growth = red_growth * ramp_factor
+        grid_growth_expanded.loc[{"Type": "HV - Lines - Overhead"}] = grid_growth_expanded.loc[{"Type": "HV - Lines - Overhead"}] + add_growth - red_growth
+
+
     # 1. calculate growth factors for the grid lines -------------------------------------------------------------
 
-    # regional total (peak) generation capacity is used as a proxy for the grid growth
-    gcap_total = gcap.sum(dim='Type')
-    gcap_growth = gcap_total / gcap_total.loc[2016]        # define growth according to 2016 as base year
+    grid_growth_expanded = calculate_grid_growth(gcap, grid_lines)
 
-    # copy growth factor for all voltage levels (overhead)
-    grid_growth = gcap_growth.expand_dims(Type=["HV - Lines - Overhead","MV - Lines - Overhead","LV - Lines - Overhead"]).copy()
-    # add coordinates for underground lines to match grid length dataarray (set to NaN, as underground lines are later calculated based on aboveground lines & fixed ratios)
-    grid_growth_expanded = grid_growth.broadcast_like(grid_lines).copy().rename("GridGrowthFactor")
+    # # regional total (peak) generation capacity is used as a proxy for the grid growth
+    # gcap_total = gcap.sum(dim='Type')
+    # gcap_growth = gcap_total / gcap_total.loc[2016]        # define growth according to 2016 as base year
 
-    # for HV lines: additional growth is presumed after 2020 based on the fraction of variable renewable energy (vre) generation capacity (solar & wind) (used to be only in the sensitivity variant, but now used in the base case as well)
-    vre_fraction = gcap.sel(Type=EPG_TECHNOLOGIES_VRE).sum(dim='Type') / gcap_total
-    # Compute additional/reduced growth
-    add_growth = vre_fraction * 1             # if value is e.g. 0.2 = 20% additional HV lines per doubling of vre gcap
-    red_growth = (1 - vre_fraction) * 0.7     
-    add_growth = add_growth.where(add_growth.Time >= 2020, 0)  # Set pre-2020 values to 0
-    red_growth = red_growth.where(red_growth.Time >= 2020, 0)
-    # Create a ramp factor (line length addition/reduction is gradually introduced from 2020 towards 2050)
-    ramp_factor = xr.DataArray(
-        np.clip((add_growth.Time - 2020) / 30, 0, 1),
-        coords={"Time": add_growth.Time},
-        dims=["Time"]
-    )
-    add_growth = add_growth * ramp_factor # Apply ramp factor
-    red_growth = red_growth * ramp_factor
-    grid_growth_expanded.loc[{"Type": "HV - Lines - Overhead"}] = grid_growth_expanded.loc[{"Type": "HV - Lines - Overhead"}] + add_growth - red_growth
+    # # copy growth factor for all voltage levels (overhead)
+    # grid_growth = gcap_growth.expand_dims(Type=["HV - Lines - Overhead","MV - Lines - Overhead","LV - Lines - Overhead"]).copy()
+    # # add coordinates for underground lines to match grid length dataarray (set to NaN, as underground lines are later calculated based on aboveground lines & fixed ratios)
+    # grid_growth_expanded = grid_growth.broadcast_like(grid_lines).copy().rename("GridGrowthFactor")
+
+    # # for HV lines: additional growth is presumed after 2020 based on the fraction of variable renewable energy (vre) generation capacity (solar & wind) (used to be only in the sensitivity variant, but now used in the base case as well)
+    # vre_fraction = gcap.sel(Type=EPG_TECHNOLOGIES_VRE).sum(dim='Type') / gcap_total
+    # # Compute additional/reduced growth
+    # add_growth = vre_fraction * 1             # if value is e.g. 0.2 = 20% additional HV lines per doubling of vre gcap
+    # red_growth = (1 - vre_fraction) * 0.7     
+    # add_growth = add_growth.where(add_growth.Time >= 2020, 0)  # Set pre-2020 values to 0
+    # red_growth = red_growth.where(red_growth.Time >= 2020, 0)
+    # # Create a ramp factor (line length addition/reduction is gradually introduced from 2020 towards 2050)
+    # ramp_factor = xr.DataArray(
+    #     np.clip((add_growth.Time - 2020) / 30, 0, 1),
+    #     coords={"Time": add_growth.Time},
+    #     dims=["Time"]
+    # )
+    # add_growth = add_growth * ramp_factor # Apply ramp factor
+    # red_growth = red_growth * ramp_factor
+    # grid_growth_expanded.loc[{"Type": "HV - Lines - Overhead"}] = grid_growth_expanded.loc[{"Type": "HV - Lines - Overhead"}] + add_growth - red_growth
 
 
     # 2. calculate grid lengths (overhead) with ratios & growth factors -------------------------------------------------------------
