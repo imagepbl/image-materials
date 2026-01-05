@@ -864,6 +864,97 @@ list(model_add.elc_grid_add)
 path_test_plots = Path(path_base, "imagematerials", "electricity", "out_test", "Test", "Figures") #scen_folder
 
 
+###########################################################################################################
+#%%% Comparisons 
+###########################################################################################################
+
+path_test = Path(path_base, "imagematerials", "electricity", "out_test", scen_folder, "StockModelOutputs")
+
+def sanitize_attrs(da):
+    """ Sanitize the attributes of a DataArray and its coordinates for safe serialization.
+
+    This function converts all attribute values that are not of type str, int, or float 
+    into strings. It applies this transformation to both the DataArray's `.attrs` and 
+    each coordinate's `.attrs`. This is useful when saving xarray objects to formats 
+    like NetCDF, which require attribute values to be basic serializable types.
+
+    Parameters
+    ----------
+    da : xarray.DataArray
+        The input DataArray whose attributes need to be sanitized.
+
+    Returns
+    -------
+    xarray.DataArray
+        A copy of the input DataArray with sanitized attributes.
+
+    Notes
+    -----
+    - This function does not modify the original DataArray in-place; it returns a copy.
+    - It preserves the data, coordinates, and dimensions of the original DataArray.
+    """
+    da = da.copy()
+    da.attrs = {k: str(v) if not isinstance(v, (str, int, float)) else v
+                for k, v in da.attrs.items()}
+    for c in da.coords:
+        da.coords[c].attrs = {
+            k: str(v) if not isinstance(v, (str, int, float)) else v
+            for k, v in da.coords[c].attrs.items()
+        }
+    return da
+
+# da_old = sanitize_attrs(model_lines.inflow.to_array())
+# da_old.to_netcdf(path_test / "grid_lines_inflow_v0.nc")
+# da_old = sanitize_attrs(model_lines.inflow_materials.to_array())
+# da_old.to_netcdf(path_test / "grid_lines_inflow_materials_v0.nc")
+# da_old = sanitize_attrs(model_lines.stock_by_cohort_materials)
+# da_old.to_netcdf(path_test / "grid_lines_stock_materials_v0.nc")
+
+# da_old = sanitize_attrs(model_add.inflow.to_array())
+# da_old.to_netcdf(path_test / "grid_additions_inflow_v0.nc")
+# da_old = sanitize_attrs(model_add.inflow_materials.to_array())
+# da_old.to_netcdf(path_test / "grid_additions_inflow_materials_v0.nc")
+# da_old = sanitize_attrs(model_add.stock_by_cohort_materials)
+# da_old.to_netcdf(path_test / "grid_additions_stock_materials_v0.nc")
+
+
+def compare_da(path, da_new):
+    """ Compare a saved DataArray to a new one, ignoring units.
+
+    Parameters
+    ----------
+    path : str or Path
+        Path to the saved DataArray file.
+    da_new : xarray.DataArray
+        The new DataArray to compare.
+
+    Returns
+    -------
+    equal : bool
+        True if the DataArrays match numerically after removing units.
+    diff_nonzero : xarray.DataArray or None
+        Differences where values differ; None if equal.
+    """
+    da_old = xr.open_dataarray(path)
+
+    da_old_clean = da_old.pint.dequantify()
+    da_new_clean = da_new.pint.dequantify()
+
+    equal = da_old_clean.equals(da_new_clean)
+    if not equal:
+        diff = da_new_clean - da_old_clean
+        diff_nonzero = diff.where(diff != 0, drop=True)
+        return equal, diff_nonzero
+    return equal, None
+
+compare_da(path_test / "grid_lines_inflow_v0.nc", model_lines.inflow.to_array())
+compare_da(path_test / "grid_lines_inflow_materials_v0.nc", model_lines.inflow_materials.to_array())
+compare_da(path_test / "grid_lines_stock_materials_v0.nc", model_lines.stock_by_cohort_materials)
+compare_da(path_test / "grid_additions_inflow_v0.nc", model_add.inflow.to_array())
+compare_da(path_test / "grid_additions_inflow_materials_v0.nc", model_add.inflow_materials.to_array())
+compare_da(path_test / "grid_additions_stock_materials_v0.nc", model_add.stock_by_cohort_materials)
+
+
 
 
 ###########################################################################################################
