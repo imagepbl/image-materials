@@ -29,9 +29,10 @@ def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray,
     region_knowledge_graph = create_region_graph()
     regions = total_m2_housing_per_cap.coords["Region"].values
 
-    base_year = circular_economy_config["base"]["buildings"]["base_year"]
-    target_year = circular_economy_config["base"]["buildings"]["target_year"]
-    floor_pc_2020 = circular_economy_config["base"]["buildings"]["residential"]["2020"]["useful_floor_pc"]
+    buildings_config = circular_economy_config["base"]["buildings"]
+    base_year = buildings_config["base_year"]
+    # target_year = circular_economy_config["base"]["buildings"]["target_year"]
+    floor_pc_2020 = buildings_config["residential"]["2020"]["useful_floor_pc"]
 
     floor_pc_2020_xr = xr.DataArray(
         list(floor_pc_2020.values()),
@@ -40,7 +41,8 @@ def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray,
         name="floor_pc_2020",
     )
 
-    regions_mapped = list(region_knowledge_graph.find_relations_inverse(regions, floor_pc_2020.keys()))
+    regions_mapped = list(region_knowledge_graph.find_relations_inverse(regions,
+                                                                        floor_pc_2020.keys()))
     floor_pc_2020_mapped = region_knowledge_graph.rebroadcast_xarray(
         floor_pc_2020_xr, output_coords=regions_mapped, dim="Region")
     floor_pc_2020_mapped = prism.Q_(floor_pc_2020_mapped, "m^2/person")
@@ -57,27 +59,30 @@ def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray,
     return total_m2_housing_per_cap
 
 
-        # if 'narrow' in circular_economy_config.keys():
-        #     base_year = circular_economy_config["narrow"]["buildings"]["base_year"]
-        #     target_year = circular_economy_config["narrow"]["buildings"]["target_year"]
+# if 'narrow' in circular_economy_config.keys():
+#     building_config = circular_economy_config["narrow"]["buildings"]
+#     base_year = building_config["base_year"]
+#     target_year = building_config["target_year"]
 
-        #     residential_scenario_settings = circular_economy_config['narrow']["buildings"]['residential']['m2_change_pc']
-        #     implementation_rate = circular_economy_config['narrow']['buildings']['implementation_rate']
+#     residential_scenario_settings = building_config['residential']['m2_change_pc']
+#     implementation_rate = building_config['implementation_rate']
 
-        #     residential_scenario_settings_xr = xr.DataArray(
-        #         list(residential_scenario_settings.values()),
-        #         coords={"Region": list(residential_scenario_settings.keys())},
-        #         dims=["Region"],
-        #         name="residential_scenario_settings"
-        #     )
+#     residential_scenario_settings_xr = xr.DataArray(
+#         list(residential_scenario_settings.values()),
+#         coords={"Region": list(residential_scenario_settings.keys())},
+#         dims=["Region"],
+#         name="residential_scenario_settings"
+#     )
 
-        #     regions_mapped = list(region_knowledge_graph.find_relations_inverse(regions, residential_scenario_settings.keys()))
-        #     residential_scenario_settings_xr_mapped = region_knowledge_graph.rebroadcast_xarray(residential_scenario_settings_xr, output_coords=regions_mapped, dim="Region")
+#     regions_mapped = list(region_knowledge_graph.find_relations_inverse(
+#         regions, residential_scenario_settings.keys()))
+#     residential_scenario_settings_xr_mapped = region_knowledge_graph.rebroadcast_xarray(
+#         residential_scenario_settings_xr, output_coords=regions_mapped, dim="Region")
 
-        #     total_m2_housing_per_cap = apply_change_per_region(
-        #         total_m2_housing_per_cap, base_year, target_year,
-        #         residential_scenario_settings_xr_mapped, implementation_rate)
-        #     print("implemented 'narrow' for Residential Buildings")
+#     total_m2_housing_per_cap = apply_change_per_region(
+#         total_m2_housing_per_cap, base_year, target_year,
+#         residential_scenario_settings_xr_mapped, implementation_rate)
+#     print("implemented 'narrow' for Residential Buildings")
 
 
 def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataArray,
@@ -103,9 +108,11 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
 
     # Base scenario
     if 'base' in circular_economy_config.keys():
-        base_year = circular_economy_config["base"]["buildings"]["base_year"]
-        target_year = circular_economy_config["base"]["buildings"]["target_year"]
-        floor_pc_2020 = circular_economy_config["base"]["buildings"]["commercial"]["2020"]["useful_floor_pc"]
+        buildings_config = circular_economy_config["base"]["buildings"]
+
+        base_year = buildings_config["base_year"]
+        target_year = buildings_config["target_year"]
+        floor_pc_2020 = buildings_config["commercial"]["2020"]["useful_floor_pc"]
 
         floor_pc_2020_xr = xr.DataArray(
             list(floor_pc_2020.values()),
@@ -129,11 +136,13 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
 
     # Narrow scenario
     if 'narrow' in circular_economy_config.keys():
-        base_year = circular_economy_config["narrow"]["buildings"]["base_year"]
-        target_year = circular_economy_config["narrow"]["buildings"]["target_year"]
+        buildings_config = circular_economy_config["narrow"]["buildings"]
 
-        commercial_scenario_settings = circular_economy_config['narrow']["buildings"]['commercial']['m2_change_pc']
-        implementation_rate = circular_economy_config['narrow']['buildings']['implementation_rate']
+        base_year = buildings_config["base_year"]
+        target_year = buildings_config["target_year"]
+
+        commercial_scenario_settings = buildings_config['commercial']['m2_change_pc']
+        implementation_rate = buildings_config['implementation_rate']
 
         commercial_scenario_settings_xr = xr.DataArray(
             list(commercial_scenario_settings.values()),
@@ -147,7 +156,8 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
         commercial_scenario_settings_xr_mapped = region_knowledge_graph.rebroadcast_xarray(
             commercial_scenario_settings_xr, output_coords=regions_mapped, dim="Region")
 
-        region_coords = np.sort(commercial_scenario_settings_xr_mapped.coords["Region"].values.astype(int)).astype(str)
+        region_coords = np.sort(commercial_scenario_settings_xr_mapped.coords["Region"]
+                                .values.astype(int)).astype(str)
         commercial_scenario_settings_xr_mapped = region_knowledge_graph.rebroadcast_xarray(
             commercial_scenario_settings_xr_mapped, region_coords, dim ="Region")
         floorspace_commercial = apply_change_per_region(floorspace_commercial, base_year,
@@ -206,13 +216,16 @@ def circular_economy_measures_material_intensities_residential(
         )
 
         # 2) map region names -> region codes, then align to model order
-        regions_mapped = list(region_knowledge_graph.find_relations_inverse(model_regions, raw.coords["Region"].values))
-        changes_mapped = region_knowledge_graph.rebroadcast_xarray(raw, output_coords=regions_mapped, dim="Region")
+        regions_mapped = list(region_knowledge_graph.find_relations_inverse(
+            model_regions, raw.coords["Region"].values))
+        changes_mapped = region_knowledge_graph.rebroadcast_xarray(
+            raw, output_coords=regions_mapped, dim="Region")
         changes_mapped = changes_mapped.sel(Region=model_regions).astype(float)
 
         # 3) apply once per material
         cur = xr_mat_res_intensities.sel(material=mat)
-        updated = apply_change_per_region(cur, base_year, target_year, changes_mapped, implementation_rate)
+        updated = apply_change_per_region(cur, base_year, target_year, changes_mapped,
+                                          implementation_rate)
         updated = updated.reindex(Region=cur.coords["Region"])
         xr_mat_res_intensities.loc[dict(material=mat)] = updated
 
@@ -245,7 +258,8 @@ def circular_economy_measures_material_intensities_commercial(xr_mat_comm_intens
 
     """
     # work array with Time dim
-    xr_mat = xr_mat_comm_intensities.rename({"Cohort": "Time"}) if "Cohort" in xr_mat_comm_intensities.dims else xr_mat_comm_intensities
+    xr_mat = (xr_mat_comm_intensities.rename({"Cohort": "Time"})
+              if "Cohort" in xr_mat_comm_intensities.dims else xr_mat_comm_intensities)
 
     base_year = circular_economy_config['narrow']['buildings']['base_year']
     target_year = circular_economy_config['narrow']['buildings']['target_year']
@@ -270,12 +284,15 @@ def circular_economy_measures_material_intensities_commercial(xr_mat_comm_intens
             )
 
             # map region names -> region codes; align to model order
-            regions_mapped = list(region_graph.find_relations_inverse(model_regions, raw.coords["Region"].values))
-            changes_mapped = region_graph.rebroadcast_xarray(raw, output_coords=regions_mapped, dim="Region")
+            regions_mapped = list(region_graph.find_relations_inverse(model_regions,
+                                                                      raw.coords["Region"].values))
+            changes_mapped = region_graph.rebroadcast_xarray(raw, output_coords=regions_mapped,
+                                                             dim="Region")
             changes_mapped = changes_mapped.sel(Region=model_regions).astype(float)
 
             # apply once per material
-            updated = apply_change_per_region(cur, base_year, target_year, changes_mapped, implementation_rate)
+            updated = apply_change_per_region(cur, base_year, target_year, changes_mapped,
+                                              implementation_rate)
             # keep Region order & dim order identical to cur
             updated = updated.reindex(Region=cur.coords["Region"]).transpose(*cur.dims)
         else:
@@ -287,7 +304,8 @@ def circular_economy_measures_material_intensities_commercial(xr_mat_comm_intens
     xr_mat_updated = xr.concat(updated_slices, dim="material")
 
     # rename back to Cohort if needed
-    xr_mat_comm_intensities = xr_mat_updated.rename({"Time": "Cohort"}) if "Time" in xr_mat_updated.dims else xr_mat_updated
+    xr_mat_comm_intensities = (xr_mat_updated.rename({"Time": "Cohort"})
+                               if "Time" in xr_mat_updated.dims else xr_mat_updated)
 
     logging.debug("implemented 'narrow' for Commercial Buildings (lightweighting)")
     return xr_mat_comm_intensities
