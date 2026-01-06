@@ -7,6 +7,10 @@ import numpy as np
 from imagematerials.buildings.preprocessing.main import buildings_preprocessing as prep_bld
 from imagematerials.vehicles.preprocessing import preprocess as prep_vhc
 from imagematerials.eol.preprocessing import eol_preprocessing as prep_eol
+from imagematerials.electricity.preprocessing import get_preprocessing_data_gen as prep_elc_gen
+from imagematerials.electricity.preprocessing import get_preprocessing_data_grid as prep_elc_grid
+from imagematerials.electricity.preprocessing import get_preprocessing_data_stor as prep_elc_stor
+
 
 from imagematerials.factory import Sector
 from imagematerials.util import (
@@ -16,7 +20,6 @@ from imagematerials.util import (
     read_climate_policy_config,
     rebroadcast_prep_data,
 )
-
 from imagematerials.constants import IMAGE_REGIONS
 
 
@@ -28,6 +31,31 @@ def _get_vehicles_prep_data(base_dir, climate_policy_scenario_dir, circular_econ
         circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
         prep_data = prep_vhc(base_dir, climate_policy_config, circular_economy_config)
 
+    return prep_data
+
+def _get_electricity_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_scenario_dirs, scenario, year_start, year_end, year_out):
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
+        circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
+        prep_data_gen = prep_elc_gen(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
+        prep_data_grid_lines, prep_data_grid_add = prep_elc_grid(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
+        prep_data_stor_phs, prep_data_stor_other = prep_elc_stor(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
+        
+        prep_data = {
+            "prep_data_gen": prep_data_gen,
+            "prep_data_grid_lines": prep_data_grid_lines,
+            "prep_data_grid_add": prep_data_grid_add,
+            "prep_data_stor_phs": prep_data_stor_phs,
+            "prep_data_stor_other": prep_data_stor_other
+        }
+    return prep_data
+
+def _get_buildings_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_scenario_dirs):
+    climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
+    circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
+    prep_data = prep_bld(base_dir, climate_policy_config, circular_economy_config)
     return prep_data
 
 
@@ -45,11 +73,26 @@ def _get_vehicles_sector(prep_data):
     return sec_vhc
 
 
-def _get_buildings_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_scenario_dirs):
-    climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
-    circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
-    prep_data = prep_bld(base_dir, climate_policy_config, circular_economy_config)
-    return prep_data
+def _get_electricity_sector(prep_data):
+
+    # sec_elc = Sector("electricity", prep_data)
+    sec_elc_gen = Sector("elc_gen", prep_data["prep_data_gen"])
+    sec_elc_grid_lines = Sector("elc_grid_lines", prep_data["prep_data_grid_lines"])
+    sec_elc_grid_add = Sector("elc_grid_add", prep_data["prep_data_grid_add"])
+    sec_elc_stor_phs = Sector("elc_stor_phs", prep_data["prep_data_stor_phs"])
+    sec_elc_stor_other = Sector("elc_stor_other", prep_data["prep_data_stor_other"])
+
+    # sec_elc = {
+    #     "sec_elc_gen": sec_elc_gen,
+    #     "sec_elc_grid_lines": sec_elc_grid_lines,
+    #     "sec_elc_grid_add": sec_elc_grid_add,
+    #     # "sec_elc_stor_phs": sec_elc_stor_phs,
+    #     # "sec_elc_stor_other": sec_elc_stor_other
+    # }
+    sec_elc = [sec_elc_gen, sec_elc_grid_lines, sec_elc_grid_add, sec_elc_stor_phs, sec_elc_stor_other]
+
+    return sec_elc
+
 
 def _get_buildings_sector(prep_data):
     return Sector("buildings", prep_data)
@@ -68,7 +111,10 @@ def get_preprocessing_data(
         climate_policy_scenario_dir: Union[str, Path, None] = None,
         circular_economy_scenario_dirs: Optional[dict[str, Union[Path, str]]] = None,
         cache: Union[bool, Path, str] = False,
-        standard_scenario:str = "SSP2"):
+        standard_scenario: str = "SSP2",
+        year_start: int = 1971,
+        year_end: int = 2100,
+        year_out: int = 2100):
     """Get preprocessing data with optional caching.
 
     Parameters
@@ -86,6 +132,20 @@ def get_preprocessing_data(
         cached.
     standard_scenario, optional
         The standard scenario to use, by default "SSP2". Change if different scenario should be selected
+
+    year_start: int, optional
+        The first year of the simulation timeline (typically the beginning of the
+        historical dataset). Default is 1970.
+
+    year_end: int, optional
+        The final year of the simulation horizon. Defines the last year for which
+        model results will be computed. Default is 2100.
+
+    year_out: int, optional
+        The target year of interest for reporting or extracting results. This is
+        often a milestone year (e.g., 2050 or 2100) used in scenario analysis.
+        Must fall between `year_start` and `year_end`. Default is 2100.
+
 
     Returns
     -------
@@ -109,8 +169,6 @@ def get_preprocessing_data(
     elif climate_policy_scenario_dir is None and circular_economy_scenario_dirs is not None:
         raise ValueError("if circular_economy_scenario_dirs is set, climate_policy_scenario_dir has to be set too")
 
-
-
     if cache is False or not Path(cache).is_file():
         if sector == "vehicles":
             prep_data = _get_vehicles_prep_data(base_dir, climate_policy_scenario_dir,
@@ -118,8 +176,17 @@ def get_preprocessing_data(
         elif sector == "buildings":
             prep_data = _get_buildings_prep_data(base_dir, climate_policy_scenario_dir,
                                                  circular_economy_scenario_dirs)
+        elif sector == "electricity":
+            prep_data = _get_electricity_prep_data(base_dir, climate_policy_scenario_dir,
+                                                   circular_economy_scenario_dirs,
+                                                   standard_scenario,
+                                                   year_start,
+                                                   year_end,
+                                                   year_out)
+
         elif sector == "eol": 
             prep_data = _get_end_of_life_prep_data(base_dir,circular_economy_scenario_dirs)
+
         else:
             raise ValueError(f"Unknown sector {sector}")
         if cache:
@@ -131,6 +198,8 @@ def get_preprocessing_data(
         return _get_vehicles_sector(prep_data)
     elif sector == "buildings":
         return _get_buildings_sector(prep_data)
+    elif sector == "electricity":
+        return _get_electricity_sector(prep_data)
     elif sector == "eol":
         return _get_end_of_life_sector(prep_data)
     raise ValueError(f"Unknown sector {sector}")

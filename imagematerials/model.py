@@ -676,51 +676,79 @@ class EndOfLife(prism.Model):
             
             'commercial': ["Office","Retail+","Hotels+","Govt+"
         ],
-        #   'generation':[], 
-        #   'grid':[],
-        #   'storage': []
-        
+            'generation':[ 'SPV', 'SPVR', 'CSP', 'WON', 'WOFF',
+            'WAVE', 'HYD', 'OREN', 'GEO', 'H2P', 'NUC', 'FREE12', 'ClST', 'OlST',
+            'NGOT', 'BioST', 'IGCC', 'OlCC', 'NGCC', 'BioCC', 'ClCS', 'OlCS',
+            'NGCS', 'BioCS', 'ClCHP', 'OlCHP', 'NGCHP', 'BioCHP', 'ClCHPCS',
+            'OlCHPCS', 'NGCHPCS', 'BioCHPCS', 'GeoCHP', 'H2CHP'
+            ],
 
+            'grid':['HV - Lines - Overhead','HV - Lines - Underground','HV - Substations', 'HV - Transformers',
+                    'LV - Lines - Overhead','LV - Lines - Underground','LV - Substations', 'LV - Transformers', 
+                    'MV - Lines - Overhead', 'MV - Lines - Underground','MV - Substations', 'MV - Transformers' 
+            ],
+
+            'storage': ["PHS", 'Compressed Air', 'Deep-cycle Lead-Acid', 'Flywheel', 'Hydrogen FC', 'LFP', 'LMO', 'LTO', 'Lithium Ceramic', 'Lithium Sulfur', 'Lithium-air',
+                        'NCA', 'NMC', 'NiMH', 'Sodium-Sulfur', 'Vanadium Redox', 'ZEBRA', 'Zinc-Bromide']
         }
-        materials = ['aluminium', 'brick', 'cement', 'cobalt', 'concrete', 'copper', 'glass',
-        'lead', 'lithium', 'manganese', 'neodymium', 'nickel', 'plastics',
-        'rubber', 'steel', 'titanium', 'wood']
 
         self.sum_outflow[t] = prism.Q_(0.0, 'kg')
         for outflow in outflow_by_cohort_materials:
             outflow_t = outflow[t] 
 
+            # sum over subtypes to supertypes
             for supertype, subtypes in type_dict.items():
-                if subtypes[0] not in outflow_t.coords["Type"]:
-                    continue
-                sum_outflow = outflow_t.sel(Type=subtypes).sum("Type")
-
-                coords = {"Type": supertype, "material": sum_outflow.coords["material"], "Region": sum_outflow.coords["Region"]}
-                input_coords = {"Time":t, "Type":supertype}
+                available = set(outflow_t.coords["Type"].values)                        # available subtypes in outflow 
+                present = [subtype for subtype in subtypes if subtype in available]     # present subtypes in outflow (defined above)
+                if not present:                                                         # if a subtype of this supertype is not present in outflow, continue
+                        continue
                 
+                # calculate sum outflow by supertype 
+                sum_outflow = outflow_t.sel(Type=present).sum("Type")
+
+                # --- reindex to target materials ---
+                target_mats = self.sum_outflow.to_array().coords["material"]  #  defining the ordering of material coords
+                sum_outflow = sum_outflow.reindex(material=target_mats, fill_value=0)
+                # --- harmonize coordinates ---
+                coords = {"Type": supertype, "material": target_mats, "Region": sum_outflow.coords["Region"]}    
+                input_coords = {"Time":t, "Type":supertype} 
+                
+                # store sum outflow
                 self.sum_outflow[t].loc[coords] = sum_outflow
 
+                # calculate collected, reusable, recyclable materials and losses
                 collected_materials = collection.loc[input_coords]*sum_outflow
                 reusable_materials = collected_materials*reuse.loc[input_coords]
                 remaining_materials = collected_materials-reusable_materials                        # non-reused but collected waste
                 recyclable_materials = remaining_materials*recycling.loc[input_coords]
                 losses_materials = (sum_outflow-collected_materials                                 # non-collected waste
-               +remaining_materials-recyclable_materials)                                           # non-reused/recycled but collected waste
+                                    +remaining_materials-recyclable_materials)                      # non-reused/recycled but collected waste
+                
+                # --- reindex to target materials ---
+                collected_materials = collected_materials.reindex(material=target_mats, fill_value=0)
+                reusable_materials = reusable_materials.reindex(material=target_mats, fill_value=0)
+                remaining_materials = remaining_materials.reindex(material=target_mats, fill_value=0)
+                recyclable_materials = recyclable_materials.reindex(material=target_mats, fill_value=0)
+                losses_materials = losses_materials.reindex(material=target_mats, fill_value=0)
 
+                # store results
                 self.collected_materials[t].loc[coords] = collected_materials
                 self.reusable_materials[t].loc[coords] = reusable_materials
                 self.remaining_materials[t].loc[coords] = remaining_materials
                 self.recyclable_materials[t].loc[coords] = recyclable_materials
                 self.losses_materials[t].loc[coords] = losses_materials
         
-
+        # calculate virgin materials needed (based on recyclables and reusables, fix this in hybrid version)
         for inflow in inflow_materials:
             inflow_t = inflow[t]
-            for supertype, subtypes in type_dict.items():
-                if subtypes[0] not in inflow_t.coords["Type"]:
-                    continue
-                sum_inflow = inflow_t.sel(Type=subtypes).sum("Type")
+            for supertype, subtypes in type_dict.items():                   # sum over subtypes to supertypes
+                available = set(map(str, inflow_t.coords["Type"].values))   # available subtypes in inflow
+                present = [st for st in subtypes if st in available]        # present subtypes in inflow (defined above)
 
+                if not present:                                             # if a subtype of this supertype is not present in inflow, continue
+                    continue
+
+                sum_inflow = inflow_t.sel(Type=present).sum("Type")
 
                 # --- harmonize coordinates ---
                 sum_inflow = sum_inflow.reindex_like(collection, fill_value=0)
