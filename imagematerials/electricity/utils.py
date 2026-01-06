@@ -10,22 +10,21 @@ import prism
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
 from imagematerials.concepts import create_electricity_graph
 from imagematerials.electricity.constants import (
-    YEAR_FIRST,
     YEAR_FIRST_GRID,
     YEAR_SWITCH,
     REGIONS,
-    MEGA_TO_TERA,
-    PKMS_TO_VKMS,
-    TONNES_TO_KGS,
-    LOAD_FACTOR,
-    BEV_CAPACITY_CURRENT,
-    PHEV_CAPACITY_CURRENT
+    EPG_TECHNOLOGIES,
+    EPG_TECHNOLOGIES_VRE,
+    STD_LIFETIMES_ELECTR,
 )
 # from imagematerials.vehicles.constants import END_YEAR, FIRST_YEAR, REGIONS
 
 # from read_scripts.dynamic_stock_model_BM import DynamicStockModel as DSM
 idx = pd.IndexSlice
 
+#####################################################################################################
+# General functions for electricity materials model
+#####################################################################################################
 
 # In order to calculate inflow & outflow smoothly (without peaks for the initial years), we calculate a historic tail to the stock, 
 # by adding a 0 value for first year of operation (=1926), then interpolate values towards 1971
@@ -286,42 +285,6 @@ def flexible_plot_1panel(
     plt.show()
 
 
-# def materials_grid_additions_to_kgperkm(materials_df, additions_df):
-#     """
-#     Vectorized approach to transform the materials DataFrame by multiplying each row with the corresponding values from the additions DataFrame.
-#     materials_df: DataFrame with MultiIndex (year, technology) and columns for materials. - units in kg/unit (unit = 1 substation or transformer)
-#     additions_df: DataFrame with index for components (Substations, Transformers) and columns for voltage levels (HV, MV, LV), values are the number of units per km of grid length.
-
-#     NOT USED ANYMORE (?) -> separate stock modeling needed for lines vs substations & transformers
-
-#     """
-    
-#     # Create mapping series
-#     mapping_dict = {}
-    
-#     for voltage in ['HV', 'MV', 'LV']:
-#         for component in ['Substations', 'Transformers']:
-#             tech_key = f"{voltage} {component}"
-            
-#             if voltage in additions_df.columns and component in additions_df.index:
-#                 mapping_dict[tech_key] = additions_df.loc[component, voltage]
-    
-#     # Create a series to map each row to its multiplier
-#     multipliers = materials_df.index.get_level_values(1).map(mapping_dict)
-    
-#     # Convert to DataFrame for broadcasting
-#     multipliers_df = pd.DataFrame(
-#         np.outer(multipliers, np.ones(len(materials_df.columns))),
-#         index=materials_df.index,
-#         columns=materials_df.columns
-#     )
-    
-#     # Multiply
-#     result_df = materials_df * multipliers_df
-    
-#     return result_df
-
-
 def print_df_info(df, name):
     """
     Prints basic information about a DataFrame, including its shape, columns, and first few index values.
@@ -332,6 +295,84 @@ def print_df_info(df, name):
           Columns: {df.columns.tolist()},
           Index name(s): {df.index.names},
           Index: {df.index.tolist()[:5]}...""")
+    
+
+
+
+#####################################################################################################
+# Functions for grid preprocessing
+#####################################################################################################
+
+
+def calculate_grid_growth(gcap, grid_lines):
+    """ Calculate grid line growth factors over time based on regional generation capacity development.
+
+    Total (peak) generation capacity is used as a proxy for grid expansion. Growth factors are
+    defined relative to a base year (2016) and applied uniformly to all voltage levels for
+    overhead lines. Underground line growth factors are included only to match the shape of
+    the grid length DataArray and are set to NaN, as underground lines are calculated separately.
+
+    For high-voltage (HV) overhead lines, additional growth adjustments are applied from 2020
+    onwards based on the share of variable renewable energy (VRE; solar and wind) capacity.
+    Line additions and reductions are gradually introduced using a linear ramp between 2020
+    and 2050.
+
+    Parameters
+    ----------
+    gcap : xarray.DataArray
+        Regional generation capacity by technology and time. Must include dimensions
+        ``Type`` and ``Time``.
+    grid_lines : xarray.DataArray
+        Grid line lengths by voltage level, type, region, and time. Used to define the target
+        shape and coordinates of the returned growth factor DataArray.
+
+    Returns
+    -------
+    grid_growth_expanded : xarray.DataArray
+        Growth factors for grid line lengths with the same dimensions and coordinates as
+        ``grid_lines``. Values represent multiplicative factors relative to 2016.
+    """
+    
+    # regional total (peak) generation capacity is used as a proxy for the grid growth
+    gcap_total = gcap.sum(dim='Type')
+    gcap_growth = gcap_total / gcap_total.loc[2016]        # define growth according to 2016 as base year
+
+    # copy growth factor for all voltage levels (overhead)
+    grid_growth = gcap_growth.expand_dims(Type=["HV - Lines - Overhead","MV - Lines - Overhead","LV - Lines - Overhead"]).copy()
+    # add coordinates for underground lines to match grid length dataarray (set to NaN, as underground lines are later calculated based on aboveground lines & fixed ratios)
+    grid_growth_expanded = grid_growth.broadcast_like(grid_lines).copy().rename("GridGrowthFactor")
+
+    # for HV lines: additional growth is presumed after 2020 based on the fraction of variable renewable energy (vre) generation capacity (solar & wind) (used to be only in the sensitivity variant, but now used in the base case as well)
+    vre_fraction = gcap.sel(Type=EPG_TECHNOLOGIES_VRE).sum(dim='Type') / gcap_total
+    # Compute additional/reduced growth
+    add_growth = vre_fraction * 1             # if value is e.g. 0.2 = 20% additional HV lines per doubling of vre gcap
+    red_growth = (1 - vre_fraction) * 0.7     
+    add_growth = add_growth.where(add_growth.Time >= 2020, 0)  # Set pre-2020 values to 0
+    red_growth = red_growth.where(red_growth.Time >= 2020, 0)
+    # Create a ramp factor (line length addition/reduction is gradually introduced from 2020 towards 2050)
+    ramp_factor = xr.DataArray(
+        np.clip((add_growth.Time - 2020) / 30, 0, 1),
+        coords={"Time": add_growth.Time},
+        dims=["Time"]
+    )
+    add_growth = add_growth * ramp_factor # Apply ramp factor
+    red_growth = red_growth * ramp_factor
+    grid_growth_expanded.loc[{"Type": "HV - Lines - Overhead"}] = grid_growth_expanded.loc[{"Type": "HV - Lines - Overhead"}] + add_growth - red_growth
+
+    return grid_growth_expanded
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # STOCK MODELLING OLD -----------------------------------------------------------------------------------------------------
