@@ -109,9 +109,7 @@ def get_preprocessing_data_grid(base_dir: str, SCEN, VARIANT, year_start, year_e
 
     assert path_image_output.is_dir()
     assert path_external_data_standard.is_dir()
-    assert path_external_data_scenario.is_dir()
-
-    idx = pd.IndexSlice   
+    assert path_external_data_scenario.is_dir() 
 
     ###########################################################################################################
     # Read in files #
@@ -337,20 +335,22 @@ def get_preprocessing_data_grid(base_dir: str, SCEN, VARIANT, year_start, year_e
 
 
     # 4. calculate number of substations & transformers based on line lengths & fixed ratios -------------------------------------------------------------
+    
     ureg = grid_lines.data._REGISTRY # extract unit registry from pint xarray dataarray to be able to define units for the calculations below
     for level in ["HV", "MV", "LV"]:
         grid_additions.loc[dict(Type=f"{level} - Transformers")] = (grid_lines.sel(Type=f"{level} - Lines - Overhead") + grid_lines.sel(Type=f"{level} - Lines - Underground")) * (ratio_grid_additions.loc['Transformers',level] * (ureg.count/ureg.kilometer))  # pandas dataframe does not support units itself -> workaround: manually multiply with units count/km
         grid_additions.loc[dict(Type=f"{level} - Substations")]  = (grid_lines.sel(Type=f"{level} - Lines - Overhead") + grid_lines.sel(Type=f"{level} - Lines - Underground")) * (ratio_grid_additions.loc['Substations',level] * (ureg.count/ureg.kilometer))  
 
+
     ###########################################################################################################
     # Interpolate #
 
-    grid_lifetime_interp = interpolate_xr(grid_lifetime, YEAR_FIRST_GRID, year_out)
-    materials_lines_interp = interpolate_xr(materials_lines, YEAR_FIRST_GRID, year_out)
-    materials_additions_interp = interpolate_xr(materials_additions, YEAR_FIRST_GRID, year_out)
+    grid_lifetime_interp        = interpolate_xr(grid_lifetime, YEAR_FIRST_GRID, year_out)
+    materials_lines_interp      = interpolate_xr(materials_lines, YEAR_FIRST_GRID, year_out)
+    materials_additions_interp  = interpolate_xr(materials_additions, YEAR_FIRST_GRID, year_out)
 
-    grid_lines_interp = add_historic_stock(grid_lines, YEAR_FIRST_GRID)
-    grid_additions_interp = add_historic_stock(grid_additions, YEAR_FIRST_GRID)
+    grid_lines_interp       = add_historic_stock(grid_lines, YEAR_FIRST_GRID)
+    grid_additions_interp   = add_historic_stock(grid_additions, YEAR_FIRST_GRID)
 
 
     ###########################################################################################################
@@ -363,20 +363,20 @@ def get_preprocessing_data_grid(base_dir: str, SCEN, VARIANT, year_start, year_e
 
 
     # bring preprocessing data into a generic format for the model
-    prep_data_lines = {}
-    prep_data_lines["lifetimes"] = grid_lifetime_interp_conv
-    prep_data_lines["stocks"] = grid_lines_interp
-    prep_data_lines["material_intensities"] = materials_lines_interp
-    prep_data_lines["knowledge_graph"] = create_electricity_graph()
-    prep_data_lines["set_unit_flexible"] = prism.U_(prep_data_lines["stocks"]) # add unit (prism.U_ gives the unit back)
-    # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
 
+    prep_data_lines = {}
+    prep_data_lines["lifetimes"]            = grid_lifetime_interp_conv
+    prep_data_lines["stocks"]               = grid_lines_interp
+    prep_data_lines["material_intensities"] = materials_lines_interp
+    prep_data_lines["knowledge_graph"]      = create_electricity_graph()
+    prep_data_lines["set_unit_flexible"]    = prism.U_(prep_data_lines["stocks"]) # add unit (prism.U_ gives the unit back)
+    # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
     prep_data_additions = {}
-    prep_data_additions["lifetimes"] = grid_lifetime_interp_conv
-    prep_data_additions["stocks"] = grid_additions_interp
+    prep_data_additions["lifetimes"]            = grid_lifetime_interp_conv
+    prep_data_additions["stocks"]               = grid_additions_interp
     prep_data_additions["material_intensities"] = materials_additions_interp
-    prep_data_additions["knowledge_graph"] = create_electricity_graph()
-    prep_data_additions["set_unit_flexible"] = prism.U_(prep_data_additions["stocks"]) # add unit (prism.U_ gives the unit back)
+    prep_data_additions["knowledge_graph"]      = create_electricity_graph()
+    prep_data_additions["set_unit_flexible"]    = prism.U_(prep_data_additions["stocks"]) # add unit (prism.U_ gives the unit back)
 
     return prep_data_lines, prep_data_additions
 
@@ -830,6 +830,10 @@ def sanitize_attrs(da):
     - This function does not modify the original DataArray in-place; it returns a copy.
     - It preserves the data, coordinates, and dimensions of the original DataArray.
     """
+    # use as:
+    # da_example = sanitize_attrs(model_lines.inflow.to_array())
+    # da_example.to_netcdf(path_test / "grid_lines_inflow_v0.nc")
+
     da = da.copy()
     da.attrs = {k: str(v) if not isinstance(v, (str, int, float)) else v
                 for k, v in da.attrs.items()}
@@ -857,6 +861,9 @@ def compare_da(path, da_new):
     diff_nonzero : xarray.DataArray or None
         Differences where values differ; None if equal.
     """
+    # use as:
+    # compare_da(path_test / "grid_lines_inflow_v0.nc", model_lines.inflow.to_array())
+    
     da_old = xr.open_dataarray(path)
 
     da_old_clean = da_old.pint.dequantify()

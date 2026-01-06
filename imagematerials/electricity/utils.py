@@ -303,6 +303,75 @@ def print_df_info(df, name):
     
 
 
+def sanitize_attrs(da): # for saving xarray objects to netcdf
+    """ Sanitize the attributes of a DataArray and its coordinates for safe serialization.
+
+    This function converts all attribute values that are not of type str, int, or float 
+    into strings. It applies this transformation to both the DataArray's `.attrs` and 
+    each coordinate's `.attrs`. This is useful when saving xarray objects to formats 
+    like NetCDF, which require attribute values to be basic serializable types.
+
+    Parameters
+    ----------
+    da : xarray.DataArray
+        The input DataArray whose attributes need to be sanitized.
+
+    Returns
+    -------
+    xarray.DataArray
+        A copy of the input DataArray with sanitized attributes.
+
+    Notes
+    -----
+    - This function does not modify the original DataArray in-place; it returns a copy.
+    - It preserves the data, coordinates, and dimensions of the original DataArray.
+    """
+    # use as:
+    # da_example = sanitize_attrs(model_lines.inflow.to_array())
+    # da_example.to_netcdf(path_test / "grid_lines_inflow_v0.nc")
+
+    da = da.copy()
+    da.attrs = {k: str(v) if not isinstance(v, (str, int, float)) else v
+                for k, v in da.attrs.items()}
+    for c in da.coords:
+        da.coords[c].attrs = {
+            k: str(v) if not isinstance(v, (str, int, float)) else v
+            for k, v in da.coords[c].attrs.items()
+        }
+    return da
+
+def compare_da(path, da_new): # for testing xarray objects
+    """ Compare a saved DataArray to a new one, ignoring units.
+
+    Parameters
+    ----------
+    path : str or Path
+        Path to the saved DataArray file.
+    da_new : xarray.DataArray
+        The new DataArray to compare.
+
+    Returns
+    -------
+    equal : bool
+        True if the DataArrays match numerically after removing units.
+    diff_nonzero : xarray.DataArray or None
+        Differences where values differ; None if equal.
+    """
+    # use as:
+    # compare_da(path_test / "grid_lines_inflow_v0.nc", model_lines.inflow.to_array())
+    
+    da_old = xr.open_dataarray(path)
+
+    da_old_clean = da_old.pint.dequantify()
+    da_new_clean = da_new.pint.dequantify()
+
+    equal = da_old_clean.equals(da_new_clean)
+    if not equal:
+        diff = da_new_clean - da_old_clean
+        diff_nonzero = diff.where(diff != 0, drop=True)
+        return equal, diff_nonzero
+    return equal, None
+
 
 #####################################################################################################
 # Functions for grid preprocessing
