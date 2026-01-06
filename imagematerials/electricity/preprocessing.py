@@ -222,6 +222,10 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
     # gcap_data = read_mym_df(path_image_output / 'GCap.out')
     gcap_data = read_mym_df(climate_policy_config["config_file_path"] / climate_policy_config["data_files"]['GCap'])
 
+    # GDP per capita (US-dollar 2005, ppp), used to derive underground-aboveground ratio based on income levels
+    # gdp_pc_data: pd.DataFrame   = read_mym_df(Path(path_base, "data", "raw", "image", scen_folder, "Socioeconomic", "gdp_pc.scn"))
+    gdp_pc_data = read_mym_df(climate_policy_config["config_file_path"] / climate_policy_config["data_files"]['gdp_pc'])
+
     ###########################################################################################################
     # Transform to xarray #
 
