@@ -9,6 +9,11 @@ import prism
 
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
 from imagematerials.concepts import create_electricity_graph
+
+from imagematerials.constants import (
+    IMAGE_REGIONS,
+)
+
 from imagematerials.electricity.constants import (
     YEAR_FIRST_GRID,
     YEAR_SWITCH,
@@ -332,7 +337,7 @@ def calculate_grid_growth(gcap, grid_lines):
         Growth factors for grid line lengths with the same dimensions and coordinates as
         ``grid_lines``. Values represent multiplicative factors relative to 2016.
     """
-    
+
     # regional total (peak) generation capacity is used as a proxy for the grid growth
     gcap_total = gcap.sum(dim='Type')
     gcap_growth = gcap_total / gcap_total.loc[2016]        # define growth according to 2016 as base year
@@ -362,7 +367,55 @@ def calculate_grid_growth(gcap, grid_lines):
     return grid_growth_expanded
 
 
+def calculate_fraction_underground(grid_lines, gdp_pc, ratio_underground):
+    """ Calculate fractions of underground and overhead grid lines by region, voltage level, and time.
 
+    Underground fractions are estimated as linear functions of GDP per capita, with separate
+    parameterizations for European and non-European regions. Fractions are bounded between
+    0 and 1 and expanded to match the dimensions of the grid line DataArray. Overhead fractions
+    are derived as the complement of underground fractions.
+
+    Parameters
+    ----------
+    grid_lines : xarray.DataArray
+        Grid line lengths by region, type, and time; used to define target shape and coordinates.
+    gdp_pc : xarray.DataArray
+        GDP per capita by region and time.
+    ratio_underground : pandas.DataFrame or xarray object
+        Coefficients (multipliers and offsets) defining the GDP-based underground line fractions
+        by region group and voltage level.
+
+    Returns
+    -------
+    fraction_lines_above_below : xarray.DataArray
+        Fractions of underground and overhead grid lines with the same dimensions as
+        ``grid_lines``.
+    """
+    fraction_lines_above_below = xr.full_like(grid_lines, np.nan).rename("FractionUndergroundAboveground")
+
+    gdp_pc_unitless = gdp_pc.pint.dequantify() #work-around for now
+    for region in IMAGE_REGIONS:
+        if region in ['WEU','CEU']:
+            select_proxy = 'Europe'
+        else:
+            select_proxy = 'Other'
+
+        fraction_lines_above_below.loc[{"Region": region, "Type": "HV - Lines - Underground"}] = (gdp_pc_unitless.sel(Region=region) * ratio_underground.loc[idx[select_proxy,'mult'],'HV'] + ratio_underground.loc[idx[select_proxy,'add'],'HV'])/100 # /100 to convert from % to fraction
+        fraction_lines_above_below.loc[{"Region": region, "Type": "MV - Lines - Underground"}] = (gdp_pc_unitless.sel(Region=region) * ratio_underground.loc[idx[select_proxy,'mult'],'MV'] + ratio_underground.loc[idx[select_proxy,'add'],'MV'])/100
+        fraction_lines_above_below.loc[{"Region": region, "Type": "LV - Lines - Underground"}] = (gdp_pc_unitless.sel(Region=region) * ratio_underground.loc[idx[select_proxy,'mult'],'LV'] + ratio_underground.loc[idx[select_proxy,'add'],'LV'])/100
+    # fraction must be between 0 and 1
+    fraction_lines_above_below = fraction_lines_above_below.clip(min=0, max=1)
+
+    # MIND! the HV lines found in OSM (+national sources) are considered as the total of the aboveground line length + the underground line length
+    # currently the total is saved in xarray grid_lines as the aboveground fraction only -> need to split into aboveground & underground based on the calculated ratios
+    # for this, we copy the aboveground length into the underground length & then multiply both with the coresponding fraction to get the correct lengths
+    for level in ["HV", "MV", "LV"]:
+        over = f"{level} - Lines - Overhead"
+        under = f"{level} - Lines - Underground"
+        # grid_lines.loc[dict(Type=under)] = grid_lines.sel(Type=over) # copy the aboveground length into the underground length
+        fraction_lines_above_below.loc[dict(Type=over)] = 1-fraction_lines_above_below.loc[dict(Type=under)] # above = 1 - under
+    
+    return fraction_lines_above_below
 
 
 

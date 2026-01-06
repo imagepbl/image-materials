@@ -19,7 +19,7 @@ from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_life
 from imagematerials.model import GenericMainModel, GenericStocks, SharesInflowStocks, Maintenance, GenericMaterials, MaterialIntensities
 from imagematerials.factory import ModelFactory, Sector
 from imagematerials.concepts import create_electricity_graph, create_region_graph
-from imagematerials.electricity.utils import add_historic_stock, interpolate_xr, flexible_plot_1panel, calculate_grid_growth
+from imagematerials.electricity.utils import add_historic_stock, interpolate_xr, flexible_plot_1panel, calculate_grid_growth, calculate_fraction_underground
 
 from imagematerials.constants import (
     IMAGE_REGIONS,
@@ -307,14 +307,12 @@ def get_preprocessing_data_grid(base_dir: str, SCEN, VARIANT, year_start, year_e
 
     ###########################################################################################################
     # Calculate variables #
-    
-    
 
-    # 1. calculate growth factors for the grid lines -------------------------------------------------------------
+    # 1. calculate growth factors for the grid lines ------------------------------------------------------------
 
     grid_growth = calculate_grid_growth(gcap, grid_lines)
     
-    # 2. calculate grid lengths (overhead) with ratios & growth factors -------------------------------------------------------------
+    # 2. calculate grid lengths (overhead) with ratios & growth factors -----------------------------------------
 
     # calculate extend of MV and LV networks in 2016 based on Hv network and fixed ratios
     grid_lines.loc[{"Type": "MV - Lines - Overhead"}] = grid_lines.loc[{"Type": "HV - Lines - Overhead"}] * ds_ratio_hv["HV to MV"]
@@ -323,33 +321,17 @@ def get_preprocessing_data_grid(base_dir: str, SCEN, VARIANT, year_start, year_e
     grid_lines = (grid_lines * grid_growth).rename(grid_lines.name).assign_attrs(grid_lines.attrs) # calculate line lengths over time based on growth factors; restore name and attributes (lost during multiplication)
 
 
-    # 3. calculate underground lines -------------------------------------------------
+    # 3. calculate underground lines ----------------------------------------------------------------------------
+    
     # determine length of underground and aboveground grid lines based on GDP/capita: fraction_underground = mult * gdp_pc + add
     # Based on insights from Kalt et al. 2021, we adjust the underground ratios downwards for non-European regions
 
-    fraction_lines_above_below = xr.full_like(grid_lines, np.nan).rename("FractionUndergroundAboveground")
+    fraction_lines_above_below = calculate_fraction_underground(grid_lines, gdp_pc, ratio_underground)
 
-    gdp_pc_unitless = gdp_pc.pint.dequantify() #work-around for now
-    for region in IMAGE_REGIONS:
-        if region in ['WEU','CEU']:
-            select_proxy = 'Europe'
-        else:
-            select_proxy = 'Other'
-
-        fraction_lines_above_below.loc[{"Region": region, "Type": "HV - Lines - Underground"}] = (gdp_pc_unitless.sel(Region=region) * ratio_underground.loc[idx[select_proxy,'mult'],'HV'] + ratio_underground.loc[idx[select_proxy,'add'],'HV'])/100 # /100 to convert from % to fraction
-        fraction_lines_above_below.loc[{"Region": region, "Type": "MV - Lines - Underground"}] = (gdp_pc_unitless.sel(Region=region) * ratio_underground.loc[idx[select_proxy,'mult'],'MV'] + ratio_underground.loc[idx[select_proxy,'add'],'MV'])/100
-        fraction_lines_above_below.loc[{"Region": region, "Type": "LV - Lines - Underground"}] = (gdp_pc_unitless.sel(Region=region) * ratio_underground.loc[idx[select_proxy,'mult'],'LV'] + ratio_underground.loc[idx[select_proxy,'add'],'LV'])/100
-    # fraction must be between 0 and 1
-    fraction_lines_above_below = fraction_lines_above_below.clip(min=0, max=1)
-
-    # MIND! the HV lines found in OSM (+national sources) are considered as the total of the aboveground line length + the underground line length
-    # currently the total is saved in xarray grid_lines as the aboveground fraction only -> need to split into aboveground & underground based on the calculated ratios
-    # for this, we copy the aboveground length into the underground length & then multiply both with the coresponding fraction to get the correct lengths
     for level in ["HV", "MV", "LV"]:
         over = f"{level} - Lines - Overhead"
         under = f"{level} - Lines - Underground"
-        grid_lines.loc[dict(Type=under)] = grid_lines.sel(Type=over) # under = over
-        fraction_lines_above_below.loc[dict(Type=over)] = 1-fraction_lines_above_below.loc[dict(Type=under)] # above = 1 - under
+        grid_lines.loc[dict(Type=under)] = grid_lines.sel(Type=over) # copy the aboveground length into the underground length, both contain now the total length, to be multiplied with the fractions next
 
     grid_lines = (grid_lines * fraction_lines_above_below).rename(grid_lines.name).assign_attrs(grid_lines.attrs) # calculate line lengths over time based on growth factors; restore name and attributes (lost during multiplication)
 
