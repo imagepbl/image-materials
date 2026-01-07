@@ -312,14 +312,14 @@ def convert_lifetime(lifetimes):
     if isinstance(lifetimes, xr.Dataset):
         return convert_lifetime_dataset(lifetimes)
     elif isinstance(lifetimes, xr.DataArray):
+        print("Dataarray")
         return convert_lifetime_dataarray(lifetimes)
     else:
         raise TypeError("Input must be an xarray.Dataset or xarray.DataArray")
     
 
 def convert_lifetime_dataset(lifetime_dataset: xr.Dataset) -> dict[str, xr.DataArray]:
-    """
-    Convert dataset with lifetimes to a dictonary with 
+    """ Convert dataset with lifetimes to a dictonary with 
     keys = name of the distribution applied to the lifetimes (folded_normal, Weibull)
     values = xarray DataArray with the scipy parameters for the distribution
 
@@ -404,8 +404,7 @@ def convert_lifetime_dataset(lifetime_dataset: xr.Dataset) -> dict[str, xr.DataA
 
 
 def convert_lifetime_dataarray(lifetime_dataarray: xr.DataArray) -> dict[str, xr.DataArray]:
-    """
-    Convert DataArray with lifetimes to a dictonary with 
+    """ Convert DataArray with lifetimes to a dictonary with 
     keys = name of the distribution applied to the lifetimes (folded_normal, Weibull)
     values = xarray DataArray with the scipy parameters for the distribution
     

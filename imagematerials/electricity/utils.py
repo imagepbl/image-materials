@@ -8,23 +8,27 @@ import prism
 
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
 from imagematerials.concepts import create_electricity_graph
+
+from imagematerials.constants import (
+    IMAGE_REGIONS,
+)
+
 from imagematerials.electricity.constants import (
-    YEAR_FIRST,
     YEAR_FIRST_GRID,
     YEAR_SWITCH,
     REGIONS,
-    MEGA_TO_TERA,
-    PKMS_TO_VKMS,
-    TONNES_TO_KGS,
-    LOAD_FACTOR,
-    BEV_CAPACITY_CURRENT,
-    PHEV_CAPACITY_CURRENT
+    EPG_TECHNOLOGIES,
+    EPG_TECHNOLOGIES_VRE,
+    STD_LIFETIMES_ELECTR,
 )
 # from imagematerials.vehicles.constants import END_YEAR, FIRST_YEAR, REGIONS
 
 # from read_scripts.dynamic_stock_model_BM import DynamicStockModel as DSM
 idx = pd.IndexSlice
 
+#####################################################################################################
+# General functions for electricity materials model
+#####################################################################################################
 
 # In order to calculate inflow & outflow smoothly (without peaks for the initial years), we calculate a historic tail to the stock, 
 # by adding a 0 value for first year of operation (=1926), then interpolate values towards 1971
@@ -203,40 +207,86 @@ def create_prep_data(results_dict, conversion_table, unit_mapping):
     return prep_data
 
 
-# def materials_grid_additions_to_kgperkm(materials_df, additions_df):
-#     """
-#     Vectorized approach to transform the materials DataFrame by multiplying each row with the corresponding values from the additions DataFrame.
-#     materials_df: DataFrame with MultiIndex (year, technology) and columns for materials. - units in kg/unit (unit = 1 substation or transformer)
-#     additions_df: DataFrame with index for components (Substations, Transformers) and columns for voltage levels (HV, MV, LV), values are the number of units per km of grid length.
+# for testing, move later to a plotting utils file in analysis repository
+def flexible_plot_1panel(
+    da: xr.DataArray,
+    x_dim: str,
+    varying_dims: list,
+    fixed: dict = None,
+    figsize=(8, 5),
+    plot_type = 'line' # 'line' or 'scatter'
+):
+    """
+    da          : xarray.DataArray
+    x_dim       : dimension to use on the x axis (e.g. 'Time' or 'Cohort')
+    varying_dims: list of dims that define separate lines (e.g. ['Type', 'Region'])
+    fixed       : dict of {dim: value or list} to filter (e.g. {'Type': [1, 2], 'Region': 5})
 
-#     NOT USED ANYMORE (?) -> separate stock modeling needed for lines vs substations & transformers
+    use as e.g.:
+    flexible_plot_1panel(
+        da=grid_length,
+        x_dim="Time",
+        varying_dims=["Type", "Region"],
+        fixed={"Type": [1, 2], "Region": [0, 3]},
+        plot_type='scatter'
+    )
+    """
+    
+    # 1. Apply filtering
+    if fixed:
+        for dim, sel in fixed.items():
+            # da = da.sel({dim: sel})
+            # Convert to list
+            if not isinstance(sel, (list, tuple)):
+                sel = [sel]
 
-#     """
+            coord_vals = da.coords[dim].values
+
+            # If the requested values exist as labels → use sel
+            if all(v in coord_vals for v in sel):
+                da = da.sel({dim: sel})
+            else:
+                # Otherwise interpret as positional integers → use isel
+                da = da.isel({dim: sel})
     
-#     # Create mapping series
-#     mapping_dict = {}
-    
-#     for voltage in ['HV', 'MV', 'LV']:
-#         for component in ['Substations', 'Transformers']:
-#             tech_key = f"{voltage} {component}"
-            
-#             if voltage in additions_df.columns and component in additions_df.index:
-#                 mapping_dict[tech_key] = additions_df.loc[component, voltage]
-    
-#     # Create a series to map each row to its multiplier
-#     multipliers = materials_df.index.get_level_values(1).map(mapping_dict)
-    
-#     # Convert to DataFrame for broadcasting
-#     multipliers_df = pd.DataFrame(
-#         np.outer(multipliers, np.ones(len(materials_df.columns))),
-#         index=materials_df.index,
-#         columns=materials_df.columns
-#     )
-    
-#     # Multiply
-#     result_df = materials_df * multipliers_df
-    
-#     return result_df
+    # 2. Ensure requested dims exist
+    for d in varying_dims + [x_dim]:
+        if d not in da.dims:
+            raise ValueError(f"Dimension '{d}' missing in DataArray")
+
+    # 3. Collapse all varying dims into a combined index
+    if varying_dims:
+        da_plot = da.stack(curve=varying_dims)
+    else:
+        da_plot = da
+
+    # 4. Prepare y-axis label with units (if present)
+    units = None
+    if hasattr(da.data, "units"):               # pint quantity
+        units = str(da.data.units)
+    else:                                       # normal xarray units
+        units = da.attrs.get("units", None)
+
+    if units:
+        y_label = f"{da.name or ''} [{units}]"
+    else:
+        y_label = da.name or ""
+
+    # 5. Plot
+    plt.figure(figsize=figsize)
+    for curve in da_plot.curve.values:
+        sub = da_plot.sel(curve=curve)
+        label = ", ".join(f"{dim}={val}" for dim, val in zip(varying_dims, curve))
+        if plot_type == 'scatter':
+            plt.scatter(sub[x_dim], sub.values, label=label)
+        else:
+            plt.plot(sub[x_dim], sub.values, label=label)
+
+    plt.xlabel(x_dim)
+    plt.ylabel(y_label)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
 
 
 def print_df_info(df, name):
@@ -249,6 +299,201 @@ def print_df_info(df, name):
           Columns: {df.columns.tolist()},
           Index name(s): {df.index.names},
           Index: {df.index.tolist()[:5]}...""")
+    
+
+
+def sanitize_attrs(da): # for saving xarray objects to netcdf
+    """ Sanitize the attributes of a DataArray and its coordinates for safe serialization.
+
+    This function converts all attribute values that are not of type str, int, or float 
+    into strings. It applies this transformation to both the DataArray's `.attrs` and 
+    each coordinate's `.attrs`. This is useful when saving xarray objects to formats 
+    like NetCDF, which require attribute values to be basic serializable types.
+
+    Parameters
+    ----------
+    da : xarray.DataArray
+        The input DataArray whose attributes need to be sanitized.
+
+    Returns
+    -------
+    xarray.DataArray
+        A copy of the input DataArray with sanitized attributes.
+
+    Notes
+    -----
+    - This function does not modify the original DataArray in-place; it returns a copy.
+    - It preserves the data, coordinates, and dimensions of the original DataArray.
+    """
+    # use as:
+    # da_example = sanitize_attrs(model_lines.inflow.to_array())
+    # da_example.to_netcdf(path_test / "grid_lines_inflow_v0.nc")
+
+    da = da.copy()
+    da.attrs = {k: str(v) if not isinstance(v, (str, int, float)) else v
+                for k, v in da.attrs.items()}
+    for c in da.coords:
+        da.coords[c].attrs = {
+            k: str(v) if not isinstance(v, (str, int, float)) else v
+            for k, v in da.coords[c].attrs.items()
+        }
+    return da
+
+def compare_da(path, da_new): # for testing xarray objects
+    """ Compare a saved DataArray to a new one, ignoring units.
+
+    Parameters
+    ----------
+    path : str or Path
+        Path to the saved DataArray file.
+    da_new : xarray.DataArray
+        The new DataArray to compare.
+
+    Returns
+    -------
+    equal : bool
+        True if the DataArrays match numerically after removing units.
+    diff_nonzero : xarray.DataArray or None
+        Differences where values differ; None if equal.
+    """
+    # use as:
+    # compare_da(path_test / "grid_lines_inflow_v0.nc", model_lines.inflow.to_array())
+    
+    da_old = xr.open_dataarray(path)
+
+    da_old_clean = da_old.pint.dequantify()
+    da_new_clean = da_new.pint.dequantify()
+
+    equal = da_old_clean.equals(da_new_clean)
+    if not equal:
+        diff = da_new_clean - da_old_clean
+        diff_nonzero = diff.where(diff != 0, drop=True)
+        return equal, diff_nonzero
+    return equal, None
+
+
+#####################################################################################################
+# Functions for grid preprocessing
+#####################################################################################################
+
+
+def calculate_grid_growth(gcap, grid_lines):
+    """ Calculate grid line growth factors over time based on regional generation capacity development.
+
+    Total (peak) generation capacity is used as a proxy for grid expansion. Growth factors are
+    defined relative to a base year (2016) and applied uniformly to all voltage levels for
+    overhead lines. Underground line growth factors are included only to match the shape of
+    the grid length DataArray and are set to NaN, as underground lines are calculated separately.
+
+    For high-voltage (HV) overhead lines, additional growth adjustments are applied from 2020
+    onwards based on the share of variable renewable energy (VRE; solar and wind) capacity.
+    Line additions and reductions are gradually introduced using a linear ramp between 2020
+    and 2050.
+
+    Parameters
+    ----------
+    gcap : xarray.DataArray
+        Regional generation capacity by technology and time. Must include dimensions
+        ``Type`` and ``Time``.
+    grid_lines : xarray.DataArray
+        Grid line lengths by voltage level, type, region, and time. Used to define the target
+        shape and coordinates of the returned growth factor DataArray.
+
+    Returns
+    -------
+    grid_growth_expanded : xarray.DataArray
+        Growth factors for grid line lengths with the same dimensions and coordinates as
+        ``grid_lines``. Values represent multiplicative factors relative to 2016.
+    """
+
+    # regional total (peak) generation capacity is used as a proxy for the grid growth
+    gcap_total = gcap.sum(dim='Type')
+    gcap_growth = gcap_total / gcap_total.loc[2016]        # define growth according to 2016 as base year
+
+    # copy growth factor for all voltage levels (overhead)
+    grid_growth = gcap_growth.expand_dims(Type=["HV - Lines - Overhead","MV - Lines - Overhead","LV - Lines - Overhead"]).copy()
+    # add coordinates for underground lines to match grid length dataarray (set to NaN, as underground lines are later calculated based on aboveground lines & fixed ratios)
+    grid_growth_expanded = grid_growth.broadcast_like(grid_lines).copy().rename("GridGrowthFactor")
+
+    # for HV lines: additional growth is presumed after 2020 based on the fraction of variable renewable energy (vre) generation capacity (solar & wind) (used to be only in the sensitivity variant, but now used in the base case as well)
+    vre_fraction = gcap.sel(Type=EPG_TECHNOLOGIES_VRE).sum(dim='Type') / gcap_total
+    # Compute additional/reduced growth
+    add_growth = vre_fraction * 1             # if value is e.g. 0.2 = 20% additional HV lines per doubling of vre gcap
+    red_growth = (1 - vre_fraction) * 0.7     
+    add_growth = add_growth.where(add_growth.Time >= 2020, 0)  # Set pre-2020 values to 0
+    red_growth = red_growth.where(red_growth.Time >= 2020, 0)
+    # Create a ramp factor (line length addition/reduction is gradually introduced from 2020 towards 2050)
+    ramp_factor = xr.DataArray(
+        np.clip((add_growth.Time - 2020) / 30, 0, 1),
+        coords={"Time": add_growth.Time},
+        dims=["Time"]
+    )
+    add_growth = add_growth * ramp_factor # Apply ramp factor
+    red_growth = red_growth * ramp_factor
+    grid_growth_expanded.loc[{"Type": "HV - Lines - Overhead"}] = grid_growth_expanded.loc[{"Type": "HV - Lines - Overhead"}] + add_growth - red_growth
+
+    return grid_growth_expanded
+
+
+def calculate_fraction_underground(grid_lines, gdp_pc, ratio_underground):
+    """ Calculate fractions of underground and overhead grid lines by region, voltage level, and time.
+
+    Underground fractions are estimated as linear functions of GDP per capita, with separate
+    parameterizations for European and non-European regions. Fractions are bounded between
+    0 and 1 and expanded to match the dimensions of the grid line DataArray. Overhead fractions
+    are derived as the complement of underground fractions.
+
+    Parameters
+    ----------
+    grid_lines : xarray.DataArray
+        Grid line lengths by region, type, and time; used to define target shape and coordinates.
+    gdp_pc : xarray.DataArray
+        GDP per capita by region and time.
+    ratio_underground : pandas.DataFrame or xarray object
+        Coefficients (multipliers and offsets) defining the GDP-based underground line fractions
+        by region group and voltage level.
+
+    Returns
+    -------
+    fraction_lines_above_below : xarray.DataArray
+        Fractions of underground and overhead grid lines with the same dimensions as
+        ``grid_lines``.
+    """
+    fraction_lines_above_below = xr.full_like(grid_lines, np.nan).rename("FractionUndergroundAboveground")
+
+    gdp_pc_unitless = gdp_pc.pint.dequantify() #work-around for now
+    for region in IMAGE_REGIONS:
+        if region in ['WEU','CEU']:
+            select_proxy = 'Europe'
+        else:
+            select_proxy = 'Other'
+
+        fraction_lines_above_below.loc[{"Region": region, "Type": "HV - Lines - Underground"}] = (gdp_pc_unitless.sel(Region=region) * ratio_underground.loc[idx[select_proxy,'mult'],'HV'] + ratio_underground.loc[idx[select_proxy,'add'],'HV'])/100 # /100 to convert from % to fraction
+        fraction_lines_above_below.loc[{"Region": region, "Type": "MV - Lines - Underground"}] = (gdp_pc_unitless.sel(Region=region) * ratio_underground.loc[idx[select_proxy,'mult'],'MV'] + ratio_underground.loc[idx[select_proxy,'add'],'MV'])/100
+        fraction_lines_above_below.loc[{"Region": region, "Type": "LV - Lines - Underground"}] = (gdp_pc_unitless.sel(Region=region) * ratio_underground.loc[idx[select_proxy,'mult'],'LV'] + ratio_underground.loc[idx[select_proxy,'add'],'LV'])/100
+    # fraction must be between 0 and 1
+    fraction_lines_above_below = fraction_lines_above_below.clip(min=0, max=1)
+
+    # MIND! the HV lines found in OSM (+national sources) are considered as the total of the aboveground line length + the underground line length
+    # currently the total is saved in xarray grid_lines as the aboveground fraction only -> need to split into aboveground & underground based on the calculated ratios
+    # for this, we copy the aboveground length into the underground length & then multiply both with the coresponding fraction to get the correct lengths
+    for level in ["HV", "MV", "LV"]:
+        over = f"{level} - Lines - Overhead"
+        under = f"{level} - Lines - Underground"
+        # grid_lines.loc[dict(Type=under)] = grid_lines.sel(Type=over) # copy the aboveground length into the underground length
+        fraction_lines_above_below.loc[dict(Type=over)] = 1-fraction_lines_above_below.loc[dict(Type=under)] # above = 1 - under
+    
+    return fraction_lines_above_below
+
+
+
+
+
+
+
+
+
+
 
 
 # STOCK MODELLING OLD -----------------------------------------------------------------------------------------------------

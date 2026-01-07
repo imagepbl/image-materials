@@ -7,3 +7,4 @@ API
    imagematerials
    vehicles
    buildings
+   electricity
