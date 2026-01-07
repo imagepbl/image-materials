@@ -23,6 +23,10 @@ from imagematerials.electricity.constants import (
     unit_mapping
 )
 
+# for ttesting, remove later:
+END_YEAR = 2100
+INTERMEDIATE_YEAR = 2080
+
 
 ###########################################################################################################
 ###########################################################################################################
@@ -96,11 +100,11 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
     # Build xarray DataArray
     gcap_materials_xr = xr.DataArray(
         data_array,
-        dims=('material', 'Cohort', 'Type'),
+        dims=('Cohort', 'Type', 'material'),
         coords={
-            'material': materials,
             'Cohort': years,
-            'Type': techs
+            'Type': techs,
+            'material': materials
         },
         name='MaterialIntensities'
     )
@@ -147,6 +151,181 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
 
     # TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
     gcap_xr_interp = add_historic_stock(gcap_xr, YEAR_FIRST_GRID)
+
+
+    ###########################################################################################################
+    # CE measures #
+
+    def apply_ce_scenario_change(arr: xr.DataArray, base_year: int, target_year: int, change: dict,
+                    implementation_rate: str, data_type: Optional[str]=None, steepness: float=0.5) -> xr.DataArray:
+        """ Applies a time-based change to values in a Xarray between a base and target year using a specified implementation method.
+
+        Parameters
+        ----------
+        arr
+            A time-indexed Xarray containing mode-specific values, such as lifetime or mileage.
+        base_year
+            The starting year for the change.
+        target_year
+            The year by which the full change should be achieved.
+        change
+            A dictionary mapping modes to percentage increases (e.g., {'Cars': 20} for +20%).
+        implementation_rate
+            The implementation method; one of 'linear', 'immediate', or 's-curve'.
+        data_type
+            Indicates what kind of data is being modified; one of 'lifetime' or 'mileages'.
+        steepness
+            Steepness parameter for the 's-curve' implementation; default is 0.5.
+
+        Returns
+        -------
+            A new Xarray with updated values for each year between base_year and target_year, and interpolated values where necessary.
+
+        Raises
+        ------
+        ValueError
+            If the implementation method is unsupported or if the specified column is not found in the DataFrame.
+
+        Notes
+        -----
+        For verhicles, this function has an implementation that works on Pandas dataframes.
+        Another version of this function is in general utils and works on Xarrays for regional data.
+        """
+
+        result = arr.copy()
+
+        if "Time" in arr.dims:
+            time_dim = "Time"
+        elif "Cohort" in arr.dims:
+            time_dim = "Cohort"
+        else:
+            raise ValueError("Input DataArray must have either 'Time' or 'Cohort' dimension.")
+        
+        if "Type" in arr.dims:
+            type_dim = "Type"
+        elif "SuperType" in arr.dims:
+            type_dim = "SuperType"
+        else:
+            raise ValueError("Input DataArray must have either 'Type' or 'SuperType' dimension.")
+
+        for type_stock, increase in change.items():
+            base_val = result.loc[{time_dim: target_year, type_dim: type_stock}]  # kept (not relied on)
+            if type_stock in result[type_dim]:
+                if implementation_rate == 'linear':
+                    # ramp progress: 0 at base_year, 1 at target_year, held at 1 after
+                    span = max(1, target_year - base_year)
+                    # apply to each year explicitly to preserve structure
+                    for year in range(base_year + 1, target_year + 1):
+                        progress = (year - base_year) / span
+                        result.loc[{time_dim: year, type_dim: type_stock}] = (
+                            arr.loc[{time_dim: year, type_dim: type_stock}] * (1 + (increase / 100.0) * progress)
+                        )
+                    # after target_year, full effect but still relative to same-year baseline
+                    result.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] = (
+                        arr.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] * (1 + increase / 100.0)
+                    )
+                    # # keep explicit anchor years ???
+                    # if 'INTERMEDIATE_YEAR' in globals():
+                    #     result.loc[{time_dim: INTERMEDIATE_YEAR, type_dim: type_stock}] = (
+                    #         arr.loc[{time_dim: INTERMEDIATE_YEAR, type_dim: type_stock}] * (1 + increase / 100.0)
+                    #     )
+                    # if 'END_YEAR' in globals():
+                    #     result.loc[{time_dim: END_YEAR, type_dim: type_stock}] = (
+                    #         arr.loc[{time_dim: END_YEAR, type_dim: type_stock}] * (1 + increase / 100.0)
+                    #     )
+
+                elif implementation_rate == 'immediate':
+                    # unchanged up to base_year; full step from base_year+1 onward, relative to same-year baseline
+                    result.loc[{time_dim: slice(None, base_year), type_dim: type_stock}] = \
+                        arr.loc[{time_dim: slice(None, base_year), type_dim: type_stock}]
+                    result.loc[{time_dim: slice(base_year + 1, None), type_dim: type_stock}] = \
+                        arr.loc[{time_dim: slice(base_year + 1, None), type_dim: type_stock}] * (1 + increase / 100.0)
+
+                elif implementation_rate == 's-curve':
+                    years = list(range(base_year, target_year + 1))
+                    mid_year = (base_year + target_year) / 2
+                    # normalize logistic so progress(base)=0 and progress(target)=1
+                    s0 = 1.0 / (1.0 + np.exp(-steepness * (base_year - mid_year)))
+                    s1 = 1.0 / (1.0 + np.exp(-steepness * (target_year - mid_year)))
+                    for year in years:
+                        s = 1.0 / (1.0 + np.exp(-steepness * (year - mid_year)))
+                        progress = np.clip((s - s0) / (s1 - s0), 0.0, 1.0)
+                        result.loc[{time_dim: year, type_dim: type_stock}] = (
+                            arr.loc[{time_dim: year, type_dim: type_stock}] * (1 + (increase / 100.0) * progress)
+                        )
+                    # after target_year, full effect relative to same-year baseline
+                    result.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] = (
+                        arr.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] * (1 + increase / 100.0)
+                    )
+                else: 
+                    raise ValueError(f"Unknown implementation method: '{implementation_rate}'. "
+                                    "Supported methods are 'immediate', 'linear', and 's-curve'.")
+            else:
+                raise ValueError(f"{type_stock} not found in DataArray.")
+        return result.interpolate_na(time_dim, method="cubic")
+    
+    def apply_change_per_material(arr: xr.DataArray, base_year: int, target_year: int, increase: float,
+                            implementation_rate: str, data_type: Optional[str]=None,
+                            steepness: float=0.5) -> xr.DataArray:
+        """
+        Applies a uniform percentage increase across all materials (columns) in the DataFrame using a specified implementation method.
+
+        Parameters:
+            arr (xarray): A time-indexed Xarray with materials as columns and a common structure across all materials.
+            base_year (int): The starting year for the change.
+            target_year (int): The year by which the full change should be achieved.
+        increase
+            The percentage increase to apply to all materials (e.g., 10 for +10%).
+            implementation_rate (str): The implementation method; one of 'linear', 'immediate', or 's-curve'.
+            data_type (str): Indicates what kind of data is being modified; one of 'lifetime' or 'mileages'.
+            steepness (float, optional): Steepness parameter for the 's-curve' implementation; default is 0.5.
+
+        Returns:
+            array: An xarray with updated values for each material, aligned by year (index).
+        """
+        results = []
+        for material, subarr in arr.groupby('material'):
+            material_subarr = subarr.copy()
+            result = apply_ce_scenario_change(
+                material_subarr, 
+                base_year=base_year, 
+                target_year=target_year, 
+                change={material: float(increase.loc[{"material": material}].item())}, 
+                implementation_rate=implementation_rate, 
+                data_type=data_type, 
+                steepness=steepness
+            )
+            results.append(result)
+        # Concatenate results along columns (axis=1), aligning on index
+        return xr.concat(results, 'material')
+
+
+
+    # Apply lightweighting in narrow scenario
+    if circular_economy_config is not None:
+        if "narrow" in circular_economy_config.keys():
+            ce_scen = "narrow"
+
+            target_year         = circular_economy_config[ce_scen]['electricity']['target_year']
+            base_year           = circular_economy_config[ce_scen]['electricity']['base_year']
+            implementation_rate = circular_economy_config[ce_scen]['electricity']['implementation_rate']
+
+            gen_weight_change_pc = circular_economy_config[ce_scen]['electricity']['generation']['weight_change_pc']
+
+            print(target_year, base_year, implementation_rate)
+            print("gen_weight_change_pc:", gen_weight_change_pc)
+            
+
+        # if "slow" in circular_economy_config.keys():
+        #     ce_scen = "slow"
+        # # if "resource_efficient" in circular_economy_config.keys():
+        # #     ce_scen = "resource_efficient"
+        
+
+
+        # vehicle_weights_simple = scenario_change(
+        #     vehicle_weights_simple, base_year, target_year, 
+        #     non_road_weight_change_pc, implementation_rate)
 
 
     ###########################################################################################################
