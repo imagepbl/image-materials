@@ -16,15 +16,10 @@ from imagematerials.constants import IMAGE_REGIONS
 
 from imagematerials.electricity.constants import (
     STANDARD_SCEN_EXTERNAL_DATA,
-    YEAR_FIRST,
     YEAR_FIRST_GRID,
-    YEAR_SWITCH,
     SENS_ANALYSIS,
     EPG_TECHNOLOGIES,
     STD_LIFETIMES_ELECTR,
-    LOAD_FACTOR,
-    BEV_CAPACITY_CURRENT,
-    PHEV_CAPACITY_CURRENT,
     unit_mapping
 )
 
@@ -180,9 +175,50 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
 ###########################################################################################################
 
 def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+    """ Prepare preprocessing input data for the electricity grid sub-module.
 
-    # scen_folder = SCEN + "_" + VARIANT
-    # path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
+    This function reads static and scenario-dependent grid data (line lengths,
+    lifetimes, material intensities, and grid additions) from a combination of IMAGE/TIMER 
+    outputs and external data files. It derives all variables required for subsequent stock 
+    modeling of grid lines and grid additions (transformers and substations). For this, it 
+    interpolates them over time, extends them with historic stock, and converts them into 
+    the generic preprocessing format used by the stock model. The function allows for the 
+    integration of climate policy and circular economy policy scenarios via the provided 
+    configuration inputs.
+
+    Parameters
+    ----------
+    path_base : str
+        Base directory containing external electricity grid data.
+    climate_policy_config : dict
+        Configuration dictionary providing paths to IMAGE/TIMER input files
+        (e.g. generation capacity and GDP per capita).
+    circular_economy_config : dict
+        Circular economy configuration (currently not used but kept for interface consistency).
+    scenario : str
+        Name of the electricity data scenario; falls back to the standard
+        scenario if not available. While the climate_policy_config directs to the IMAGE/TIMER
+        scenario files used, this parameter specifies which set of external data files are 
+        used. The scenarios used here should be consistent with those used in climate_policy_config.
+        #TODO: come up with a better way to ensure consistency between the two scenario specifications.
+    year_start : int
+        First simulation year.
+    year_end : int
+        Last simulation year.
+    year_out : int
+        Last year that is transmitted to the stock model (year_out <= year_end). 
+
+    Returns
+    -------
+    prep_data_lines : dict
+        Preprocessing data for grid lines, containing lifetimes, stock time
+        series, material intensities, the electricity knowledge graph, and a
+        flexible unit placeholder.
+    prep_data_additions : dict
+        Preprocessing data for grid additions (transformers and substations),
+        structured analogously to `prep_data_lines`.
+    """    
+
     path_external_data_standard = Path(path_base,  "electricity", "standard_data")
     path_external_data_scenario = Path(path_base,  "electricity", scenario)
     
