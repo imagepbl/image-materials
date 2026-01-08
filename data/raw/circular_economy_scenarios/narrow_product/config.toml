@@ -93,6 +93,25 @@ target_year = 2060
 # possibilities for implementation rate are: linear, immediate, s-curve
 implementation_rate = 'linear'
 
+[vehicles.passenger]
+kilometers = -25
+
+[vehicles.mileage]
+"Midi Buses" = 10
+"Regular Buses" = 10
+"Trains" = 10
+"High Speed Trains" = 10
+"Freight Trains" = 10
+"Bikes" = 10
+"Light Commercial Vehicles" = 10
+"Inland Ships" = 10
+
+[vehicles.region_mileage]
+"Cars" = 20
+
+[vehicles.freight]
+kilometers = -13
+
 [vehicles.non-road.weight_change_pc]
 'Passenger Planes' = -4.2
 'Freight Planes' = -4.2
