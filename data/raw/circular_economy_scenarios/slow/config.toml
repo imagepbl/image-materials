@@ -112,13 +112,13 @@ target_year = 2060
 implementation_rate = 'linear'
 
 [electricity.generation.lifetime_increase_percent]
-'solar PV centralized' = 32
-'solar PV roof' = 32
+'SPV' = 32
+'SPVR' = 32
 'CSP' = 10
-'wind onshore' = 20 
-'wind offshore' = 20
-'wave' = 0
-'hydropower' = 6 
+'WON' = 20 
+'WOFF' = 20
+'WAVE' = 0
+'HYD' = 6 
 
 [electricity.grid_add.lifetime_increase_percent]
 'auxiliary grid equipment' = 10 
