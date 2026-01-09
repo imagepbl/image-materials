@@ -134,15 +134,13 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
         floorspace_commercial.loc[{"Region": regions_mapped}] *= scaling_factors
         logging.debug("implemented 'base' for Commercial Buildings")
 
-    # Narrow scenario
-    if 'narrow' in circular_economy_config.keys():
-        buildings_config = circular_economy_config["narrow"]["buildings"]
+    # narrow_activity scenario
+    if 'narrow_activity' in circular_economy_config.keys():
+        base_year = circular_economy_config["narrow_activity"]["buildings"]["base_year"]
+        target_year = circular_economy_config["narrow_activity"]["buildings"]["target_year"]
 
-        base_year = buildings_config["base_year"]
-        target_year = buildings_config["target_year"]
-
-        commercial_scenario_settings = buildings_config['commercial']['m2_change_pc']
-        implementation_rate = buildings_config['implementation_rate']
+        commercial_scenario_settings = circular_economy_config['narrow_activity']["buildings"]['commercial']['m2_change_pc']
+        implementation_rate = circular_economy_config['narrow_activity']['buildings']['implementation_rate']
 
         commercial_scenario_settings_xr = xr.DataArray(
             list(commercial_scenario_settings.values()),
@@ -164,7 +162,7 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
                                                         target_year,
                                                         commercial_scenario_settings_xr_mapped,
                                                         implementation_rate)
-        logging.debug("implemented 'narrow' for Commercial Buildings")
+        logging.debug("implemented 'narrow_activity' for Commercial Buildings")
         # fix unit like this for now :TODO to improve
         floorspace_commercial = prism.Q_(floorspace_commercial, "m^2/person")
 
@@ -193,10 +191,10 @@ def circular_economy_measures_material_intensities_residential(
         xr_mat_res_intensities.rename({"Cohort": "Time"})
 
     # import parameters from config file
-    target_year = circular_economy_config['narrow']['buildings']['target_year']
-    base_year = circular_economy_config['narrow']['buildings']['base_year']
-    implementation_rate = circular_economy_config['narrow']['buildings']['implementation_rate']
-    mat_changes = circular_economy_config['narrow']['buildings']['material_intensity_change']
+    target_year = circular_economy_config['narrow_product']['buildings']['target_year']
+    base_year = circular_economy_config['narrow_product']['buildings']['base_year']
+    implementation_rate = circular_economy_config['narrow_product']['buildings']['implementation_rate']
+    mat_changes = circular_economy_config['narrow_product']['buildings']['material_intensity_change']
 
     region_knowledge_graph = create_region_graph()
     model_regions = list(xr_mat_res_intensities.coords["Region"].values)
@@ -233,7 +231,7 @@ def circular_economy_measures_material_intensities_residential(
     if "Time" in xr_mat_res_intensities.dims:
         xr_mat_res_intensities = xr_mat_res_intensities.rename({"Time": "Cohort"})
 
-    logging.debug("implemented 'narrow' for Residential Buildings (lightweighting)")
+    logging.debug("implemented 'narrow_product' for Residential Buildings (lightweighting)")
     return xr_mat_res_intensities
 
 
@@ -261,10 +259,10 @@ def circular_economy_measures_material_intensities_commercial(xr_mat_comm_intens
     xr_mat = (xr_mat_comm_intensities.rename({"Cohort": "Time"})
               if "Cohort" in xr_mat_comm_intensities.dims else xr_mat_comm_intensities)
 
-    base_year = circular_economy_config['narrow']['buildings']['base_year']
-    target_year = circular_economy_config['narrow']['buildings']['target_year']
-    implementation_rate = circular_economy_config['narrow']['buildings']['implementation_rate']
-    mat_changes = circular_economy_config['narrow']['buildings']['material_intensity_change']
+    base_year = circular_economy_config['narrow_product']['buildings']['base_year']
+    target_year = circular_economy_config['narrow_product']['buildings']['target_year']
+    implementation_rate = circular_economy_config['narrow_product']['buildings']['implementation_rate']
+    mat_changes = circular_economy_config['narrow_product']['buildings']['material_intensity_change']
 
     region_graph = create_region_graph()
     materials_order = list(xr_mat.coords["material"].values)
@@ -307,5 +305,5 @@ def circular_economy_measures_material_intensities_commercial(xr_mat_comm_intens
     xr_mat_comm_intensities = (xr_mat_updated.rename({"Time": "Cohort"})
                                if "Time" in xr_mat_updated.dims else xr_mat_updated)
 
-    logging.debug("implemented 'narrow' for Commercial Buildings (lightweighting)")
+    logging.debug("implemented 'narrow_product' for Commercial Buildings (lightweighting)")
     return xr_mat_comm_intensities
