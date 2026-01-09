@@ -192,7 +192,7 @@ def circular_economy_measures_material_intensities_residential(
     model_regions = list(xr_mat_res_intensities.coords["Region"].values)
     materials_all = set(xr_mat_res_intensities.coords["material"].values)
 
-    for mat in ("Steel", "Concrete", "Aluminium"):
+    for mat in ("steel", "concrete", "aluminium"):
         if mat not in mat_changes or mat not in materials_all:
             continue
 
