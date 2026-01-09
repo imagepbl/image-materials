@@ -4,15 +4,21 @@ import numpy as np
 from pathlib import Path
 import pint
 import xarray as xr
-from typing import Optional
-
-
 
 import prism
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
 from imagematerials.concepts import create_electricity_graph, create_region_graph
-from imagematerials.electricity.utils import MNLogit, stock_tail, create_prep_data, interpolate_xr, add_historic_stock, calculate_grid_growth, calculate_fraction_underground
+from imagematerials.electricity.utils import (
+    MNLogit, 
+    stock_tail, 
+    create_prep_data, 
+    interpolate_xr, 
+    add_historic_stock, 
+    calculate_grid_growth, 
+    calculate_fraction_underground, 
+    apply_lightweighting_to_elc
+)
 
 from imagematerials.constants import IMAGE_REGIONS
 
@@ -54,8 +60,6 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
     
     # material compositions of electricity generation tecnologies (g/MW)
     gcap_materials_data = pd.read_csv(path_external_data_scenario / 'composition_generation.csv',index_col=[0,1]).transpose()
-    sel = gcap_materials_data.loc[:, [(2020, "Solar PV"), (2050, "Solar PV")]]
-    print("gcap_materials_data:", sel)
 
     # 2. IMAGE/TIMER files -----------------------------------------
     # Generation capacity (stock demand per generation technology) in MW peak capacity
@@ -86,7 +90,7 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
             "Cohort": times,
             "Type": [str(r) for r in types]
         },
-        name="Lifetime"
+        name="GenerationLifetime"
     )
     gcap_lifetime_xr = prism.Q_(gcap_lifetime_xr, "year")
     gcap_lifetime_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_lifetime_xr, output_coords=EPG_TECHNOLOGIES, dim="Type") # convert technology names to the standard names from TIMER
@@ -101,13 +105,6 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
     materials = gcap_materials_data.index
     # Convert to 3D array: (Material, Year, Tech)
     data_array = gcap_materials_data.to_numpy().reshape(len(materials),len(years), len(techs))
-    # data_array = gcap_materials_data.to_numpy().reshape(len(years), len(techs), len(materials))
-    # data_array = (
-    #     gcap_materials_data
-    #     .unstack(level=1)          # material × year × tech
-    #     .values
-    #     .transpose(1, 2, 0)        # → year, tech, material
-    # )
     # Build xarray DataArray
     gcap_materials_xr = xr.DataArray(
         data_array,
@@ -117,19 +114,11 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
             'Cohort': years,
             'Type': techs,
         },
-        name='MaterialIntensities'
+        name='GenerationMaterialIntensities'
     )
     gcap_materials_xr = prism.Q_(gcap_materials_xr, "g/MW")
     gcap_materials_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_materials_xr, output_coords=EPG_TECHNOLOGIES, dim="Type")
     gcap_materials_xr = gcap_materials_xr.assign_coords(Type=np.array(gcap_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
-
-    print("gcap_materials_xr:",
-        gcap_materials_xr.sel(
-            Cohort=[2020, 2050],
-            Type="SPV"
-        )
-    )
-
 
     # Gcap ------
     gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
@@ -165,30 +154,6 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
     gcap_lifetime_xr_interp.loc[dict(DistributionParams="stdev")] = gcap_lifetime_xr_interp.loc[dict(DistributionParams="mean")] * STD_LIFETIMES_ELECTR
     gcap_materials_xr_interp = interpolate_xr(gcap_materials_xr, YEAR_FIRST_GRID, year_out)
 
-    import matplotlib.pyplot as plt
-    xsel = gcap_materials_xr_interp.copy().sel(Cohort=slice(2000, 2080))
-    xsel2 = gcap_materials_xr.copy().sel(Cohort=slice(2000, 2080))
-    fig, ax = plt.subplots()
-    materials = ["steel", "aluminium"]
-    techs = ["SPV", "WON"]
-    for material in materials:
-        for tech in techs:
-            ax.scatter(
-                xsel.Cohort,
-                xsel.loc[dict(material=material, Type=tech)],
-                label=f"{material} - {tech}"
-            )
-            ax.scatter(
-                xsel2.Cohort,
-                xsel2.loc[dict(material=material, Type=tech)],
-                label=f"{material} - {tech}",
-                linestyle='--'
-            )
-    ax.set_xlabel("Year")
-    ax.set_ylabel("Material Intensity (g/MW)")
-    ax.legend()
-    plt.show()
-
     # The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
     gcap_lifetime_xr_interp = convert_lifetime(gcap_lifetime_xr_interp)
 
@@ -198,113 +163,6 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
 
     ###########################################################################################################
     # CE measures #
-
-    def apply_lightweighting_to_elc(arr: xr.DataArray, base_year: int, target_year: int, change: dict,
-                    implementation_rate: str, data_type: Optional[str]=None, steepness: float=0.5) -> xr.DataArray:
-        """ Applies a time-based change to values in a Xarray between a base and target year using a specified implementation method.
-
-        Parameters
-        ----------
-        arr
-            A time-indexed Xarray containing mode-specific values, such as lifetime or mileage.
-        base_year
-            The starting year for the change.
-        target_year
-            The year by which the full change should be achieved.
-        change
-            A dictionary mapping modes to percentage increases (e.g., {'Cars': 20} for +20%).
-        implementation_rate
-            The implementation method; one of 'linear', 'immediate', or 's-curve'.
-        data_type
-            Indicates what kind of data is being modified; one of 'lifetime' or 'mileages'.
-        steepness
-            Steepness parameter for the 's-curve' implementation; default is 0.5.
-
-        Returns
-        -------
-            A new Xarray with updated values for each year between base_year and target_year, and interpolated values where necessary.
-
-        Raises
-        ------
-        ValueError
-            If the implementation method is unsupported or if the specified column is not found in the DataFrame.
-
-        Notes
-        -----
-        For verhicles, this function has an implementation that works on Pandas dataframes.
-        Another version of this function is in general utils and works on Xarrays for regional data.
-        """
-
-        result = arr.copy()
-
-        if "Time" in arr.dims:
-            time_dim = "Time"
-        elif "Cohort" in arr.dims:
-            time_dim = "Cohort"
-        else:
-            raise ValueError("Input DataArray must have either 'Time' or 'Cohort' dimension.")
-        
-        if "Type" in arr.dims:
-            type_dim = "Type"
-        elif "SuperType" in arr.dims:
-            type_dim = "SuperType"
-        else:
-            raise ValueError("Input DataArray must have either 'Type' or 'SuperType' dimension.")
-
-        for type_stock, increase in change.items():
-            base_val = result.loc[{time_dim: target_year, type_dim: type_stock}]  # kept (not relied on)
-            if type_stock in result[type_dim]:
-                print("type_stock:", type_stock)
-                print("before", arr.loc[{type_dim: type_stock}])
-                if implementation_rate == 'linear':
-                    # ramp progress: 0 at base_year, 1 at target_year, held at 1 after
-                    span = max(1, target_year - base_year)
-                    # apply to each year explicitly to preserve structure
-                    for year in range(base_year + 1, target_year + 1):
-                        progress = (year - base_year) / span
-                        # print(result.loc[{time_dim: year, type_dim: type_stock}])
-                        # print(arr.loc[{time_dim: year, type_dim: type_stock}] * (1 + (increase / 100.0) * progress))
-                        result.loc[{time_dim: year, type_dim: type_stock}] = (
-                            arr.loc[{time_dim: year, type_dim: type_stock}] * (1 + (increase / 100.0) * progress)
-                        )
-                    # after target_year, full effect but still relative to same-year baseline
-                    result.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] = (
-                        arr.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] * (1 + increase / 100.0)
-                    )
-
-                    print("after", result.loc[{type_dim: type_stock}])
-
-                elif implementation_rate == 'immediate':
-                    # unchanged up to base_year; full step from base_year+1 onward, relative to same-year baseline
-                    result.loc[{time_dim: slice(None, base_year), type_dim: type_stock}] = \
-                        arr.loc[{time_dim: slice(None, base_year), type_dim: type_stock}]
-                    result.loc[{time_dim: slice(base_year + 1, None), type_dim: type_stock}] = \
-                        arr.loc[{time_dim: slice(base_year + 1, None), type_dim: type_stock}] * (1 + increase / 100.0)
-
-                elif implementation_rate == 's-curve':
-                    years = list(range(base_year, target_year + 1))
-                    mid_year = (base_year + target_year) / 2
-                    # normalize logistic so progress(base)=0 and progress(target)=1
-                    s0 = 1.0 / (1.0 + np.exp(-steepness * (base_year - mid_year)))
-                    s1 = 1.0 / (1.0 + np.exp(-steepness * (target_year - mid_year)))
-                    for year in years:
-                        s = 1.0 / (1.0 + np.exp(-steepness * (year - mid_year)))
-                        progress = np.clip((s - s0) / (s1 - s0), 0.0, 1.0)
-                        result.loc[{time_dim: year, type_dim: type_stock}] = (
-                            arr.loc[{time_dim: year, type_dim: type_stock}] * (1 + (increase / 100.0) * progress)
-                        )
-                    # after target_year, full effect relative to same-year baseline
-                    result.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] = (
-                        arr.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] * (1 + increase / 100.0)
-                    )
-                else: 
-                    raise ValueError(f"Unknown implementation method: '{implementation_rate}'. "
-                                    "Supported methods are 'immediate', 'linear', and 's-curve'.")
-            else:
-                raise ValueError(f"{type_stock} not found in DataArray.")
-        return result.interpolate_na(time_dim, method="linear") #cubic
-
-
 
     # Apply lightweighting in narrow scenario
     if circular_economy_config is not None:
@@ -317,41 +175,14 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
 
             gen_weight_change_pc = circular_economy_config[ce_scen]['electricity']['generation']['weight_change_pc']
 
-            print(target_year, base_year, implementation_rate)
-            print("gen_weight_change_pc:", gen_weight_change_pc)
-            print("MI before apply_ce_scenario_change:", gcap_materials_xr_interp)
-            x = apply_lightweighting_to_elc(
+            gcap_materials_xr_interp = apply_lightweighting_to_elc(
                 gcap_materials_xr_interp,
                 base_year=base_year,
                 target_year=target_year,
                 change=gen_weight_change_pc,
                 implementation_rate=implementation_rate
             )
-            print("MI after apply_ce_scenario_change:", x)
 
-            import matplotlib.pyplot as plt
-            xsel = gcap_materials_xr_interp.copy().sel(Cohort=slice(2000, 2080))
-            xsel2 = x.copy().sel(Cohort=slice(2000, 2080))
-            fig, ax = plt.subplots()
-            materials = ["steel", "aluminium"]
-            techs = ["SPV", "WON"]
-            for material in materials:
-                for tech in techs:
-                    ax.plot(
-                        xsel.Cohort,
-                        xsel.loc[dict(material=material, Type=tech)],
-                        label=f"{material} - {tech}"
-                    )
-                    ax.plot(
-                        xsel2.Cohort,
-                        xsel2.loc[dict(material=material, Type=tech)],
-                        label=f"{material} - {tech}",
-                        linestyle='--'
-                    )
-            ax.set_xlabel("Year")
-            ax.set_ylabel("Material Intensity (g/MW)")
-            ax.legend()
-            plt.show()
 
         # if "slow" in circular_economy_config.keys():
         #     ce_scen = "slow"
@@ -548,7 +379,7 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
             "Cohort": times.astype(int),
             "Type": [str(r) for r in tech_types]
         },
-        name="Lifetime"
+        name="GridLifetime"
     )
     grid_lifetime = prism.Q_(grid_lifetime, "year")
 
@@ -561,7 +392,7 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
     materials_lines['Type'] = materials_lines['Type'].str.split(n=1).apply(lambda x: f"{x[0]} - Lines - {x[1]}")
     # convert to xarray: material columns become a new 'material' dimension
     materials_lines = materials_lines.set_index(['Cohort', 'Type']).to_xarray()
-    materials_lines = materials_lines.to_array(dim='material').rename("GridMaterialsLines")
+    materials_lines = materials_lines.to_array(dim='material').rename("GridMaterialIntensitiesLines")
     materials_lines = materials_lines.transpose('Cohort', 'Type', 'material') # reorder dimensions
     materials_lines = prism.Q_(materials_lines, "kg/km")
     materials_lines = materials_lines.reindex(Type=grid_lines.Type)  # ensure same order of types as in stock dataarray
@@ -572,7 +403,7 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
     materials_additions['Type'] = materials_additions['Type'].str.split(n=1).apply(lambda x: f"{x[0]} - {x[1]}")
     # convert to xarray: material columns become a new 'material' dimension
     materials_additions = materials_additions.set_index(['Cohort', 'Type']).to_xarray()
-    materials_additions = materials_additions.to_array(dim='material').rename("GridMaterialsAdditions")
+    materials_additions = materials_additions.to_array(dim='material').rename("GridMaterialIntensitiesAdditions")
     materials_additions = materials_additions.transpose('Cohort', 'Type', 'material') # reorder dimensions
     materials_additions = prism.Q_(materials_additions, "kg/count")
     materials_additions = materials_additions.reindex(Type=grid_additions.Type)  # ensure same order of types as in stock dataarray
@@ -689,14 +520,41 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
     grid_additions_interp   = add_historic_stock(grid_additions, YEAR_FIRST_GRID)
 
 
-    ###########################################################################################################
-    # Prep_data File #
-
     # calculate standard deviation as a fixed fraction of the mean lifetime
     grid_lifetime_interp.loc[{"DistributionParams": "stdev"}] = grid_lifetime_interp.sel({"DistributionParams": "mean"}) * STD_LIFETIMES_ELECTR
     # the lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
     grid_lifetime_interp_conv = convert_lifetime(grid_lifetime_interp)
 
+
+    ###########################################################################################################
+    # CE measures #
+
+    # Apply lightweighting in narrow scenario
+    if circular_economy_config is not None:
+        if "narrow" in circular_economy_config.keys():
+            ce_scen = "narrow"
+
+            target_year         = circular_economy_config[ce_scen]['electricity']['target_year']
+            base_year           = circular_economy_config[ce_scen]['electricity']['base_year']
+            implementation_rate = circular_economy_config[ce_scen]['electricity']['implementation_rate']
+
+            gen_weight_change_pc = circular_economy_config[ce_scen]['electricity']['grid_add']['weight_change_pc']
+
+            materials_additions_interp = apply_lightweighting_to_elc(
+                materials_additions_interp,
+                base_year=base_year,
+                target_year=target_year,
+                change=gen_weight_change_pc,
+                implementation_rate=implementation_rate,
+                data_type = "electricity grid"
+            )
+
+            
+
+
+
+    ###########################################################################################################
+    # Prep_data File #
 
     # bring preprocessing data into a generic format for the model
 

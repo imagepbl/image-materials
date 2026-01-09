@@ -201,4 +201,5 @@ implementation_rate = 'linear'
 'HYD' = 0
 
 [electricity.grid_add.weight_change_pc]
-'auxiliary grid equipment' = -10
+'Transformers' = -10
+'Substations' = -10

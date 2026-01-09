@@ -121,7 +121,8 @@ implementation_rate = 'linear'
 'HYD' = 6 
 
 [electricity.grid_add.lifetime_increase_percent]
-'auxiliary grid equipment' = 10 
+'Transformers' = 10 
+'Substations' = 10 
 
 [electricity.eol_reuse_rate_2060]
 steel = 0.238
