@@ -17,7 +17,7 @@ from imagematerials.electricity.utils import (
     add_historic_stock, 
     calculate_grid_growth, 
     calculate_fraction_underground, 
-    apply_lightweighting_to_elc
+    apply_ce_measures_to_elc
 )
 
 from imagematerials.constants import IMAGE_REGIONS
@@ -154,9 +154,6 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
     gcap_lifetime_xr_interp.loc[dict(DistributionParams="stdev")] = gcap_lifetime_xr_interp.loc[dict(DistributionParams="mean")] * STD_LIFETIMES_ELECTR
     gcap_materials_xr_interp = interpolate_xr(gcap_materials_xr, YEAR_FIRST_GRID, year_out)
 
-    # The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
-    gcap_lifetime_xr_interp = convert_lifetime(gcap_lifetime_xr_interp)
-
     # TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
     gcap_xr_interp = add_historic_stock(gcap_xr, YEAR_FIRST_GRID)
 
@@ -164,40 +161,47 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
     ###########################################################################################################
     # CE measures #
 
-    # Apply lightweighting in narrow scenario
+    # Depending on circular economy scenario, apply different measures
     if circular_economy_config is not None:
         if "narrow" in circular_economy_config.keys():
             ce_scen = "narrow"
-
-            target_year         = circular_economy_config[ce_scen]['electricity']['target_year']
-            base_year           = circular_economy_config[ce_scen]['electricity']['base_year']
-            implementation_rate = circular_economy_config[ce_scen]['electricity']['implementation_rate']
-
+            target_year          = circular_economy_config[ce_scen]['electricity']['target_year']
+            base_year            = circular_economy_config[ce_scen]['electricity']['base_year']
+            implementation_rate  = circular_economy_config[ce_scen]['electricity']['implementation_rate']
             gen_weight_change_pc = circular_economy_config[ce_scen]['electricity']['generation']['weight_change_pc']
 
-            gcap_materials_xr_interp = apply_lightweighting_to_elc(
+            gcap_materials_xr_interp = apply_ce_measures_to_elc(
                 gcap_materials_xr_interp,
-                base_year=base_year,
-                target_year=target_year,
-                change=gen_weight_change_pc,
-                implementation_rate=implementation_rate
+                base_year           = base_year,
+                target_year         = target_year,
+                change              = gen_weight_change_pc,
+                implementation_rate = implementation_rate
             )
+            print("narrow|lightweighting applied to ", gcap_materials_xr_interp.name)
 
+        if "slow" in circular_economy_config.keys():
+            ce_scen = "slow"
+            target_year          = circular_economy_config[ce_scen]['electricity']['target_year']
+            base_year            = circular_economy_config[ce_scen]['electricity']['base_year']
+            implementation_rate  = circular_economy_config[ce_scen]['electricity']['implementation_rate']
+            gen_lifetime_change_pc = circular_economy_config[ce_scen]['electricity']['generation']['lifetime_increase_percent']
 
-        # if "slow" in circular_economy_config.keys():
-        #     ce_scen = "slow"
-        # # if "resource_efficient" in circular_economy_config.keys():
-        # #     ce_scen = "resource_efficient"
+            gcap_lifetime_xr_interp = apply_ce_measures_to_elc(
+                gcap_lifetime_xr_interp,
+                base_year           = base_year,
+                target_year         = target_year,
+                change              = gen_lifetime_change_pc,
+                implementation_rate = implementation_rate,
+                data_type           = "lifetime"
+            )
+            print("slow|lifetime increase applied to ", gcap_lifetime_xr_interp.name)
         
-
-
-        # vehicle_weights_simple = scenario_change(
-        #     vehicle_weights_simple, base_year, target_year, 
-        #     non_road_weight_change_pc, implementation_rate)
-
 
     ###########################################################################################################
     # Prep_data File #
+
+    # The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
+    gcap_lifetime_xr_interp = convert_lifetime(gcap_lifetime_xr_interp)
     
     # bring preprocessing data into a generic format for the model
     prep_data = {}
@@ -522,14 +526,12 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
 
     # calculate standard deviation as a fixed fraction of the mean lifetime
     grid_lifetime_interp.loc[{"DistributionParams": "stdev"}] = grid_lifetime_interp.sel({"DistributionParams": "mean"}) * STD_LIFETIMES_ELECTR
-    # the lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
-    grid_lifetime_interp_conv = convert_lifetime(grid_lifetime_interp)
 
 
     ###########################################################################################################
     # CE measures #
 
-    # Apply lightweighting in narrow scenario
+    # Depending on circular economy scenario, apply different measures
     if circular_economy_config is not None:
         if "narrow" in circular_economy_config.keys():
             ce_scen = "narrow"
@@ -540,24 +542,43 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
 
             gen_weight_change_pc = circular_economy_config[ce_scen]['electricity']['grid_add']['weight_change_pc']
 
-            materials_additions_interp = apply_lightweighting_to_elc(
+            materials_additions_interp = apply_ce_measures_to_elc(
                 materials_additions_interp,
                 base_year=base_year,
                 target_year=target_year,
                 change=gen_weight_change_pc,
                 implementation_rate=implementation_rate,
-                data_type = "electricity grid"
+                data_sector = "electricity grid"
             )
+            print("narrow|lightweighting applied to ", materials_additions_interp.name)
 
-            
 
+        if "slow" in circular_economy_config.keys():
+            ce_scen = "slow"
+            target_year          = circular_economy_config[ce_scen]['electricity']['target_year']
+            base_year            = circular_economy_config[ce_scen]['electricity']['base_year']
+            implementation_rate  = circular_economy_config[ce_scen]['electricity']['implementation_rate']
+            gen_lifetime_change_pc = circular_economy_config[ce_scen]['electricity']['grid_add']['lifetime_increase_percent']
+
+            x = apply_ce_measures_to_elc(
+                grid_lifetime_interp,
+                base_year           = base_year,
+                target_year         = target_year,
+                change              = gen_lifetime_change_pc,
+                implementation_rate = implementation_rate,
+                data_sector         = "electricity grid",
+                data_type           = "lifetime"
+            )
+            print("slow|lifetime increase applied to ", grid_lifetime_interp.name)           
 
 
     ###########################################################################################################
     # Prep_data File #
 
-    # bring preprocessing data into a generic format for the model
+    # the lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
+    grid_lifetime_interp_conv = convert_lifetime(grid_lifetime_interp)
 
+    # bring preprocessing data into a generic format for the model
     prep_data_lines = {}
     prep_data_lines["lifetimes"]            = grid_lifetime_interp_conv
     prep_data_lines["stocks"]               = grid_lines_interp

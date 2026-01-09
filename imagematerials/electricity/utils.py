@@ -1,4 +1,5 @@
 
+from statistics import mode
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -380,9 +381,9 @@ def compare_da(path, da_new): # for testing xarray objects
 #####################################################################################################
 
 
-def apply_lightweighting_to_elc(arr: xr.DataArray, base_year: int, target_year: int, change: dict,
-                    implementation_rate: str, data_type: Optional[str]=None, steepness: float=0.5) -> xr.DataArray:
-        """ Apply lightweighting CE measures to an xarray DataArray over time for (technology) types.
+def apply_ce_measures_to_elc(arr: xr.DataArray, base_year: int, target_year: int, change: dict,
+                    implementation_rate: str, data_sector: Optional[str]=None, data_type: Optional[str]=None, steepness: float=0.5) -> xr.DataArray:
+        """ Apply CE measures to an xarray DataArray over time for (technology) types.
 
         The function modifies values by applying a percentage change according to a chosen
         implementation pathway (immediate, linear, or s-curve) between a base year and a target year.
@@ -402,16 +403,18 @@ def apply_lightweighting_to_elc(arr: xr.DataArray, base_year: int, target_year: 
             to apply (e.g., {\"Solar PV\": -10} for a 10% reduction).
         implementation_rate : str
             Implementation pathway. One of {'immediate', 'linear', 's-curve'}.
+        data_sector : str, optional
+            To which sector data belong (e.g., 'electricity grid').
         data_type : str, optional
-            Type of data being processed (e.g., 'electricity grid').
+            Type of data being processed. Needed for the case of modifying lifetime distributions.
+            Acccepted value is 'lifetime'.
         steepness : float, default 0.5
             Steepness parameter for the logistic function when using the 's-curve' implementation.
 
         Returns
         -------
         xr.DataArray
-            A new DataArray with lightweighting applied and missing values interpolated
-            linearly along the time dimension.
+            A new DataArray with ce measure applied along the time dimension.
 
         Raises
         ------
@@ -429,6 +432,7 @@ def apply_lightweighting_to_elc(arr: xr.DataArray, base_year: int, target_year: 
 
         result = arr.copy()
 
+        # Determine time and type dimensions (to support different types of DataArrays)
         if "Time" in arr.dims:
             time_dim = "Time"
         elif "Cohort" in arr.dims:
@@ -443,10 +447,19 @@ def apply_lightweighting_to_elc(arr: xr.DataArray, base_year: int, target_year: 
         else:
             raise ValueError("Input DataArray must have either 'Type' or 'SuperType' dimension.")
         
-        if data_type == 'electricity grid':
+        # If CE measures are only specified for aggregated grid items, expand to all relevant types
+        if data_sector == 'electricity grid':
             change = expand_change_dict_for_grid_items(change)
-        elif data_type is not None:
-            raise ValueError(f"Unknown data_type: '{data_type}'. Supported types are 'electricity grid' or None.")
+        elif data_sector is not None:
+            raise ValueError(f"Unknown data_sector: '{data_sector}'. Supported types are 'electricity grid' or None.")
+        
+        # If data_type is 'lifetime', we need to determine which distribution parameter to modify
+        if data_type == "lifetime":
+            dist_param = 'mean'
+        elif data_type is None:
+            pass
+        else:
+            raise ValueError(f"Unknown data_type: '{data_type}'. Supported types are 'lifetime' or None.")
 
         for type_stock, increase in change.items():
             if type_stock in result[type_dim]:
@@ -456,20 +469,36 @@ def apply_lightweighting_to_elc(arr: xr.DataArray, base_year: int, target_year: 
                     # apply to each year explicitly to preserve structure
                     for year in range(base_year + 1, target_year + 1):
                         progress = (year - base_year) / span
-                        result.loc[{time_dim: year, type_dim: type_stock}] = (
-                            arr.loc[{time_dim: year, type_dim: type_stock}] * (1 + ((increase / 100.0) * progress))
-                        )
+                        if data_type == "lifetime":
+                            result.loc[{time_dim: year, type_dim: type_stock, "DistributionParams": dist_param}] = (
+                                arr.loc[{time_dim: year, type_dim: type_stock, "DistributionParams": dist_param}] * (1 + ((increase / 100.0) * progress))
+                            )
+                        else:
+                            result.loc[{time_dim: year, type_dim: type_stock}] = (
+                                arr.loc[{time_dim: year, type_dim: type_stock}] * (1 + ((increase / 100.0) * progress))
+                            )
                     # after target_year, full effect but still relative to same-year baseline
-                    result.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] = (
-                        arr.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] * ((1 + increase / 100.0))
-                    )
+                    if data_type == "lifetime":
+                        result.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock, "DistributionParams": dist_param}] = (
+                            arr.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock, "DistributionParams": dist_param}] * ((1 + increase / 100.0))
+                        )
+                    else:
+                        result.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] = (
+                            arr.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] * ((1 + increase / 100.0))
+                        )
 
                 elif implementation_rate == 'immediate':
                     # unchanged up to base_year; full step from base_year+1 onward, relative to same-year baseline
-                    result.loc[{time_dim: slice(None, base_year), type_dim: type_stock}] = \
-                        arr.loc[{time_dim: slice(None, base_year), type_dim: type_stock}]
-                    result.loc[{time_dim: slice(base_year + 1, None), type_dim: type_stock}] = \
-                        arr.loc[{time_dim: slice(base_year + 1, None), type_dim: type_stock}] * (1 + increase / 100.0)
+                    if data_type == "lifetime":
+                        result.loc[{time_dim: slice(None, base_year), type_dim: type_stock, "DistributionParams": dist_param}] = \
+                            arr.loc[{time_dim: slice(None, base_year), type_dim: type_stock, "DistributionParams": dist_param}]
+                        result.loc[{time_dim: slice(base_year + 1, None), type_dim: type_stock, "DistributionParams": dist_param}] = \
+                            arr.loc[{time_dim: slice(base_year + 1, None), type_dim: type_stock, "DistributionParams": dist_param}] * (1 + increase / 100.0)
+                    else:
+                        result.loc[{time_dim: slice(None, base_year), type_dim: type_stock}] = \
+                            arr.loc[{time_dim: slice(None, base_year), type_dim: type_stock}]
+                        result.loc[{time_dim: slice(base_year + 1, None), type_dim: type_stock}] = \
+                            arr.loc[{time_dim: slice(base_year + 1, None), type_dim: type_stock}] * (1 + increase / 100.0)
 
                 elif implementation_rate == 's-curve':
                     years = list(range(base_year, target_year + 1))
@@ -480,13 +509,23 @@ def apply_lightweighting_to_elc(arr: xr.DataArray, base_year: int, target_year: 
                     for year in years:
                         s = 1.0 / (1.0 + np.exp(-steepness * (year - mid_year)))
                         progress = np.clip((s - s0) / (s1 - s0), 0.0, 1.0)
-                        result.loc[{time_dim: year, type_dim: type_stock}] = (
-                            arr.loc[{time_dim: year, type_dim: type_stock}] * (1 + (increase / 100.0) * progress)
-                        )
+                        if data_type == "lifetime":
+                            result.loc[{time_dim: year, type_dim: type_stock, "DistributionParams": dist_param}] = (
+                                arr.loc[{time_dim: year, type_dim: type_stock, "DistributionParams": dist_param}] * (1 + (increase / 100.0) * progress)
+                            )
+                        else:
+                            result.loc[{time_dim: year, type_dim: type_stock}] = (
+                                arr.loc[{time_dim: year, type_dim: type_stock}] * (1 + (increase / 100.0) * progress)
+                            )
                     # after target_year, full effect relative to same-year baseline
-                    result.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] = (
-                        arr.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] * (1 + increase / 100.0)
-                    )
+                    if data_type == "lifetime":
+                        result.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock, "DistributionParams": dist_param}] = (
+                            arr.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock, "DistributionParams": dist_param}] * (1 + increase / 100.0)
+                        )
+                    else:
+                        result.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] = (
+                            arr.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] * (1 + increase / 100.0)
+                        )
                 else: 
                     raise ValueError(f"Unknown implementation method: '{implementation_rate}'. "
                                     "Supported methods are 'immediate', 'linear', and 's-curve'.")
@@ -500,7 +539,7 @@ def apply_lightweighting_to_elc(arr: xr.DataArray, base_year: int, target_year: 
                 f"NaNs present in years: {years_with_nans.values}",
                 RuntimeWarning
             )
-        print("narrow-lightweighting applied to ", result.name)
+
         return result
 
 def expand_change_dict_for_grid_items(dict_change: dict) -> dict:
