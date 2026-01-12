@@ -153,29 +153,78 @@ def interpolate_xr(data_array, t_start, t_end, interp_method = 'linear'):
 
     return da_interp
 
+def MNLogit(data, logitpar):
+    """ Multinomial Logit function to calculate market shares from technology prices.
 
-def MNLogit(df, logitpar):
-    '''
-    Multinomial Logit function, assumes input of an ordered dataframe with rows as years and columns as technologies, values as prices. 
-    
-    logitpar: calibrated Logit parameter (usually a nagetive number between 0 and 1)
+    Works with:
+      - pandas.DataFrame (index = years, columns = technologies)
+      - xarray.DataArray (dims: Cohort, Type)
+
+    Returns the same type as the input, containing market shares.
+
+    Note:
+    logitpar: calibrated Logit parameter (usually a negative number between 0 and 1)
     - represents the price sensitivity or substitution elasticity between different technologies.
     -> how responsive consumers/markets are to price differences between technologies.
     - More negative values (e.g., -2, -5) = higher price sensitivity -> Small price differences lead to large changes in market share = Technologies are highly substitutable
     - Less negative values (e.g., -0.1, -0.5) = lower price sensitivity -> Price differences have less impact on market share = Technologies are less substitutable (perhaps due to quality differences, switching costs, etc.)
 
-    - mathematically: exp(logitpar * price) means: When logitpar is negative and prices are positive, higher prices get exponentially smaller weights
+    - mathematically: exp(logitpar * price) means: when logitpar is negative and prices are positive, higher prices get exponentially smaller weights
+    """
+
+    # ---------- xarray ----------
+    if isinstance(data, xr.DataArray):
+        
+        # strip physical units (required for exp)
+        values = data.pint.dequantify() if hasattr(data, "pint") else data
+
+        weights = np.exp(logitpar * values)
+
+        # normalize over technologies
+        shares = weights / weights.sum(dim="Type")
+
+        # attach new unit
+        if hasattr(data, "pint"):
+            shares = prism.Q_(shares, prism.Unit('shares'))
+
+        return shares
+
+    # ---------- pandas ----------
+    elif isinstance(data, pd.DataFrame):
+        weights = np.exp(logitpar * data)
+
+        shares = weights.div(weights.sum(axis=1), axis=0)
+
+        return shares
+
+    else:
+        raise TypeError("Input must be pandas.DataFrame or xarray.DataArray")
     
-    TODO: check: is this true?
-    '''
-    new_dataframe = pd.DataFrame(index=df.index, columns=df.columns)
-    for year in range(df.index[0],df.index[-1]+1): #from first to last year
-        yearsum = 0
-        for column in df.columns:
-            yearsum += math.exp(logitpar * df.loc[year,column]) # calculate the sum of the prices
-        for column in df.columns:
-            new_dataframe.loc[year,column] = math.exp(logitpar * df.loc[year,column])/yearsum
-    return new_dataframe    # the retuned dataframe contains the market shares
+def normalize_selected_techs(market_share, techs):
+    """ Select technologies and renormalize their market shares to sum to 1 per year.
+
+    Works with:
+    - xarray.DataArray (dimension: Type)
+    - pandas.DataFrame (columns: technologies)
+
+    Parameters
+    ----------
+    market_share : xarray.DataArray or pandas.DataFrame
+        Market shares by year and technology.
+    techs : list of str
+        Technologies to select and normalize.
+
+    Returns
+    -------
+    Same type as input
+        Normalized market shares of the selected technologies.
+    """
+    if isinstance(market_share, xr.DataArray):
+        sel = market_share.sel(Type=techs)
+        return sel / sel.sum(dim="Type")
+    else:  # pandas
+        sel = market_share[techs]
+        return sel.div(sel.sum(axis=1), axis=0)
 
 
 def create_prep_data(results_dict, conversion_table, unit_mapping):

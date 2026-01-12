@@ -24,8 +24,17 @@ from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_life
 from imagematerials.model import GenericMainModel, GenericStocks, SharesInflowStocks, Maintenance, GenericMaterials, MaterialIntensities
 from imagematerials.factory import ModelFactory, Sector
 from imagematerials.concepts import create_electricity_graph, create_region_graph, create_vehicle_graph
-from imagematerials.electricity.utils import MNLogit, stock_tail, create_prep_data, logistic, quadratic, interpolate_xr, add_historic_stock
 from imagematerials.vehicles.modelling_functions import interpolate
+from imagematerials.electricity.utils import (
+    MNLogit, 
+    create_prep_data, 
+    logistic, 
+    quadratic, 
+    interpolate_xr, 
+    add_historic_stock, 
+    normalize_selected_techs,
+)
+
 
 from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.vehicles.constants import (
@@ -100,7 +109,7 @@ storage_costs = pd.read_csv(path_external_data_standard / 'storage_cost.csv', in
 costs_correction = pd.read_csv(path_external_data_standard / 'storage_malus.csv', index_col=0).transpose()
 
 # assumptions on the long-term price decline after 2050. the fraction of the annual growth rate (determined based on 2018-2030) that will be applied after 2030, ranging from 0.25 to 1 - 0.25 means the price decline is not expected to continue strongly, while 1 means that the same (2018-2030) annual price decline is also applied between 2030 and 2050)
-costs_decline_longterm = pd.Series(pd.read_csv(path_external_data_standard / 'storage_ltdecline.csv',index_col=0,  header=None).transpose().iloc[0]) 
+cost_decline_longterm_correction = pd.Series(pd.read_csv(path_external_data_standard / 'storage_ltdecline.csv',index_col=0,  header=None).transpose().iloc[0]) 
 
 # INVERS energy density (note that the unit is kg/kWh, the invers of energy density: storage capacity - mass required to store one unit of energy —> more mass per energy = worse performance)
 # TODO: read in directly IRENA data?
@@ -174,9 +183,9 @@ xr_costs_correction = xr.DataArray(
 xr_costs_correction = prism.Q_(xr_costs_correction, "dimensionless")
 
 # 1.3 storage costs longterm decline factor
-techs = costs_decline_longterm.index.rename(None)
-data_array = costs_decline_longterm.to_numpy()
-xr_costs_decline_longterm = xr.DataArray(
+techs = cost_decline_longterm_correction.index.rename(None)
+data_array = cost_decline_longterm_correction.to_numpy()
+xr_cost_decline_longterm_correction = xr.DataArray(
     data_array,
     dims=('Type',),
     coords={
@@ -184,7 +193,7 @@ xr_costs_decline_longterm = xr.DataArray(
     },
     name='StorageCostsDeclineLongterm'
 )
-xr_costs_decline_longterm = prism.Q_(xr_costs_decline_longterm, "fraction")
+xr_cost_decline_longterm_correction = prism.Q_(xr_cost_decline_longterm_correction, "fraction")
 
 # 2. battery weigths: first some formatting and then conversion to xarray DataArray (see below)
 
@@ -259,7 +268,7 @@ xr_vhc_fraction_v2g = xr.DataArray(
         'Time': years,
         'Type': techs
     },
-    name='VehicleFractionV2g'
+    name='VehicleFractionV2G'
 )
 xr_vhc_fraction_v2g = prism.Q_(xr_vhc_fraction_v2g, "fraction")
 
@@ -286,27 +295,68 @@ xr_capacity_fraction_v2g = prism.Q_(xr_capacity_fraction_v2g, "fraction")
 
 # 1. Market Shares -----------------------------------------------------------------------------
 
-xr_storage_costs_interp     = interpolate_xr(xr_storage_costs, xr_storage_costs.Cohort.values[0], xr_storage_costs.Cohort.values[-1])
-xr_costs_correction_interp  = interpolate_xr(xr_costs_correction, xr_costs_correction.Cohort.values[0], xr_costs_correction.Cohort.values[-1])
+t_start = xr_storage_costs.Cohort.values[0]
+t_end   = xr_storage_costs.Cohort.values[-1]
+
+# interpolate from first to last vailable year within the data, then extend to  YEAR_START and 2050 (keep values constant before first and after last year)
+xr_storage_costs     = interpolate_xr(xr_storage_costs, YEAR_START, 2050)
+xr_costs_correction   = interpolate_xr(xr_costs_correction, YEAR_START, 2050)
 
 # determine the annual % decline of the costs based on the 2018-2030 data (original, before applying the malus)
-t_start = xr_storage_costs_interp.Cohort.values[0]
-t_end   = xr_storage_costs_interp.Cohort.values[-1]
-cost_decline = (((xr_storage_costs_interp.loc[t_start,:]-xr_storage_costs_interp.loc[t_end,:])/(t_end-t_start))/xr_storage_costs_interp.loc[t_start,:]).drop_vars('Cohort')
-decline_used = decline*costs_decline_longterm #TODO: what is happening here? Why?
-# costs_decline_longterm is a single number and should describe the long-term decline after 2030 relative to the 2018-2030 decline
+xr_cost_decline = (((xr_storage_costs.loc[t_start,:]-xr_storage_costs.loc[t_end,:])/(t_end-t_start))/xr_storage_costs.loc[t_start,:]).drop_vars('Cohort')
+xr_cost_decline_longterm = xr_cost_decline*xr_cost_decline_longterm_correction # cost decline after 2030 = cost decline 2018-2030 * correction factor
+# cost_decline_longterm_correction is a single number and should describe the long-term decline after 2030 relative to the 2018-2030 decline
 
 # storage_costs_new = storage_costs_interpol * costs_correction_interpol
-xr_storage_costs_cor = xr_storage_costs_interp * xr_costs_correction_interp
+xr_storage_costs_cor = xr_storage_costs * xr_costs_correction
 
-xr_storage_costs.sel(
-    Type=['Flywheel', 'Compressed Air']
-).plot.scatter(x='Cohort')
+# ---------- future development ----------
+# calculate the development from 2030 to 2050 (using annual price decline)
+# vectorized approach for "for t in range(t_end, 2050+1): ..."
+years_fwd = xr_storage_costs_cor.Cohort.where(
+    xr_storage_costs_cor.Cohort > t_end, drop=True
+)
+n_fwd = years_fwd - t_end
+factors_fwd = (1 - xr_cost_decline_longterm) ** n_fwd
 
-xr_storage_costs_i.sel(
-    Type=['Flywheel', 'Compressed Air']
-).plot.scatter(x='Cohort')
+xr_storage_costs_cor.loc[dict(Cohort=years_fwd)] = (
+    xr_storage_costs_cor.sel(Cohort=t_end) * factors_fwd
+)
 
+# ---------- past development ----------
+# for historic price development, assume 2x AVERAGE annual price decline on all technologies
+years_bwd = xr_storage_costs_cor.Cohort.where(
+    xr_storage_costs_cor.Cohort < t_start, drop=True
+)
+n_bwd = t_start - years_bwd
+factors_bwd = (1 + 2 * xr_cost_decline_longterm.mean()) ** n_bwd
+
+xr_storage_costs_cor.loc[dict(Cohort=years_bwd)] = (
+    xr_storage_costs_cor.sel(Cohort=t_start) * factors_bwd
+)
+# restore values for lead-acid (set to constant 2018 values) -> exception: so that lead-acid gets a relative price advantage from 1970-2018
+xr_storage_costs_cor.loc[dict(Cohort=years_bwd, Type="Deep-cycle Lead-Acid")] = (
+    xr_storage_costs_cor.sel(Cohort=t_start, Type="Deep-cycle Lead-Acid")
+)
+
+# plt.figure()
+# xr_storage_costs_cor.sel(
+#     Type=['Flywheel'] #, 'Compressed Air'
+# ).plot.scatter(x='Cohort', label='Flywheel', color='black')
+# xr_storage_costs_cor.sel(
+#     Type=['Deep-cycle Lead-Acid']
+# ).plot.scatter(x='Cohort', label='Deep-cycle Lead-Acid', color='red')
+# plt.legend()
+# plt.show()
+
+
+# market shares ---
+# use the storage price development in the logit model to get market shares
+storage_market_share = MNLogit(xr_storage_costs_cor, -0.2) #assumes input of an ordered dataframe with rows as years and columns as technologies, values as prices. Logitpar is the calibrated Logit parameter (usually a nagetive number between 0 and 1)
+
+# As not all storage technologies are suitable for EV & mobile applications, select only those technologies.
+# normalize the selection of EV battery technologies, so that total market share is 1 again (taking the relative share in the selected battery techs)
+market_share_EVs = normalize_selected_techs(storage_market_share, EV_BATTERIES) # TODO: this should be done differently as market shares of EV batteries probably differ from their market shares in total storage market
 
 
 # 2. Battery Weights ----------------------------------------------------------------
@@ -373,51 +423,51 @@ xr_energy_density_interp = interpolate_xr(xr_energy_density, YEAR_FIRST_GRID, YE
 
 # storage costs ---
 # determine the annual % decline of the costs based on the 2018-2030 data (original, before applying the malus)
-decline = ((storage_costs_interpol.loc[storage_start,:]-storage_costs_interpol.loc[storage_end,:])/(storage_end-storage_start))/storage_costs_interpol.loc[storage_start,:]
-decline_used = decline*costs_decline_longterm #TODO: what is happening here? Why?
-# costs_decline_longterm is a single number and should describe the long-term decline after 2030 relative to the 2018-2030 decline
+# decline = ((storage_costs_interpol.loc[storage_start,:]-storage_costs_interpol.loc[storage_end,:])/(storage_end-storage_start))/storage_costs_interpol.loc[storage_start,:]
+# decline_used = decline*costs_decline_longterm #TODO: what is happening here? Why?
+# # costs_decline_longterm is a single number and should describe the long-term decline after 2030 relative to the 2018-2030 decline
 
-storage_costs_new = storage_costs_interpol * costs_correction_interpol
-# calculate the development from 2030 to 2050 (using annual price decline)
-for year in range(storage_end+1,2050+1):
-    # print(year)
-    # storage_costs_new = storage_costs_new.append(pd.Series(storage_costs_new.loc[storage_costs_new.last_valid_index()]*(1-decline_used), name=year))
-    # storage_costs_new = pd.concat([storage_costs_new, pd.Series(storage_costs_new.loc[storage_costs_new.last_valid_index()] * (1 - decline_used), name=year)])
-    row = pd.DataFrame([storage_costs_new.loc[storage_costs_new.last_valid_index()] * (1 - decline_used)])
-    storage_costs_new.loc[year] = row.iloc[0]
-# for historic price development, assume 2x AVERAGE annual price decline on all technologies, except lead-acid (so that lead-acid gets a relative price advantage from 1970-2018)
-for year in reversed(range(YEAR_START,storage_start)):
-    # storage_costs_new = storage_costs_new.append(pd.Series(storage_costs_new.loc[storage_costs_new.first_valid_index()]*(1+(2*decline_used.mean())), name=year)).sort_index(axis=0)
-    row = pd.DataFrame([storage_costs_new.loc[storage_costs_new.first_valid_index()]*(1+(2*decline_used.mean()))])
-    storage_costs_new.loc[year] = row.iloc[0]
-    storage_costs_new.sort_index(axis=0, inplace=True) 
+# storage_costs_new = storage_costs_interpol * costs_correction_interpol
+# # calculate the development from 2030 to 2050 (using annual price decline)
+# for year in range(storage_end+1,2050+1):
+#     # print(year)
+#     # storage_costs_new = storage_costs_new.append(pd.Series(storage_costs_new.loc[storage_costs_new.last_valid_index()]*(1-decline_used), name=year))
+#     # storage_costs_new = pd.concat([storage_costs_new, pd.Series(storage_costs_new.loc[storage_costs_new.last_valid_index()] * (1 - decline_used), name=year)])
+#     row = pd.DataFrame([storage_costs_new.loc[storage_costs_new.last_valid_index()] * (1 - decline_used)])
+#     storage_costs_new.loc[year] = row.iloc[0]
+# # for historic price development, assume 2x AVERAGE annual price decline on all technologies, except lead-acid (so that lead-acid gets a relative price advantage from 1970-2018)
+# for year in reversed(range(YEAR_START,storage_start)):
+#     # storage_costs_new = storage_costs_new.append(pd.Series(storage_costs_new.loc[storage_costs_new.first_valid_index()]*(1+(2*decline_used.mean())), name=year)).sort_index(axis=0)
+#     row = pd.DataFrame([storage_costs_new.loc[storage_costs_new.first_valid_index()]*(1+(2*decline_used.mean()))])
+#     storage_costs_new.loc[year] = row.iloc[0]
+#     storage_costs_new.sort_index(axis=0, inplace=True) 
 
-storage_costs_new.sort_index(axis=0, inplace=True) 
-storage_costs_new.loc[1971:2017,'Deep-cycle Lead-Acid'] = storage_costs_new.loc[2018,'Deep-cycle Lead-Acid'] # restore the exception (set to constant 2018 values)
+# storage_costs_new.sort_index(axis=0, inplace=True) 
+# storage_costs_new.loc[1971:2017,'Deep-cycle Lead-Acid'] = storage_costs_new.loc[2018,'Deep-cycle Lead-Acid'] # restore the exception (set to constant 2018 values)
 
 
-# market shares ---
-# use the storage price development in the logit model to get market shares
-storage_market_share = MNLogit(storage_costs_new, -0.2) #assumes input of an ordered dataframe with rows as years and columns as technologies, values as prices. Logitpar is the calibrated Logit parameter (usually a nagetive number between 0 and 1)
+# # market shares ---
+# # use the storage price development in the logit model to get market shares
+# storage_market_share = MNLogit(storage_costs_new, -0.2) #assumes input of an ordered dataframe with rows as years and columns as technologies, values as prices. Logitpar is the calibrated Logit parameter (usually a nagetive number between 0 and 1)
 
-# fix the market share of storage technologies after 2050
-for year in range(2050+1,YEAR_OUT+1):
-    # storage_market_share = storage_market_share.append(pd.Series(storage_market_share.loc[storage_market_share.last_valid_index()], name=year))
-    row = pd.DataFrame([storage_market_share.loc[storage_market_share.last_valid_index()]])
-    storage_market_share.loc[year] = row.iloc[0]
-# fix the market share of storage technologies before YEAR_START
-for year in range(YEAR_FIRST_GRID,YEAR_START):
-    # storage_market_share = storage_market_share.append(pd.Series(storage_market_share.loc[storage_market_share.last_valid_index()], name=year))
-    row = pd.DataFrame([storage_market_share.loc[storage_market_share.first_valid_index()]])
-    storage_market_share.loc[year] = row.iloc[0]
+# # fix the market share of storage technologies after 2050
+# for year in range(2050+1,YEAR_OUT+1):
+#     # storage_market_share = storage_market_share.append(pd.Series(storage_market_share.loc[storage_market_share.last_valid_index()], name=year))
+#     row = pd.DataFrame([storage_market_share.loc[storage_market_share.last_valid_index()]])
+#     storage_market_share.loc[year] = row.iloc[0]
+# # fix the market share of storage technologies before YEAR_START
+# for year in range(YEAR_FIRST_GRID,YEAR_START):
+#     # storage_market_share = storage_market_share.append(pd.Series(storage_market_share.loc[storage_market_share.last_valid_index()], name=year))
+#     row = pd.DataFrame([storage_market_share.loc[storage_market_share.first_valid_index()]])
+#     storage_market_share.loc[year] = row.iloc[0]
     
-storage_market_share = storage_market_share.sort_index(axis=0)
+# storage_market_share = storage_market_share.sort_index(axis=0)
 
-#First we calculate the share of the inflow using only a few of the technologies in the storage market share
-#The selection represents only the batteries that are suitable for EV & mobile applications
+# #First we calculate the share of the inflow using only a few of the technologies in the storage market share
+# #The selection represents only the batteries that are suitable for EV & mobile applications
 
-#normalize the selection of market shares, so that total market share is 1 again (taking the relative share in the selected battery techs)
-market_share_EVs = storage_market_share[EV_BATTERIES].div(storage_market_share[EV_BATTERIES].sum(axis=1), axis=0)
+# #normalize the selection of market shares, so that total market share is 1 again (taking the relative share in the selected battery techs)
+# market_share_EVs = storage_market_share[EV_BATTERIES].div(storage_market_share[EV_BATTERIES].sum(axis=1), axis=0)
 
 
 ###################
