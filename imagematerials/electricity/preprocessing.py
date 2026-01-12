@@ -5,12 +5,20 @@ from pathlib import Path
 import pint
 import xarray as xr
 
-
 import prism
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
 from imagematerials.concepts import create_electricity_graph, create_region_graph
-from imagematerials.electricity.utils import MNLogit, stock_tail, create_prep_data, interpolate_xr, add_historic_stock, calculate_grid_growth, calculate_fraction_underground
+from imagematerials.electricity.utils import (
+    MNLogit, 
+    stock_tail, 
+    create_prep_data, 
+    interpolate_xr, 
+    add_historic_stock, 
+    calculate_grid_growth, 
+    calculate_fraction_underground, 
+    apply_ce_measures_to_elc
+)
 
 from imagematerials.constants import IMAGE_REGIONS
 
@@ -22,6 +30,10 @@ from imagematerials.electricity.constants import (
     STD_LIFETIMES_ELECTR,
     unit_mapping
 )
+
+# for ttesting, remove later:
+END_YEAR = 2100
+INTERMEDIATE_YEAR = 2080
 
 
 ###########################################################################################################
@@ -78,7 +90,7 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
             "Cohort": times,
             "Type": [str(r) for r in types]
         },
-        name="Lifetime"
+        name="GenerationLifetime"
     )
     gcap_lifetime_xr = prism.Q_(gcap_lifetime_xr, "year")
     gcap_lifetime_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_lifetime_xr, output_coords=EPG_TECHNOLOGIES, dim="Type") # convert technology names to the standard names from TIMER
@@ -92,7 +104,7 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
     techs = gcap_materials_data.columns.get_level_values(1).unique()
     materials = gcap_materials_data.index
     # Convert to 3D array: (Material, Year, Tech)
-    data_array = gcap_materials_data.to_numpy().reshape(len(materials), len(years), len(techs))
+    data_array = gcap_materials_data.to_numpy().reshape(len(materials),len(years), len(techs))
     # Build xarray DataArray
     gcap_materials_xr = xr.DataArray(
         data_array,
@@ -100,9 +112,9 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
         coords={
             'material': materials,
             'Cohort': years,
-            'Type': techs
+            'Type': techs,
         },
-        name='MaterialIntensities'
+        name='GenerationMaterialIntensities'
     )
     gcap_materials_xr = prism.Q_(gcap_materials_xr, "g/MW")
     gcap_materials_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_materials_xr, output_coords=EPG_TECHNOLOGIES, dim="Type")
@@ -142,15 +154,54 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
     gcap_lifetime_xr_interp.loc[dict(DistributionParams="stdev")] = gcap_lifetime_xr_interp.loc[dict(DistributionParams="mean")] * STD_LIFETIMES_ELECTR
     gcap_materials_xr_interp = interpolate_xr(gcap_materials_xr, YEAR_FIRST_GRID, year_out)
 
-    # The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
-    gcap_lifetime_xr_interp = convert_lifetime(gcap_lifetime_xr_interp)
-
     # TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
     gcap_xr_interp = add_historic_stock(gcap_xr, YEAR_FIRST_GRID)
 
 
     ###########################################################################################################
+    # CE measures #
+
+    # Depending on circular economy scenario, apply different measures
+    if circular_economy_config is not None:
+        if "narrow" in circular_economy_config.keys():
+            ce_scen = "narrow"
+            target_year          = circular_economy_config[ce_scen]['electricity']['target_year']
+            base_year            = circular_economy_config[ce_scen]['electricity']['base_year']
+            implementation_rate  = circular_economy_config[ce_scen]['electricity']['implementation_rate']
+            gen_weight_change_pc = circular_economy_config[ce_scen]['electricity']['generation']['weight_change_pc']
+
+            gcap_materials_xr_interp = apply_ce_measures_to_elc(
+                gcap_materials_xr_interp,
+                base_year           = base_year,
+                target_year         = target_year,
+                change              = gen_weight_change_pc,
+                implementation_rate = implementation_rate
+            )
+            print("narrow|lightweighting applied to ", gcap_materials_xr_interp.name)
+
+        if "slow" in circular_economy_config.keys():
+            ce_scen = "slow"
+            target_year          = circular_economy_config[ce_scen]['electricity']['target_year']
+            base_year            = circular_economy_config[ce_scen]['electricity']['base_year']
+            implementation_rate  = circular_economy_config[ce_scen]['electricity']['implementation_rate']
+            gen_lifetime_change_pc = circular_economy_config[ce_scen]['electricity']['generation']['lifetime_increase_percent']
+
+            gcap_lifetime_xr_interp = apply_ce_measures_to_elc(
+                gcap_lifetime_xr_interp,
+                base_year           = base_year,
+                target_year         = target_year,
+                change              = gen_lifetime_change_pc,
+                implementation_rate = implementation_rate,
+                data_type           = "lifetime"
+            )
+            print("slow|lifetime increase applied to ", gcap_lifetime_xr_interp.name)
+        
+
+    ###########################################################################################################
     # Prep_data File #
+
+    # The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
+    gcap_lifetime_xr_interp = convert_lifetime(gcap_lifetime_xr_interp)
     
     # bring preprocessing data into a generic format for the model
     prep_data = {}
@@ -332,7 +383,7 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
             "Cohort": times.astype(int),
             "Type": [str(r) for r in tech_types]
         },
-        name="Lifetime"
+        name="GridLifetime"
     )
     grid_lifetime = prism.Q_(grid_lifetime, "year")
 
@@ -345,7 +396,7 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
     materials_lines['Type'] = materials_lines['Type'].str.split(n=1).apply(lambda x: f"{x[0]} - Lines - {x[1]}")
     # convert to xarray: material columns become a new 'material' dimension
     materials_lines = materials_lines.set_index(['Cohort', 'Type']).to_xarray()
-    materials_lines = materials_lines.to_array(dim='material').rename("GridMaterialsLines")
+    materials_lines = materials_lines.to_array(dim='material').rename("GridMaterialIntensitiesLines")
     materials_lines = materials_lines.transpose('Cohort', 'Type', 'material') # reorder dimensions
     materials_lines = prism.Q_(materials_lines, "kg/km")
     materials_lines = materials_lines.reindex(Type=grid_lines.Type)  # ensure same order of types as in stock dataarray
@@ -356,7 +407,7 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
     materials_additions['Type'] = materials_additions['Type'].str.split(n=1).apply(lambda x: f"{x[0]} - {x[1]}")
     # convert to xarray: material columns become a new 'material' dimension
     materials_additions = materials_additions.set_index(['Cohort', 'Type']).to_xarray()
-    materials_additions = materials_additions.to_array(dim='material').rename("GridMaterialsAdditions")
+    materials_additions = materials_additions.to_array(dim='material').rename("GridMaterialIntensitiesAdditions")
     materials_additions = materials_additions.transpose('Cohort', 'Type', 'material') # reorder dimensions
     materials_additions = prism.Q_(materials_additions, "kg/count")
     materials_additions = materials_additions.reindex(Type=grid_additions.Type)  # ensure same order of types as in stock dataarray
@@ -473,17 +524,61 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
     grid_additions_interp   = add_historic_stock(grid_additions, YEAR_FIRST_GRID)
 
 
+    # calculate standard deviation as a fixed fraction of the mean lifetime
+    grid_lifetime_interp.loc[{"DistributionParams": "stdev"}] = grid_lifetime_interp.sel({"DistributionParams": "mean"}) * STD_LIFETIMES_ELECTR
+
+
+    ###########################################################################################################
+    # CE measures #
+
+    # Depending on circular economy scenario, apply different measures
+    if circular_economy_config is not None:
+        if "narrow" in circular_economy_config.keys():
+            ce_scen = "narrow"
+
+            target_year         = circular_economy_config[ce_scen]['electricity']['target_year']
+            base_year           = circular_economy_config[ce_scen]['electricity']['base_year']
+            implementation_rate = circular_economy_config[ce_scen]['electricity']['implementation_rate']
+
+            gen_weight_change_pc = circular_economy_config[ce_scen]['electricity']['grid_add']['weight_change_pc']
+
+            materials_additions_interp = apply_ce_measures_to_elc(
+                materials_additions_interp,
+                base_year=base_year,
+                target_year=target_year,
+                change=gen_weight_change_pc,
+                implementation_rate=implementation_rate,
+                data_sector = "electricity grid"
+            )
+            print("narrow|lightweighting applied to ", materials_additions_interp.name)
+
+
+        if "slow" in circular_economy_config.keys():
+            ce_scen = "slow"
+            target_year          = circular_economy_config[ce_scen]['electricity']['target_year']
+            base_year            = circular_economy_config[ce_scen]['electricity']['base_year']
+            implementation_rate  = circular_economy_config[ce_scen]['electricity']['implementation_rate']
+            gen_lifetime_change_pc = circular_economy_config[ce_scen]['electricity']['grid_add']['lifetime_increase_percent']
+
+            x = apply_ce_measures_to_elc(
+                grid_lifetime_interp,
+                base_year           = base_year,
+                target_year         = target_year,
+                change              = gen_lifetime_change_pc,
+                implementation_rate = implementation_rate,
+                data_sector         = "electricity grid",
+                data_type           = "lifetime"
+            )
+            print("slow|lifetime increase applied to ", grid_lifetime_interp.name)           
+
+
     ###########################################################################################################
     # Prep_data File #
 
-    # calculate standard deviation as a fixed fraction of the mean lifetime
-    grid_lifetime_interp.loc[{"DistributionParams": "stdev"}] = grid_lifetime_interp.sel({"DistributionParams": "mean"}) * STD_LIFETIMES_ELECTR
     # the lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
     grid_lifetime_interp_conv = convert_lifetime(grid_lifetime_interp)
 
-
     # bring preprocessing data into a generic format for the model
-
     prep_data_lines = {}
     prep_data_lines["lifetimes"]            = grid_lifetime_interp_conv
     prep_data_lines["stocks"]               = grid_lines_interp

@@ -312,7 +312,6 @@ def convert_lifetime(lifetimes):
     if isinstance(lifetimes, xr.Dataset):
         return convert_lifetime_dataset(lifetimes)
     elif isinstance(lifetimes, xr.DataArray):
-        print("Dataarray")
         return convert_lifetime_dataarray(lifetimes)
     else:
         raise TypeError("Input must be an xarray.Dataset or xarray.DataArray")

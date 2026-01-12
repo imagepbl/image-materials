@@ -192,13 +192,14 @@ target_year = 2060
 implementation_rate = 'linear'
 
 [electricity.generation.weight_change_pc]
-'solar PV centralized' = -20
-'solar PV roof' = -10
+'SPV' = -20
+'SPVR' = -10
 'CSP' = -30
-'wind onshore' = -20
-'wind offshore' = -10
-'wave' = -30
-'hydropower' = 0
+'WON' = -20
+'WOFF' = -10
+'WAVE' = -30
+'HYD' = 0
 
 [electricity.grid_add.weight_change_pc]
-'auxiliary grid equipment' = -10
+'Transformers' = -10
+'Substations' = -10
