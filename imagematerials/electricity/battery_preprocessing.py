@@ -299,7 +299,7 @@ t_start = xr_storage_costs.Cohort.values[0]
 t_end   = xr_storage_costs.Cohort.values[-1]
 
 # interpolate from first to last vailable year within the data, then extend to  YEAR_START and 2050 (keep values constant before first and after last year)
-xr_storage_costs     = interpolate_xr(xr_storage_costs, YEAR_START, 2050)
+xr_storage_costs      = interpolate_xr(xr_storage_costs, YEAR_START, 2050)
 xr_costs_correction   = interpolate_xr(xr_costs_correction, YEAR_START, 2050)
 
 # determine the annual % decline of the costs based on the 2018-2030 data (original, before applying the malus)
@@ -353,7 +353,8 @@ xr_storage_costs_cor.loc[dict(Cohort=years_bwd, Type="Deep-cycle Lead-Acid")] = 
 # market shares ---
 # use the storage price development in the logit model to get market shares
 storage_market_share = MNLogit(xr_storage_costs_cor, -0.2) #assumes input of an ordered dataframe with rows as years and columns as technologies, values as prices. Logitpar is the calibrated Logit parameter (usually a nagetive number between 0 and 1)
-
+# fix the market share of storage technologies before YEAR_START and after 2050
+storage_market_share_interp = interpolate_xr(storage_market_share, YEAR_FIRST_GRID, YEAR_OUT)
 # As not all storage technologies are suitable for EV & mobile applications, select only those technologies.
 # normalize the selection of EV battery technologies, so that total market share is 1 again (taking the relative share in the selected battery techs)
 market_share_EVs = normalize_selected_techs(storage_market_share, EV_BATTERIES) # TODO: this should be done differently as market shares of EV batteries probably differ from their market shares in total storage market
@@ -450,7 +451,7 @@ xr_energy_density_interp = interpolate_xr(xr_energy_density, YEAR_FIRST_GRID, YE
 # # use the storage price development in the logit model to get market shares
 # storage_market_share = MNLogit(storage_costs_new, -0.2) #assumes input of an ordered dataframe with rows as years and columns as technologies, values as prices. Logitpar is the calibrated Logit parameter (usually a nagetive number between 0 and 1)
 
-# # fix the market share of storage technologies after 2050
+# fix the market share of storage technologies after 2050
 # for year in range(2050+1,YEAR_OUT+1):
 #     # storage_market_share = storage_market_share.append(pd.Series(storage_market_share.loc[storage_market_share.last_valid_index()], name=year))
 #     row = pd.DataFrame([storage_market_share.loc[storage_market_share.last_valid_index()]])
