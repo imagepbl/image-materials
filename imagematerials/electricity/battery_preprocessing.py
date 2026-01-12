@@ -195,7 +195,35 @@ xr_cost_decline_longterm_correction = xr.DataArray(
 )
 xr_cost_decline_longterm_correction = prism.Q_(xr_cost_decline_longterm_correction, "fraction")
 
-# 2. battery weigths: first some formatting and then conversion to xarray DataArray (see below)
+# 2. battery weigths -----------------------------------------------------------------------
+
+df = battery_weights_data.copy()
+# 1. Extract values
+times = sorted(battery_weights_data.index.get_level_values(0).unique())
+drivetrains = sorted(battery_weights_data.index.get_level_values(1).unique())
+vehicles = battery_weights_data.columns
+# 2. Create combined Type labels: 'Vehicle - Drivetrain'
+types = [f"{v} - {d}" for v in vehicles for d in drivetrains]
+# 3. Convert DataFrame to NumPy array
+# First, ensure row order: time × drivetrain
+df_sorted = battery_weights_data.sort_index(level=[0,1])
+# Flatten rows and columns into 2D array: (time × drivetrain, vehicle)
+data = df_sorted.to_numpy()  # shape: (len(times)*len(drivetrains), len(vehicles))
+# 4. Reorder / reshape to (time, Type)
+# For each time, concatenate all drivetrains in order
+data_2d = np.hstack([data[i::len(drivetrains), :] for i in range(len(drivetrains))])
+
+# 5. Build xarray
+xr_battery_weights = xr.DataArray(
+    data_2d,
+    dims=("Cohort", "Type"),
+    coords={
+        "Cohort": times,
+        "Type": types
+    },
+    name="BatteryWeights"
+)
+xr_battery_weights = prism.Q_(xr_battery_weights, "kg")
 
 # 3. material intensities -----------------------------------------------------------------------
 storage_materials.columns = storage_materials.columns.rename([None, None]) # remove column MultiIndex name "g/MW" as it causes issues when converting to xarray
@@ -244,10 +272,6 @@ ev_fraction_v2g = ev_fraction_v2g_data.reindex(range(YEAR_FIRST_GRID,YEAR_OUT+1)
 ev_fraction_v2g.loc[:ev_fraction_v2g_data.index[0]] = 0 # set values before first data point to 0
 ev_fraction_v2g.loc[ev_fraction_v2g_data.index[0]:ev_fraction_v2g_data.index[1]] = y # set values between (originally) first and last data point to quadratic/logistic interpolation
 
-# plt.figure()
-# plt.plot(ev_fraction_v2g_test.loc[2010:2060].index,ev_fraction_v2g_test.loc[2010:2060], label='')
-# plt.scatter(ev_fraction_v2g_test.loc[2023:2026].index,ev_fraction_v2g_test.iloc[:, 0].loc[2023:2026], label='')
-# plt.scatter(ev_fraction_v2g_test.loc[2048:2052].index,ev_fraction_v2g_test.iloc[:, 0].loc[2048:2052], label='')
 
 # Create an empty expanded df
 vhc_fraction_v2g = pd.DataFrame(index=ev_fraction_v2g.index)
@@ -357,11 +381,11 @@ storage_market_share = MNLogit(xr_storage_costs_cor, -0.2) #assumes input of an 
 storage_market_share_interp = interpolate_xr(storage_market_share, YEAR_FIRST_GRID, YEAR_OUT)
 # As not all storage technologies are suitable for EV & mobile applications, select only those technologies.
 # normalize the selection of EV battery technologies, so that total market share is 1 again (taking the relative share in the selected battery techs)
-market_share_EVs = normalize_selected_techs(storage_market_share, EV_BATTERIES) # TODO: this should be done differently as market shares of EV batteries probably differ from their market shares in total storage market
+market_share_EVs = normalize_selected_techs(storage_market_share_interp, EV_BATTERIES) # TODO: this should be done differently as market shares of EV batteries probably differ from their market shares in total storage market
 
 
 # 2. Battery Weights ----------------------------------------------------------------
-battery_weights = interpolate(battery_weights_data.unstack())
+xr_battery_weights_interp = interpolate_xr(xr_battery_weights, YEAR_FIRST_GRID, YEAR_OUT)
 
 # 3. Material Intensities ----------------------------------------------------------------
 xr_storage_materials_interp = interpolate_xr(xr_storage_materials, YEAR_FIRST_GRID, YEAR_OUT)
@@ -557,8 +581,8 @@ conversion_table = {
 results_dict = {
         "battery_shares": market_share_EVs, # 1
         "battery_weights": battery_weights, #2
-        "ev_battery_materials": xr_ev_battery_materials, #3
-        "ev_energy_density": xr_ev_density_interpol, #4
+        "ev_battery_materials": xr_storage_materials_interp, #3
+        "ev_energy_density": xr_energy_density_interp, #4
         "vhc_fraction_v2g": xr_vhc_fraction_v2g, #5
         "capacity_fraction_v2g": xr_capacity_fraction_v2g, #6
 }
@@ -566,7 +590,33 @@ results_dict = {
 
 
 
-preprocessing_results_xarray = create_prep_data(results_dict, conversion_table, unit_mapping)
+# prep_data = create_prep_data(results_dict, conversion_table, unit_mapping)
+
+###########################################################################################################
+# Prep_data File #
+
+
+# bring preprocessing data into a generic format for the model
+prep_data = {}
+prep_data["shares"] = market_share_EVs
+prep_data["battery_weights"] = xr_battery_weights_interp
+prep_data["material_intensities"] = xr_storage_materials_interp
+prep_data["energy_density"] = xr_energy_density_interp
+prep_data["vhc_fraction_v2g"] = xr_vhc_fraction_v2g
+prep_data["capacity_fraction_v2g"] = xr_capacity_fraction_v2g
+prep_data["knowledge_graph"] = create_electricity_graph()
+
+# prep_data["set_unit_flexible"] = prism.U_(prep_data["stocks"]) # prism.U_ gives the unit back
+
+
+time_start = 1970
+complete_timeline = prism.Timeline(time_start, YEAR_END, 1)
+simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
+
+sec_electr_gen = Sector("ev_batteries", prep_data)
+
+
+
 
 # Set default battery weight to 0 # TODO: do I need this? (Luja has it in vehicles preprocessing)
 # xr_default_battery = xr.DataArray(
