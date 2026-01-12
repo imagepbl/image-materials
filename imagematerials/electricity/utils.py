@@ -1,10 +1,14 @@
 
+from statistics import mode
 import numpy as np
 import pandas as pd
 import xarray as xr
 import math
 import scipy.stats
+import pint
 import prism
+from typing import Optional
+import warnings
 
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
 from imagematerials.concepts import create_electricity_graph
@@ -180,13 +184,13 @@ def create_prep_data(results_dict, conversion_table, unit_mapping):
     prep_data = {}
     for df_name, df in results_dict.items():
         if df_name in conversion_table and isinstance(df, pd.DataFrame): # convert to xarray
-            print(f"{df_name} to xarray Dataset")
+            # print(f"{df_name} to xarray Dataset")
             data_xar_dataset = pandas_to_xarray(df, unit_mapping)
             data_xarray = dataset_to_array(data_xar_dataset, *conversion_table[df_name])
         elif df_name in conversion_table and isinstance(df, xr.DataArray): # already xarray
             data_xarray = df 
         else:
-            print(f"{df_name} not in conversion_table")
+            # print(f"{df_name} not in conversion_table")
             # lifetimes_vehicles does not need to be converted in the same way.
             data_xarray = pandas_to_xarray(df, unit_mapping)
         prep_data[df_name] = data_xarray
@@ -370,6 +374,204 @@ def compare_da(path, da_new): # for testing xarray objects
         diff_nonzero = diff.where(diff != 0, drop=True)
         return equal, diff_nonzero
     return equal, None
+
+
+#####################################################################################################
+# Circular economy implementations
+#####################################################################################################
+
+
+def apply_ce_measures_to_elc(arr: xr.DataArray, base_year: int, target_year: int, change: dict,
+                    implementation_rate: str, data_sector: Optional[str]=None, data_type: Optional[str]=None, steepness: float=0.5) -> xr.DataArray:
+        """ Apply CE measures to an xarray DataArray over time for (technology) types.
+
+        The function modifies values by applying a percentage change according to a chosen
+        implementation pathway (immediate, linear, or s-curve) between a base year and a target year.
+        Changes are applied relative to the same-year baseline and preserve the original data structure.
+
+        Parameters
+        ----------
+        arr : xr.DataArray
+            Input DataArray containing a time dimension ('Time' or 'Cohort') and a type
+            classification dimension ('Type' or 'SuperType').
+        base_year : int
+            Year at which the implementation of lightweighting begins.
+        target_year : int
+            Year by which the full lightweighting effect is achieved.
+        change : dict
+            Mapping of type (matching entries in the type dimension) to percentage change
+            to apply (e.g., {\"Solar PV\": -10} for a 10% reduction).
+        implementation_rate : str
+            Implementation pathway. One of {'immediate', 'linear', 's-curve'}.
+        data_sector : str, optional
+            To which sector data belong (e.g., 'electricity grid').
+        data_type : str, optional
+            Type of data being processed. Needed for the case of modifying lifetime distributions.
+            Acccepted value is 'lifetime'.
+        steepness : float, default 0.5
+            Steepness parameter for the logistic function when using the 's-curve' implementation.
+
+        Returns
+        -------
+        xr.DataArray
+            A new DataArray with ce measure applied along the time dimension.
+
+        Raises
+        ------
+        ValueError
+            If required dimensions are missing, a specified vehicle type is not found,
+            or an unsupported implementation_rate is provided.
+
+        Notes
+        -----
+        - Supports DataArrays with either 'Time' or 'Cohort' as the temporal dimension.
+        - Supports either 'Type' or 'SuperType' as the vehicle classification dimension.
+        - A pandas-based implementation exists for vehicle-level data.
+        - A general xarray-based version is available in general utilities for regional data.
+        """
+
+        result = arr.copy()
+
+        # Determine time and type dimensions (to support different types of DataArrays)
+        if "Time" in arr.dims:
+            time_dim = "Time"
+        elif "Cohort" in arr.dims:
+            time_dim = "Cohort"
+        else:
+            raise ValueError("Input DataArray must have either 'Time' or 'Cohort' dimension.")
+        
+        if "Type" in arr.dims:
+            type_dim = "Type"
+        elif "SuperType" in arr.dims:
+            type_dim = "SuperType"
+        else:
+            raise ValueError("Input DataArray must have either 'Type' or 'SuperType' dimension.")
+        
+        # If CE measures are only specified for aggregated grid items, expand to all relevant types
+        if data_sector == 'electricity grid':
+            change = expand_change_dict_for_grid_items(change)
+        elif data_sector is not None:
+            raise ValueError(f"Unknown data_sector: '{data_sector}'. Supported types are 'electricity grid' or None.")
+        
+        # If data_type is 'lifetime', we need to determine which distribution parameter to modify
+        if data_type == "lifetime":
+            dist_param = 'mean'
+        elif data_type is None:
+            pass
+        else:
+            raise ValueError(f"Unknown data_type: '{data_type}'. Supported types are 'lifetime' or None.")
+
+        for type_stock, increase in change.items():
+            if type_stock in result[type_dim]:
+                if implementation_rate == 'linear':
+                    # ramp progress: 0 at base_year, 1 at target_year, held at 1 after
+                    span = max(1, target_year - base_year)
+                    # apply to each year explicitly to preserve structure
+                    for year in range(base_year + 1, target_year + 1):
+                        progress = (year - base_year) / span
+                        if data_type == "lifetime":
+                            result.loc[{time_dim: year, type_dim: type_stock, "DistributionParams": dist_param}] = (
+                                arr.loc[{time_dim: year, type_dim: type_stock, "DistributionParams": dist_param}] * (1 + ((increase / 100.0) * progress))
+                            )
+                        else:
+                            result.loc[{time_dim: year, type_dim: type_stock}] = (
+                                arr.loc[{time_dim: year, type_dim: type_stock}] * (1 + ((increase / 100.0) * progress))
+                            )
+                    # after target_year, full effect but still relative to same-year baseline
+                    if data_type == "lifetime":
+                        result.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock, "DistributionParams": dist_param}] = (
+                            arr.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock, "DistributionParams": dist_param}] * ((1 + increase / 100.0))
+                        )
+                    else:
+                        result.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] = (
+                            arr.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] * ((1 + increase / 100.0))
+                        )
+
+                elif implementation_rate == 'immediate':
+                    # unchanged up to base_year; full step from base_year+1 onward, relative to same-year baseline
+                    if data_type == "lifetime":
+                        result.loc[{time_dim: slice(None, base_year), type_dim: type_stock, "DistributionParams": dist_param}] = \
+                            arr.loc[{time_dim: slice(None, base_year), type_dim: type_stock, "DistributionParams": dist_param}]
+                        result.loc[{time_dim: slice(base_year + 1, None), type_dim: type_stock, "DistributionParams": dist_param}] = \
+                            arr.loc[{time_dim: slice(base_year + 1, None), type_dim: type_stock, "DistributionParams": dist_param}] * (1 + increase / 100.0)
+                    else:
+                        result.loc[{time_dim: slice(None, base_year), type_dim: type_stock}] = \
+                            arr.loc[{time_dim: slice(None, base_year), type_dim: type_stock}]
+                        result.loc[{time_dim: slice(base_year + 1, None), type_dim: type_stock}] = \
+                            arr.loc[{time_dim: slice(base_year + 1, None), type_dim: type_stock}] * (1 + increase / 100.0)
+
+                elif implementation_rate == 's-curve':
+                    years = list(range(base_year, target_year + 1))
+                    mid_year = (base_year + target_year) / 2
+                    # normalize logistic so progress(base)=0 and progress(target)=1
+                    s0 = 1.0 / (1.0 + np.exp(-steepness * (base_year - mid_year)))
+                    s1 = 1.0 / (1.0 + np.exp(-steepness * (target_year - mid_year)))
+                    for year in years:
+                        s = 1.0 / (1.0 + np.exp(-steepness * (year - mid_year)))
+                        progress = np.clip((s - s0) / (s1 - s0), 0.0, 1.0)
+                        if data_type == "lifetime":
+                            result.loc[{time_dim: year, type_dim: type_stock, "DistributionParams": dist_param}] = (
+                                arr.loc[{time_dim: year, type_dim: type_stock, "DistributionParams": dist_param}] * (1 + (increase / 100.0) * progress)
+                            )
+                        else:
+                            result.loc[{time_dim: year, type_dim: type_stock}] = (
+                                arr.loc[{time_dim: year, type_dim: type_stock}] * (1 + (increase / 100.0) * progress)
+                            )
+                    # after target_year, full effect relative to same-year baseline
+                    if data_type == "lifetime":
+                        result.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock, "DistributionParams": dist_param}] = (
+                            arr.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock, "DistributionParams": dist_param}] * (1 + increase / 100.0)
+                        )
+                    else:
+                        result.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] = (
+                            arr.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] * (1 + increase / 100.0)
+                        )
+                else: 
+                    raise ValueError(f"Unknown implementation method: '{implementation_rate}'. "
+                                    "Supported methods are 'immediate', 'linear', and 's-curve'.")
+            else:
+                raise ValueError(f"{type_stock} not found in DataArray.")
+            
+        nan_mask = result.isnull()
+        if nan_mask.any():
+            years_with_nans = result[time_dim].where(nan_mask.any(dim=[d for d in result.dims if d != time_dim]), drop=True)
+            warnings.warn(
+                f"NaNs present in years: {years_with_nans.values}",
+                RuntimeWarning
+            )
+
+        return result
+
+def expand_change_dict_for_grid_items(dict_change: dict) -> dict:
+    transformer_expanded = {
+        "HV - Transformers",
+        "MV - Transformers",
+        "LV - Transformers",
+    }
+    substation_expanded = {
+        "HV - Substations",
+        "MV - Substations",
+        "LV - Substations",
+    }
+
+    has_transformer_expanded = any(k in dict_change for k in transformer_expanded)
+    has_substation_expanded = any(k in dict_change for k in substation_expanded)
+
+    dict_change_expanded = dict(dict_change)
+
+    if not has_transformer_expanded and "Transformers" in dict_change:
+        val = dict_change["Transformers"]
+        for k in transformer_expanded:
+            dict_change_expanded[k] = val
+        dict_change_expanded.pop("Transformers")
+
+    if not has_substation_expanded and "Substations" in dict_change:
+        val = dict_change["Substations"]
+        for k in substation_expanded:
+            dict_change_expanded[k] = val
+        dict_change_expanded.pop("Substations")
+
+    return dict_change_expanded
 
 
 #####################################################################################################

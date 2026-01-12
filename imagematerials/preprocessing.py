@@ -75,20 +75,12 @@ def _get_vehicles_sector(prep_data):
 
 def _get_electricity_sector(prep_data):
 
-    # sec_elc = Sector("electricity", prep_data)
     sec_elc_gen = Sector("elc_gen", prep_data["prep_data_gen"])
     sec_elc_grid_lines = Sector("elc_grid_lines", prep_data["prep_data_grid_lines"])
     sec_elc_grid_add = Sector("elc_grid_add", prep_data["prep_data_grid_add"])
     sec_elc_stor_phs = Sector("elc_stor_phs", prep_data["prep_data_stor_phs"])
     sec_elc_stor_other = Sector("elc_stor_other", prep_data["prep_data_stor_other"])
 
-    # sec_elc = {
-    #     "sec_elc_gen": sec_elc_gen,
-    #     "sec_elc_grid_lines": sec_elc_grid_lines,
-    #     "sec_elc_grid_add": sec_elc_grid_add,
-    #     # "sec_elc_stor_phs": sec_elc_stor_phs,
-    #     # "sec_elc_stor_other": sec_elc_stor_other
-    # }
     sec_elc = [sec_elc_gen, sec_elc_grid_lines, sec_elc_grid_add, sec_elc_stor_phs, sec_elc_stor_other]
 
     return sec_elc
