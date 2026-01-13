@@ -462,6 +462,15 @@ def calculate_storage_market_shares(
       at its 2018 level.
     """
 
+    # if "Type" in storage_costs.dims: # TODO: not working yet
+    #     dim_type = Type
+    #     print(dim_type)
+    # elif "BatteryType" in storage_costs.dims:
+    #     dim_type = "BatteryType"
+    #     print(dim_type)
+    # else:
+    #     raise ValueError("storage_costs must have either 'Type' or 'BatteryType' dimension.")
+
     t_start = storage_costs.Cohort.values[0]
     t_end   = storage_costs.Cohort.values[-1]
 
@@ -502,8 +511,8 @@ def calculate_storage_market_shares(
         storage_costs_cor.sel(Cohort=t_start) * factors_bwd
     )
     # restore values for lead-acid (set to constant 2018 values) -> exception: so that lead-acid gets a relative price advantage from 1970-2018
-    storage_costs_cor.loc[dict(Cohort=years_bwd, Type="Deep-cycle Lead-Acid")] = (
-        storage_costs_cor.sel(Cohort=t_start, Type="Deep-cycle Lead-Acid")
+    storage_costs_cor.loc[dict(Cohort=years_bwd, dim_type="Deep-cycle Lead-Acid")] = (
+        storage_costs_cor.sel(Cohort=t_start, dim_type="Deep-cycle Lead-Acid")
     )
 
     # market shares ---
