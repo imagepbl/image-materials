@@ -205,14 +205,10 @@ vehicles = battery_weights_data.columns
 # 2. Create combined Type labels: 'Vehicle - Drivetrain'
 types = [f"{v} - {d}" for v in vehicles for d in drivetrains]
 # 3. Convert DataFrame to NumPy array
-# First, ensure row order: time × drivetrain
-df_sorted = battery_weights_data.sort_index(level=[0,1])
-# Flatten rows and columns into 2D array: (time × drivetrain, vehicle)
-data = df_sorted.to_numpy()  # shape: (len(times)*len(drivetrains), len(vehicles))
+df_sorted = battery_weights_data.sort_index(level=[0,1]) # First, ensure row order: time × drivetrain
+data = df_sorted.to_numpy()  # Flatten rows and columns into 2D array: shape: (len(times)*len(drivetrains), len(vehicles))
 # 4. Reorder / reshape to (time, Type)
-# For each time, concatenate all drivetrains in order
-data_2d = np.hstack([data[i::len(drivetrains), :] for i in range(len(drivetrains))])
-
+data_2d = np.hstack([data[i::len(drivetrains), :] for i in range(len(drivetrains))]) # For each time, concatenate all drivetrains in order
 # 5. Build xarray
 xr_battery_weights = xr.DataArray(
     data_2d,
@@ -319,6 +315,75 @@ xr_capacity_fraction_v2g = prism.Q_(xr_capacity_fraction_v2g, "fraction")
 
 # 1. Market Shares -----------------------------------------------------------------------------
 
+def calculate_storage_market_shares(
+    storage_costs: xr.DataArray,
+    costs_correction: xr.DataArray,
+    cost_decline_longterm_correction: xr.DataArray,
+    mnlogit_param: float,
+    t_start_interpolation: int = YEAR_START,
+    t_end_interpolation: int = 2050) -> xr.DataArray:
+
+    t_start = storage_costs.Cohort.values[0]
+    t_end   = storage_costs.Cohort.values[-1]
+
+    # interpolate from first to last vailable year within the data, then extend to  YEAR_START and 2050 (keep values constant before first and after last year)
+    storage_costs      = interpolate_xr(storage_costs, t_start_interpolation, t_end_interpolation)
+    costs_correction   = interpolate_xr(costs_correction, t_start_interpolation, t_end_interpolation)
+
+    # determine the annual % decline of the costs based on the 2018-2030 data (original, before applying the malus)
+    xr_cost_decline = (((storage_costs.loc[t_start,:]-storage_costs.loc[t_end,:])/(t_end-t_start))/storage_costs.loc[t_start,:]).drop_vars('Cohort')
+    xr_cost_decline_longterm = xr_cost_decline*cost_decline_longterm_correction # cost decline after 2030 = cost decline 2018-2030 * correction factor
+    # cost_decline_longterm_correction is a single number and should describe the long-term decline after 2030 relative to the 2018-2030 decline
+
+    # storage_costs_new = storage_costs_interpol * costs_correction_interpol
+    storage_costs_cor = storage_costs * costs_correction
+
+    # ---------- future development ----------
+    # calculate the development from 2030 to 2050 (using annual price decline)
+    # vectorized approach for "for t in range(t_end, 2050+1): ..."
+    years_fwd = storage_costs_cor.Cohort.where(
+        storage_costs_cor.Cohort > t_end, drop=True
+    )
+    n_fwd = years_fwd - t_end
+    factors_fwd = (1 - xr_cost_decline_longterm) ** n_fwd
+
+    storage_costs_cor.loc[dict(Cohort=years_fwd)] = (
+        storage_costs_cor.sel(Cohort=t_end) * factors_fwd
+    )
+
+    # ---------- past development ----------
+    # for historic price development, assume 2x AVERAGE annual price decline on all technologies
+    years_bwd = storage_costs_cor.Cohort.where(
+        storage_costs_cor.Cohort < t_start, drop=True
+    )
+    n_bwd = t_start - years_bwd
+    factors_bwd = (1 + 2 * xr_cost_decline_longterm.mean()) ** n_bwd
+
+    storage_costs_cor.loc[dict(Cohort=years_bwd)] = (
+        storage_costs_cor.sel(Cohort=t_start) * factors_bwd
+    )
+    # restore values for lead-acid (set to constant 2018 values) -> exception: so that lead-acid gets a relative price advantage from 1970-2018
+    storage_costs_cor.loc[dict(Cohort=years_bwd, Type="Deep-cycle Lead-Acid")] = (
+        storage_costs_cor.sel(Cohort=t_start, Type="Deep-cycle Lead-Acid")
+    )
+
+    # market shares ---
+    # use the storage price development in the logit model to get market shares
+    storage_market_share = MNLogit(storage_costs_cor, mnlogit_param) #assumes input of an ordered dataframe with rows as years and columns as technologies, values as prices. Logitpar is the calibrated Logit parameter (usually a nagetive number between 0 and 1)
+
+    return storage_market_share
+
+
+storage_market_share_2 = calculate_storage_market_shares(
+    xr_storage_costs,
+    xr_costs_correction,
+    xr_cost_decline_longterm_correction,
+    mnlogit_param=-0.2,
+    t_start_interpolation=YEAR_START,
+    t_end_interpolation=2050
+)
+
+
 t_start = xr_storage_costs.Cohort.values[0]
 t_end   = xr_storage_costs.Cohort.values[-1]
 
@@ -394,204 +459,6 @@ xr_storage_materials_interp = interpolate_xr(xr_storage_materials, YEAR_FIRST_GR
 xr_energy_density_interp = interpolate_xr(xr_energy_density, YEAR_FIRST_GRID, YEAR_OUT)
 
 
-#%%%% old
-# turn index to integer for sorting during the next step
-# storage_costs.index = storage_costs.index.astype('int64')
-# costs_correction.index = costs_correction.index.astype('int64')
-# energy_density.index = energy_density.index.astype('int64')
-
-# to interpolate between 2018 and 2030, first create empty rows (NaN values) 
-# storage_start = storage_costs.first_valid_index()
-# storage_end =   storage_costs.last_valid_index()
-# for i in range(storage_start+1,storage_end):
-#     storage_costs = pd.concat([storage_costs, pd.DataFrame(index=[i])]) #, ignore_index=True
-#     costs_correction = pd.concat([costs_correction, pd.DataFrame(index=[i])])         # mind: the malus needs to be defined for the same years as the cost indications
-#     energy_density = pd.concat([energy_density, pd.DataFrame(index=[i])])     # mind: the density needs to be defined for the same years as the cost indications
-    
-# then, do the actual interpolation on the sorted dataframes                                                    
-# storage_costs_interpol = storage_costs.sort_index(axis=0).interpolate(axis=0)#.index.astype('int64')
-# costs_correction_interpol = costs_correction.sort_index(axis=0).interpolate(axis=0)
-# energy_density_interpol = energy_density.sort_index(axis=0).interpolate(axis=0)  # density calculation continue with the material calculations
-
-# energy density ---
-# fix the energy density (kg/kwh) of storage technologies after 2030
-# for year in range(2030+1,YEAR_OUT+1):
-#     # energy_density_interpol = energy_density_interpol.append(pd.Series(energy_density_interpol.loc[energy_density_interpol.last_valid_index()], name=year))
-#     row = energy_density_interpol.loc[[energy_density_interpol.last_valid_index()]]
-#     row.index = [year]
-#     energy_density_interpol = pd.concat([energy_density_interpol, row])
-# # assumed fixed energy densities before 2018
-# for year in reversed(range(YEAR_FIRST_GRID,storage_start)): # was YEAR_SWITCH, storage_start
-#     # energy_density_interpol = energy_density_interpol.append(pd.Series(energy_density_interpol.loc[energy_density_interpol.first_valid_index()], name=year)).sort_index(axis=0)
-#     row = energy_density_interpol.loc[[energy_density_interpol.first_valid_index()]]
-#     row.index = [year]
-#     energy_density_interpol = pd.concat([energy_density_interpol, row]).sort_index(axis=0)
-
-# storage material intensity ---
-# Interpolate material intensities (dynamic content for gcap & storage technologies between 1926 to 2100, based on data files)
-# index = pd.MultiIndex.from_product([list(range(YEAR_FIRST_GRID, YEAR_OUT+1)), list(storage_materials.index)])
-# stor_materials_interpol = pd.DataFrame(index=index, columns=storage_materials.columns.levels[1])
-# # material intensities for storage
-# for cat in list(storage_materials.columns.levels[1]):
-#     stor_materials_1st   = storage_materials.loc[:,idx[storage_materials.columns[0][0],cat]]
-#     stor_materials_interpol.loc[idx[YEAR_FIRST_GRID ,:],cat] = stor_materials_1st.to_numpy()  # set the first year (1926) values to the first available values in the dataset (for the year 2000) 
-#     stor_materials_interpol.loc[idx[storage_materials.columns.levels[0].min(),:],cat] = storage_materials.loc[:, idx[storage_materials.columns.levels[0].min(),cat]].to_numpy() # set the middle year (2000) values to the first available values in the dataset (for the year 2000) 
-#     stor_materials_interpol.loc[idx[storage_materials.columns.levels[0].max(),:],cat] = storage_materials.loc[:, idx[storage_materials.columns.levels[0].max(),cat]].to_numpy() # set the last year (2100) values to the last available values in the dataset (for the year 2050) 
-#     stor_materials_interpol.loc[idx[:,:],cat] = stor_materials_interpol.loc[idx[:,:],cat].unstack().astype('float64').interpolate().stack()
-
-
-#################
-#%%%% Market Shares #
-#################
-
-# Determine MARKET SHARE of the storage capacity using a multi-nomial logit function
-
-# storage costs ---
-# determine the annual % decline of the costs based on the 2018-2030 data (original, before applying the malus)
-# decline = ((storage_costs_interpol.loc[storage_start,:]-storage_costs_interpol.loc[storage_end,:])/(storage_end-storage_start))/storage_costs_interpol.loc[storage_start,:]
-# decline_used = decline*costs_decline_longterm #TODO: what is happening here? Why?
-# # costs_decline_longterm is a single number and should describe the long-term decline after 2030 relative to the 2018-2030 decline
-
-# storage_costs_new = storage_costs_interpol * costs_correction_interpol
-# # calculate the development from 2030 to 2050 (using annual price decline)
-# for year in range(storage_end+1,2050+1):
-#     # print(year)
-#     # storage_costs_new = storage_costs_new.append(pd.Series(storage_costs_new.loc[storage_costs_new.last_valid_index()]*(1-decline_used), name=year))
-#     # storage_costs_new = pd.concat([storage_costs_new, pd.Series(storage_costs_new.loc[storage_costs_new.last_valid_index()] * (1 - decline_used), name=year)])
-#     row = pd.DataFrame([storage_costs_new.loc[storage_costs_new.last_valid_index()] * (1 - decline_used)])
-#     storage_costs_new.loc[year] = row.iloc[0]
-# # for historic price development, assume 2x AVERAGE annual price decline on all technologies, except lead-acid (so that lead-acid gets a relative price advantage from 1970-2018)
-# for year in reversed(range(YEAR_START,storage_start)):
-#     # storage_costs_new = storage_costs_new.append(pd.Series(storage_costs_new.loc[storage_costs_new.first_valid_index()]*(1+(2*decline_used.mean())), name=year)).sort_index(axis=0)
-#     row = pd.DataFrame([storage_costs_new.loc[storage_costs_new.first_valid_index()]*(1+(2*decline_used.mean()))])
-#     storage_costs_new.loc[year] = row.iloc[0]
-#     storage_costs_new.sort_index(axis=0, inplace=True) 
-
-# storage_costs_new.sort_index(axis=0, inplace=True) 
-# storage_costs_new.loc[1971:2017,'Deep-cycle Lead-Acid'] = storage_costs_new.loc[2018,'Deep-cycle Lead-Acid'] # restore the exception (set to constant 2018 values)
-
-
-# # market shares ---
-# # use the storage price development in the logit model to get market shares
-# storage_market_share = MNLogit(storage_costs_new, -0.2) #assumes input of an ordered dataframe with rows as years and columns as technologies, values as prices. Logitpar is the calibrated Logit parameter (usually a nagetive number between 0 and 1)
-
-# fix the market share of storage technologies after 2050
-# for year in range(2050+1,YEAR_OUT+1):
-#     # storage_market_share = storage_market_share.append(pd.Series(storage_market_share.loc[storage_market_share.last_valid_index()], name=year))
-#     row = pd.DataFrame([storage_market_share.loc[storage_market_share.last_valid_index()]])
-#     storage_market_share.loc[year] = row.iloc[0]
-# # fix the market share of storage technologies before YEAR_START
-# for year in range(YEAR_FIRST_GRID,YEAR_START):
-#     # storage_market_share = storage_market_share.append(pd.Series(storage_market_share.loc[storage_market_share.last_valid_index()], name=year))
-#     row = pd.DataFrame([storage_market_share.loc[storage_market_share.first_valid_index()]])
-#     storage_market_share.loc[year] = row.iloc[0]
-    
-# storage_market_share = storage_market_share.sort_index(axis=0)
-
-# #First we calculate the share of the inflow using only a few of the technologies in the storage market share
-# #The selection represents only the batteries that are suitable for EV & mobile applications
-
-# #normalize the selection of market shares, so that total market share is 1 again (taking the relative share in the selected battery techs)
-# market_share_EVs = storage_market_share[EV_BATTERIES].div(storage_market_share[EV_BATTERIES].sum(axis=1), axis=0)
-
-
-###################
-# Battery Weights #
-###################
-
-###################
-#%% Capacity #
-###################
-
-
-#%%% 2. Dynamic battery capacity #
-
-# With a pre-determined battery capacity in 2018, we assume an increasing capacity (as an effect of an increased density) based on a fixed weight assumption
-# BEV_dynamic_capacity = (weighted_average_density[2018] * BEV_CAPACITY_CURRENT) / weighted_average_density
-# PHEV_dynamic_capacity = (weighted_average_density[2018] * PHEV_CAPACITY_CURRENT) / weighted_average_density
-
-# Define the V2G settings over time (assuming slow adoption to the maximum usable capacity)
-# year_v2g_start = 2025-1 # -1 leads to usable capacity in 2025
-# year_full_capacity = 2040
-# v2g_usable = pd.Series(index=list(range(YEAR_START,YEAR_OUT+1)), name='years')    #fraction of the cars ready and willing to use v2g
-# for year in list(range(YEAR_START,YEAR_OUT+1)):
-#     if (year <= year_v2g_start):
-#         v2g_usable[year] = 0
-#     elif (year >= year_full_capacity):
-#         v2g_usable[year] = 1
-# v2g_usable = v2g_usable.interpolate()
-
-# #total capacity per car connected to v2g (in %)
-# max_capacity_BEV = v2g_usable * capacity_usable_BEV  
-# max_capacity_PHEV = v2g_usable * capacity_usable_PHEV   
-
-# #usable capacity per car connected to v2g (in kWh)
-# usable_capacity_BEV = max_capacity_BEV.mul(BEV_dynamic_capacity[:YEAR_OUT])     
-# usable_capacity_PHEV = max_capacity_PHEV.mul(PHEV_dynamic_capacity[:YEAR_OUT])  
-
-
-
-
-# # Vehicle storage in MWh #TODO: move to battery model
-# storage_BEV = storage_PHEV = pd.DataFrame().reindex_like(vehicles_BEV)
-# for region in region_list:
-#     storage_PHEV[region] = vehicles_PHEV[region].mul(usable_capacity_PHEV) /1000
-#     storage_BEV[region] = vehicles_BEV[region].mul(usable_capacity_BEV) /1000
-# storage_vehicles = storage_BEV + storage_PHEV
-
-
-
-########################
-# Material Intensities #
-########################
-# MIs: (years, material) index and technologies as columns -> years as index and (technology, Material) as columns
-
-# # 2nd level of the MultiIndex are materials (1971,'Aluminium')
-# ev_battery_materials = stor_materials_interpol.copy()
-# ev_battery_materials.index.names = ["year", "material"]  # assign names
-# ev_battery_materials = ev_battery_materials.reset_index(level=["year", "material"])
-# # Pivot so we get (technology, material) as columns, years as index
-# ev_battery_materials = ev_battery_materials.melt(id_vars=["year", "material"], var_name="technology", value_name="value")
-# ev_battery_materials = ev_battery_materials.pivot_table(index="year", columns=["technology", "material"], values="value")
-# # Ensure proper MultiIndex column names
-# ev_battery_materials.columns = pd.MultiIndex.from_tuples(ev_battery_materials.columns, names=["technology", "material"])
-# xr_ev_battery_materials = dataset_to_array(pandas_to_xarray(ev_battery_materials, unit_mapping), *(["Cohort"], ["Type", "material"],))
-# xr_ev_battery_materials = xr_ev_battery_materials.sel(Type=EV_BATTERIES)
-# xr_energy_density_interpol = dataset_to_array(pandas_to_xarray(energy_density_interpol, unit_mapping), *(["Cohort"], ["Type"],))
-# xr_ev_density_interpol = xr_energy_density_interpol.sel(Type=EV_BATTERIES)
-# oth_storage_materialintens = xr_ev_battery_materials * xr_energy_density_interpol
-
-
-
-# ##########################################################################################################
-# %% Prep_data
-# ##########################################################################################################
-
-# Conversion table for all coordinates, to be removed/adapted after input tables are fixed.
-conversion_table = {
-    "battery_shares": (["Cohort"], ["battery"],),
-    "battery_weights": (["Cohort"], ["Type", "SubType"], {"Type": ["Type", "SubType"]}),
-    "ev_battery_materials": (["Cohort"], ["battery", "material"],),
-    "ev_energy_density": (["Cohort"], ["battery"],),
-    "vhc_fraction_v2g": (["Time"], ["Type"]), # TODO: check if Time coord is ok here
-    "capacity_fraction_v2g": (["Type"]),
-}
-## "gcap_materials_interpol": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]})
-
-results_dict = {
-        "battery_shares": market_share_EVs, # 1
-        "battery_weights": battery_weights, #2
-        "ev_battery_materials": xr_storage_materials_interp, #3
-        "ev_energy_density": xr_energy_density_interp, #4
-        "vhc_fraction_v2g": xr_vhc_fraction_v2g, #5
-        "capacity_fraction_v2g": xr_capacity_fraction_v2g, #6
-}
-
-
-
-
-# prep_data = create_prep_data(results_dict, conversion_table, unit_mapping)
-
 ###########################################################################################################
 # Prep_data File #
 
@@ -615,23 +482,3 @@ simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
 
 sec_electr_gen = Sector("ev_batteries", prep_data)
 
-
-
-
-# Set default battery weight to 0 # TODO: do I need this? (Luja has it in vehicles preprocessing)
-# xr_default_battery = xr.DataArray(
-#     0.0, 
-#     dims=("Cohort", "Type"),
-#     coords={
-#         "Cohort": preprocessing_results_xarray["battery_weights"].coords["Cohort"],
-#         "Type": ["Vehicles"]
-#     }
-# )
-# preprocessing_results_xarray["battery_weights"] = prism.Q_(xr.concat((preprocessing_results_xarray["battery_weights"], xr_default_battery), dim="Type"), "kg")
-
-
-# prep_data_oth_storage = create_prep_data(results_dict, conversion_table, unit_mapping)
-# prep_data_oth_storage["stocks"] = prism.Q_(prep_data_oth_storage["stocks"], "MWh")
-# prep_data_oth_storage["material_intensities"] = prism.Q_(prep_data_oth_storage["material_intensities"], "kg/kWh")
-# prep_data_oth_storage["shares"] = prism.Q_(prep_data_oth_storage["shares"], "share")
-# prep_data_oth_storage["set_unit_flexible"] = prism.U_(prep_data_oth_storage["stocks"]) # prism.U_ gives the unit back
