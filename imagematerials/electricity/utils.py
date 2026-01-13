@@ -199,32 +199,6 @@ def MNLogit(data, logitpar):
 
     else:
         raise TypeError("Input must be pandas.DataFrame or xarray.DataArray")
-    
-def normalize_selected_techs(market_share, techs):
-    """ Select technologies and renormalize their market shares to sum to 1 per year.
-
-    Works with:
-    - xarray.DataArray (dimension: Type)
-    - pandas.DataFrame (columns: technologies)
-
-    Parameters
-    ----------
-    market_share : xarray.DataArray or pandas.DataFrame
-        Market shares by year and technology.
-    techs : list of str
-        Technologies to select and normalize.
-
-    Returns
-    -------
-    Same type as input
-        Normalized market shares of the selected technologies.
-    """
-    if isinstance(market_share, xr.DataArray):
-        sel = market_share.sel(Type=techs)
-        return sel / sel.sum(dim="Type")
-    else:  # pandas
-        sel = market_share[techs]
-        return sel.div(sel.sum(axis=1), axis=0)
 
 
 def create_prep_data(results_dict, conversion_table, unit_mapping):
@@ -355,6 +329,215 @@ def print_df_info(df, name):
           Columns: {df.columns.tolist()},
           Index name(s): {df.index.names},
           Index: {df.index.tolist()[:5]}...""")
+    
+
+def sanitize_attrs(da): # for saving xarray objects to netcdf
+	""" Sanitize the attributes of a DataArray and its coordinates for safe serialization. This function 
+    converts all attribute values that are not of type str, int, or float into strings. It applies this 
+    transformation to both the DataArray's `.attrs` and each coordinate's `.attrs`. This is useful when 
+    saving xarray objects to formats like NetCDF, which require attribute values to be basic serializable 
+    types.
+	
+	Parameters
+	----------
+	da : xarray.DataArray
+		The input DataArray whose attributes need to be sanitized.
+	
+	Returns
+	-------
+	xarray.DataArray
+		A copy of the input DataArray with sanitized attributes.
+	
+	Notes
+	-----
+	- This function does not modify the original DataArray in-place; it returns a copy.
+	- It preserves the data, coordinates, and dimensions of the original DataArray.
+	"""
+	
+	# use as:
+	# da_example = sanitize_attrs(model_lines.inflow.to_array())
+	# da_example.to_netcdf(path_test / "grid_lines_inflow_v0.nc")
+	
+	da = da.copy()
+	da.attrs = {k: str(v) if not isinstance(v, (str, int, float)) else v
+				for k, v in da.attrs.items()}
+	for c in da.coords:
+		da.coords[c].attrs = {
+			k: str(v) if not isinstance(v, (str, int, float)) else v
+			for k, v in da.coords[c].attrs.items()
+		}
+	return da
+
+def compare_da(da_new, da_old = None, path_to_saved_da=None): # for testing xarray objects
+    """ Compare a (saved) DataArray to a new one.
+	
+	Parameters
+	----------
+	path : str or Path
+		Path to the saved DataArray file.
+	da_new : xarray.DataArray
+		The new DataArray to compare.
+	
+	Returns
+	-------
+	equal : bool
+		True if the DataArrays match numerically (after removing units in case of a saved da).
+	diff_nonzero : xarray.DataArray or None
+		Differences where values differ; None if equal.
+	"""
+	# use as:
+	# compare_da(model_lines.inflow.to_array(), path_test / "grid_lines_inflow_v0.nc")
+
+    if path_to_saved_da is not None and da_old is None:
+        da_old = xr.open_dataarray(os.path)
+        da_old_clean = da_old.pint.dequantify()
+        da_new_clean = da_new.pint.dequantify()
+    elif da_old is not None and path_to_saved_da is None:
+        da_old_clean = da_old
+        da_new_clean = da_new
+    else:
+        raise ValueError("Either da_old or path_to_saved_da must be provided, but not both or neither.")
+	
+    equal = da_old_clean.equals(da_new_clean)
+
+    if not equal:
+        diff = da_new_clean - da_old_clean
+        diff_nonzero = diff.where(diff != 0, drop=True)
+        return equal, diff_nonzero
+
+    return equal, None
+
+
+
+##########################################################################################
+# Storage preprocessing functions
+##########################################################################################
+
+
+def calculate_storage_market_shares(
+    storage_costs: xr.DataArray,
+    costs_correction: xr.DataArray,
+    cost_decline_longterm_correction: xr.DataArray,
+    mnlogit_param: float,
+    t_start_interpolation: int = 1970,
+    t_end_interpolation: int = 2050) -> xr.DataArray:
+    """ Calculate technology market shares for energy storage based on cost
+    developments and a multinomial logit model.
+
+    The function interpolates storage costs and correction factors over a
+    specified time range, applies cost decline assumptions for future and past
+    years, and computes market shares based on costs using a multinomial logit formulation.
+
+    Parameters
+    ----------
+    storage_costs : xr.DataArray
+        Storage technology costs indexed by year (dimension ``Cohort``)
+        and technology type (e.g. ``Type``). Values represent base costs
+        before corrections.
+    costs_correction : xr.DataArray
+        Multiplicative correction factors for storage costs, aligned with
+        ``storage_costs`` in dimensions.
+    cost_decline_longterm_correction : xr.DataArray
+        Scalar correction factor applied to the annual cost decline rate
+        derived from the historical period (2018–2030) to represent
+        long-term cost decline after 2030.
+    mnlogit_param : float
+        Logit parameter used in the multinomial logit model. Typically a
+        negative value controlling price sensitivity.
+    t_start_interpolation : int, optional
+        First year of interpolation and extrapolation (default: YEAR_START).
+    t_end_interpolation : int, optional
+        Last year of interpolation and extrapolation (default: 2050).
+
+    Returns
+    -------
+    xr.DataArray
+        Market shares of storage technologies over time, indexed by year
+        (``Cohort``) and technology type.
+
+    Notes
+    -----
+    - Past costs assume twice the average long-term annual decline rate,
+      except for deep-cycle lead-acid technology, which is held constant
+      at its 2018 level.
+    """
+
+    t_start = storage_costs.Cohort.values[0]
+    t_end   = storage_costs.Cohort.values[-1]
+
+    # interpolate from first to last vailable year within the data, then extend to  YEAR_START and 2050 (keep values constant before first and after last year)
+    storage_costs      = interpolate_xr(storage_costs, t_start_interpolation, t_end_interpolation)
+    costs_correction   = interpolate_xr(costs_correction, t_start_interpolation, t_end_interpolation)
+
+    # determine the annual % decline of the costs based on the 2018-2030 data (original, before applying the malus)
+    xr_cost_decline = (((storage_costs.loc[t_start,:]-storage_costs.loc[t_end,:])/(t_end-t_start))/storage_costs.loc[t_start,:]).drop_vars('Cohort')
+    xr_cost_decline_longterm = xr_cost_decline*cost_decline_longterm_correction # cost decline after 2030 = cost decline 2018-2030 * correction factor
+    # cost_decline_longterm_correction is a single number and should describe the long-term decline after 2030 relative to the 2018-2030 decline
+
+    # storage_costs_new = storage_costs_interpol * costs_correction_interpol
+    storage_costs_cor = storage_costs * costs_correction
+
+    # ---------- future development ----------
+    # calculate the development from 2030 to 2050 (using annual price decline)
+    # vectorized approach for "for t in range(t_end, 2050+1): ..."
+    years_fwd = storage_costs_cor.Cohort.where(
+        storage_costs_cor.Cohort > t_end, drop=True
+    )
+    n_fwd = years_fwd - t_end
+    factors_fwd = (1 - xr_cost_decline_longterm) ** n_fwd
+
+    storage_costs_cor.loc[dict(Cohort=years_fwd)] = (
+        storage_costs_cor.sel(Cohort=t_end) * factors_fwd
+    )
+
+    # ---------- past development ----------
+    # for historic price development, assume 2x AVERAGE annual price decline on all technologies
+    years_bwd = storage_costs_cor.Cohort.where(
+        storage_costs_cor.Cohort < t_start, drop=True
+    )
+    n_bwd = t_start - years_bwd
+    factors_bwd = (1 + 2 * xr_cost_decline_longterm.mean()) ** n_bwd
+
+    storage_costs_cor.loc[dict(Cohort=years_bwd)] = (
+        storage_costs_cor.sel(Cohort=t_start) * factors_bwd
+    )
+    # restore values for lead-acid (set to constant 2018 values) -> exception: so that lead-acid gets a relative price advantage from 1970-2018
+    storage_costs_cor.loc[dict(Cohort=years_bwd, Type="Deep-cycle Lead-Acid")] = (
+        storage_costs_cor.sel(Cohort=t_start, Type="Deep-cycle Lead-Acid")
+    )
+
+    # market shares ---
+    # use the storage price development in the logit model to get market shares
+    storage_market_share = MNLogit(storage_costs_cor, mnlogit_param) #assumes input of an ordered dataframe with rows as years and columns as technologies, values as prices. Logitpar is the calibrated Logit parameter (usually a nagetive number between 0 and 1)
+
+    return storage_market_share
+
+
+def normalize_selected_techs(market_share, techs):
+    """ Select technologies and renormalize their market shares to sum to 1 per year.
+
+    Works with:
+    - xarray.DataArray (dimension: Type)
+    - pandas.DataFrame (columns: technologies)
+
+    Parameters
+    ----------
+    market_share : xarray.DataArray or pandas.DataFrame
+        Market shares by year and technology.
+    techs : list of str
+        Technologies to select and normalize.
+
+    Returns
+    -------
+    Same type as input
+        Normalized market shares of the selected technologies.
+    """
+    if isinstance(market_share, xr.DataArray):
+        sel = market_share.sel(Type=techs)
+        return sel / sel.sum(dim="Type")
+    else:  # pandas
+        sel = market_share[techs]
+        return sel.div(sel.sum(axis=1), axis=0)
 
 
 # STOCK MODELLING OLD -----------------------------------------------------------------------------------------------------
