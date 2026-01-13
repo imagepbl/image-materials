@@ -17,54 +17,64 @@ class ElectricVehicleBatteries(prism.Model):
     """
 
     # Input data
-    battery_weights: xr.DataArray
-    battery_shares: xr.DataArray
+    weights: xr.DataArray
+    shares: xr.DataArray
+    material_fractions: xr.DataArray
+    energy_density: xr.DataArray
 
     # Dimensions
-    Region: prism.Coords[REGION]
-    Type: prism.Coords[STOCK_TYPE]
-    battery: prism.Coords[BATTERY_TYPE] 
-    Cohort: prism.Coords[COHORT]
-    Time: prism.Coords[TIME]
+    Region:   prism.Coords[REGION]
+    Type:     prism.Coords[STOCK_TYPE]
+    battery:  prism.Coords[BATTERY_TYPE] 
+    Cohort:   prism.Coords[COHORT]
+    Time:     prism.Coords[TIME]
+    material: prism.Coords[MATERIAL_TYPE]
 
     # Data dependencies
-    input_data: tuple[str] = ("battery_shares", "battery_weights",
-                              "stock_by_cohort", "inflow", "outflow_by_cohort") #
-    output_data: tuple[str] = ("inflow_battery_kg","stock_battery_kg","outflow_battery_kg")
+    input_data: tuple[str] = ("shares", "weights", "material_fractions", "energy_density", 
+                              "stock_by_cohort", "inflow", "outflow_by_cohort") # from vehicle stock module
+    output_data: tuple[str] = ("inflow_battery_kWh","stock_battery_kWh","outflow_battery_kWh","inflow_battery_kg","stock_battery_kg","outflow_battery_kg")
 
-    
+    inflow_battery_kWh:     prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, "count"] = prism.export()
+    stock_battery_kWh:      prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, COHORT, "count"] = prism.export()
+    outflow_battery_kWh:    prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, COHORT, "count"] = prism.export()
+    inflow_battery_kg:      prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, MATERIAL_TYPE, "kg"] = prism.export()
+    stock_battery_kg:       prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, MATERIAL_TYPE, COHORT, "kg"] = prism.export()
+    outflow_battery_kg:     prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, MATERIAL_TYPE, COHORT, "kg"] = prism.export()
+
     def compute_initial_values(self, time: prism.Timeline):
         """
         """
-        self.inflow_battery_kg = xr.DataArray(
-            0.0,
-            dims=("Time", "Cohort", "Region", "battery", "Type"),
-            coords={"Time":      self.Time,
-                    "Cohort":    self.Cohort,
-                    "Region":    self.Region,
-                    "battery":   self.battery,
-                    "Type":      self.Type})
-        self.inflow_battery_kg = prism.Q_(self.inflow_battery_kg, "kg")
+        pass
+        # self.inflow_battery_kg = xr.DataArray(
+        #     0.0,
+        #     dims=("Time", "Cohort", "Region", "battery", "Type"),
+        #     coords={"Time":      self.Time,
+        #             "Cohort":    self.Cohort,
+        #             "Region":    self.Region,
+        #             "battery":   self.battery,
+        #             "Type":      self.Type})
+        # self.inflow_battery_kg = prism.Q_(self.inflow_battery_kg, "kg")
         
-        self.stock_battery_kg = xr.DataArray(
-            0.0,
-            dims=("Time", "Cohort", "Region", "battery", "Type"),
-            coords={"Time":      self.Time,
-                    "Cohort":    self.Cohort,
-                    "Region":    self.Region,
-                    "battery":   self.battery,
-                    "Type":      self.Type})
-        self.stock_battery_kg = prism.Q_(self.stock_battery_kg, "kg")
+        # self.stock_battery_kg = xr.DataArray(
+        #     0.0,
+        #     dims=("Time", "Cohort", "Region", "battery", "Type"),
+        #     coords={"Time":      self.Time,
+        #             "Cohort":    self.Cohort,
+        #             "Region":    self.Region,
+        #             "battery":   self.battery,
+        #             "Type":      self.Type})
+        # self.stock_battery_kg = prism.Q_(self.stock_battery_kg, "kg")
         
-        self.outflow_battery_kg = xr.DataArray(
-            0.0,
-            dims=("Time", "Cohort", "Region", "battery", "Type"),
-            coords={"Time":      self.Time,
-                    "Cohort":    self.Cohort,
-                    "Region":    self.Region,
-                    "battery":   self.battery,
-                    "Type":      self.Type})
-        self.outflow_battery_kg = prism.Q_(self.outflow_battery_kg, "kg")
+        # self.outflow_battery_kg = xr.DataArray(
+        #     0.0,
+        #     dims=("Time", "Cohort", "Region", "battery", "Type"),
+        #     coords={"Time":      self.Time,
+        #             "Cohort":    self.Cohort,
+        #             "Region":    self.Region,
+        #             "battery":   self.battery,
+        #             "Type":      self.Type})
+        # self.outflow_battery_kg = prism.Q_(self.outflow_battery_kg, "kg")
         
 
     def compute_values(self, time: prism.Time, inflow, stock_by_cohort, outflow_by_cohort):
