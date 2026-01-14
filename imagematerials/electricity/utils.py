@@ -6,6 +6,8 @@ import math
 import matplotlib.pyplot as plt
 import scipy.stats
 import prism
+from typing import Optional
+from pathlib import Path
 import warnings
 from pint.errors import UnitStrippedWarning
 
@@ -378,7 +380,9 @@ def sanitize_attrs(da): # for saving xarray objects to netcdf
 		}
 	return da
 
-def compare_da(da_new, da_old = None, path_to_saved_da=None): # for testing xarray objects
+def compare_da(da_new: xr.DataArray, 
+               da_old: xr.DataArray = None, 
+               path_to_saved_da: Optional[str | Path] = None): # for testing xarray objects
     """ Compare a (saved) DataArray to a new one.
 	
 	Parameters
@@ -399,7 +403,7 @@ def compare_da(da_new, da_old = None, path_to_saved_da=None): # for testing xarr
 	# compare_da(model_lines.inflow.to_array(), path_test / "grid_lines_inflow_v0.nc")
 
     if path_to_saved_da is not None and da_old is None:
-        da_old = xr.open_dataarray(os.path)
+        da_old = xr.open_dataarray(str(path_to_saved_da))
         da_old_clean = da_old.pint.dequantify()
         da_new_clean = da_new.pint.dequantify()
     elif da_old is not None and path_to_saved_da is None:

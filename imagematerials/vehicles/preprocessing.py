@@ -5,6 +5,7 @@ Returns:
 """
 # %%
 import argparse
+from itertools import product
 import os
 from collections import defaultdict
 from pathlib import Path
@@ -16,6 +17,7 @@ import xarray as xr
 import numpy as np
 import prism
 
+from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.distribution import ALL_DISTRIBUTIONS, NAME_TO_DIST
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import (
@@ -57,7 +59,7 @@ from imagematerials.vehicles.constants import (
     years_range,
     maintenance_lifetime_per_mode,
 )
-from imagematerials.concepts import create_vehicle_graph
+from imagematerials.concepts import create_vehicle_graph, create_region_graph
 from imagematerials.vehicles.modelling_functions import (interpolate, tkms_to_nr_of_vehicles_fixed,  
     scenario_change, apply_change_per_region)
 #from imagematerials.concepts import vehicle_knowledge_graph
@@ -722,9 +724,9 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
         'vehicle_weights_simple': vehicle_weights_simple,
         'vehicle_weights_typical': vehicle_weights_typical,
         'lifetimes': lifetimes_vehicles,
-        'battery_weights_typical': battery_weights_typical,
-        'battery_materials': battery_materials,
-        'battery_shares': battery_shares,
+        # 'battery_weights_typical': battery_weights_typical,
+        # 'battery_materials': battery_materials,
+        # 'battery_shares': battery_shares,
         'weight_boats': weight_boats,
         'vehicle_shares_typical': vehicle_shares_typical,
     }
@@ -740,9 +742,9 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
         "material_fractions_typical": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]}),
         "vehicle_weights_simple": (["Cohort"], ["Type"],),
         "vehicle_weights_typical": (["Cohort"], ["Type", "SubType"], {"Type": ["Type", "SubType"]}),
-        "battery_weights_typical": (["Cohort"], ["Type", "SubType"], {"Type": ["Type", "SubType"]}),
-        "battery_materials": (["Cohort"], ["material", "battery"],),
-        "battery_shares": (["Cohort"], ["battery"],),
+        # "battery_weights_typical": (["Cohort"], ["Type", "SubType"], {"Type": ["Type", "SubType"]}),
+        # "battery_materials": (["Cohort"], ["material", "battery"],),
+        # "battery_shares": (["Cohort"], ["battery"],),
         "weight_boats": (["Cohort"], ["Type"],),
         "vehicle_shares_typical": (["Time"], ["Type", "SubType", "Region"], {"Type": ["Type", "SubType"]})
     }
@@ -778,9 +780,9 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
     preprocessing_results_xarray["maintenance_material_fractions"] = maintenance_material_per_year_broadcasted
 
     # TODO: Check if this is correct
-    bad_coords = preprocessing_results_xarray["battery_materials"].coords["battery"]
-    new_coords = [x if x != "LMO" else "LMO/LCO" for x in bad_coords.values]
-    preprocessing_results_xarray["battery_materials"] = preprocessing_results_xarray["battery_materials"].assign_coords({"battery": new_coords})
+    # bad_coords = preprocessing_results_xarray["battery_materials"].coords["battery"]
+    # new_coords = [x if x != "LMO" else "LMO/LCO" for x in bad_coords.values]
+    # preprocessing_results_xarray["battery_materials"] = preprocessing_results_xarray["battery_materials"].assign_coords({"battery": new_coords})
 
     # Fix coordinates of weight_boats and concatenate to vehicle weights
     xr_ships = preprocessing_results_xarray.pop("weight_boats")
@@ -788,11 +790,11 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
     preprocessing_results_xarray["vehicle_weights"] = xr.concat((preprocessing_results_xarray["vehicle_weights"], xr_ships), dim="Type")
 
     # Set default battery weight to 0
-    xr_default_battery = xr.DataArray(0.0, dims=("Cohort", "Type"),
-                                      coords={
-                                          "Cohort": preprocessing_results_xarray["battery_weights"].coords["Cohort"],
-                                           "Type": ["Vehicles"]})
-    preprocessing_results_xarray["battery_weights"] = prism.Q_(xr.concat((preprocessing_results_xarray["battery_weights"], xr_default_battery), dim="Type"), "kg")
+    # xr_default_battery = xr.DataArray(0.0, dims=("Cohort", "Type"),
+    #                                   coords={
+    #                                       "Cohort": preprocessing_results_xarray["battery_weights"].coords["Cohort"],
+    #                                        "Type": ["Vehicles"]})
+    # preprocessing_results_xarray["battery_weights"] = prism.Q_(xr.concat((preprocessing_results_xarray["battery_weights"], xr_default_battery), dim="Type"), "kg")
 
     xr_default_maintenace = xr.DataArray(0.0, dims=("Type", "material"),
                                     coords={
@@ -824,7 +826,11 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
     
     prep_data["weights"] = prep_data.pop("vehicle_weights")
     prep_data["set_unit_flexible"] = "count"
-    
+
+    # new 14.01
+    knowledge_graph_region = create_region_graph()
+    preprocessing_results_xarray["stocks"] = knowledge_graph_region.rebroadcast_xarray(preprocessing_results_xarray["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
+        
     return preprocessing_results_xarray
 
 

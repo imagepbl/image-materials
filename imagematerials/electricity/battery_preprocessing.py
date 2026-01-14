@@ -56,37 +56,37 @@ from imagematerials.electricity.constants import (
     unit_mapping
 )
 
-YEAR_START = 1971
-YEAR_END = 2100
-YEAR_OUT = 2100
+# YEAR_START = 1971
+# YEAR_END = 2100
+# YEAR_OUT = 2100
 
-SCEN = "SSP2"
-# VARIANT = "VLHO"
-VARIANT = "M_CP"
-scen_folder = SCEN + "_" + VARIANT
-# path_base = Path().resolve() # TODO absolute path of file "preprocessing.py" ? current solution can differ depending on IDE used (?) 
-path_current = Path().resolve()
-path_base = path_current.parent.parent # base path of the project -> image-materials
-print(f"Base path: {path_base}")
+# SCEN = "SSP2"
+# # VARIANT = "VLHO"
+# VARIANT = "M_CP"
+# scen_folder = SCEN + "_" + VARIANT
+# # path_base = Path().resolve() # TODO absolute path of file "preprocessing.py" ? current solution can differ depending on IDE used (?) 
+# path_current = Path().resolve()
+# path_base = path_current.parent.parent # base path of the project -> image-materials
+# print(f"Base path: {path_base}")
 
-path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
+# path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
 
-path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
-path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scen_folder)
-# test if path_external_data_scenario exists and if not set to standard scenario
-if not path_external_data_scenario.exists():
-    path_external_data_scenario = Path(path_base, "data", "raw", "electricity", STANDARD_SCEN_EXTERNAL_DATA)
-print(f"Path to image output: {path_image_output}")
+# path_external_data_standard = Path(path_base, "data", "raw", "electricity", "standard_data")
+# path_external_data_scenario = Path(path_base, "data", "raw", "electricity", scen_folder)
+# # test if path_external_data_scenario exists and if not set to standard scenario
+# if not path_external_data_scenario.exists():
+#     path_external_data_scenario = Path(path_base, "data", "raw", "electricity", STANDARD_SCEN_EXTERNAL_DATA)
+# print(f"Path to image output: {path_image_output}")
 
-assert path_image_output.is_dir()
-assert path_external_data_standard.is_dir()
-assert path_external_data_scenario.is_dir()
+# assert path_image_output.is_dir()
+# assert path_external_data_standard.is_dir()
+# assert path_external_data_scenario.is_dir()
 
-# create the folder out_test if it does not exist
-if not (path_base / 'imagematerials' / 'electricity' / 'out_test').is_dir():
-    (path_base / 'imagematerials' / 'electricity' / 'out_test').mkdir(parents=True)
+# # create the folder out_test if it does not exist
+# if not (path_base / 'imagematerials' / 'electricity' / 'out_test').is_dir():
+#     (path_base / 'imagematerials' / 'electricity' / 'out_test').mkdir(parents=True)
 
-prism.unit_registry.load_definitions(path_base / "imagematerials" / "units.txt")
+# prism.unit_registry.load_definitions(path_base / "imagematerials" / "units.txt")
 # C:\Users\Judit\PhD\Coding\image-materials\imagematerials\units.txt
 idx = pd.IndexSlice   
 
@@ -158,7 +158,23 @@ def get_preprocessing_data_evbattery(path_base: str, scenario, year_start, year_
     # Transform to xarray #
 
     # create list of all vehicle types (combinations of vehicles type (Cars, Medium Freight Trucks,...) and drive trains (ICE, BEV,...))
-    vehicle_list = [f"{super_type} - {sub_type}" for super_type, sub_type in product(typical_modes, drive_trains)]
+    # vehicle_list = [f"{super_type} - {sub_type}" for super_type, sub_type in product(typical_modes, drive_trains)]
+    vehicle_list = ['Cars - BEV', 'Cars - FCV', 'Cars - HEV', 'Cars - ICE', 'Cars - PHEV',
+       'Cars - Trolley', 'Heavy Freight Trucks - BEV',
+       'Heavy Freight Trucks - FCV', 'Heavy Freight Trucks - HEV',
+       'Heavy Freight Trucks - ICE', 'Heavy Freight Trucks - PHEV',
+       'Heavy Freight Trucks - Trolley', 'Light Commercial Vehicles - BEV',
+       'Light Commercial Vehicles - FCV', 'Light Commercial Vehicles - HEV',
+       'Light Commercial Vehicles - ICE', 'Light Commercial Vehicles - PHEV',
+       'Light Commercial Vehicles - Trolley', 'Medium Freight Trucks - BEV',
+       'Medium Freight Trucks - FCV', 'Medium Freight Trucks - HEV',
+       'Medium Freight Trucks - ICE', 'Medium Freight Trucks - PHEV',
+       'Medium Freight Trucks - Trolley', 'Midi Buses - BEV',
+       'Midi Buses - FCV', 'Midi Buses - HEV', 'Midi Buses - ICE',
+       'Midi Buses - PHEV', 'Midi Buses - Trolley', 'Regular Buses - BEV',
+       'Regular Buses - FCV', 'Regular Buses - HEV', 'Regular Buses - ICE',
+       'Regular Buses - PHEV', 'Regular Buses - Trolley']
+    vhc_knowledge_graph = create_vehicle_graph()
 
     # 1. Market Shares -----------------------------------------------------------------------------
 
@@ -230,6 +246,7 @@ def get_preprocessing_data_evbattery(path_base: str, scenario, year_start, year_
         name="BatteryWeights"
     )
     xr_battery_weights = prism.Q_(xr_battery_weights, "kg")
+    xr_battery_weights = vhc_knowledge_graph.rebroadcast_xarray(xr_battery_weights, output_coords=vehicle_list, dim="Type")
 
     # 3. material intensities -----------------------------------------------------------------------
     storage_materials.columns = storage_materials.columns.rename([None, None]) # remove column MultiIndex name "g/MW" as it causes issues when converting to xarray
@@ -279,8 +296,6 @@ def get_preprocessing_data_evbattery(path_base: str, scenario, year_start, year_
     ev_fraction_v2g = ev_fraction_v2g_data.reindex(range(YEAR_FIRST_GRID,year_out+1)).interpolate(method="linear") # create dataframe with full index; values before first data points will be Nans, between data points interpolated linearly, after last data point will be last known value
     ev_fraction_v2g.loc[:ev_fraction_v2g_data.index[0]] = 0 # set values before first data point to 0
     ev_fraction_v2g.loc[ev_fraction_v2g_data.index[0]:ev_fraction_v2g_data.index[1]] = y # set values between (originally) first and last data point to quadratic/logistic interpolation
-
-
     # Create an empty expanded df
     vhc_fraction_v2g = pd.DataFrame(index=ev_fraction_v2g.index)
     # transfer the values for the relevant vehicle types (for now: Cars - BEV and Cars - PHEV)
@@ -306,6 +321,7 @@ def get_preprocessing_data_evbattery(path_base: str, scenario, year_start, year_
         name="VehicleFractionV2G"
     )
     xr_vhc_fraction_v2g = prism.Q_(xr_vhc_fraction_v2g, "fraction")
+    xr_vhc_fraction_v2g = vhc_knowledge_graph.rebroadcast_xarray(xr_vhc_fraction_v2g, output_coords=vehicle_list, dim="Type")
 
     # 6. capacity used for V2G -----------------------------------------------------------------------------
     # Build xarray DataArray
@@ -359,8 +375,8 @@ def get_preprocessing_data_evbattery(path_base: str, scenario, year_start, year_
     # bring preprocessing data into a generic format for the model
     prep_data = {}
     prep_data["shares"] = market_share_EVs
-    prep_data["battery_weights"] = xr_battery_weights_interp
-    prep_data["material_intensities"] = xr_battery_materials_interp
+    prep_data["weights"] = xr_battery_weights_interp
+    prep_data["material_fractions"] = xr_battery_materials_interp
     prep_data["energy_density"] = xr_energy_density_interp
     prep_data["vhc_fraction_v2g"] = xr_vhc_fraction_v2g
     prep_data["capacity_fraction_v2g"] = xr_capacity_fraction_v2g
@@ -386,7 +402,7 @@ def get_preprocessing_data_evbattery(path_base: str, scenario, year_start, year_
 
 
 
-
+"""
 #----------------------------------------------------------------------------------------------------------
 ###########################################################################################################
 # %% I. Read in files
@@ -441,6 +457,7 @@ ev_fraction_v2g_data = pd.read_csv(path_external_data_standard / 'ev_fraction_av
 
 # create list of all vehicle types (combinations of vehicles type (Cars, Medium Freight Trucks,...) and drive trains (ICE, BEV,...))
 vehicle_list = [f"{super_type} - {sub_type}" for super_type, sub_type in product(typical_modes, drive_trains)]
+vhc_knowledge_graph = create_vehicle_graph()
 
 
 # 1. Market Shares -----------------------------------------------------------------------------
@@ -513,6 +530,7 @@ xr_battery_weights = xr.DataArray(
     name="BatteryWeights"
 )
 xr_battery_weights = prism.Q_(xr_battery_weights, "kg")
+xr_battery_weights = vhc_knowledge_graph.rebroadcast_xarray(xr_battery_weights, output_coords=vehicle_list, dim="Type")
 
 # 3. material intensities -----------------------------------------------------------------------
 storage_materials.columns = storage_materials.columns.rename([None, None]) # remove column MultiIndex name "g/MW" as it causes issues when converting to xarray
@@ -719,4 +737,4 @@ prep_data["knowledge_graph"] = create_electricity_graph()
 # simulation_timeline = prism.Timeline(YEAR_START, YEAR_END, 1) #1970
 
 # sec_electr_gen = Sector("ev_batteries", prep_data)
-
+    """
