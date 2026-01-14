@@ -153,7 +153,10 @@ def interpolate_xr(data_array, t_start, t_end, interp_method = 'linear'):
 
     return da_interp
 
-def MNLogit(data, logitpar):
+def MNLogit(data: xr.DataArray | pd.DataFrame, 
+            logitpar: float, 
+            dim_type: str | None =None
+            ) -> xr.DataArray | pd.DataFrame:
     """ Multinomial Logit function to calculate market shares from technology prices.
 
     Works with:
@@ -174,6 +177,13 @@ def MNLogit(data, logitpar):
 
     # ---------- xarray ----------
     if isinstance(data, xr.DataArray):
+
+        if dim_type is None:
+            # detect type dimension (Type / SuperType / BatteryType)
+            dim_type = next(
+                d for d in ["Type", "BatteryType", "SuperType"]
+                if d in data.dims
+            )
         
         # strip physical units (required for exp)
         values = data.pint.dequantify() if hasattr(data, "pint") else data
@@ -181,7 +191,7 @@ def MNLogit(data, logitpar):
         weights = np.exp(logitpar * values)
 
         # normalize over technologies
-        shares = weights / weights.sum(dim="Type")
+        shares = weights / weights.sum(dim=dim_type)
 
         # attach new unit
         if hasattr(data, "pint"):
@@ -420,7 +430,8 @@ def calculate_storage_market_shares(
     cost_decline_longterm_correction: xr.DataArray,
     mnlogit_param: float,
     t_start_interpolation: int = 1970,
-    t_end_interpolation: int = 2050) -> xr.DataArray:
+    t_end_interpolation: int = 2050,
+    dim_type: str | None = None) -> xr.DataArray:
     """ Calculate technology market shares for energy storage based on cost
     developments and a multinomial logit model.
 
@@ -439,7 +450,7 @@ def calculate_storage_market_shares(
         ``storage_costs`` in dimensions.
     cost_decline_longterm_correction : xr.DataArray
         Scalar correction factor applied to the annual cost decline rate
-        derived from the historical period (2018–2030) to represent
+        derived from the historical period (2018-2030) to represent
         long-term cost decline after 2030.
     mnlogit_param : float
         Logit parameter used in the multinomial logit model. Typically a
@@ -462,14 +473,14 @@ def calculate_storage_market_shares(
       at its 2018 level.
     """
 
-    # if "Type" in storage_costs.dims: # TODO: not working yet
-    #     dim_type = Type
-    #     print(dim_type)
-    # elif "BatteryType" in storage_costs.dims:
-    #     dim_type = "BatteryType"
-    #     print(dim_type)
-    # else:
-    #     raise ValueError("storage_costs must have either 'Type' or 'BatteryType' dimension.")
+    # if dim_type not specified as input: detect from data. Raise warning if multiple candidates found.
+    if dim_type is None:
+        candidates = [d for d in ["Type", "BatteryType", "SuperType"] if d in storage_costs.dims]
+        if len(candidates) == 0:
+            raise ValueError("No valid type dimension found.")
+        if len(candidates) > 1:
+            warnings.warn(f"Multiple type dimensions found: {candidates}. Using {candidates[0]}.")
+        dim_type = candidates[0]
 
     t_start = storage_costs.Cohort.values[0]
     t_end   = storage_costs.Cohort.values[-1]
@@ -511,18 +522,21 @@ def calculate_storage_market_shares(
         storage_costs_cor.sel(Cohort=t_start) * factors_bwd
     )
     # restore values for lead-acid (set to constant 2018 values) -> exception: so that lead-acid gets a relative price advantage from 1970-2018
-    storage_costs_cor.loc[dict(Cohort=years_bwd, dim_type="Deep-cycle Lead-Acid")] = (
-        storage_costs_cor.sel(Cohort=t_start, dim_type="Deep-cycle Lead-Acid")
+    storage_costs_cor.loc[dict(Cohort=years_bwd, **{dim_type: "Deep-cycle Lead-Acid"})] = ( # **{dim_type: "Deep-cycle Lead-Acid"} dynamically creates a keyword argument 
+        storage_costs_cor.sel(Cohort=t_start, **{dim_type: "Deep-cycle Lead-Acid"})         # if dim_type == "Type" -> Type="Deep-cycle Lead-Acid"
     )
 
     # market shares ---
     # use the storage price development in the logit model to get market shares
-    storage_market_share = MNLogit(storage_costs_cor, mnlogit_param) #assumes input of an ordered dataframe with rows as years and columns as technologies, values as prices. Logitpar is the calibrated Logit parameter (usually a nagetive number between 0 and 1)
+    storage_market_share = MNLogit(storage_costs_cor, mnlogit_param, dim_type=dim_type) #assumes input of an ordered dataframe with rows as years and columns as technologies, values as prices. Logitpar is the calibrated Logit parameter (usually a nagetive number between 0 and 1)
 
     return storage_market_share
 
 
-def normalize_selected_techs(market_share, techs):
+def normalize_selected_techs(market_share: xr.DataArray | pd.DataFrame, 
+                             techs: list[str], 
+                             dim_type: str | None = None
+                             ) -> xr.DataArray | pd.DataFrame:
     """ Select technologies and renormalize their market shares to sum to 1 per year.
 
     Works with:
@@ -542,8 +556,14 @@ def normalize_selected_techs(market_share, techs):
         Normalized market shares of the selected technologies.
     """
     if isinstance(market_share, xr.DataArray):
-        sel = market_share.sel(Type=techs)
-        return sel / sel.sum(dim="Type")
+        # if type dimension not specified as input: detect from data (Type / SuperType / BatteryType)
+        if dim_type is None:
+            dim_type = next(
+                d for d in ["Type", "BatteryType", "SuperType"]
+                if d in market_share.dims
+            )
+        sel = market_share.sel(**{dim_type: techs}) # **{...} is dictionary unpacking -> handles flexible keyword arguments
+        return sel / sel.sum(dim=dim_type)
     else:  # pandas
         sel = market_share[techs]
         return sel.div(sel.sum(axis=1), axis=0)

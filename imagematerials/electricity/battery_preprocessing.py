@@ -168,10 +168,10 @@ def get_preprocessing_data_evbattery(path_base: str, scenario, year_start, year_
     data_array = storage_costs.to_numpy()
     xr_storage_costs = xr.DataArray(
         data_array,
-        dims=("Cohort", "Type"),
+        dims=("Cohort", "BatteryType"),
         coords={
             "Cohort": years,
-            "Type": techs
+            "BatteryType": techs
         },
         name="StorageCosts"
     )
@@ -183,10 +183,10 @@ def get_preprocessing_data_evbattery(path_base: str, scenario, year_start, year_
     data_array = costs_correction.to_numpy()
     xr_costs_correction = xr.DataArray(
         data_array,
-        dims=("Cohort", "Type"),
+        dims=("Cohort", "BatteryType"),
         coords={
             "Cohort": years,
-            "Type": techs
+            "BatteryType": techs
         },
         name="StorageCostsCorrection"
     )
@@ -197,9 +197,9 @@ def get_preprocessing_data_evbattery(path_base: str, scenario, year_start, year_
     data_array = cost_decline_longterm_correction.to_numpy()
     xr_cost_decline_longterm_correction = xr.DataArray(
         data_array,
-        dims=("Type",),
+        dims=("BatteryType",),
         coords={
-            "Type": techs
+            "BatteryType": techs
         },
         name="StorageCostsDeclineLongterm"
     )
@@ -241,16 +241,16 @@ def get_preprocessing_data_evbattery(path_base: str, scenario, year_start, year_
     # Build xarray DataArray
     xr_storage_materials = xr.DataArray(
         data_array,
-        dims=("material", "Cohort", "Type"),
+        dims=("material", "Cohort", "BatteryType"),
         coords={
             "material": materials,
             "Cohort": years,
-            "Type": techs
+            "BatteryType": techs
         },
         name="MaterialFractions"
     )
     xr_storage_materials = prism.Q_(xr_storage_materials, "fraction")
-    xr_battery_materials = xr_storage_materials.sel(Type=EV_BATTERIES) # Select only those technologies from the storage technologies that are suitable for EV & mobile applications
+    xr_battery_materials = xr_storage_materials.sel(BatteryType=EV_BATTERIES) # Select only those technologies from the storage technologies that are suitable for EV & mobile applications
 
 
     # 4. energy density -----------------------------------------------------------------------------
@@ -260,15 +260,15 @@ def get_preprocessing_data_evbattery(path_base: str, scenario, year_start, year_
     data_array = energy_density.to_numpy()
     xr_energy_density = xr.DataArray(
         data_array,
-        dims=("Cohort", "Type"),
+        dims=("Cohort", "BatteryType"),
         coords={
             "Cohort": years,
-            "Type": techs
+            "BatteryType": techs
         },
         name="EnergyDensity"
     )
     xr_energy_density = prism.Q_(xr_energy_density, "kg/kWh")
-    xr_energy_density = xr_energy_density.sel(Type=EV_BATTERIES) # Select only those technologies from the storage technologies that are suitable for EV & mobile applications
+    xr_energy_density = xr_energy_density.sel(BatteryType=EV_BATTERIES) # Select only those technologies from the storage technologies that are suitable for EV & mobile applications
 
 
     # 5. EV fraction available for V2G --------------------------------------------------------------------
@@ -341,7 +341,7 @@ def get_preprocessing_data_evbattery(path_base: str, scenario, year_start, year_
     storage_market_share_interp = interpolate_xr(storage_market_share, YEAR_FIRST_GRID, year_out)
     # Select only those technologies from the storage technologies that are suitable for EV & mobile applications
     # normalize the selection of EV battery technologies, so that total market share is 1 again (taking the relative share in the selected battery techs)
-    market_share_EVs = normalize_selected_techs(storage_market_share_interp, EV_BATTERIES) # TODO: this should be done differently as market shares of EV batteries probably differ from their market shares in total storage market
+    market_share_EVs = normalize_selected_techs(storage_market_share_interp, EV_BATTERIES, dim_type="BatteryType") # TODO: this should be done differently as market shares of EV batteries probably differ from their market shares in total storage market
 
     # 2. Battery Weights ----------------------------------------------------------------
     xr_battery_weights_interp = interpolate_xr(xr_battery_weights, YEAR_FIRST_GRID, year_out)
@@ -682,7 +682,7 @@ storage_market_share = calculate_storage_market_shares(
 storage_market_share_interp = interpolate_xr(storage_market_share, YEAR_FIRST_GRID, YEAR_OUT)
 # As not all storage technologies are suitable for EV & mobile applications, select only those technologies.
 # normalize the selection of EV battery technologies, so that total market share is 1 again (taking the relative share in the selected battery techs)
-market_share_EVs = normalize_selected_techs(storage_market_share_interp, EV_BATTERIES) # TODO: this should be done differently as market shares of EV batteries probably differ from their market shares in total storage market
+market_share_EVs = normalize_selected_techs(storage_market_share_interp, EV_BATTERIES, dim_type="BatteryType") # TODO: this should be done differently as market shares of EV batteries probably differ from their market shares in total storage market
 
 
 # 2. Battery Weights ----------------------------------------------------------------
