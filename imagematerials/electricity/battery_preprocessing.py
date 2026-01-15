@@ -380,7 +380,8 @@ def get_preprocessing_data_evbattery(path_base: str, scenario, year_start, year_
     prep_data["energy_density"] = xr_energy_density_interp
     prep_data["vhc_fraction_v2g"] = xr_vhc_fraction_v2g
     prep_data["capacity_fraction_v2g"] = xr_capacity_fraction_v2g
-    prep_data["knowledge_graph"] = create_electricity_graph()
+    prep_data["knowledge_graph_elc"] = create_electricity_graph()
+    prep_data["knowledge_graph_vhc"] = create_vehicle_graph()
 
     return prep_data
 
