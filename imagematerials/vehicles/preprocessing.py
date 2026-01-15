@@ -387,8 +387,6 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
     # Apply lightweighting in narrow scenario
     if "narrow" in circular_economy_config.keys():
         ce_scen = "narrow"
-    if "resource_efficient" in circular_economy_config.keys():
-        ce_scen = "resource_efficient"
     
         target_year = circular_economy_config[ce_scen]['vehicles']['target_year']
         base_year = circular_economy_config[ce_scen]['vehicles']['base_year']
