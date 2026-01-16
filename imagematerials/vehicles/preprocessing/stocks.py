@@ -74,6 +74,7 @@ def get_vehicle_stocks(data_path: str, standard_data_path, climate_data_path, cl
         years_range
     ).interpolate(limit_direction='both')
 
+    ce_scen = None  # INITIALIZE ce_scen
     if "narrow" in circular_economy_config.keys():
         ce_scen = "narrow"
     if "narrow_product" in circular_economy_config.keys():

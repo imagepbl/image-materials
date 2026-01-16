@@ -73,7 +73,7 @@ def buildings_preprocessing(base_directory: Path, climate_policy_config: dict,
     floorspace_commercial = floorspace_commercial_rururb.sel(
         {"Type": [x.values for x in floorspace_commercial_rururb.coords["Type"] if x.values not in ["Urban", "Rural"]]})
     
-    if "base" or "narrow_activity" in circular_economy_config.keys():
+    if "base" or "narrow_activity" or "narrow" in circular_economy_config.keys():
         # Implement circular economy for commercial floorspace
         # This is only done for the base and narrow_activity scenarios, as the other scenarios do not have a circular economy component
         floorspace_commercial = apply_circular_economy_commercial_floorspace(floorspace_commercial, circular_economy_config)
