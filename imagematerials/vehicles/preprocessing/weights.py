@@ -51,7 +51,22 @@ def get_weights(data_path: str, general_data_path: str, circular_economy_config:
         vehicle_weight_kg_typical.rename_axis('mode', axis=1).stack().unstack(['mode', 'type'])
     vehicle_weights_typical = interpolate(pd.DataFrame(vehicle_weights_typical))
 
+        # Apply lightweighting if part of scenario
+    ce_scen = None  # INITIALIZE ce_scen
+
+    if "narrow" in circular_economy_config.keys():
+        ce_scen = "narrow"
+    if "narrow_product" in circular_economy_config.keys():
+        ce_scen = "narrow_product"
     if "resource_efficient" in circular_economy_config.keys():
+        ce_scen = "resource_efficient"
+
+    if ce_scen in ["resource_efficient", "narrow_product", "narrow"]:
+                # Verify both are defined, otherwise raise error
+        if not ('weight_change_pc' in circular_economy_config[ce_scen]['vehicles'].get('road', {}) and \
+                'weight_change_pc' in circular_economy_config[ce_scen]['vehicles'].get('non-road', {})):
+            raise ValueError(f"Both 'road' and 'non-road' weight_change_pc must be defined in '{ce_scen}' scenario")
+        
         resource_efficient_config = circular_economy_config['resource_efficient']['vehicles']
         target_year = resource_efficient_config['target_year']
         base_year = resource_efficient_config['base_year']
@@ -77,7 +92,7 @@ def get_weights(data_path: str, general_data_path: str, circular_economy_config:
             vehicle_weights_typical, base_year, target_year,
             weight_change_pc_expanded, implementation_rate
         )
-        logging.debug("implemented 'resource_efficient' for Vehicles (lightweighting)")
+        logging.debug(f"implemented '{ce_scen}' for Vehicles (lightweighting)")
 
     vehicle_weights_simple = xarray_conversion(vehicle_weights_simple, (["Cohort"], ["Type"],))
     vehicle_weights_typical = xarray_conversion(vehicle_weights_typical, (["Cohort"], ["Type", "SubType"], {"Type": ["Type", "SubType"]}))
