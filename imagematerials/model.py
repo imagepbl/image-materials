@@ -777,21 +777,21 @@ class RestOf(prism.Model):
     # Data dependencies
     input_data: tuple[str] = ("gompertz_coefs", "gdp_per_capita", "population", 
                               "historic_diff_consumption_mean", "historic_diff_consumption_total")
-    output_data: tuple[str] = ("inflow_materials_rest",)
+    output_data: tuple[str] = ("inflow_materials",)
 
     # Output data inflow_materials_rest
-    # inflow_materials_rest: prism.TimeVariable[REGION, MATERIAL_TYPE] = prism.export()
+    # inflow_materials: prism.TimeVariable[REGION, MATERIAL_TYPE] = prism.export()
 
     def compute_initial_values(self, time: prism.Timeline):
-        self.inflow_materials_rest = xr.DataArray(
-            0.0, dims=("Time", "Region", "material"),
+        self.inflow_materials = xr.DataArray(
+            0.0, dims=("time", "Region", "material"),
             coords={
-                "Time": self.Time,
+                "time": self.Time,
                 "Region": self.Region,  
                 "material": self.material
             }
         )
-        self.inflow_materials_rest = prism.Q_(self.inflow_materials_rest, "t")
+        self.inflow_materials = prism.Q_(self.inflow_materials, "t")
         
     def compute_values(self, time: prism.Time, gompertz_coefs, gdp_per_capita, population, 
                        historic_diff_consumption_mean, historic_diff_consumption_total):
@@ -804,28 +804,27 @@ class RestOf(prism.Model):
             c = gompertz_coefs.sel(coef='c', Time = t)
             self.inflow_per_capita_rest = (a * np.exp(-b * np.exp(-c * gdp_per_capita.loc[t])))
             self.inflow_per_capita_rest = prism.Q_(self.inflow_per_capita_rest, "t/person")
-            self.inflow_materials_rest.loc[t] = self.inflow_per_capita_rest * population.loc[t]
+            self.inflow_materials.loc[t] = self.inflow_per_capita_rest * population.loc[t]
             
             # Create a mask of where values are nan
-            mask = np.isnan(self.inflow_materials_rest.loc[t])
+            mask = np.isnan(self.inflow_materials.loc[t])
            
             # Use the mask to fill nans with historic_diff_consumption
-            # Align historic_diff_consumption to the same dims/order as inflow_materials_rest
+            # Align historic_diff_consumption to the same dims/order as inflow_materials
 
-            self.inflow_materials_rest.loc[t] = xr.where(
+            self.inflow_materials.loc[t] = xr.where(
                 mask,
-                historic_diff_consumption_mean.transpose(*self.inflow_materials_rest.loc[t].dims),
-                self.inflow_materials_rest.loc[t]
+                historic_diff_consumption_mean.transpose(*self.inflow_materials.loc[t].dims),
+                self.inflow_materials.loc[t]
             )
-            
-            # check if real historic data is available (not nan)
-            real_historic_data_mask = ~np.isnan(historic_diff_consumption_total.sel(Time=t))
-            self.inflow_materials_rest.loc[t] = xr.where(
-                real_historic_data_mask,
-                historic_diff_consumption_total.sel(Time=t),
-                self.inflow_materials_rest.loc[t]
-            )
+            if t > 1970 and t < 2025:
+                # check if real historic data is available (not nan)
+                real_historic_data_mask = ~np.isnan(historic_diff_consumption_total.sel(Time=t))
+                self.inflow_materials.loc[t] = xr.where(
+                    real_historic_data_mask,
+                    historic_diff_consumption_total.sel(Time=t),
+                    self.inflow_materials.loc[t]
+                )
 
         else:
             pass # No inflow before 1970
-        
