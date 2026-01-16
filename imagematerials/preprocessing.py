@@ -5,7 +5,7 @@ from typing import Optional, Union
 import numpy as np
 
 from imagematerials.buildings.preprocessing.main import buildings_preprocessing as prep_bld
-from imagematerials.vehicles.preprocessing import preprocess as prep_vhc
+from imagematerials.vehicles.preprocessing.main import vehicles_preprocessing as prep_vhc
 from imagematerials.eol.preprocessing import eol_preprocessing as prep_eol
 from imagematerials.electricity.preprocessing import get_preprocessing_data_gen as prep_elc_gen
 from imagematerials.electricity.preprocessing import get_preprocessing_data_grid as prep_elc_grid
