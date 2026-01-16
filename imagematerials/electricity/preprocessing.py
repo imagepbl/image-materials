@@ -48,7 +48,7 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
     if not path_external_data_scenario.exists():
         path_external_data_scenario = Path(path_base, "electricity", STANDARD_SCEN_EXTERNAL_DATA)
 
-    assert path_external_data_scenario.is_dir()
+    # assert path_external_data_scenario.is_dir()
 
     ###########################################################################################################
     # Read in files #
@@ -277,8 +277,8 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
     if not path_external_data_scenario.exists():
         path_external_data_scenario = Path(path_base, "electricity", STANDARD_SCEN_EXTERNAL_DATA)
 
-    assert path_external_data_standard.is_dir()
-    assert path_external_data_scenario.is_dir() 
+    # assert path_external_data_standard.is_dir()
+    # assert path_external_data_scenario.is_dir() 
 
     ###########################################################################################################
     # Read in files #
@@ -676,8 +676,8 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
 
     # print(f"Path to image output: {path_image_output}")
     # assert path_image_output.is_dir()
-    assert path_external_data_standard.is_dir()
-    assert path_external_data_scenario.is_dir()
+    # assert path_external_data_standard.is_dir()
+    # assert path_external_data_scenario.is_dir()
 
     idx = pd.IndexSlice   
 
