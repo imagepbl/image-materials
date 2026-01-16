@@ -18,37 +18,49 @@ def cement_projection(scenario: str, path_input_data, path_input_data_image):
     cement = ResourceModel(resource_group = 'nmm', resource = 'cement', 
                         image_mat_available = True, start_year = 1971, 
                         scenario=scenario,
-                        convert_image=True, end_year = 2012, convert_to_tons = 1/1000_000, 
-                        trade_data=True, 
+                        convert_image=True, end_year = 2023, convert_to_tons = 1/1000_000, 
+                        trade_data=False, 
                         path_input_data=path_input_data,
                         path_input_data_image=path_input_data_image)
     # cement net trade
     # Historical export per region for Cement (Mtonne), 1970-2000 + 2100 (constant from 2000 on) 
     # (because export and import did not add up to 0, import has been increased by 25%, see Roorda, page 13)
 
+    group_1 = ['class_ 1', 'class_ 11', ]
+    group_2 = ['class_ 3', 'class_ 4', 'class_ 5', 
+            'class_ 6', 'class_ 10'] 
+    group_4 = ['class_ 8', 'class_ 9', 'class_ 26']
+    group_5 = ['class_ 12']
+    group_6 = ['class_ 13', 'class_ 21']
+    group_7 = ['class_ 18', 'class_ 22', 'class_ 25']
+    group_8 = ['class_ 19']
+    group_9 = ['class_ 23']
+    group_10 = ['class_ 24']
+    group_11 = ['class_ 2']
     china = ['class_ 20']
-
-    medium = ['class_ 1', 'class_ 2',  'class_ 3', 'class_ 4', 
-              'class_ 5', 'class_ 6', 'class_ 10',
-              'class_ 23', 'class_ 11' , 'class_ 24'] 
-
-    # will get global fit
-    spreaded = ['class_ 12', 'class_ 16']
 
     # what is in rest will be fitted to global fit      
     rest = all_regions_list_class[:-1]
-    rest = [r for r in rest if r not in (china+medium)]
+    rest = [r for r in rest if r not in (group_1+group_2+group_4+group_5+group_6+group_7+group_8+group_9+group_10+group_11+china)]
 
-    all_regions_list_class_except_china_and_global = [r for r in all_regions_list_class if r not in ['class_ 20', 'class_ 27']]
-    excluded = ['class_ 8', 'class_ 9', 'class_ 14']
+    excluded = [] #['class_ 8', 'class_ 9', 'class_ 14']
 
     # trajectory not to forseen, will be fitted with global regression
 
     # for these models a regression will be made
     # all reginos that are not in the high, medium, low will be fitted with the global regression
-    cement_grouping = {'all' : all_regions_list_class_except_china_and_global,
-                        'china': china,
-                        'medium': medium
+    cement_grouping = {'all' : all_regions_list_class[:-1],
+                    'group_1': group_1,
+                    'group_2': group_2,
+                        'group_4': group_4,
+                        'group_5': group_5,
+                        'group_6': group_6,
+                        'group_7': group_7,
+                        'group_8': group_8,
+                        'group_9': group_9,
+                        'group_10': group_10,
+                        'group_11': group_11,
+                        'china': china, #use all
                         }
 
     #cement_grouping = {'all' : all_regions_list_class[:-1]}
@@ -66,17 +78,36 @@ def cement_projection(scenario: str, path_input_data, path_input_data_image):
     # Fit models 
     cement.calculate_regressors(cement.historic_other_fraction_consumption)
 
+
     best_rmse_models={
         'all' : 'gompertz model',
+        'group_1' : 'gompertz model',
+        'group_2' : 'gompertz model',
+        'group_4' : 'gompertz model',
+        'group_5' : 'gompertz model',
+        'group_6' :  'gompertz model',
+        'group_7' : 'gompertz model',
+        'group_8' : 'gompertz model',
+        'group_9' : 'gompertz model',
+        'group_10' : 'gompertz model',
+        'group_11' : 'gompertz model',
         'china': 'gompertz model',
-        'medium': 'gompertz model'}
-
-    bounds = {
-        'all' : ([0, 0, 0], [10, 10, 10]),
-        'china': ([0, 0, 0], [2, 10, 10]),
-        'medium': ([0, 5, 0], [10, 10, 10]),
     }
 
+    bounds = {
+        'all' : ([0, 0, 0.5], [1, 5, 5]),
+        'group_1' : ([0, 1, 1], [1, 5, 5]),
+        'group_2' : ([0, 1, 1], [0.3, 5, 5]),
+        'group_4' : ([0, 1, 1], [0.35, 5, 5]),
+        'group_5' : ([0, 1, 1], [1, 5, 5]),
+        'group_6' : ([0, 1, 1], [1, 5, 5]),
+        'group_7' : ([0, 1, 1], [1, 5, 5]),
+        'group_8' : ([0, 1, 1], [1, 5, 5]),
+        'group_9' : ([0, 1, 1], [1, 5, 5]),
+        'group_10' : ([0, 1, 1], [1, 5, 5]),
+        'group_11' : ([0, 1, 1], [1, 5, 5]),
+        'china': ([0, 2, 0.5], [1, 5, 5]),
+    }
     cement.fit_models(best_rmse_models, bounds)
 
     # project based on best model
