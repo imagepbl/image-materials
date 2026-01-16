@@ -1,5 +1,6 @@
 import prism
 import xarray as xr
+import numpy as np
 
 from imagematerials.concepts import KnowledgeGraph
 
@@ -89,25 +90,40 @@ class ElectricVehicleBatteries(prism.Model):
          
         t, dt = time.t, time.dt
 
+        print("inflow is zero:")
+        print(bool(np.isclose(self.inflow.pint.magnitude, 0).all()))
+
         # 1. Calculate batteries inflow, stock, outflow ("count")
-        self.inflow_battery[t]  = self.inflow.loc[t] * self.shares.sel(Cohort = t)#.sum("Type")
+        self.inflow_battery[t]  = self.inflow.loc[t] * self.shares.sel(Cohort = t).drop_vars("Cohort")#.sum("Type")
         self.stock_battery[t]   = (self.stock_by_cohort.loc[t] * self.shares)#.sum("Type") #.sum(["Cohort","battery"])
         self.outflow_battery[t] = (self.outflow_by_cohort.loc[t] * self.shares)#.sum("Type") #.sum(["Cohort","battery"])
 
+        print("inflow_battery is zero:")
+        print(bool(np.isclose(prism.M_(self.inflow_battery), 0).all()))
+
         # 2. Intermediate variable: battery mass inflow, stock, outflow (kg)
-        inflow_battery_kg   = self.inflow_battery[t]  * self.weights.sel(Cohort = t)
+        inflow_battery_kg   = self.inflow_battery[t]  * self.weights.sel(Cohort = t).drop_vars("Cohort")
         stock_battery_kg    = self.stock_battery[t]  * self.weights
         outflow_battery_kg  = self.outflow_battery[t]  * self.weights
 
+        print("inflow_battery_kg is zero:")
+        print(bool(np.isclose(prism.M_(inflow_battery_kg), 0).all()))
+
         # 3. Calculate battery materials (copper, ..) inflow, stock, outflow (kg)
-        self.inflow_battery_materials[t]  = (inflow_battery_kg * self.material_fractions.sel(Cohort = t))
+        self.inflow_battery_materials[t]  = (inflow_battery_kg * self.material_fractions.sel(Cohort = t).drop_vars("Cohort"))
         self.stock_battery_materials[t]   = (stock_battery_kg * self.material_fractions)
         self.outflow_battery_materials[t] = (outflow_battery_kg * self.material_fractions)
 
+        print("inflow_battery_materials is zero:")
+        print(bool(np.isclose(prism.M_(self.inflow_battery_materials), 0).all()))
+
         # 4. Calculate battery energy capacity inflow, stock, outflow (kWh)
-        self.inflow_battery_kWh[t]  = inflow_battery_kg / self.energy_density.sel(Cohort = t)
+        self.inflow_battery_kWh[t]  = inflow_battery_kg / self.energy_density.sel(Cohort = t).drop_vars("Cohort")
         self.stock_battery_kWh[t]   = stock_battery_kg / self.energy_density
         self.outflow_battery_kWh[t] = outflow_battery_kg / self.energy_density
+
+        print("inflow_battery_kWh is zero:")
+        print(bool(np.isclose(prism.M_(self.inflow_battery_kWh), 0).all()))
         
         # cohort dimension calculation done internally by xarray (in that way battery shares of stock are used which are different from inflow shares)
         

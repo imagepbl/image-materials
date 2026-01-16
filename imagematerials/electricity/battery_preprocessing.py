@@ -174,6 +174,16 @@ def get_preprocessing_data_evbattery(path_base: str, scenario, year_start, year_
        'Midi Buses - PHEV', 'Midi Buses - Trolley', 'Regular Buses - BEV',
        'Regular Buses - FCV', 'Regular Buses - HEV', 'Regular Buses - ICE',
        'Regular Buses - PHEV', 'Regular Buses - Trolley']
+    vehicle_list_non_ev = ['Cars - ICE', 'Cars - HEV', 'Cars - FCV', 'Cars - Trolley', 
+        'Regular Buses - ICE', 'Regular Buses - HEV', 'Regular Buses - FCV', 
+        'Regular Buses - Trolley', 'Midi Buses - ICE', 'Midi Buses - HEV',
+       'Midi Buses - FCV', 'Midi Buses - Trolley', 'Heavy Freight Trucks - ICE',
+       'Heavy Freight Trucks - HEV', 'Heavy Freight Trucks - FCV',
+       'Heavy Freight Trucks - Trolley', 'Medium Freight Trucks - ICE',
+       'Medium Freight Trucks - HEV', 'Medium Freight Trucks - FCV',
+       'Medium Freight Trucks - Trolley', 'Light Commercial Vehicles - ICE',
+       'Light Commercial Vehicles - HEV', 'Light Commercial Vehicles - FCV',
+       'Light Commercial Vehicles - Trolley']
     vhc_knowledge_graph = create_vehicle_graph()
 
     # 1. Market Shares -----------------------------------------------------------------------------
@@ -358,6 +368,8 @@ def get_preprocessing_data_evbattery(path_base: str, scenario, year_start, year_
     # Select only those technologies from the storage technologies that are suitable for EV & mobile applications
     # normalize the selection of EV battery technologies, so that total market share is 1 again (taking the relative share in the selected battery techs)
     market_share_EVs = normalize_selected_techs(storage_market_share_interp, EV_BATTERIES, dim_type="BatteryType") # TODO: this should be done differently as market shares of EV batteries probably differ from their market shares in total storage market
+    market_share_EVs = market_share_EVs.expand_dims(Type=vehicle_list).copy() # add vehicle type dimension
+    market_share_EVs.loc[dict(Type=vehicle_list_non_ev)] = 0 # set non-EV vehicle types to zero
 
     # 2. Battery Weights ----------------------------------------------------------------
     xr_battery_weights_interp = interpolate_xr(xr_battery_weights, YEAR_FIRST_GRID, year_out)
@@ -457,7 +469,32 @@ ev_fraction_v2g_data = pd.read_csv(path_external_data_standard / 'ev_fraction_av
 # %%% Transform to xarray #
 
 # create list of all vehicle types (combinations of vehicles type (Cars, Medium Freight Trucks,...) and drive trains (ICE, BEV,...))
-vehicle_list = [f"{super_type} - {sub_type}" for super_type, sub_type in product(typical_modes, drive_trains)]
+# vehicle_list = [f"{super_type} - {sub_type}" for super_type, sub_type in product(typical_modes, drive_trains)]
+vehicle_list = ['Cars - BEV', 'Cars - FCV', 'Cars - HEV', 'Cars - ICE', 'Cars - PHEV',
+       'Cars - Trolley', 'Heavy Freight Trucks - BEV',
+       'Heavy Freight Trucks - FCV', 'Heavy Freight Trucks - HEV',
+       'Heavy Freight Trucks - ICE', 'Heavy Freight Trucks - PHEV',
+       'Heavy Freight Trucks - Trolley', 'Light Commercial Vehicles - BEV',
+       'Light Commercial Vehicles - FCV', 'Light Commercial Vehicles - HEV',
+       'Light Commercial Vehicles - ICE', 'Light Commercial Vehicles - PHEV',
+       'Light Commercial Vehicles - Trolley', 'Medium Freight Trucks - BEV',
+       'Medium Freight Trucks - FCV', 'Medium Freight Trucks - HEV',
+       'Medium Freight Trucks - ICE', 'Medium Freight Trucks - PHEV',
+       'Medium Freight Trucks - Trolley', 'Midi Buses - BEV',
+       'Midi Buses - FCV', 'Midi Buses - HEV', 'Midi Buses - ICE',
+       'Midi Buses - PHEV', 'Midi Buses - Trolley', 'Regular Buses - BEV',
+       'Regular Buses - FCV', 'Regular Buses - HEV', 'Regular Buses - ICE',
+       'Regular Buses - PHEV', 'Regular Buses - Trolley']
+vehicle_list_non_ev = ['Cars - ICE', 'Cars - HEV', 'Cars - FCV', 'Cars - Trolley', 
+        'Regular Buses - ICE', 'Regular Buses - HEV', 'Regular Buses - FCV', 
+        'Regular Buses - Trolley', 'Midi Buses - ICE', 'Midi Buses - HEV',
+       'Midi Buses - FCV', 'Midi Buses - Trolley', 'Heavy Freight Trucks - ICE',
+       'Heavy Freight Trucks - HEV', 'Heavy Freight Trucks - FCV',
+       'Heavy Freight Trucks - Trolley', 'Medium Freight Trucks - ICE',
+       'Medium Freight Trucks - HEV', 'Medium Freight Trucks - FCV',
+       'Medium Freight Trucks - Trolley', 'Light Commercial Vehicles - ICE',
+       'Light Commercial Vehicles - HEV', 'Light Commercial Vehicles - FCV',
+       'Light Commercial Vehicles - Trolley']
 vhc_knowledge_graph = create_vehicle_graph()
 
 
@@ -702,7 +739,8 @@ storage_market_share_interp = interpolate_xr(storage_market_share, YEAR_FIRST_GR
 # As not all storage technologies are suitable for EV & mobile applications, select only those technologies.
 # normalize the selection of EV battery technologies, so that total market share is 1 again (taking the relative share in the selected battery techs)
 market_share_EVs = normalize_selected_techs(storage_market_share_interp, EV_BATTERIES, dim_type="BatteryType") # TODO: this should be done differently as market shares of EV batteries probably differ from their market shares in total storage market
-
+market_share_EVs = market_share_EVs.expand_dims(Type=vehicle_list).copy() # add vehicle type dimension
+market_share_EVs.loc[dict(Type=vehicle_list_non_ev)] = 0 # set non-EV vehicle types to zero
 
 # 2. Battery Weights ----------------------------------------------------------------
 xr_battery_weights_interp = interpolate_xr(xr_battery_weights, YEAR_FIRST_GRID, YEAR_OUT)
