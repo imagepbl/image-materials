@@ -136,8 +136,8 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
     ce_scen = None  # INITIALIZE ce_scen
     if "narrow" in circular_economy_config.keys():
         ce_scen = "narrow"
-    if "narrow_product" in circular_economy_config.keys():
-        ce_scen = "narrow_product"
+    if "narrow_activity" in circular_economy_config.keys():
+        ce_scen = "narrow_activity"
     # narrow_activity scenario
     if ce_scen in circular_economy_config.keys():
         base_year = circular_economy_config[ce_scen]["buildings"]["base_year"]
