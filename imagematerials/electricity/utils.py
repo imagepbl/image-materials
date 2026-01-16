@@ -476,6 +476,122 @@ def compare_da(da_new: xr.DataArray,
 
 
 
+#####################################################################################################
+# Functions for grid preprocessing
+#####################################################################################################
+
+
+def calculate_grid_growth(gcap, grid_lines):
+    """ Calculate grid line growth factors over time based on regional generation capacity development.
+
+    Total (peak) generation capacity is used as a proxy for grid expansion. Growth factors are
+    defined relative to a base year (2016) and applied uniformly to all voltage levels for
+    overhead lines. Underground line growth factors are included only to match the shape of
+    the grid length DataArray and are set to NaN, as underground lines are calculated separately.
+
+    For high-voltage (HV) overhead lines, additional growth adjustments are applied from 2020
+    onwards based on the share of variable renewable energy (VRE; solar and wind) capacity.
+    Line additions and reductions are gradually introduced using a linear ramp between 2020
+    and 2050.
+
+    Parameters
+    ----------
+    gcap : xarray.DataArray
+        Regional generation capacity by technology and time. Must include dimensions
+        ``Type`` and ``Time``.
+    grid_lines : xarray.DataArray
+        Grid line lengths by voltage level, type, region, and time. Used to define the target
+        shape and coordinates of the returned growth factor DataArray.
+
+    Returns
+    -------
+    grid_growth_expanded : xarray.DataArray
+        Growth factors for grid line lengths with the same dimensions and coordinates as
+        ``grid_lines``. Values represent multiplicative factors relative to 2016.
+    """
+
+    # regional total (peak) generation capacity is used as a proxy for the grid growth
+    gcap_total = gcap.sum(dim='Type')
+    gcap_growth = gcap_total / gcap_total.loc[2016]        # define growth according to 2016 as base year
+
+    # copy growth factor for all voltage levels (overhead)
+    grid_growth = gcap_growth.expand_dims(Type=["HV - Lines - Overhead","MV - Lines - Overhead","LV - Lines - Overhead"]).copy()
+    # add coordinates for underground lines to match grid length dataarray (set to NaN, as underground lines are later calculated based on aboveground lines & fixed ratios)
+    grid_growth_expanded = grid_growth.broadcast_like(grid_lines).copy().rename("GridGrowthFactor")
+
+    # for HV lines: additional growth is presumed after 2020 based on the fraction of variable renewable energy (vre) generation capacity (solar & wind) (used to be only in the sensitivity variant, but now used in the base case as well)
+    vre_fraction = gcap.sel(Type=EPG_TECHNOLOGIES_VRE).sum(dim='Type') / gcap_total
+    # Compute additional/reduced growth
+    add_growth = vre_fraction * 1             # if value is e.g. 0.2 = 20% additional HV lines per doubling of vre gcap
+    red_growth = (1 - vre_fraction) * 0.7     
+    add_growth = add_growth.where(add_growth.Time >= 2020, 0)  # Set pre-2020 values to 0
+    red_growth = red_growth.where(red_growth.Time >= 2020, 0)
+    # Create a ramp factor (line length addition/reduction is gradually introduced from 2020 towards 2050)
+    ramp_factor = xr.DataArray(
+        np.clip((add_growth.Time - 2020) / 30, 0, 1),
+        coords={"Time": add_growth.Time},
+        dims=["Time"]
+    )
+    add_growth = add_growth * ramp_factor # Apply ramp factor
+    red_growth = red_growth * ramp_factor
+    grid_growth_expanded.loc[{"Type": "HV - Lines - Overhead"}] = grid_growth_expanded.loc[{"Type": "HV - Lines - Overhead"}] + add_growth - red_growth
+
+    return grid_growth_expanded
+
+
+def calculate_fraction_underground(grid_lines, gdp_pc, ratio_underground):
+    """ Calculate fractions of underground and overhead grid lines by region, voltage level, and time.
+
+    Underground fractions are estimated as linear functions of GDP per capita, with separate
+    parameterizations for European and non-European regions. Fractions are bounded between
+    0 and 1 and expanded to match the dimensions of the grid line DataArray. Overhead fractions
+    are derived as the complement of underground fractions.
+
+    Parameters
+    ----------
+    grid_lines : xarray.DataArray
+        Grid line lengths by region, type, and time; used to define target shape and coordinates.
+    gdp_pc : xarray.DataArray
+        GDP per capita by region and time.
+    ratio_underground : pandas.DataFrame or xarray object
+        Coefficients (multipliers and offsets) defining the GDP-based underground line fractions
+        by region group and voltage level.
+
+    Returns
+    -------
+    fraction_lines_above_below : xarray.DataArray
+        Fractions of underground and overhead grid lines with the same dimensions as
+        ``grid_lines``.
+    """
+    fraction_lines_above_below = xr.full_like(grid_lines, np.nan).rename("FractionUndergroundAboveground")
+
+    gdp_pc_unitless = gdp_pc.pint.dequantify() #work-around for now
+    for region in IMAGE_REGIONS:
+        if region in ['WEU','CEU']:
+            select_proxy = 'Europe'
+        else:
+            select_proxy = 'Other'
+
+        fraction_lines_above_below.loc[{"Region": region, "Type": "HV - Lines - Underground"}] = (gdp_pc_unitless.sel(Region=region) * ratio_underground.loc[idx[select_proxy,'mult'],'HV'] + ratio_underground.loc[idx[select_proxy,'add'],'HV'])/100 # /100 to convert from % to fraction
+        fraction_lines_above_below.loc[{"Region": region, "Type": "MV - Lines - Underground"}] = (gdp_pc_unitless.sel(Region=region) * ratio_underground.loc[idx[select_proxy,'mult'],'MV'] + ratio_underground.loc[idx[select_proxy,'add'],'MV'])/100
+        fraction_lines_above_below.loc[{"Region": region, "Type": "LV - Lines - Underground"}] = (gdp_pc_unitless.sel(Region=region) * ratio_underground.loc[idx[select_proxy,'mult'],'LV'] + ratio_underground.loc[idx[select_proxy,'add'],'LV'])/100
+    # fraction must be between 0 and 1
+    fraction_lines_above_below = fraction_lines_above_below.clip(min=0, max=1)
+
+    # MIND! the HV lines found in OSM (+national sources) are considered as the total of the aboveground line length + the underground line length
+    # currently the total is saved in xarray grid_lines as the aboveground fraction only -> need to split into aboveground & underground based on the calculated ratios
+    # for this, we copy the aboveground length into the underground length & then multiply both with the coresponding fraction to get the correct lengths
+    for level in ["HV", "MV", "LV"]:
+        over = f"{level} - Lines - Overhead"
+        under = f"{level} - Lines - Underground"
+        # grid_lines.loc[dict(Type=under)] = grid_lines.sel(Type=over) # copy the aboveground length into the underground length
+        fraction_lines_above_below.loc[dict(Type=over)] = 1-fraction_lines_above_below.loc[dict(Type=under)] # above = 1 - under
+    
+    return fraction_lines_above_below
+
+
+
+
 ##########################################################################################
 # Storage preprocessing functions
 ##########################################################################################
@@ -624,6 +740,212 @@ def normalize_selected_techs(market_share: xr.DataArray | pd.DataFrame,
     else:  # pandas
         sel = market_share[techs]
         return sel.div(sel.sum(axis=1), axis=0)
+
+
+
+
+
+#####################################################################################################
+# Circular economy implementations
+#####################################################################################################
+
+
+def apply_ce_measures_to_elc(arr: xr.DataArray, base_year: int, target_year: int, change: dict,
+                    implementation_rate: str, data_sector: Optional[str]=None, data_type: Optional[str]=None, steepness: float=0.5) -> xr.DataArray:
+        """ Apply CE measures to an xarray DataArray over time for (technology) types.
+
+        The function modifies values by applying a percentage change according to a chosen
+        implementation pathway (immediate, linear, or s-curve) between a base year and a target year.
+        Changes are applied relative to the same-year baseline and preserve the original data structure.
+
+        Parameters
+        ----------
+        arr : xr.DataArray
+            Input DataArray containing a time dimension ('Time' or 'Cohort') and a type
+            classification dimension ('Type' or 'SuperType').
+        base_year : int
+            Year at which the implementation of lightweighting begins.
+        target_year : int
+            Year by which the full lightweighting effect is achieved.
+        change : dict
+            Mapping of type (matching entries in the type dimension) to percentage change
+            to apply (e.g., {\"Solar PV\": -10} for a 10% reduction).
+        implementation_rate : str
+            Implementation pathway. One of {'immediate', 'linear', 's-curve'}.
+        data_sector : str, optional
+            To which sector data belong (e.g., 'electricity grid').
+        data_type : str, optional
+            Type of data being processed. Needed for the case of modifying lifetime distributions.
+            Acccepted value is 'lifetime'.
+        steepness : float, default 0.5
+            Steepness parameter for the logistic function when using the 's-curve' implementation.
+
+        Returns
+        -------
+        xr.DataArray
+            A new DataArray with ce measure applied along the time dimension.
+
+        Raises
+        ------
+        ValueError
+            If required dimensions are missing, a specified vehicle type is not found,
+            or an unsupported implementation_rate is provided.
+
+        Notes
+        -----
+        - Supports DataArrays with either 'Time' or 'Cohort' as the temporal dimension.
+        - Supports either 'Type' or 'SuperType' as the vehicle classification dimension.
+        - A pandas-based implementation exists for vehicle-level data.
+        - A general xarray-based version is available in general utilities for regional data.
+        """
+
+        result = arr.copy()
+
+        # Determine time and type dimensions (to support different types of DataArrays)
+        if "Time" in arr.dims:
+            time_dim = "Time"
+        elif "Cohort" in arr.dims:
+            time_dim = "Cohort"
+        else:
+            raise ValueError("Input DataArray must have either 'Time' or 'Cohort' dimension.")
+        
+        if "Type" in arr.dims:
+            type_dim = "Type"
+        elif "SuperType" in arr.dims:
+            type_dim = "SuperType"
+        else:
+            raise ValueError("Input DataArray must have either 'Type' or 'SuperType' dimension.")
+        
+        # If CE measures are only specified for aggregated grid items, expand to all relevant types
+        if data_sector == 'electricity grid':
+            change = expand_change_dict_for_grid_items(change)
+        elif data_sector is not None:
+            raise ValueError(f"Unknown data_sector: '{data_sector}'. Supported types are 'electricity grid' or None.")
+        
+        # If data_type is 'lifetime', we need to determine which distribution parameter to modify
+        if data_type == "lifetime":
+            dist_param = 'mean'
+        elif data_type is None:
+            pass
+        else:
+            raise ValueError(f"Unknown data_type: '{data_type}'. Supported types are 'lifetime' or None.")
+
+        for type_stock, increase in change.items():
+            if type_stock in result[type_dim]:
+                if implementation_rate == 'linear':
+                    # ramp progress: 0 at base_year, 1 at target_year, held at 1 after
+                    span = max(1, target_year - base_year)
+                    # apply to each year explicitly to preserve structure
+                    for year in range(base_year + 1, target_year + 1):
+                        progress = (year - base_year) / span
+                        if data_type == "lifetime":
+                            result.loc[{time_dim: year, type_dim: type_stock, "DistributionParams": dist_param}] = (
+                                arr.loc[{time_dim: year, type_dim: type_stock, "DistributionParams": dist_param}] * (1 + ((increase / 100.0) * progress))
+                            )
+                        else:
+                            result.loc[{time_dim: year, type_dim: type_stock}] = (
+                                arr.loc[{time_dim: year, type_dim: type_stock}] * (1 + ((increase / 100.0) * progress))
+                            )
+                    # after target_year, full effect but still relative to same-year baseline
+                    if data_type == "lifetime":
+                        result.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock, "DistributionParams": dist_param}] = (
+                            arr.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock, "DistributionParams": dist_param}] * ((1 + increase / 100.0))
+                        )
+                    else:
+                        result.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] = (
+                            arr.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] * ((1 + increase / 100.0))
+                        )
+
+                elif implementation_rate == 'immediate':
+                    # unchanged up to base_year; full step from base_year+1 onward, relative to same-year baseline
+                    if data_type == "lifetime":
+                        result.loc[{time_dim: slice(None, base_year), type_dim: type_stock, "DistributionParams": dist_param}] = \
+                            arr.loc[{time_dim: slice(None, base_year), type_dim: type_stock, "DistributionParams": dist_param}]
+                        result.loc[{time_dim: slice(base_year + 1, None), type_dim: type_stock, "DistributionParams": dist_param}] = \
+                            arr.loc[{time_dim: slice(base_year + 1, None), type_dim: type_stock, "DistributionParams": dist_param}] * (1 + increase / 100.0)
+                    else:
+                        result.loc[{time_dim: slice(None, base_year), type_dim: type_stock}] = \
+                            arr.loc[{time_dim: slice(None, base_year), type_dim: type_stock}]
+                        result.loc[{time_dim: slice(base_year + 1, None), type_dim: type_stock}] = \
+                            arr.loc[{time_dim: slice(base_year + 1, None), type_dim: type_stock}] * (1 + increase / 100.0)
+
+                elif implementation_rate == 's-curve':
+                    years = list(range(base_year, target_year + 1))
+                    mid_year = (base_year + target_year) / 2
+                    # normalize logistic so progress(base)=0 and progress(target)=1
+                    s0 = 1.0 / (1.0 + np.exp(-steepness * (base_year - mid_year)))
+                    s1 = 1.0 / (1.0 + np.exp(-steepness * (target_year - mid_year)))
+                    for year in years:
+                        s = 1.0 / (1.0 + np.exp(-steepness * (year - mid_year)))
+                        progress = np.clip((s - s0) / (s1 - s0), 0.0, 1.0)
+                        if data_type == "lifetime":
+                            result.loc[{time_dim: year, type_dim: type_stock, "DistributionParams": dist_param}] = (
+                                arr.loc[{time_dim: year, type_dim: type_stock, "DistributionParams": dist_param}] * (1 + (increase / 100.0) * progress)
+                            )
+                        else:
+                            result.loc[{time_dim: year, type_dim: type_stock}] = (
+                                arr.loc[{time_dim: year, type_dim: type_stock}] * (1 + (increase / 100.0) * progress)
+                            )
+                    # after target_year, full effect relative to same-year baseline
+                    if data_type == "lifetime":
+                        result.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock, "DistributionParams": dist_param}] = (
+                            arr.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock, "DistributionParams": dist_param}] * (1 + increase / 100.0)
+                        )
+                    else:
+                        result.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] = (
+                            arr.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] * (1 + increase / 100.0)
+                        )
+                else: 
+                    raise ValueError(f"Unknown implementation method: '{implementation_rate}'. "
+                                    "Supported methods are 'immediate', 'linear', and 's-curve'.")
+            else:
+                raise ValueError(f"{type_stock} not found in DataArray.")
+            
+        nan_mask = result.isnull()
+        if nan_mask.any():
+            years_with_nans = result[time_dim].where(nan_mask.any(dim=[d for d in result.dims if d != time_dim]), drop=True)
+            warnings.warn(
+                f"NaNs present in years: {years_with_nans.values}",
+                RuntimeWarning
+            )
+
+        return result
+
+def expand_change_dict_for_grid_items(dict_change: dict) -> dict:
+    transformer_expanded = {
+        "HV - Transformers",
+        "MV - Transformers",
+        "LV - Transformers",
+    }
+    substation_expanded = {
+        "HV - Substations",
+        "MV - Substations",
+        "LV - Substations",
+    }
+
+    has_transformer_expanded = any(k in dict_change for k in transformer_expanded)
+    has_substation_expanded = any(k in dict_change for k in substation_expanded)
+
+    dict_change_expanded = dict(dict_change)
+
+    if not has_transformer_expanded and "Transformers" in dict_change:
+        val = dict_change["Transformers"]
+        for k in transformer_expanded:
+            dict_change_expanded[k] = val
+        dict_change_expanded.pop("Transformers")
+
+    if not has_substation_expanded and "Substations" in dict_change:
+        val = dict_change["Substations"]
+        for k in substation_expanded:
+            dict_change_expanded[k] = val
+        dict_change_expanded.pop("Substations")
+
+    return dict_change_expanded
+
+
+
+
+
 
 
 # STOCK MODELLING OLD -----------------------------------------------------------------------------------------------------
