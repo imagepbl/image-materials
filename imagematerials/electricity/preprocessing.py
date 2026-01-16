@@ -860,7 +860,7 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
         row = pd.DataFrame([storage_market_share.loc[storage_market_share.last_valid_index()]])
         storage_market_share.loc[year] = row.iloc[0]
     # fix the market share of storage technologies before YEAR_START
-    for year in range(YEAR_FIRST_GRID,YEAR_START):
+    for year in range(YEAR_FIRST_GRID,year_start):
         # storage_market_share = storage_market_share.append(pd.Series(storage_market_share.loc[storage_market_share.last_valid_index()], name=year))
         row = pd.DataFrame([storage_market_share.loc[storage_market_share.first_valid_index()]])
         storage_market_share.loc[year] = row.iloc[0]
