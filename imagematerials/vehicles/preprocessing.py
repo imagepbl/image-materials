@@ -385,14 +385,18 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
         pd.DataFrame(vehicle_weights_typical))
     
     # Apply lightweighting if part of scenario
+    ce_scen = None  # INITIALIZE ce_scen
+
+    if "narrow" in circular_economy_config.keys():
+        ce_scen = "narrow"
     if "narrow_product" in circular_economy_config.keys():
         ce_scen = "narrow_product"
     if "resource_efficient" in circular_economy_config.keys():
         ce_scen = "resource_efficient"
     
-    if ce_scen and \
-        ('weight_change_pc' in circular_economy_config[ce_scen]['vehicles'].get('road', {}) or \
-        'weight_change_pc' in circular_economy_config[ce_scen]['vehicles'].get('non-road', {})):
+    if ce_scen in ["resource_efficient", "narrow_product", "narrow"]:
+       # ('weight_change_pc' in circular_economy_config[ce_scen]['vehicles'].get('road', {}) or \
+       # 'weight_change_pc' in circular_economy_config[ce_scen]['vehicles'].get('non-road', {})):
         
         # Verify both are defined, otherwise raise error
         if not ('weight_change_pc' in circular_economy_config[ce_scen]['vehicles'].get('road', {}) and \
@@ -469,13 +473,13 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
 
     
     # increase mileages\kilometrages
-    if 'narrow_product' in circular_economy_config.keys():
-        target_year = circular_economy_config['narrow_product']['vehicles']['target_year']
-        base_year = circular_economy_config['narrow_product']['vehicles']['base_year']
-        mileage_increase = circular_economy_config['narrow_product']['vehicles']['mileage']
-        region_mileage = circular_economy_config['narrow_product']['vehicles']['region_mileage']
-        implementation_rate = circular_economy_config['narrow_product']['vehicles']['implementation_rate']
-
+    if ce_scen in [ "narrow_product", "narrow"]:
+    
+        target_year = circular_economy_config[ce_scen]['vehicles']['target_year']
+        base_year = circular_economy_config[ce_scen]['vehicles']['base_year']
+        mileage_increase = circular_economy_config[ce_scen]['vehicles']['mileage']
+        region_mileage = circular_economy_config[ce_scen]['vehicles']['region_mileage']
+        implementation_rate = circular_economy_config[ce_scen]['vehicles']['implementation_rate']
         mileages = scenario_change(
             mileages, base_year, target_year, 
             mileage_increase, implementation_rate)
@@ -494,7 +498,7 @@ def preprocess(base_dir: str, climate_policy_config: dict, circular_economy_conf
             mileage_increase['Regular Buses'], implementation_rate
         )
 
-        print("implemented 'narrow_product' for Vehicles (increase mileage)")
+        print(f"implemented '{ce_scen}' for Vehicles (increase mileage)")
     
 
     # Calculate maintenace material need in kg material per kg vehicle
