@@ -1,10 +1,11 @@
 
+from statistics import mode
 import numpy as np
 import pandas as pd
 import xarray as xr
 import math
-import matplotlib.pyplot as plt
 import scipy.stats
+import pint
 import prism
 from typing import Optional
 from pathlib import Path
@@ -14,23 +15,27 @@ from pint.errors import UnitStrippedWarning
 
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
 from imagematerials.concepts import create_electricity_graph
+
+from imagematerials.constants import (
+    IMAGE_REGIONS,
+)
+
 from imagematerials.electricity.constants import (
-    YEAR_FIRST,
     YEAR_FIRST_GRID,
     YEAR_SWITCH,
     REGIONS,
-    MEGA_TO_TERA,
-    PKMS_TO_VKMS,
-    TONNES_TO_KGS,
-    LOAD_FACTOR,
-    BEV_CAPACITY_CURRENT,
-    PHEV_CAPACITY_CURRENT
+    EPG_TECHNOLOGIES,
+    EPG_TECHNOLOGIES_VRE,
+    STD_LIFETIMES_ELECTR,
 )
 # from imagematerials.vehicles.constants import END_YEAR, FIRST_YEAR, REGIONS
 
 # from read_scripts.dynamic_stock_model_BM import DynamicStockModel as DSM
 idx = pd.IndexSlice
 
+#####################################################################################################
+# General functions for electricity materials model
+#####################################################################################################
 
 # In order to calculate inflow & outflow smoothly (without peaks for the initial years), we calculate a historic tail to the stock, 
 # by adding a 0 value for first year of operation (=1926), then interpolate values towards 1971
@@ -218,13 +223,13 @@ def create_prep_data(results_dict, conversion_table, unit_mapping):
     prep_data = {}
     for df_name, df in results_dict.items():
         if df_name in conversion_table and isinstance(df, pd.DataFrame): # convert to xarray
-            print(f"{df_name} to xarray Dataset")
+            # print(f"{df_name} to xarray Dataset")
             data_xar_dataset = pandas_to_xarray(df, unit_mapping)
             data_xarray = dataset_to_array(data_xar_dataset, *conversion_table[df_name])
         elif df_name in conversion_table and isinstance(df, xr.DataArray): # already xarray
             data_xarray = df 
         else:
-            print(f"{df_name} not in conversion_table")
+            # print(f"{df_name} not in conversion_table")
             # lifetimes_vehicles does not need to be converted in the same way.
             data_xarray = pandas_to_xarray(df, unit_mapping)
         prep_data[df_name] = data_xarray
@@ -245,40 +250,88 @@ def create_prep_data(results_dict, conversion_table, unit_mapping):
     return prep_data
 
 
-# def materials_grid_additions_to_kgperkm(materials_df, additions_df):
-#     """
-#     Vectorized approach to transform the materials DataFrame by multiplying each row with the corresponding values from the additions DataFrame.
-#     materials_df: DataFrame with MultiIndex (year, technology) and columns for materials. - units in kg/unit (unit = 1 substation or transformer)
-#     additions_df: DataFrame with index for components (Substations, Transformers) and columns for voltage levels (HV, MV, LV), values are the number of units per km of grid length.
+# for testing, move later to a plotting utils file in analysis repository
+def flexible_plot_1panel(
+    da: xr.DataArray,
+    x_dim: str,
+    varying_dims: list,
+    fixed: dict = None,
+    figsize=(8, 5),
+    plot_type = 'line' # 'line' or 'scatter'
+):
+    """
+    da          : xarray.DataArray
+    x_dim       : dimension to use on the x axis (e.g. 'Time' or 'Cohort')
+    varying_dims: list of dims that define separate lines (e.g. ['Type', 'Region'])
+    fixed       : dict of {dim: value or list} to filter (e.g. {'Type': [1, 2], 'Region': 5})
 
-#     NOT USED ANYMORE (?) -> separate stock modeling needed for lines vs substations & transformers
+    use as e.g.:
+    flexible_plot_1panel(
+        da=grid_length,
+        x_dim="Time",
+        varying_dims=["Type", "Region"],
+        fixed={"Type": [1, 2], "Region": [0, 3]},
+        plot_type='scatter'
+    )
+    """
+    
+    # 1. Apply filtering
+    if fixed:
+        for dim, sel in fixed.items():
+            # da = da.sel({dim: sel})
+            # Convert to list
+            if not isinstance(sel, (list, tuple)):
+                sel = [sel]
 
-#     """
+            coord_vals = da.coords[dim].values
+
+            # If the requested values exist as labels → use sel
+            if all(v in coord_vals for v in sel):
+                da = da.sel({dim: sel})
+            else:
+                # Otherwise interpret as positional integers → use isel
+                da = da.isel({dim: sel})
     
-#     # Create mapping series
-#     mapping_dict = {}
-    
-#     for voltage in ['HV', 'MV', 'LV']:
-#         for component in ['Substations', 'Transformers']:
-#             tech_key = f"{voltage} {component}"
-            
-#             if voltage in additions_df.columns and component in additions_df.index:
-#                 mapping_dict[tech_key] = additions_df.loc[component, voltage]
-    
-#     # Create a series to map each row to its multiplier
-#     multipliers = materials_df.index.get_level_values(1).map(mapping_dict)
-    
-#     # Convert to DataFrame for broadcasting
-#     multipliers_df = pd.DataFrame(
-#         np.outer(multipliers, np.ones(len(materials_df.columns))),
-#         index=materials_df.index,
-#         columns=materials_df.columns
-#     )
-    
-#     # Multiply
-#     result_df = materials_df * multipliers_df
-    
-#     return result_df
+    # 2. Ensure requested dims exist
+    for d in varying_dims + [x_dim]:
+        if d not in da.dims:
+            raise ValueError(f"Dimension '{d}' missing in DataArray")
+
+    # 3. Collapse all varying dims into a combined index
+    if varying_dims:
+        da_plot = da.stack(curve=varying_dims)
+    else:
+        da_plot = da
+
+    # 4. Prepare y-axis label with units (if present)
+    units = None
+    if hasattr(da.data, "units"):               # pint quantity
+        units = str(da.data.units)
+    else:                                       # normal xarray units
+        units = da.attrs.get("units", None)
+
+    if units:
+        y_label = f"{da.name or ''} [{units}]"
+    else:
+        y_label = da.name or ""
+
+    # 5. Plot
+    plt.figure(figsize=figsize)
+    for curve in da_plot.curve.values:
+        sub = da_plot.sel(curve=curve)
+        label = ", ".join(f"{dim}={val}" for dim, val in zip(varying_dims, curve))
+        if plot_type == 'scatter':
+            plt.scatter(sub[x_dim], sub.values, label=label)
+        else:
+            plt.plot(sub[x_dim], sub.values, label=label)
+
+    plt.xlabel(x_dim)
+    plt.ylabel(y_label)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
 
 
 def logistic(x, L, x0=None):

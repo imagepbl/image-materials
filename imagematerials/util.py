@@ -8,6 +8,7 @@ import numpy as np
 import xarray as xr
 import warnings
 import prism
+import pint
 
 if sys.version_info < (3, 11):
     import tomli as tomllib
@@ -201,6 +202,7 @@ def import_from_netcdf(in_fp) -> dict:
             prep_data_dict[key] = KnowledgeGraph.from_dataarray(prep_data_dict[key])
     return prep_data_dict
 
+
 def summarize_prep_data(data):
     all_summary = {}
     for data_name, array in data.items():
@@ -210,6 +212,8 @@ def summarize_prep_data(data):
             all_summary[data_name] = _summarize_array(array)
         elif isinstance(array, KnowledgeGraph):
             continue
+        elif isinstance(array, pint.Unit):
+            continue
         elif array is None:
             all_summary[data_name] = array
         elif isinstance(array, str):
@@ -218,20 +222,24 @@ def summarize_prep_data(data):
             raise ValueError(f"Cannot compare data with name '{data_name}' with type {type(array)}")
     return all_summary
 
+
 def _summarize_array(array):
     all_summary = {}
     for drop_coor in array.coords.keys():
         sum_over = set(x for x in list(array.coords.keys())) - set({drop_coor})
         summary = array.sum(sum_over)
+        summary.attrs = array.attrs
         all_summary[drop_coor] = _listify(summary.to_dict())
     return all_summary
 
+
 def _listify(data):
     if isinstance(data, dict):
-        return {key: _listify(value) for key, value in data.items()}
+        return {str(key): _listify(value) for key, value in data.items()}
     elif isinstance(data, tuple):
         return list(data)
     return data
+
 
 def rebroadcast_prep_data(prep_data, knowledge_graph, dim, output_coords):
     new_prep_data = {}
@@ -310,8 +318,7 @@ def convert_lifetime(lifetimes):
     
 
 def convert_lifetime_dataset(lifetime_dataset: xr.Dataset) -> dict[str, xr.DataArray]:
-    """
-    Convert dataset with lifetimes to a dictonary with 
+    """ Convert dataset with lifetimes to a dictonary with 
     keys = name of the distribution applied to the lifetimes (folded_normal, Weibull)
     values = xarray DataArray with the scipy parameters for the distribution
 
@@ -396,8 +403,7 @@ def convert_lifetime_dataset(lifetime_dataset: xr.Dataset) -> dict[str, xr.DataA
 
 
 def convert_lifetime_dataarray(lifetime_dataarray: xr.DataArray) -> dict[str, xr.DataArray]:
-    """
-    Convert DataArray with lifetimes to a dictonary with 
+    """ Convert DataArray with lifetimes to a dictonary with 
     keys = name of the distribution applied to the lifetimes (folded_normal, Weibull)
     values = xarray DataArray with the scipy parameters for the distribution
     
@@ -646,3 +652,29 @@ def overwrite_future_rates(arr: xr.DataArray, target_year: int, supertypes: list
             raise ValueError(f"'{material}' not found in DataArray.")
         result.loc[{"Time": target_year,"Type": supertypes, "material": material}] = new_value
     return result
+
+def reindex_material(sector, materials):
+    """
+    Reindex the 'material' coordinate of a sector's data to match a given list of materials.
+    Parameters
+    ----------
+    sector : xr.DataArray or xr.Dataset (e.g., electricity sector)
+        The sector data to be reindexed.
+    materials : list
+        The list of materials to reindex to.
+    Returns
+    -------
+        The reindexed sector data.
+    """
+    if isinstance(sector, xr.DataArray):                                    # check if it's a DataArray
+        if "material" in sector.coords:                                     # only reindex if material coord exists
+            return sector.reindex(material=materials, fill_value=0)         # reindex and fill missing materials with 0
+        return sector
+
+    if isinstance(sector, xr.Dataset):                                      # check if it's a Dataset                   
+        return sector.map(                                                  # apply reindexing to each DataArray in the Dataset
+            lambda da: da.reindex(material=materials, fill_value=0)         # only if material coord exists
+            if "material" in da.coords else da                              
+        )
+
+    return sector

@@ -1,36 +1,6 @@
-[vehicles]
-base_year = 2025
-target_year = 2060
-# possibilities for implementation rate are: linear, immediate, s-curve
-implementation_rate = 'linear'
-
 [buildings]
 base_year = 2020
 target_year = 2060
-
-[vehicles.data_files]
-lifetimes = '....csv'
-material_composation = '.csv'
-weights = '.csv'
-
-[vehicles.lifetime_increase_percent_slow]
-"Passenger Planes" = 10
-"Freight Planes" = 10
-"Trains" = 38
-"High Speed Trains" = 38
-"Freight Trains" = 38
-"Small Ships" = 33
-"Medium Ships" = 33
-"Large Ships" = 33
-"Very Large Ships" = 33
-"Light Commercial Vehicles" = 10
-"Medium Freight Trucks" = 10
-"Heavy Freight Trucks" = 10
-"Midi Buses" = 20
-"Regular Buses" = 20
-"Inland Ships" = 33
-"Bikes" = 20
-"Cars" = 22.5
 
 [buildings.residential.lifetime_2020]
 Canada = 51
@@ -93,16 +63,71 @@ USA = 90
 "Sub-Saharan Africa" = 60
 
 [buildings.eol_reuse_rate_2060]
-Steel = 0.29
-Concrete = 0.13
-Wood = 0.25
-Copper = 0.33
-Glass = 0.35
-Aluminium = 0.50
+steel = 0.29
+concrete = 0.13
+wood = 0.25
+copper = 0.33
+glass = 0.35
+aluminium = 0.50
+
+[vehicles]
+base_year = 2025
+target_year = 2060
+# possibilities for implementation rate are: linear, immediate, s-curve
+implementation_rate = 'linear'
+
+[vehicles.data_files]
+lifetimes = '....csv'
+material_composation = '.csv'
+weights = '.csv'
+
+[vehicles.lifetime_increase_percent_slow]
+"Passenger Planes" = 10
+"Freight Planes" = 10
+"Trains" = 38
+"High Speed Trains" = 38
+"Freight Trains" = 38
+"Small Ships" = 33
+"Medium Ships" = 33
+"Large Ships" = 33
+"Very Large Ships" = 33
+"Light Commercial Vehicles" = 10
+"Medium Freight Trucks" = 10
+"Heavy Freight Trucks" = 10
+"Midi Buses" = 20
+"Regular Buses" = 20
+"Inland Ships" = 33
+"Bikes" = 20
+"Cars" = 22.5
 
 [vehicles.eol_reuse_rate_2060]
-Steel = 0.20
-Copper = 0.28
-Glass = 0.68
-Aluminium = 0.29
+steel = 0.20
+copper = 0.28
+glass = 0.68
+aluminium = 0.29
 
+[electricity]
+base_year = 2020
+target_year = 2060
+implementation_rate = 'linear'
+
+[electricity.generation.lifetime_increase_percent]
+'SPV' = 32
+'SPVR' = 32
+'CSP' = 10
+'WON' = 20 
+'WOFF' = 20
+'WAVE' = 0
+'HYD' = 6 
+
+[electricity.grid_add.lifetime_increase_percent]
+'Transformers' = 10 
+'Substations' = 10 
+
+[electricity.eol_reuse_rate_2060]
+steel = 0.238
+concrete = 0.21
+wood = 0.455
+copper = 0.33
+glass = 0.68
+aluminium = 0.345

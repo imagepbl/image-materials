@@ -1,6 +1,7 @@
 imagematerials buildings package
 ================================
 
+.. currentmodule:: imagematerials.buildings
 
 buildings.constants module
 --------------------------
@@ -34,10 +35,10 @@ buildings.preprocessing.lifetimes module
    :undoc-members:
    :show-inheritance:
 
-buildings.constants module
-----------------------------------------
+buildings.preprocessing.circular_economy_measures module
+--------------------------------------------------------
 
-.. automodule:: imagematerials.buildings.constants
+.. automodule:: imagematerials.buildings.preprocessing.circular_economy_measures
    :members:
    :undoc-members:
    :show-inheritance:

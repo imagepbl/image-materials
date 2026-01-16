@@ -1,4 +1,4 @@
-time,batt,Steel,Aluminium,Cu,Plastics,Li,Co,Ni,Mn,Nd,Glass,Ti,Wood,Rubber,Pb
+time,batt,steel,aluminium,copper,plastics,lithium,cobalt,nickel,manganese,neodymium,glass,titanium,wood,rubber,lead
 2020,NiMH,0.1,0.00255,0.01769956,0.21,0.000525,0.00255,0.442573913,0.00255,0.047101968,0,0,0,0,0
 2020,LMO,0.2147,0.0374,0.1003,0.0839875,0.010623757,0,0,0.166944751,0,0,0,0,0,0
 2020,NMC,0.2147,0.0374,0.1003,0.0839875,0.009070283,0.076449528,0.076449528,0.071266509,0,0,0,0,0,0

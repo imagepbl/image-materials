@@ -1,26 +1,59 @@
+"""Building lifetime calculations during preprocessing."""
+from pathlib import Path
+
 import pandas as pd
 import xarray as xr
 
-from imagematerials.buildings.constants import FLAG_NORMAL, SCENARIO_SELECT, ALL_YEARS
+from imagematerials.buildings.constants import ALL_YEARS, SCENARIO_SELECT
 from imagematerials.util import dataset_to_array, merge_dims
 
 
-def compute_lifetimes(base_directory, commercial_types, circular_economy_config, distribution_type="weibull"):
+def compute_lifetimes(base_directory: Path,
+                      commercial_types: list[str],
+                      circular_economy_config: dict,
+                      distribution_type="weibull") -> xr.DataArray:
+    """Compute the residential and commercial lifetimes.
 
+    Parameters
+    ----------
+    base_directory:
+        Base directory under which the input files can be found.
+    commercial_types:
+        Building types for commercial buildings.
+    circular_economy_config:
+        Dictionary containing the circular economy configuration.
+    distribution_type:
+        Distribution type for the lifetimes. Should be one of ("weibull", "folded_norm").
+
+    Returns
+    -------
+    xr_lifetimes:
+        Array that contains the scipy parameters to generate the lifetime distributions.
+
+    """
     if 'slow' in circular_economy_config.keys():
         # TODO make this dynamic in the long run, for now simple solution chosen
-        SCENARIO = "SSP2_2D_RE"
+        scenario = "SSP2_2D_RE"
         print("implemented 'slow' for Buildings")
     else:
-        SCENARIO = SCENARIO_SELECT
+        scenario = SCENARIO_SELECT
 
-    lifetimes_commercial = pd.read_csv(base_directory / 'buildings'  / 'files_lifetimes' / SCENARIO / 'lifetimes_comm.csv', index_col = [0,1])  # Weibull parameter database for commercial buildings (shape & scale parameters given by region, area & building-type)
+    # Weibull parameter database for commercial buildings (shape & scale parameters given by region,
+    # area & building-type)
+    lifetimes_commercial = pd.read_csv(base_directory / 'buildings'  / 'files_lifetimes' / scenario
+                                       / 'lifetimes_comm.csv', index_col = [0,1])
     # TODO originally lifetimes_commercial was only read in with flag_normal == 0
 
     if distribution_type == "weibull":
-        lifetimes_residential = pd.read_csv(base_directory / 'buildings' / 'files_lifetimes' / SCENARIO / 'lifetimes.csv', index_col = [0,1,2,3])   # Weibull parameter database for residential buildings (shape & scale parameters given by region, area & building-type)
+        # Weibull parameter database for residential buildings (shape & scale parameters given by
+        # region, area & building-type)
+        lifetimes_residential = pd.read_csv(base_directory / 'buildings' / 'files_lifetimes'
+                                            / scenario / 'lifetimes.csv', index_col = [0,1,2,3])
     elif distribution_type == "folded_norm":
-        lifetimes_residential = pd.read_csv(base_directory / 'buildings' / 'files_lifetimes' / 'lifetimes_normal.csv')  # Normal distribution database (Mean & StDev parameters given by region, area & building-type, though only defined by region for now)
+        # Normal distribution database (Mean & StDev parameters given by region,
+        # area & building-type, though only defined by region for now)
+        lifetimes_residential = pd.read_csv(base_directory / 'buildings' / 'files_lifetimes'
+                                            / 'lifetimes_normal.csv')
     else:
         raise ValueError(f"Unknown distribution type {distribution_type}, "
                          "available: [weibull, folded_norm]")
@@ -35,7 +68,8 @@ def compute_lifetimes(base_directory, commercial_types, circular_economy_config,
         lifetimes_residential['Shape']
         .unstack(level='time')  # Temporarily unstack 'time' level
         .reindex(columns=ALL_YEARS)  # Reindex to include all years in the specified range
-        .interpolate(method='linear', limit=300, limit_direction='both', axis=1)  # Interpolate missing years
+        .interpolate(method='linear', limit=300,
+                     limit_direction='both', axis=1)  # Interpolate missing years
         .stack(level='time')  # Stack 'time' level back to its original position
     )
 
@@ -64,14 +98,28 @@ def compute_lifetimes(base_directory, commercial_types, circular_economy_config,
     xr_lifetimes_residential = dataset_to_array(lifetimes_residential_interpolated.to_xarray(),
                                                 ["Region", "Type", "Area", "Time"],
                                                 ["Parameter"])
-    fixed_coords = [x if x != "Appartments" else "Appartment" for x in xr_lifetimes_residential.coords["Type"].values]
+    fixed_coords = [x if x != "Appartments" else "Appartment"
+                    for x in xr_lifetimes_residential.coords["Type"].values]
     xr_lifetimes_residential.coords["Type"] = fixed_coords
     xr_lifetimes_residential = merge_dims(xr_lifetimes_residential, "Type", "Area")
-    xr_lifetimes_residential = xr_lifetimes_residential.transpose("Time", "Region", "Type", "Parameter")
+    xr_lifetimes_residential = xr_lifetimes_residential.transpose("Time", "Region",
+                                                                  "Type", "Parameter")
     lifetimes_array = xr.concat((xr_lifetimes_commercial, xr_lifetimes_residential), dim="Type")
     return convert_lifetimes_buildings(lifetimes_array, distribution_type)
 
-def convert_lifetimes_buildings(lifetimes, distribution_type="folded_norm"):
+def convert_lifetimes_buildings(lifetimes: xr.DataArray,
+                                distribution_type: str = "folded_norm") -> dict[str, xr.DataArray]:
+    """Convert the parameters in the input file to Scipy parameters.
+
+    Parameters
+    ----------
+    lifetimes:
+        Input lifetimes that have been read from the file. These files contain the Shape and Scale
+        parameters.
+    distribution_type:
+        The type of distribution for the lifetimes.
+
+    """
     if distribution_type == "folded_norm":
         c = lifetimes.sel(Parameter="Scale")/lifetimes.sel(Parameter="Shape")
         scale = lifetimes.sel(Parameter="Scale")

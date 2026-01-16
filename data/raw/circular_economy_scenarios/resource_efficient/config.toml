@@ -1,0 +1,186 @@
+[buildings]
+base_year = 2020
+target_year = 2060
+implementation_rate = 'linear'
+
+[vehicles]
+base_year = 2019
+target_year = 2060
+# possibilities for implementation rate are: linear, immediate, s-curve
+implementation_rate = 'linear'
+
+[buildings.residential.m2_change_pc]
+"Asian-Stan" = -15.0
+Brazil = -16.7
+Canada = -35.0
+"Central Europe" = -10.0
+"China +" = -19.2
+"Eastern Africa" = -15.0
+"India +" = -12.5
+"Indonesia +" = -12.5
+Japan = -15.0
+Korea = -10.0
+Mexico = -27.5
+"Middle East" = -23.3
+"Northern Africa" = -23.3
+Oceania = -31.7
+"Rest of Central America" = -12.5
+"Rest of South America" = -20.0
+"Rest of South Asia" = -15.0
+"Rest of Southern Africa" = -15.0
+"Russia +" = -13.3
+"South Africa" = -20.0
+"Southeastern Asia" = -12.5
+Turkey = -27.5
+"Ukraine +" = -10.0
+USA = -35.0
+"Western Africa" = -15.0
+"Western Europe" = -23.3
+
+[buildings.commercial.m2_change_pc]
+"Asian-Stan" = -15.0
+Brazil = -16.7
+Canada = -35.0
+"Central Europe" = -10.0
+"China +" = -19.2
+"Eastern Africa" = -15.0
+"India +" = -12.5
+"Indonesia +" = -12.5
+Japan = -20.0
+Korea = -15.0
+Mexico = -20.0
+"Middle East" = -23.3
+"Northern Africa" = -15.0
+Oceania = -40.0
+"Rest of Central America" = -12.5
+"Rest of South America" = -12.5
+"Rest of South Asia" = -15.0
+"Rest of Southern Africa" = -15.0
+"Russia +" = -13.3
+"South Africa" = -20.0
+"Southeastern Asia" = -12.5
+Turkey = -20.0
+"Ukraine +" = -5.0
+USA = -35.0
+"Western Africa" = -15.0
+"Western Europe" = -23.3
+
+[vehicles.passenger]
+kilometers = -25
+
+[vehicles.mileage]
+"Midi Buses" = 10
+"Regular Buses" = 10
+"Trains" = 10
+"High Speed Trains" = 10
+"Freight Trains" = 10
+"Bikes" = 10
+"Light Commercial Vehicles" = 10
+"Inland Ships" = 10
+
+[vehicles.region_mileage]
+"Cars" = 20
+
+[vehicles.freight]
+kilometers = -13
+
+[buildings.material_intensity_change.Steel]
+"Asian-Stan" = -12.8
+Brazil = -12.8
+Canada = -12.8
+"Central Europe" = -12.8
+"China +" = -12.8
+"Eastern Africa" = -12.8
+"India +" = -12.8
+"Indonesia +" = -12.8
+Japan = -12.8
+Korea = -12.8
+Mexico = -12.8
+"Middle East" = -12.8
+"Northern Africa" = -12.8
+Oceania = -12.8
+"Rest of Central America" = -12.8
+"Rest of South America" = -12.8
+"Rest of South Asia" = -12.8
+"Rest of Southern Africa" = -12.8
+"Russia +" = -12.8
+"South Africa" = -12.8
+"Southeastern Asia" = -12.8
+Turkey = -12.8
+"Ukraine +" = -12.8
+USA = -12.8
+"Western Africa" = -12.8
+"Western Europe" = -12.8
+
+[buildings.material_intensity_change.Concrete]
+"Asian-Stan" = -11.3
+Brazil = -11.3
+Canada = -11.3
+"Central Europe" = -11.3
+"China +" = -11.3
+"Eastern Africa" = -11.3
+"India +" = -11.3
+"Indonesia +" = -11.3
+Japan = -11.3
+Korea = -11.3
+Mexico = -11.3
+"Middle East" = -11.3
+"Northern Africa" = -11.3
+Oceania = -11.3
+"Rest of Central America" = -11.3
+"Rest of South America" = -11.3
+"Rest of South Asia" = -11.3
+"Rest of Southern Africa" = -11.3
+"Russia +" = -11.3
+"South Africa" = -11.3
+"Southeastern Asia" = -11.3
+Turkey = -11.3
+"Ukraine +" = -11.3
+USA = -11.3
+"Western Africa" = -11.3
+"Western Europe" = -11.3
+
+[buildings.material_intensity_change.Aluminium]
+"Asian-Stan" = -14.3
+Brazil = -14.3
+Canada = -14.3
+"Central Europe" = -14.3
+"China +" = -14.3
+"Eastern Africa" = -14.3
+"India +" = -14.3
+"Indonesia +" = -14.3
+Japan = -14.3
+Korea = -14.3
+Mexico = -14.3
+"Middle East" = -14.3
+"Northern Africa" = -14.3
+Oceania = -14.3
+"Rest of Central America" = -14.3
+"Rest of South America" = -14.3
+"Rest of South Asia" = -14.3
+"Rest of Southern Africa" = -14.3
+"Russia +" = -14.3
+"South Africa" = -14.3
+"Southeastern Asia" = -14.3
+Turkey = -14.3
+"Ukraine +" = -14.3
+USA = -14.3
+"Western Africa" = -14.3
+"Western Europe" = -14.3
+
+[vehicles.non-road.weight_change_pc]
+'Passenger Planes' = -4.2
+'Freight Planes' = -4.2
+'Trains' = -4.2
+'High Speed Trains' = -4.2
+'Freight Trains' = -4.2
+'Inland Ships' = -4.2
+'Bikes' = -4.2
+
+[vehicles.road.weight_change_pc]
+'Light Commercial Vehicles' = -8.2
+'Medium Freight Trucks' = -8.2
+'Heavy Freight Trucks' = -8.2
+'Midi Buses' = -8.2
+'Regular Buses' = -8.2
+'Cars' = -8.2

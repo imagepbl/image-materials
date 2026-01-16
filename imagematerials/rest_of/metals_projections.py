@@ -24,8 +24,7 @@ def copper_projection(scenario: str, path_input_data, path_input_data_image):
 
     group_1 = ["class_ 1", "class_ 24"]
     group_2 = ["class_ 11", "class_ 23"]
-    group_3 = ["class_ 3", "class_ 13", "class_ 15", 
-            "class_ 16"]
+    group_3 = ["class_ 3", "class_ 13", "class_ 15", "class_ 16"]
     group_4 = ["class_ 20"]
     group_5 = ["class_ 2"]
     group_6 = ["class_ 19"]
@@ -33,10 +32,10 @@ def copper_projection(scenario: str, path_input_data, path_input_data_image):
     # trajectory not to forseen, will be fitted with global regression
   
     # take average of last years for exclude and scattered
-    exclude = ["class_ 4", "class_ 5", "class_ 7", "class_ 8",  
-               "class_ 9", "class_ 14", "class_ 17", "class_ 18", "class_ 25", "class_ 26"]
+    exclude = ["class_ 4", "class_ 5", "class_ 6", "class_ 7", "class_ 8",  
+               "class_ 9", "class_ 14", "class_ 17", "class_ 18", "class_ 22", "class_ 25", "class_ 26"]
     
-    scattered = ["class_ 10", "class_ 12", ]
+    scattered = ["class_ 10", "class_ 12"]
 
     # for these models a regression will be made
     # all reginos that are not in the high, medium, low will be fitted with the global regression
@@ -80,6 +79,8 @@ def copper_projection(scenario: str, path_input_data, path_input_data_image):
     copper.fit_models(best_rmse_models=best_rmse_models, bounds=bounds)
     copper.assign_fit_to_groups_not_fitted(list_regions=['class_ 18', "class_ 21",  "class_ 22"], 
                                            assign_model='group_1', model_nr=6)
+    copper.assign_fit_to_groups_not_fitted(list_regions=scattered, 
+                                           assign_model='all_regions', model_nr=6)
 
     copper.remove_regions_with_no_good_fit_from_region_model_match(exclude)
 
@@ -98,43 +99,38 @@ def steel_projection(scenario: str, path_input_data, path_input_data_image):
                         path_input_data_image=path_input_data_image)
     
     class_1 = ['class_ 1'] 
-
+    class_3 = ['class_ 3', 'class_ 10']
+    class_17 = ['class_ 17']
+    class_18 = ['class_ 18']
+    class_21 = ['class_ 21']
     high = ['class_ 19', 'class_ 23']
-
     china = ['class_ 20']
-
-    low = ['class_ 2', 'class_ 11' , 'class_ 12', 'class_ 13', 'class_ 24']
-
-    very_low = ["class_ 3", "class_ 5", "class_ 6", "class_ 7", 
-                  "class_ 17", "class_ 18", "class_ 21"]
+    low = ['class_ 2', 'class_ 11' , 'class_ 13', 'class_ 12', 'class_ 24']
+    very_low = ["class_ 5", "class_ 6", "class_ 7"]
 
     # trajectory not to forseen, will be fitted with global regression
-    spreaded = ['class_ 10', 'class_ 14', 'class_ 15', 'class_ 16']
+    spreaded = ['class_ 14', 'class_ 15', 'class_ 16']
+    exclude = ['class_ 4', 'class_ 8', "class_ 9", "class_ 25", "class_ 26"]  # regions excluded from the analysis
 
-    # will be excluded and assigned average diff
-    fit_not_good = ['class_ 5', 'class_ 6', 'class_ 10', 'class_ 14', 
-                    'class_ 15', "class_ 18", "class_ 24"]
-    
-    too_low = ['class_ 4', 'class_ 8', "class_ 9", 
-               'class_ 22', 'class_ 25', "class_ 26"]
-
-    exclude = too_low + fit_not_good
 
     # what is in rest will not be fitted because of outliers - will follow global projections       
     rest = all_regions_list_class[:-1]
-    rest = [r for r in rest if r not in (low+class_1+high+very_low+too_low+fit_not_good+china)]
+    rest = [r for r in rest if r not in (low+class_1+high+very_low+china)]
 
     # for these models a regression will be made
     # all reginos that are not in the high, medium, low will be fitted with the global regression
     steel_grouping = {'all_regions' : all_regions_list_class[:-1],
-                      'class_ 1': class_1,
-                      'high': high,
-                      'china': china,
-                      'low': low,
-                      'very_low': very_low,
-                      'too_low': too_low,
-                    }
-
+                    'class_ 1': class_1,
+                    'class_ 3': class_3,
+                    'class_ 17': class_17,
+                    'class_ 18': class_18,
+                    'class_ 21': class_21,
+                    'high': high,
+                    'china': china,
+                    'low': low,
+                    'very_low': very_low,
+                }
+    
     #steel_grouping = {'all' : all_regions_list_class[:-1]}
     steel.data_grouped_regions(regions_grouping = steel_grouping)
 
@@ -153,22 +149,33 @@ def steel_projection(scenario: str, path_input_data, path_input_data_image):
     bounds = {
     'all_regions': ([0, 0, 0], [10, 10, 10]),
     'class_ 1': ([0, 0, 0], [10, 10, 10]),
-    'high': ([0, 0, 0], [0.7, 10, 10]),
+    'class_ 3': ([0, 2, 2], [10, 10, 10]),
+    'class_ 17': ([0, 0, 0], [10, 10, 10]),
+    'class_ 18': ([0, 0, 0], [0.125, 10, 10]), # same as 21
+    'class_ 21': ([0, 0, 0], [10, 10, 10]),
+    'high': ([0, 0, 0], [10, 10, 10]),
     'china': ([0, 0, 0], [0.5, 10, 10]),
-    'low': ([0, 0, 0], [10, 10, 10]),
-    'very_low': ([0, 0, 0], [10, 10, 10]),
-    'too_low': ([0, 0, 0], [10, 10, 10])}
+    'low': ([0, 2, 2], [10, 10, 10]),
+    'very_low': ([0, 0, 0], [0.5, 10, 10])}
 
     # enforce that for all groups gompertz model is selected as best fit
     steel.fit_models(best_rmse_models={'all_regions' : 'gompertz model',
                                     'class_ 1': 'gompertz model',
+                                    'class_ 3': 'gompertz model',
+                                    'class_ 17': 'gompertz model',
+                                    'class_ 18': 'gompertz model',
+                                    'class_ 21': 'gompertz model',
                                     'high': 'gompertz model',
                                     'china': 'gompertz model',
                                     'low': 'gompertz model',
-                                    'very_low': 'gompertz model',
-                                    'too_low': 'gompertz model'},
+                                    'very_low': 'gompertz model'
+                                    },
                                     bounds=bounds)  
-
+    
+    steel.assign_fit_to_groups_not_fitted(spreaded, 
+                                        assign_model='all_regions', 
+                                        model_nr=6)
+    
     steel.remove_regions_with_no_good_fit_from_region_model_match(exclude)
     
     return steel
@@ -254,9 +261,6 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
     }
 
     aluminium.fit_models(best_rmse_models, bounds)
-
-
-
 
     # add regions to regions model match that are not in there yet becaused they are fitted to the global average
     for key in IAI_TO_IMAGE_CLASSES.keys():

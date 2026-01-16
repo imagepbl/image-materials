@@ -1,5 +1,0 @@
-Region,Constants,HV,MV,LV
-Europe,mult,0.0009,0.0016,0.0016
-Europe,add,-15.102,-4.769,7.5104
-Other,mult,0.000475,0.00125,0.00143
-Other,add,-7.97,-3.73,6.69

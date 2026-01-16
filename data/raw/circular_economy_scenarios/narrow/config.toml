@@ -3,12 +3,6 @@ base_year = 2020
 target_year = 2060
 implementation_rate = 'linear'
 
-[vehicles]
-base_year = 2019
-target_year = 2060
-# possibilities for implementation rate are: linear, immediate, s-curve
-implementation_rate = 'linear'
-
 [buildings.residential.m2_change_pc]
 "Asian-Stan" = -15.0
 Brazil = -16.7
@@ -65,24 +59,6 @@ USA = -35.0
 "Western Africa" = -15.0
 "Western Europe" = -23.3
 
-[vehicles.passenger]
-kilometers = -25
-
-[vehicles.mileage]
-"Midi Buses" = 10
-"Regular Buses" = 10
-"Trains" = 10
-"High Speed Trains" = 10
-"Freight Trains" = 10
-"Bikes" = 10
-"Light Commercial Vehicles" = 10
-"Inland Ships" = 10
-
-[vehicles.region_mileage]
-"Cars" = 20
-
-[vehicles.freight]
-kilometers = -13
 
 [buildings.material_intensity_change.Steel]
 "Asian-Stan" = -12.8
@@ -168,6 +144,31 @@ USA = -14.3
 "Western Africa" = -14.3
 "Western Europe" = -14.3
 
+[vehicles]
+base_year = 2019
+target_year = 2060
+# possibilities for implementation rate are: linear, immediate, s-curve
+implementation_rate = 'linear'
+
+[vehicles.passenger]
+kilometers = -25
+
+[vehicles.mileage]
+"Midi Buses" = 10
+"Regular Buses" = 10
+"Trains" = 10
+"High Speed Trains" = 10
+"Freight Trains" = 10
+"Bikes" = 10
+"Light Commercial Vehicles" = 10
+"Inland Ships" = 10
+
+[vehicles.region_mileage]
+"Cars" = 20
+
+[vehicles.freight]
+kilometers = -13
+
 [vehicles.non-road.weight_change_pc]
 'Passenger Planes' = -4.2
 'Freight Planes' = -4.2
@@ -184,3 +185,21 @@ USA = -14.3
 'Midi Buses' = -8.2
 'Regular Buses' = -8.2
 'Cars' = -8.2
+
+[electricity]
+base_year = 2020
+target_year = 2060
+implementation_rate = 'linear'
+
+[electricity.generation.weight_change_pc]
+'SPV' = -20
+'SPVR' = -10
+'CSP' = -30
+'WON' = -20
+'WOFF' = -10
+'WAVE' = -30
+'HYD' = 0
+
+[electricity.grid_add.weight_change_pc]
+'Transformers' = -10
+'Substations' = -10

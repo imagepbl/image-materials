@@ -14,20 +14,20 @@ FONT = {'family' : 'sans-serif',
 
 
 COLOR_MATERIAL = {
-    "Steel"     : "#16697a",
-    "Aluminium" : "#79a3b1",
-    "Cu"        : "#c7956d",
-    "Plastics"  : "#ffd369",
-    "Glass"     : "#bbbbbb",
-    "Rubber"    : "#0a043c",
-    "Co"        : "#314a73",
-    "Li"        : "#d6d6d6",
-    "Mn"        : "#6d5987",
-    "Nd"        : "#e38846",
-    "Ni"        : "#428a66",
-    "Pb"        : "#5b6b5f",
-    "Ti"        : "#daf2e0",
-    "Wood"      : "#73523b"
+    "steel"     : "#16697a",
+    "aluminium" : "#79a3b1",
+    "copper"        : "#c7956d",
+    "plastics"  : "#ffd369",
+    "glass"     : "#bbbbbb",
+    "rubber"    : "#0a043c",
+    "cobalt"        : "#314a73",
+    "lithium"        : "#d6d6d6",
+    "manganese"        : "#6d5987",
+    "neodymium"        : "#e38846",
+    "nickel"        : "#428a66",
+    "lead"        : "#5b6b5f",
+    "titanium"        : "#daf2e0",
+    "wood"      : "#73523b"
     }
 
 VEHICLE_LIST =       ['Bicycles', 'Cars',    'Planes',  'Trains',  'Buses',   'Rail Cargo', 'Air Cargo', 'Trucks',  'Ships']
@@ -97,12 +97,12 @@ def plot_vehicle_material_composition(
     material_fractions_truck = (material_fractions_truck_MFT + material_fractions_truck_HFT) / 2    # pre calculate the avreage of Heavy & Medium Trucks
     figure_fp = Path(output_folder, "graphs", "bars_compositon.png")
 
-    plotvar_steel      = [material_fractions_car.loc[year, idx['ICE','Steel']]*mul,     material_fractions_bicycle.loc[year,'Steel']*mul,     material_fractions_bus_midi.loc[year, idx['ICE','Steel']]*mul,     material_fractions_bus_reg.loc[year, idx['ICE','Steel']]*mul,     material_fractions_air_pas.loc[year,'Steel']*mul,     material_fractions_rail_reg.loc[year,'Steel']*mul,     material_fractions_rail_hst.loc[year,'Steel']*mul,     0, material_fractions_air_frgt.loc[year,'Steel']*mul,     material_fractions_rail_frgt.loc[year,'Steel']*mul,     material_fractions_inland_ship.loc[year,'Steel']*mul,     material_fractions_truck_LCV.loc[year, idx['ICE','Steel']]*mul,     material_fractions_truck.loc[year, idx['ICE','Steel']]*mul]
-    plotvar_aluminium  = [material_fractions_car.loc[year, idx['ICE','Aluminium']]*mul, material_fractions_bicycle.loc[year,'Aluminium']*mul, material_fractions_bus_midi.loc[year, idx['ICE','Aluminium']]*mul, material_fractions_bus_reg.loc[year, idx['ICE','Aluminium']]*mul, material_fractions_air_pas.loc[year,'Aluminium']*mul, material_fractions_rail_reg.loc[year,'Aluminium']*mul, material_fractions_rail_hst.loc[year,'Aluminium']*mul, 0, material_fractions_air_frgt.loc[year,'Aluminium']*mul, material_fractions_rail_frgt.loc[year,'Aluminium']*mul, material_fractions_inland_ship.loc[year,'Aluminium']*mul, material_fractions_truck_LCV.loc[year, idx['ICE','Aluminium']]*mul, material_fractions_truck.loc[year, idx['ICE','Aluminium']]*mul]
-    plotvar_cu         = [material_fractions_car.loc[year, idx['ICE','Cu']]*mul,        material_fractions_bicycle.loc[year,'Cu']*mul,        material_fractions_bus_midi.loc[year, idx['ICE','Cu']]*mul,        material_fractions_bus_reg.loc[year, idx['ICE','Cu']]*mul,        material_fractions_air_pas.loc[year,'Cu']*mul,        material_fractions_rail_reg.loc[year,'Cu']*mul,        material_fractions_rail_hst.loc[year,'Cu']*mul,        0, material_fractions_air_frgt.loc[year,'Cu']*mul,        material_fractions_rail_frgt.loc[year,'Cu']*mul,        material_fractions_inland_ship.loc[year,'Cu']*mul,        material_fractions_truck_LCV.loc[year, idx['ICE','Cu']]*mul,        material_fractions_truck.loc[year, idx['ICE','Cu']]*mul]
-    plotvar_plastics   = [material_fractions_car.loc[year, idx['ICE','Plastics']]*mul,  material_fractions_bicycle.loc[year,'Plastics']*mul,  material_fractions_bus_midi.loc[year, idx['ICE','Plastics']]*mul,  material_fractions_bus_reg.loc[year, idx['ICE','Plastics']]*mul,  material_fractions_air_pas.loc[year,'Plastics']*mul,  material_fractions_rail_reg.loc[year,'Plastics']*mul,  material_fractions_rail_hst.loc[year,'Plastics']*mul,  0, material_fractions_air_frgt.loc[year,'Plastics']*mul,  material_fractions_rail_frgt.loc[year,'Plastics']*mul,  material_fractions_inland_ship.loc[year,'Plastics']*mul,  material_fractions_truck_LCV.loc[year, idx['ICE','Plastics']]*mul,  material_fractions_truck.loc[year, idx['ICE','Plastics']]*mul]
-    plotvar_glass      = [material_fractions_car.loc[year, idx['ICE','Glass']]*mul,     material_fractions_bicycle.loc[year,'Glass']*mul,     material_fractions_bus_midi.loc[year, idx['ICE','Glass']]*mul,     material_fractions_bus_reg.loc[year, idx['ICE','Glass']]*mul,     material_fractions_air_pas.loc[year,'Glass']*mul,     material_fractions_rail_reg.loc[year,'Glass']*mul,     material_fractions_rail_hst.loc[year,'Glass']*mul,     0, material_fractions_air_frgt.loc[year,'Glass']*mul,     material_fractions_rail_frgt.loc[year,'Glass']*mul,     material_fractions_inland_ship.loc[year,'Glass']*mul,     material_fractions_truck_LCV.loc[year, idx['ICE','Glass']]*mul,     material_fractions_truck.loc[year, idx['ICE','Glass']]*mul]
-    plotvar_rubber     = [material_fractions_car.loc[year, idx['ICE','Rubber']]*mul,    material_fractions_bicycle.loc[year,'Rubber']*mul,    material_fractions_bus_midi.loc[year, idx['ICE','Rubber']]*mul,    material_fractions_bus_reg.loc[year, idx['ICE','Rubber']]*mul,    material_fractions_air_pas.loc[year,'Rubber']*mul,    material_fractions_rail_reg.loc[year,'Rubber']*mul,    material_fractions_rail_hst.loc[year,'Rubber']*mul,    0, material_fractions_air_frgt.loc[year,'Rubber']*mul,    material_fractions_rail_frgt.loc[year,'Rubber']*mul,    material_fractions_inland_ship.loc[year,'Rubber']*mul,    material_fractions_truck_LCV.loc[year, idx['ICE','Rubber']]*mul,    material_fractions_truck.loc[year, idx['ICE','Rubber']]*mul]
+    plotvar_steel      = [material_fractions_car.loc[year, idx['ICE',"steel"]]*mul,     material_fractions_bicycle.loc[year,"steel"]*mul,     material_fractions_bus_midi.loc[year, idx['ICE',"steel"]]*mul,     material_fractions_bus_reg.loc[year, idx['ICE',"steel"]]*mul,     material_fractions_air_pas.loc[year,"steel"]*mul,     material_fractions_rail_reg.loc[year,"steel"]*mul,     material_fractions_rail_hst.loc[year,"steel"]*mul,     0, material_fractions_air_frgt.loc[year,"steel"]*mul,     material_fractions_rail_frgt.loc[year,"steel"]*mul,     material_fractions_inland_ship.loc[year,"steel"]*mul,     material_fractions_truck_LCV.loc[year, idx['ICE',"steel"]]*mul,     material_fractions_truck.loc[year, idx['ICE',"steel"]]*mul]
+    plotvar_aluminium  = [material_fractions_car.loc[year, idx['ICE',"aluminium"]]*mul, material_fractions_bicycle.loc[year,"aluminium"]*mul, material_fractions_bus_midi.loc[year, idx['ICE',"aluminium"]]*mul, material_fractions_bus_reg.loc[year, idx['ICE',"aluminium"]]*mul, material_fractions_air_pas.loc[year,"aluminium"]*mul, material_fractions_rail_reg.loc[year,"aluminium"]*mul, material_fractions_rail_hst.loc[year,"aluminium"]*mul, 0, material_fractions_air_frgt.loc[year,"aluminium"]*mul, material_fractions_rail_frgt.loc[year,"aluminium"]*mul, material_fractions_inland_ship.loc[year,"aluminium"]*mul, material_fractions_truck_LCV.loc[year, idx['ICE',"aluminium"]]*mul, material_fractions_truck.loc[year, idx['ICE',"aluminium"]]*mul]
+    plotvar_cu         = [material_fractions_car.loc[year, idx['ICE',"copper"]]*mul,        material_fractions_bicycle.loc[year,"copper"]*mul,        material_fractions_bus_midi.loc[year, idx['ICE',"copper"]]*mul,        material_fractions_bus_reg.loc[year, idx['ICE',"copper"]]*mul,        material_fractions_air_pas.loc[year,"copper"]*mul,        material_fractions_rail_reg.loc[year,"copper"]*mul,        material_fractions_rail_hst.loc[year,"copper"]*mul,        0, material_fractions_air_frgt.loc[year,"copper"]*mul,        material_fractions_rail_frgt.loc[year,"copper"]*mul,        material_fractions_inland_ship.loc[year,"copper"]*mul,        material_fractions_truck_LCV.loc[year, idx['ICE',"copper"]]*mul,        material_fractions_truck.loc[year, idx['ICE',"copper"]]*mul]
+    plotvar_plastics   = [material_fractions_car.loc[year, idx['ICE',"plastics"]]*mul,  material_fractions_bicycle.loc[year,"plastics"]*mul,  material_fractions_bus_midi.loc[year, idx['ICE',"plastics"]]*mul,  material_fractions_bus_reg.loc[year, idx['ICE',"plastics"]]*mul,  material_fractions_air_pas.loc[year,"plastics"]*mul,  material_fractions_rail_reg.loc[year,"plastics"]*mul,  material_fractions_rail_hst.loc[year,"plastics"]*mul,  0, material_fractions_air_frgt.loc[year,"plastics"]*mul,  material_fractions_rail_frgt.loc[year,"plastics"]*mul,  material_fractions_inland_ship.loc[year,"plastics"]*mul,  material_fractions_truck_LCV.loc[year, idx['ICE',"plastics"]]*mul,  material_fractions_truck.loc[year, idx['ICE',"plastics"]]*mul]
+    plotvar_glass      = [material_fractions_car.loc[year, idx['ICE',"glass"]]*mul,     material_fractions_bicycle.loc[year,"glass"]*mul,     material_fractions_bus_midi.loc[year, idx['ICE',"glass"]]*mul,     material_fractions_bus_reg.loc[year, idx['ICE',"glass"]]*mul,     material_fractions_air_pas.loc[year,"glass"]*mul,     material_fractions_rail_reg.loc[year,"glass"]*mul,     material_fractions_rail_hst.loc[year,"glass"]*mul,     0, material_fractions_air_frgt.loc[year,"glass"]*mul,     material_fractions_rail_frgt.loc[year,"glass"]*mul,     material_fractions_inland_ship.loc[year,"glass"]*mul,     material_fractions_truck_LCV.loc[year, idx['ICE',"glass"]]*mul,     material_fractions_truck.loc[year, idx['ICE',"glass"]]*mul]
+    plotvar_rubber     = [material_fractions_car.loc[year, idx['ICE',"rubber"]]*mul,    material_fractions_bicycle.loc[year,"rubber"]*mul,    material_fractions_bus_midi.loc[year, idx['ICE',"rubber"]]*mul,    material_fractions_bus_reg.loc[year, idx['ICE',"rubber"]]*mul,    material_fractions_air_pas.loc[year,"rubber"]*mul,    material_fractions_rail_reg.loc[year,"rubber"]*mul,    material_fractions_rail_hst.loc[year,"rubber"]*mul,    0, material_fractions_air_frgt.loc[year,"rubber"]*mul,    material_fractions_rail_frgt.loc[year,"rubber"]*mul,    material_fractions_inland_ship.loc[year,"rubber"]*mul,    material_fractions_truck_LCV.loc[year, idx['ICE',"rubber"]]*mul,    material_fractions_truck.loc[year, idx['ICE',"rubber"]]*mul]
 
     barWidth = 0.5
     r1 = np.arange(13)
@@ -113,17 +113,17 @@ def plot_vehicle_material_composition(
     plt.yticks(fontsize=16)
     plt.subplots_adjust(wspace = 0.1, bottom = 0.15, right = 0.80)
     ax.set_ylim(ymin=0, ymax=100)
-    ax.bar(r1, plotvar_steel,     color=COLOR_MATERIAL["Steel"],     width=barWidth, edgecolor=None, label='2018')
+    ax.bar(r1, plotvar_steel,     color=COLOR_MATERIAL["steel"],     width=barWidth, edgecolor=None, label='2018')
     bottom = plotvar_steel
-    ax.bar(r1, plotvar_aluminium, color=COLOR_MATERIAL["Aluminium"], width=barWidth, bottom=bottom, edgecolor=None, label='2018')
+    ax.bar(r1, plotvar_aluminium, color=COLOR_MATERIAL["aluminium"], width=barWidth, bottom=bottom, edgecolor=None, label='2018')
     bottom = [a+b for a,b in zip(bottom,plotvar_aluminium)]
-    ax.bar(r1, plotvar_cu,        color=COLOR_MATERIAL["Cu"],        width=barWidth, bottom=bottom, edgecolor=None, label='2018')
+    ax.bar(r1, plotvar_cu,        color=COLOR_MATERIAL["copper"],        width=barWidth, bottom=bottom, edgecolor=None, label='2018')
     bottom = [a+b for a,b in zip(bottom,plotvar_cu)]
-    ax.bar(r1, plotvar_plastics,  color=COLOR_MATERIAL["Plastics"],  width=barWidth, bottom=bottom, edgecolor=None, label='2018')
+    ax.bar(r1, plotvar_plastics,  color=COLOR_MATERIAL["plastics"],  width=barWidth, bottom=bottom, edgecolor=None, label='2018')
     bottom = [a+b for a,b in zip(bottom,plotvar_plastics)]
-    ax.bar(r1, plotvar_glass,     color=COLOR_MATERIAL["Glass"],     width=barWidth, bottom=bottom, edgecolor=None, label='2018')
+    ax.bar(r1, plotvar_glass,     color=COLOR_MATERIAL["glass"],     width=barWidth, bottom=bottom, edgecolor=None, label='2018')
     bottom = [a+b for a,b in zip(bottom,plotvar_glass)]
-    ax.bar(r1, plotvar_rubber,    color=COLOR_MATERIAL["Rubber"],    width=barWidth, bottom=bottom, edgecolor=None, label='2018')
+    ax.bar(r1, plotvar_rubber,    color=COLOR_MATERIAL["rubber"],    width=barWidth, bottom=bottom, edgecolor=None, label='2018')
 
     # Add xticks on the middle of the group bars
     plt.xticks([r + barWidth - 0.5 for r in range(13)], ['Cars', 'Bicycles', 'Midi Bus', 'Bus', 'Airplane', 'Rail', 'High Speed Train', '', 'Air Cargo', 'Rail Cargo', 'Ships', 'Light Truck', 'Other Trucks'], fontsize=11)
@@ -131,12 +131,12 @@ def plot_vehicle_material_composition(
     plt.title('Default material composition of different vehicles', y=1.08, fontsize=16)
 
     # Legend & text
-    legend_elements = [matplotlib.patches.Patch(facecolor=COLOR_MATERIAL["Rubber"],    label='Rubber'),
-                    matplotlib.patches.Patch(facecolor=COLOR_MATERIAL["Glass"],     label='Glass'),
-                    matplotlib.patches.Patch(facecolor=COLOR_MATERIAL["Plastics"],  label='Plastics'),
-                    matplotlib.patches.Patch(facecolor=COLOR_MATERIAL["Cu"],        label='Cu'),
-                    matplotlib.patches.Patch(facecolor=COLOR_MATERIAL["Aluminium"], label='Aluminium'),
-                    matplotlib.patches.Patch(facecolor=COLOR_MATERIAL["Steel"],     label='Steel')]
+    legend_elements = [matplotlib.patches.Patch(facecolor=COLOR_MATERIAL["rubber"],    label="rubber"),
+                    matplotlib.patches.Patch(facecolor=COLOR_MATERIAL["glass"],     label="glass"),
+                    matplotlib.patches.Patch(facecolor=COLOR_MATERIAL["plastics"],  label="plastics"),
+                    matplotlib.patches.Patch(facecolor=COLOR_MATERIAL["copper"],        label="copper"),
+                    matplotlib.patches.Patch(facecolor=COLOR_MATERIAL["aluminium"], label="aluminium"),
+                    matplotlib.patches.Patch(facecolor=COLOR_MATERIAL["steel"],     label="steel")]
     plt.legend(handles=legend_elements, loc=2, bbox_to_anchor=(1,1), ncol=1, frameon=False, fontsize=16)
     fig.savefig(figure_fp, dpi=600)
     plt.show()
@@ -269,10 +269,10 @@ def plot_global_stocks_flows(vehicle_material_stock_global, vehicle_materials,
     # 3) Steel weight, Stock by hevicle + inflow/outflow
     # 4) Aluminium weight, Stock by vehicle + inflow/outflow
 
-    #material = 'Steel'
+    #material = "steel"
     #test = vehicle_material_stock_global.loc[idx[material,['sea_shipping_small', 'sea_shipping_med','sea_shipping_large', 'sea_shipping_vl']],:].sum(axis=0)
 
-    bulk_list =          ["Steel" ,  "Aluminium",   "Cu",   "Plastics",   "Glass",   "Rubber"]
+    bulk_list =          ["steel" ,  "aluminium",   "copper",   "plastics",   "glass",   "rubber"]
     figure_fp = Path(output_folder, "graphs", "vehicle_material_results_panel.png")
              
     #grouping
@@ -292,14 +292,14 @@ def plot_global_stocks_flows(vehicle_material_stock_global, vehicle_materials,
     car_share_in_total_stock = graph1_data.sum(axis=1)['Cars']/graph1_data.sum(axis=1).sum()
 
     graph2_data = vehicle_material_stock_global.loc[idx[bulk_list,VEHICLE_LIST],YEARS_SELECT].sum(axis=0, level=0)                          # by material
-    graph3_data = vehicle_material_stock_global.loc[idx['Steel',VEHICLE_LIST],YEARS_SELECT].sum(axis=0, level=1).reindex(VEHICLE_LIST)      # Steel by vehicle
-    graph4_data = vehicle_material_stock_global.loc[idx['Aluminium',VEHICLE_LIST],YEARS_SELECT].sum(axis=0, level=1).reindex(VEHICLE_LIST)  # Aluminium by vehicle
+    graph3_data = vehicle_material_stock_global.loc[idx["steel",VEHICLE_LIST],YEARS_SELECT].sum(axis=0, level=1).reindex(VEHICLE_LIST)      # Steel by vehicle
+    graph4_data = vehicle_material_stock_global.loc[idx["aluminium",VEHICLE_LIST],YEARS_SELECT].sum(axis=0, level=1).reindex(VEHICLE_LIST)  # Aluminium by vehicle
 
-    graph3_data_in  = vehicle_materials.loc[idx[:,:,'inflow',:,:,'Steel',:],YEARS_SELECT].sum(axis=0, level=5).loc['Steel']
-    graph3_data_out = vehicle_materials.loc[idx[:,:,'outflow',:,:,'Steel',:],YEARS_SELECT].sum(axis=0, level=5).loc['Steel']
+    graph3_data_in  = vehicle_materials.loc[idx[:,:,'inflow',:,:,"steel",:],YEARS_SELECT].sum(axis=0, level=5).loc["steel"]
+    graph3_data_out = vehicle_materials.loc[idx[:,:,'outflow',:,:,"steel",:],YEARS_SELECT].sum(axis=0, level=5).loc["steel"]
 
-    graph4_data_in  = vehicle_materials.loc[idx[:,:,'inflow',:,:,'Aluminium',:],YEARS_SELECT].sum(axis=0, level=5).loc['Aluminium']
-    graph4_data_out = vehicle_materials.loc[idx[:,:,'outflow',:,:,'Aluminium',:],YEARS_SELECT].sum(axis=0, level=5).loc['Aluminium']
+    graph4_data_in  = vehicle_materials.loc[idx[:,:,'inflow',:,:,"aluminium",:],YEARS_SELECT].sum(axis=0, level=5).loc["aluminium"]
+    graph4_data_out = vehicle_materials.loc[idx[:,:,'outflow',:,:,"aluminium",:],YEARS_SELECT].sum(axis=0, level=5).loc["aluminium"]
 
     graph3_data_in[[2006,2007,2008]].mean() # quick comparison to Cullen & Alwood 2012
     graph4_data_in[[2006,2007,2008]].mean() # quick comparison to Cullen & Alwood 2012
@@ -375,7 +375,7 @@ def plot_net_steel_additions_stocks(vehicle_materials, output_folder=OUTPUT_FOLD
     years_average_now   = [2016,2017,2018,2019,2020] 
     years_average_end   = [OUT_YEAR -4,OUT_YEAR -3,OUT_YEAR -2,OUT_YEAR -1,OUT_YEAR] 
 
-    material_select = 'Steel'
+    material_select = "steel"
     vehcile_list       = ['bicycle', 'rail_reg', 'rail_hst', 'reg_bus', 'midi_bus']           #only those vehicles which go negative by the end of the scenario (may add: 'sea_shipping_small', 'sea_shipping_med', 'sea_shipping_large', 'sea_shipping_vl')
     regions_developed  = [1,2,3,11,12,13,14,15,16,17,24]
     regions_developing = [4,5,6,7,8,9,10,18,19,21,22,25,26]
@@ -577,7 +577,7 @@ def plot_stock_weight_intensity(car_total_nr, region_list,
     plt.yticks(fontsize=16)
     plt.subplots_adjust(wspace = 0.1, bottom = 0.15, right = 0.80)
     ax.set_ylim(ymin=0, ymax=100)
-    ax.bar(r1, plotvar_matint,     color=COLOR_MATERIAL["Steel"],     width=barWidth, edgecolor=None, label='2018')
+    ax.bar(r1, plotvar_matint,     color=COLOR_MATERIAL["steel"],     width=barWidth, edgecolor=None, label='2018')
     bbox_props = dict(boxstyle="rarrow", fc=(0.8, 0.9, 0.9), ec="b", lw=0.5)
     ax.text(11, 100,  "180",   ha="center", va="center", rotation=90,  size=10, bbox=bbox_props)
 
