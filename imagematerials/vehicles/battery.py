@@ -31,9 +31,9 @@ class ElectricVehicleBatteries(prism.Model):
     material_fractions:  xr.DataArray
     energy_density:      xr.DataArray
     knowledge_graph_vhc: KnowledgeGraph
-    inflow:              prism.TimeVariable
-    stock_by_cohort:     xr.DataArray   
-    outflow_by_cohort:   prism.TimeVariable
+    # inflow:              prism.TimeVariable
+    # stock_by_cohort:     xr.DataArray   
+    # outflow_by_cohort:   prism.TimeVariable
     
 
     # Dimensions
@@ -68,13 +68,13 @@ class ElectricVehicleBatteries(prism.Model):
     def compute_initial_values(self, time: prism.Timeline):
         """
         """
-        self.inflow = self.inflow.to_array()
-        self.inflow = self.inflow.drop_sel(Type=["Bikes", "Freight Planes", "Passenger Planes","Small Ships", "Medium Ships", 
+        inflow = inflow.to_array()
+        inflow = inflow.drop_sel(Type=["Bikes", "Freight Planes", "Passenger Planes","Small Ships", "Medium Ships", 
                                                  "Large Ships", "Very Large Ships", "Inland Ships", "Freight Trains", "Trains", "High Speed Trains"])
-        self.outflow_by_cohort = self.outflow_by_cohort.to_array()
-        self.outflow_by_cohort = self.outflow_by_cohort.drop_sel(Type=["Bikes", "Freight Planes", "Passenger Planes","Small Ships", "Medium Ships", 
+        outflow_by_cohort = outflow_by_cohort.to_array()
+        outflow_by_cohort = outflow_by_cohort.drop_sel(Type=["Bikes", "Freight Planes", "Passenger Planes","Small Ships", "Medium Ships", 
                                                  "Large Ships", "Very Large Ships", "Inland Ships", "Freight Trains", "Trains", "High Speed Trains"])
-        self.stock_by_cohort = self.stock_by_cohort.drop_sel(Type=["Bikes", "Freight Planes", "Passenger Planes","Small Ships", "Medium Ships", 
+        stock_by_cohort = stock_by_cohort.drop_sel(Type=["Bikes", "Freight Planes", "Passenger Planes","Small Ships", "Medium Ships", 
                                                  "Large Ships", "Very Large Ships", "Inland Ships", "Freight Trains", "Trains", "High Speed Trains"])
         # self.inflow = self.knowledge_graph_vhc.rebroadcast_xarray(self.inflow, output_coords = self.weights.coords["Type"].values, dim="Type")
         # print(self.inflow.coords["Type"].values)
@@ -83,7 +83,7 @@ class ElectricVehicleBatteries(prism.Model):
 
         
 
-    def compute_values(self, time: prism.Time):
+    def compute_values(self, time: prism.Time, inflow, stock_by_cohort, outflow_by_cohort):
         """
         
         """
@@ -94,9 +94,9 @@ class ElectricVehicleBatteries(prism.Model):
         print(bool(np.isclose(self.inflow.pint.magnitude, 0).all()))
 
         # 1. Calculate batteries inflow, stock, outflow ("count")
-        self.inflow_battery[t]  = self.inflow.loc[t] * self.shares.sel(Cohort = t).drop_vars("Cohort")#.sum("Type")
-        self.stock_battery[t]   = (self.stock_by_cohort.loc[t] * self.shares)#.sum("Type") #.sum(["Cohort","battery"])
-        self.outflow_battery[t] = (self.outflow_by_cohort.loc[t] * self.shares)#.sum("Type") #.sum(["Cohort","battery"])
+        self.inflow_battery[t]  = inflow.loc[t] * self.shares.sel(Cohort = t).drop_vars("Cohort")#.sum("Type")
+        self.stock_battery[t]   = (stock_by_cohort.loc[t] * self.shares)#.sum("Type") #.sum(["Cohort","battery"])
+        self.outflow_battery[t] = (outflow_by_cohort.loc[t] * self.shares)#.sum("Type") #.sum(["Cohort","battery"])
 
         print("inflow_battery is zero:")
         print(bool(np.isclose(prism.M_(self.inflow_battery), 0).all()))
