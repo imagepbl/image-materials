@@ -163,8 +163,8 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
 
     # Depending on circular economy scenario, apply different measures
     if circular_economy_config is not None:
-        if "narrow" in circular_economy_config.keys():
-            ce_scen = "narrow"
+        if "narrow_product" in circular_economy_config.keys():
+            ce_scen = "narrow_product"
             target_year          = circular_economy_config[ce_scen]['electricity']['target_year']
             base_year            = circular_economy_config[ce_scen]['electricity']['base_year']
             implementation_rate  = circular_economy_config[ce_scen]['electricity']['implementation_rate']
@@ -533,8 +533,8 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
 
     # Depending on circular economy scenario, apply different measures
     if circular_economy_config is not None:
-        if "narrow" in circular_economy_config.keys():
-            ce_scen = "narrow"
+        if "narrow_product" in circular_economy_config.keys():
+            ce_scen = "narrow_product"
 
             target_year         = circular_economy_config[ce_scen]['electricity']['target_year']
             base_year           = circular_economy_config[ce_scen]['electricity']['base_year']
