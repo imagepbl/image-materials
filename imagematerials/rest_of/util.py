@@ -44,8 +44,8 @@ def sum_inflows_for_all_sectors(model, get_mfa_data: str, list_sum_sctors: list)
         inflow_elc_grid_lines = model.elc_grid_lines.get(get_mfa_data).to_array()
         arrays.append(inflow_elc_grid_lines)
     if "elc_grid_add" in list_sum_sctors:
-        inflow_elc_grid_additional = model.elc_grid_additional.get(get_mfa_data).to_array()
-        arrays.append(inflow_elc_grid_additional)
+        inflow_elc_grid_add = model.elc_grid_add.get(get_mfa_data).to_array()
+        arrays.append(inflow_elc_grid_add)
     if "elc_stor_phs" in list_sum_sctors:
         inflow_elc_stor_phs = model.elc_stor_phs.get(get_mfa_data).to_array()
         arrays.append(inflow_elc_stor_phs)
