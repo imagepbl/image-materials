@@ -192,11 +192,10 @@ def circular_economy_measures_material_intensities_residential(
     """
     # rename Cohort to Time for compatibility with apply_change_per_region function
     if "Cohort" in xr_mat_res_intensities.dims:
-        xr_mat_res_intensities.rename({"Cohort": "Time"})
+        xr_mat_res_intensities = xr_mat_res_intensities.rename({"Cohort": "Time"})
 
     ce_scen = None  # INITIALIZE ce_scen
-    if "narrow" in circular_economy_config.keys():
-        ce_scen = "narrow"
+
     if "narrow_product" in circular_economy_config.keys():
         ce_scen = "narrow_product"
 
@@ -207,10 +206,10 @@ def circular_economy_measures_material_intensities_residential(
     mat_changes = circular_economy_config[ce_scen]['buildings']['material_intensity_change']
 
     region_knowledge_graph = create_region_graph()
-    model_regions = list(xr_mat_res_intensities.coords["Region"].values)
-    materials_all = set(xr_mat_res_intensities.coords["material"].values)
+    model_regions = list(xr_mat_res_intensities.coords["Region"].values) # regions in model
+    materials_all = set(xr_mat_res_intensities.coords["material"].values) # all materials in data
 
-    for mat in ("steel", "concrete", "aluminium"):
+    for mat in ("steel", "concrete", "aluminium"):              # in residential buildings we apply lightweighting to concrete and later derive the cement demand from that
         if mat not in mat_changes or mat not in materials_all:
             continue
 
@@ -266,7 +265,7 @@ def circular_economy_measures_material_intensities_commercial(xr_mat_comm_intens
 
     """
     # work array with Time dim
-    xr_mat = (xr_mat_comm_intensities.rename({"Cohort": "Time"})
+    xr_mat_comm_intensities = (xr_mat_comm_intensities.rename({"Cohort": "Time"})
               if "Cohort" in xr_mat_comm_intensities.dims else xr_mat_comm_intensities)
     
     ce_scen = None  # INITIALIZE ce_scen
@@ -281,11 +280,14 @@ def circular_economy_measures_material_intensities_commercial(xr_mat_comm_intens
     mat_changes = circular_economy_config[ce_scen]['buildings']['material_intensity_change']
 
     region_graph = create_region_graph()
-    materials_order = list(xr_mat.coords["material"].values)
+    materials_all = list(xr_mat_comm_intensities.coords["material"].values) #
 
     updated_slices = []
-    for mat in materials_order:
-        cur = xr_mat.sel(material=mat)
+
+    for mat in ("steel", "cement", "aluminium"):                    # in commercial buildings we apply lightweighting to cement instead of concrete
+        if mat not in mat_changes or mat not in materials_all:
+            continue
+        cur = xr_mat_comm_intensities.sel(material=mat)
 
         # only apply for those present in TOML; others pass through unchanged
         if mat in mat_changes:
