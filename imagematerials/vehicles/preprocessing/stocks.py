@@ -74,15 +74,21 @@ def get_vehicle_stocks(data_path: str, standard_data_path, climate_data_path, cl
         years_range
     ).interpolate(limit_direction='both')
 
-    if 'narrow' in circular_economy_config.keys():
-        target_year = circular_economy_config['narrow']['vehicles']['target_year']
-        base_year = circular_economy_config['narrow']['vehicles']['base_year']
-        mileage_increase = circular_economy_config['narrow']['vehicles']['mileage']
-        implementation_rate = circular_economy_config['narrow']['vehicles']['implementation_rate']
+    ce_scen = None  # INITIALIZE ce_scen
+    if "narrow_product" in circular_economy_config.keys():
+        ce_scen = "narrow_product"
+
+    if ce_scen == "narrow_product":
+        target_year = circular_economy_config[ce_scen]['vehicles']['target_year']
+        base_year = circular_economy_config[ce_scen]['vehicles']['base_year']
+        mileage_increase = circular_economy_config[ce_scen]['vehicles']['mileage']
+        implementation_rate = circular_economy_config[ce_scen]['vehicles']['implementation_rate']
 
         mileages = scenario_change(
             mileages, base_year, target_year, 
             mileage_increase, implementation_rate)
+        
+        logging.debug(f"implemented '{ce_scen}' for Vehicles (mileage/kilometrage increase)")
 
     # TODO
     # TODO: exchange for proper region labels defined elsewhere
