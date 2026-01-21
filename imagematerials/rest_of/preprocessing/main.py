@@ -86,6 +86,12 @@ def read_gompertz_values(base_directory, scenario: str):
     else: 
         name = "coefs_gompertz.nc"
 
+    if scenario in ["SSP2_narrow", "SSP2_narrow_activity", "SSP2_narrow_slow_close",]:
+        print('Using Gompertz coefficients for resource efficiency measures')
+        name = "coefs_gompertz_eff.nc"
+    else: 
+        name = "coefs_gompertz.nc"
+
     xr_gompertz = xr.open_dataset(base_directory / "rest-of" / "gompertz_values" / name, engine="netcdf4")
     xr_gompertz = xr_gompertz.to_array().isel(variable=0).drop_vars("variable")
 
