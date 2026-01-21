@@ -1,6 +1,7 @@
 import xarray as xr
 import numpy as np
 import pandas as pd
+import logging
 
 # from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.read_mym import read_mym_df
