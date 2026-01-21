@@ -67,9 +67,12 @@ def compute_mat_intensities_residential(database_dir: Path,
         str(x) for x in xr_mat_res_intensities.coords["Region"].values]
 
     # applying material intensity changes for residential buildings
-    if 'narrow' in circular_economy_config.keys():
-        xr_mat_res_intensities = circular_economy_measures_material_intensities_residential(
-            xr_mat_res_intensities, circular_economy_config)
+    if circular_economy_config and (
+        ("narrow_product" in circular_economy_config or "narrow" in circular_economy_config)
+        and "narrow_activity" not in circular_economy_config
+        ):
+        xr_mat_res_intensities = circular_economy_measures_material_intensities_residential(xr_mat_res_intensities, 
+                                                                                            circular_economy_config)
 
     xr_mat_res_intensities = prism.Q_(xr_mat_res_intensities, "kg/m^2") # assign unit
 
@@ -125,9 +128,11 @@ def compute_mat_intensities_commercial(
                                                                 "Type", "material")
 
     # apply CE changes (per material, per region)
-    if 'narrow' in circular_economy_config.keys():
-        xr_mat_comm_intensities = circular_economy_measures_material_intensities_commercial(
-            xr_mat_comm_intensities, circular_economy_config, model_regions)
+    if circular_economy_config and (
+        ("narrow_product" in circular_economy_config or "narrow" in circular_economy_config)
+        and "narrow_activity" not in circular_economy_config
+        ):
+        xr_mat_comm_intensities = circular_economy_measures_material_intensities_commercial(xr_mat_comm_intensities, circular_economy_config, model_regions)
 
     xr_mat_comm_intensities = prism.Q_(xr_mat_comm_intensities, "kg/m^2") # assign unit
 
