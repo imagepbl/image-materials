@@ -77,17 +77,16 @@ def sum_inflows_for_all_sectors(model, get_mfa_data: str, list_sum_sctors: list)
     return total_inflow
 
 
-def calculate_cement_equivalent(total_inflow: xr.DataArray):
+def calculate_cement_equivalent(total_inflow: xr.DataArray, include_rest_of = True):
         from imagematerials.rest_of.const import cement_in_concrete_factor
-        cement = total_inflow.sel(material = 'cement')
         concrete = total_inflow.sel(material = 'concrete')
-
+        if include_rest_of is True:
+            cement_rest_of = total_inflow.sel(material = 'cement')
         # convert concrete to cement equivalent
         cement_in_concrete = concrete * cement_in_concrete_factor
-        cement_in_concrete
         # change coordinate of material to 'cement'
         cement_in_concrete = cement_in_concrete.assign_coords(material = 'cement')
-        inflow_material = cement_in_concrete + cement
+        inflow_material = cement_in_concrete + cement_rest_of
         print("summed cement and cement in concrete.")
         return inflow_material
 
