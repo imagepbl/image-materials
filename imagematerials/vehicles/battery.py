@@ -44,8 +44,8 @@ class ElectricVehicleBatteries(prism.Model):
     Time:         prism.Coords[TIME]
 
     # Data dependencies
-    input_data: tuple[str] = ("shares", "weights", "material_fractions", "energy_density", "knowledge_graph_vhc", "vhc_fraction_v2g", "capacity_fraction_v2g",
-                              "stock_by_cohort", "inflow", "outflow_by_cohort") # from vehicle stock module
+    input_data: tuple[str] = ("shares", "weights", "material_fractions", "energy_density", "knowledge_graph_vhc", "vhc_fraction_v2g", "capacity_fraction_v2g", # input from battery preprocessing
+                              "stock_by_cohort", "inflow", "outflow_by_cohort") # input from vehicle stock module
     output_data: tuple[str] = ("stock_battery_kWh_v2g", #"outflow_battery_kWh_v2g",#"inflow_battery_kWh_v2g",
                                "inflow_battery_kWh","stock_battery_kWh","outflow_battery_kWh",
                                "inflow_battery_materials","stock_battery_materials","outflow_battery_materials")
@@ -68,34 +68,14 @@ class ElectricVehicleBatteries(prism.Model):
         # vhc_fraction_v2g only contains Types that are V2G capable (e.g. "Cars - BEV")
         types_v2g = self.vhc_fraction_v2g.Type
 
-        # self.inflow_battery_kWh_v2g = xr.DataArray(
-        #     0.0,
-        #     dims=("Time", "BatteryType", "Region"), #"Type", 
-        #     coords={"Time":         self.Time,
-        #             "BatteryType":  self.BatteryType,
-        #             #"Type":         types_v2g,
-        #             "Region":       self.Region})
-        # self.inflow_battery_kWh_v2g = prism.Q_(self.inflow_battery_kWh_v2g, "kWh")
-
         self.stock_battery_kWh_v2g = xr.DataArray(
             0.0,
             dims=("Time", "Type", "BatteryType", "Region"), # 
             coords={"Time":         self.Time,
-                    #"Cohort":       self.Cohort,
                     "BatteryType":  self.BatteryType,
                     "Type":         types_v2g,
                     "Region":       self.Region})
         self.stock_battery_kWh_v2g = prism.Q_(self.stock_battery_kWh_v2g, "kWh")
-
-        # self.outflow_battery_kWh_v2g = xr.DataArray(
-        #     0.0,
-        #     dims=("Time", "Cohort", "BatteryType", "Region"), #"Type", 
-        #     coords={"Time":         self.Time,
-        #             "Cohort":       self.Cohort,
-        #             "BatteryType":  self.BatteryType,
-        #             #"Type":         types_v2g,
-        #             "Region":       self.Region})
-        # self.outflow_battery_kWh_v2g = prism.Q_(self.outflow_battery_kWh_v2g, "kWh")
 
         
 
@@ -116,19 +96,15 @@ class ElectricVehicleBatteries(prism.Model):
         stock_by_cohort = stock_by_cohort.drop_sel(Type=["Bikes", "Freight Planes", "Passenger Planes","Small Ships", "Medium Ships", 
                                                  "Large Ships", "Very Large Ships", "Inland Ships", "Freight Trains", "Trains", "High Speed Trains"])
 
-
-        # 1. Calculate batteries inflow, stock, outflow ("count")
+        # 1. Calculate battery mass inflow, stock, outflow (kg)
         inflow_battery_kg  = inflow.loc[t] * self.shares.sel(Cohort = t).drop_vars("Cohort") * self.weights.sel(Cohort = t).drop_vars("Cohort")
-        stock_battery_kg   = (stock_by_cohort.loc[t] * self.shares * self.weights) #.sum(["Cohort","battery"])
-        outflow_battery_kg = (outflow_by_cohort.loc[t] * self.shares * self.weights)
-
-        # 2. Intermediate variable: battery mass inflow, stock, outflow (kg)
-        
+        stock_battery_kg   = (stock_by_cohort.loc[t] * self.shares * self.weights)
+        outflow_battery_kg = (outflow_by_cohort.loc[t] * self.shares * self.weights)   
 
         # 3. Calculate battery materials (copper, ..) inflow, stock, outflow (kg)
         self.inflow_battery_materials[t]  = (inflow_battery_kg * self.material_fractions.sel(Cohort = t).drop_vars("Cohort"))
-        self.stock_battery_materials[t]   = (stock_battery_kg * self.material_fractions).sum(["Cohort"])#.drop_vars("Cohort")
-        self.outflow_battery_materials[t] = (outflow_battery_kg * self.material_fractions).sum(["Cohort"])#.drop_vars("Cohort")
+        self.stock_battery_materials[t]   = (stock_battery_kg * self.material_fractions).sum(["Cohort"])
+        self.outflow_battery_materials[t] = (outflow_battery_kg * self.material_fractions).sum(["Cohort"])
 
         # 4. Calculate battery energy capacity inflow, stock, outflow (kWh)
         self.inflow_battery_kWh[t]  = inflow_battery_kg / self.energy_density.sel(Cohort = t).drop_vars("Cohort")
@@ -137,14 +113,8 @@ class ElectricVehicleBatteries(prism.Model):
 
         # 5. Calculate V2G capable battery energy capacity stock (kWh) (to calculate "Other storage" only the V2G battery stock is needed)
         types_v2g = self.vhc_fraction_v2g.Type
-
-        # inflow = self.inflow_battery_kWh[t].sel(Type=types_v2g) * self.vhc_fraction_v2g.sel(Time = t, Type=types_v2g).drop_vars("Time")
-        stock = self.stock_battery_kWh[t].sel(Type=types_v2g) * self.vhc_fraction_v2g
-        # outflow = self.outflow_battery_kWh[t].sel(Type=types_v2g) * self.vhc_fraction_v2g.sel(Type=types_v2g)
-
-        # self.inflow_battery_kWh_v2g.loc[dict(Time=t)]  = (inflow * self.capacity_fraction_v2g).sum(["Type"])
-        self.stock_battery_kWh_v2g.loc[dict(Time=t, Type=types_v2g)]  = (stock.sel(Time=t).drop_vars("Time") * self.capacity_fraction_v2g).sum(["Cohort"])
-        # self.outflow_battery_kWh_v2g.loc[dict(Time=t)]  = (outflow.sel(Time=t).drop_vars("Time") * self.capacity_fraction_v2g).sum(["Type"])
+        stock_v2g = self.stock_battery_kWh[t].sel(Type=types_v2g) * self.vhc_fraction_v2g
+        self.stock_battery_kWh_v2g.loc[dict(Time=t, Type=types_v2g)]  = (stock_v2g.sel(Time=t).drop_vars("Time") * self.capacity_fraction_v2g).sum(["Cohort"])
         
 
 
