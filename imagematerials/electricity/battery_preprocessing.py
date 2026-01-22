@@ -306,18 +306,10 @@ def get_preprocessing_data_evbattery(path_base: str, scenario, year_start, year_
     ev_fraction_v2g = ev_fraction_v2g_data.reindex(range(YEAR_FIRST_GRID,year_out+1)).interpolate(method="linear") # create dataframe with full index; values before first data points will be Nans, between data points interpolated linearly, after last data point will be last known value
     ev_fraction_v2g.loc[:ev_fraction_v2g_data.index[0]] = 0 # set values before first data point to 0
     ev_fraction_v2g.loc[ev_fraction_v2g_data.index[0]:ev_fraction_v2g_data.index[1]] = y # set values between (originally) first and last data point to quadratic/logistic interpolation
-    # Create an empty expanded df
-    vhc_fraction_v2g = pd.DataFrame(index=ev_fraction_v2g.index)
-    # transfer the values for the relevant vehicle types (for now: Cars - BEV and Cars - PHEV)
-    for item in vehicle_list: # TODO: is this even necessary? If not all coordinates are defined, maybe they are just ignored in later calculations?
-        if item in ev_fraction_v2g.columns:
-            vhc_fraction_v2g[item] = ev_fraction_v2g[item]
-        else:
-            vhc_fraction_v2g[item] = 0 # other drive trains are not V2G capable
     # Build xarray DataArray
-    years = vhc_fraction_v2g.index.astype(int).rename(None)
-    techs = vhc_fraction_v2g.columns
-    data_array = vhc_fraction_v2g.to_numpy()    # shape (Time, Type)
+    years = ev_fraction_v2g.index.astype(int).rename(None)
+    techs = ev_fraction_v2g.columns
+    data_array = ev_fraction_v2g.to_numpy()    # shape (Time, Type)
     data_array = data_array[:, :, np.newaxis]   # shape (Time, Type, 1)
     data_array = np.broadcast_to(data_array, data_array.shape[:2] + (len(IMAGE_REGIONS),)) # (Time, Type, Region) - add region dimension, though all regions have the same values for now
     xr_vhc_fraction_v2g = xr.DataArray(
@@ -331,9 +323,10 @@ def get_preprocessing_data_evbattery(path_base: str, scenario, year_start, year_
         name="VehicleFractionV2G"
     )
     xr_vhc_fraction_v2g = prism.Q_(xr_vhc_fraction_v2g, "fraction")
-    xr_vhc_fraction_v2g = vhc_knowledge_graph.rebroadcast_xarray(xr_vhc_fraction_v2g, output_coords=vehicle_list, dim="Type")
+    # xr_vhc_fraction_v2g = vhc_knowledge_graph.rebroadcast_xarray(xr_vhc_fraction_v2g, output_coords=vehicle_list, dim="Type")
 
     # 6. capacity used for V2G -----------------------------------------------------------------------------
+    # Note: xr_capacity_fraction_v2g must have same Type coords than xr_vhc_fraction_v2g (otherwise ElectricVehicleBatteries model will crash)
     # Build xarray DataArray
     techs = ev_capacity_fraction_v2g.columns
     data_array = ev_capacity_fraction_v2g.to_numpy().ravel()  # flatten to 1D
@@ -619,19 +612,19 @@ ev_fraction_v2g = ev_fraction_v2g_data.reindex(range(YEAR_FIRST_GRID,YEAR_OUT+1)
 ev_fraction_v2g.loc[:ev_fraction_v2g_data.index[0]] = 0 # set values before first data point to 0
 ev_fraction_v2g.loc[ev_fraction_v2g_data.index[0]:ev_fraction_v2g_data.index[1]] = y # set values between (originally) first and last data point to quadratic/logistic interpolation
 
-
+# vhc_fraction_v2g = ev_fraction_v2g.copy()
 # Create an empty expanded df
-vhc_fraction_v2g = pd.DataFrame(index=ev_fraction_v2g.index)
-# transfer the values for the relevant vehicle types (for now: Cars - BEV and Cars - PHEV)
-for item in vehicle_list: # TODO: is this even necessary? If not all coordinates are defined, maybe they are just ignored in later calculations?
-    if item in ev_fraction_v2g.columns:
-        vhc_fraction_v2g[item] = ev_fraction_v2g[item]
-    else:
-        vhc_fraction_v2g[item] = 0 # other drive trains are not V2G capable
+# vhc_fraction_v2g = pd.DataFrame(index=ev_fraction_v2g.index)
+# # transfer the values for the relevant vehicle types (for now: Cars - BEV and Cars - PHEV)
+# for item in vehicle_list: # TODO: is this even necessary? If not all coordinates are defined, maybe they are just ignored in later calculations?
+#     if item in ev_fraction_v2g.columns:
+#         vhc_fraction_v2g[item] = ev_fraction_v2g[item]
+#     else:
+#         vhc_fraction_v2g[item] = 0 # other drive trains are not V2G capable
 # Build xarray DataArray
-years = vhc_fraction_v2g.index.astype(int).rename(None)
-techs = vhc_fraction_v2g.columns
-data_array = vhc_fraction_v2g.to_numpy()
+years = ev_fraction_v2g.index.astype(int).rename(None)
+techs = ev_fraction_v2g.columns
+data_array = ev_fraction_v2g.to_numpy()
 xr_vhc_fraction_v2g = xr.DataArray(
     data_array,
     dims=('Time', 'Type'),
