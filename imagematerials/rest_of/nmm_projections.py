@@ -43,7 +43,7 @@ def cement_projection(scenario: str, path_input_data, path_input_data_image):
     rest = all_regions_list_class[:-1]
     rest = [r for r in rest if r not in (group_1+group_2+group_4+group_5+group_6+group_7+group_8+group_9+group_10+group_11+china)]
 
-    excluded = [] #['class_ 8', 'class_ 9', 'class_ 14']
+    excluded = [] 
 
     # trajectory not to forseen, will be fitted with global regression
 
@@ -97,13 +97,13 @@ def cement_projection(scenario: str, path_input_data, path_input_data_image):
     bounds = {
         'all' : ([0, 0, 0.5], [1, 5, 5]),
         'group_1' : ([0, 1, 1], [1, 5, 5]),
-        'group_2' : ([0, 1, 1], [0.3, 5, 5]),
-        'group_4' : ([0, 1, 1], [0.35, 5, 5]),
+        'group_2' : ([0, 1, 1], [0.5, 5, 5]),
+        'group_4' : ([0, 1, 1], [0.5, 5, 5]),
         'group_5' : ([0, 1, 1], [1, 5, 5]),
         'group_6' : ([0, 1, 1], [1, 5, 5]),
         'group_7' : ([0, 1, 1], [1, 5, 5]),
         'group_8' : ([0, 1, 1], [1, 5, 5]),
-        'group_9' : ([0, 1, 1], [1, 5, 5]),
+        'group_9' : ([0, 1, 1], [0.35, 5, 5]),
         'group_10' : ([0, 1, 1], [1, 5, 5]),
         'group_11' : ([0, 1, 1], [1, 5, 5]),
         'china': ([0, 2, 0.5], [1, 5, 5]),
