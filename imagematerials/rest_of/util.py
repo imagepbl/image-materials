@@ -86,15 +86,18 @@ def calculate_cement_equivalent(total_inflow: xr.DataArray, include_rest_of = Tr
         cement_in_concrete = concrete * cement_in_concrete_factor
         # change coordinate of material to 'cement'
         cement_in_concrete = cement_in_concrete.assign_coords(material = 'cement')
-        inflow_material = cement_in_concrete + cement_rest_of
+        if include_rest_of is True:
+            inflow_material = cement_in_concrete + cement_rest_of
+        else:
+            inflow_material = cement_in_concrete
         print("summed cement and cement in concrete.")
         return inflow_material
 
 
-def sand_gravel_crushed_rock_equivalent(total_inflow: xr.DataArray, rename= False, sand_available = False):
+def sand_gravel_crushed_rock_equivalent(total_inflow: xr.DataArray, rename= False, sand_available = False, include_rest_bool = True):
  
         from imagematerials.rest_of.const import sand_in_cement_conversion, sand_in_glass_conversion
-        inflow_sand_in_cement = calculate_cement_equivalent(total_inflow)*sand_in_cement_conversion
+        inflow_sand_in_cement = calculate_cement_equivalent(total_inflow, include_rest_of=include_rest_bool)*sand_in_cement_conversion
         inflow_sand_in_glass = total_inflow.sel(material = 'glass') * sand_in_glass_conversion
         # rename coord material to 'sand'
         if rename == False:

@@ -631,7 +631,7 @@ scenario_list = {"base":("SSP2_M_CP", None),
 
 scenario_name_resource_model = "SSP2_M_CP"
 
-cement_in_concrete_factor = 0.1
+cement_in_concrete_factor = 0.12
 sand_in_cement_conversion = 0.17 #(silica)
 sand_in_concrete = cement_in_concrete_factor*sand_in_cement_conversion
 sand_in_glass_conversion = 0.7
