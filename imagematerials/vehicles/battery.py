@@ -15,6 +15,60 @@ BATTERY_TYPE = prism.Dimension("BatteryType")
 
 
 @prism.interface
+class LinkModule(prism.Model):
+    """ Calculates # batteries, energy capacity and materials per battery type for inflow, stock, outflow
+    in electric vehicles.
+
+
+    Notes
+    -----
+        Assumption: battery lifetime = vehicle lifetime (no explicit battery stock calculation)
+    """
+
+    # Input data
+    stocks:                 xr.DataArray
+    stock_battery_kWh_v2g:  xr.DataArray
+    knowledge_graph_elc:    KnowledgeGraph
+    
+
+    # Dimensions
+    Type:         prism.Coords[STOCK_TYPE]
+    # BatteryType:  prism.Coords[BATTERY_TYPE]
+    Region:       prism.Coords[REGION]
+    # Cohort:       prism.Coords[COHORT]
+    SuperType:  prism.Coords[STOCK_SUPERTYPE]
+    Time:         prism.Coords[TIME]
+
+    # Data dependencies
+    input_data: tuple[str] = ("stock_battery_kWh_v2g", "stocks", "knowledge_graph_elc") # input from vehicle stock module
+    output_data: tuple[str] = ("stocks")
+
+    # Output
+    
+
+    def compute_initial_values(self, time: prism.Timeline):
+        """
+        """
+        pass
+        
+
+        
+    def compute_values(self, time: prism.Time):
+        """
+        
+        """
+         
+        t, dt = time.t, time.dt
+
+        stock_ev_storage = self.stock_battery_kWh_v2g.loc[t].sum(["BatteryType","Type"]) 
+        print("stock_ev_storage", stock_ev_storage)
+        # stock_ev_storage has dims (Time, Region)
+        # stocks has dims (Time, Region, SuperType)
+        self.stocks.loc[t] = self.stocks.loc[t] - stock_ev_storage
+
+
+
+@prism.interface
 class ElectricVehicleBatteries(prism.Model):
     """ Calculates # batteries, energy capacity and materials per battery type for inflow, stock, outflow
     in electric vehicles.
