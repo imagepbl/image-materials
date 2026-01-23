@@ -1,5 +1,5 @@
 [buildings]
-base_year = 2020
+base_year = 2025
 target_year = 2060
 
 [buildings.residential.lifetime_2020]
@@ -107,7 +107,7 @@ glass = 0.68
 aluminium = 0.29
 
 [electricity]
-base_year = 2020
+base_year = 2025
 target_year = 2060
 implementation_rate = 'linear'
 

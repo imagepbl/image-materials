@@ -1,5 +1,5 @@
 [buildings]
-base_year = 2020
+base_year = 2025
 target_year = 2060
 implementation_rate = 'linear'
 
@@ -123,7 +123,7 @@ USA = -17.6
 "Western Europe" = -9.5
 
 [vehicles]
-base_year = 2019
+base_year = 2025
 target_year = 2060
 # possibilities for implementation rate are: linear, immediate, s-curve
 implementation_rate = 'linear'
@@ -159,7 +159,7 @@ implementation_rate = 'linear'
 "Cars" = 20
 
 [electricity]
-base_year = 2020
+base_year = 2025
 target_year = 2060
 implementation_rate = 'linear'
 
