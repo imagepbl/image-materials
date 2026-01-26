@@ -5,6 +5,7 @@ import xarray as xr
 
 from imagematerials.concepts import create_region_graph
 from imagematerials.constants import IMAGE_REGIONS
+from imagematerials.rest_of.const import IAI_TO_IMAGE_CLASSES
 from imagematerials.rest_of.metals_projections import (
     steel_projection, 
     aluminium_projection, 
@@ -256,3 +257,42 @@ def historic_other_fraction_consumption_to_xr(results_models):
     diff_cons_all.to_netcdf('../../../data/raw/rest-of/gompertz_values/diff_cons_all.nc')
 
     return diff_cons_all
+
+
+def get_X_max_scaling_factor(results, create_class_region_graph, IAI_TO_IMAGE_CLASSES):
+    arrays=[]
+
+    knowledge_graph_region = create_class_region_graph()
+    for material in ['steel', 'aluminium', 'copper','cement', 'sand', 'limestone', 'clay']:
+        if material == 'aluminium':
+            max_x_alu = results.get('SSP2_M_CP').get('aluminium').region_max_gdp_pc_match
+            max_x_image_dict = {}
+
+            for iai_region, image_classes in IAI_TO_IMAGE_CLASSES.items():
+                    if iai_region in max_x_alu:
+                        max_x_value = max_x_alu[iai_region]
+                        for image_class in image_classes:
+                            max_x_image_dict[image_class] = max_x_value
+
+            max_x = max_x_image_dict
+
+        else:
+            max_x = results.get('SSP2_M_CP').get(material).region_max_gdp_pc_match
+        # make the values just the numbers (not class_ 1, class_ 2, ...) but leave in a dict
+
+        max_x_da = xr.DataArray(
+            list(max_x.values()),
+            coords={'Region': list(max_x.keys()), 'material': material},
+            dims=['Region']
+        )
+        max_x_da = knowledge_graph_region.rebroadcast_xarray(max_x_da, output_coords=IMAGE_REGIONS, dim="Region")
+
+        da = knowledge_graph_region.rebroadcast_xarray(max_x_da, output_coords=IMAGE_REGIONS, dim='Region')
+        arrays.append(da)
+
+    max_x_da = xr.concat(arrays, dim='material')
+    max_x_da = max_x_da.sortby('material')
+    max_x_da.to_netcdf('../../../data/raw/rest-of/gompertz_values/max_x_regressor.nc')
+
+    # convert to x_array with IMAGE regions
+    return max_x_da

@@ -5,12 +5,16 @@ import prism
 
 from pathlib import Path
 
+from imagematerials.concepts import create_class_region_graph
+
+
 from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.concepts import create_region_graph
 
 from imagematerials.read_mym import read_mym_df
 from imagematerials.buildings.preprocessing.population import compute_population
 
+from imagematerials.rest_of.const import IAI_TO_IMAGE_CLASSES
 from imagematerials.rest_of.preprocessing.resource_efficiency_measures import adapt_gompertz_regional
 
 from imagematerials.rest_of.preprocessing.regressions_all_materials import (fit_models_all_materials,
@@ -109,9 +113,12 @@ def read_historic_diff_cons_data(base_directory):
 
     return diff_consumption
 
+# TODO: read in max X data
 
-def read_image_gdp_cap_data(image_scenario_directory):
 
+def read_image_gdp_cap_data(base_directory, image_scenario_directory):
+    max_x = xr.open_dataset(base_directory / "rest-of" / "gompertz_values" / "max_x_regressor.nc", engine="netcdf4")
+    max_x = max_x.to_array().isel(variable=0).drop_vars("variable")
     image_directory = Path(image_scenario_directory)
     gdp_per_capita: pd.DataFrame = read_mym_df(image_directory.joinpath("Socioeconomic", "gdp_pc.scn"))
 
@@ -130,7 +137,10 @@ def read_image_gdp_cap_data(image_scenario_directory):
     knowledge_graph_region = create_region_graph()
     gdp_per_capita_xr = knowledge_graph_region.rebroadcast_xarray(gdp_per_capita_xr, output_coords=IMAGE_REGIONS, dim="Region")
 
-    return gdp_per_capita_xr
+    downscaled_gdp_per_capita_xr = gdp_per_capita_xr/max_x # downscale gdp to avoid numerical issues
+    print('Gdp per capita data read and downscaled successfully.')
+
+    return downscaled_gdp_per_capita_xr
 
 
 def rest_of_preprocessing(base_directory, image_scenario_directory, scenario: str, 
@@ -144,7 +154,7 @@ def rest_of_preprocessing(base_directory, image_scenario_directory, scenario: st
         print('Materials regression refitted and preprocessing data updated.')
 
     gompertz_values = read_gompertz_values(base_directory, scenario)
-    gdp_per_capita = read_image_gdp_cap_data(image_scenario_directory)
+    gdp_per_capita = read_image_gdp_cap_data(base_directory, image_scenario_directory)
     historic_diff_consumption_mean = read_historic_diff_cons_data_mean(base_directory)
     historic_diff_consumption_total = read_historic_diff_cons_data(base_directory)
     population = compute_population(image_scenario_directory, base_directory)

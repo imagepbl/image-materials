@@ -66,16 +66,17 @@ def copper_projection(scenario: str, path_input_data, path_input_data_image):
     }
 
     bounds = {
-        'all_regions' : ([0, 0, 0], [10, 10, 10]),
-        'group_1': ([0, 0, 0], [0.005, 10, 10]),
-        'group_2': ([0, 2, 2], [10, 10, 10]),
-        'group_3': ([0, 0, 0], [0.006, 10, 10]),
-        'group_4': ([0, 0, 0], [10, 10, 10]),
-        'group_5': ([0, 2, 2], [10, 10, 10]),
-        'group_6': ([0, 0, 0], [10, 10, 10]),
+        'all_regions' : ([0, 0, 0], [1, 20, 10_000]),
+        'group_1': ([0, 0, 0], [1, 20, 10_000]),
+        'group_2': ([0, 0, 0], [1, 20, 10_000]),
+        'group_3': ([0, 0, 0], [1, 20, 10_000]),
+        'group_4': ([0, 0, 0], [1, 20, 10_000]),
+        'group_5': ([0, 0, 0], [1, 20, 10_000]),
+        'group_6': ([0, 0, 0], [1, 20, 10_000]),
     }
 
     copper.calculate_regressors(copper.historic_other_fraction_consumption)
+    copper.get_X_max_scaling_factor()
     copper.fit_models(best_rmse_models=best_rmse_models, bounds=bounds)
     copper.assign_fit_to_groups_not_fitted(list_regions=['class_ 18', "class_ 21",  "class_ 22"], 
                                            assign_model='group_1', model_nr=6)
@@ -147,16 +148,16 @@ def steel_projection(scenario: str, path_input_data, path_input_data_image):
     steel.calculate_regressors(steel.historic_other_fraction_consumption)
 
     bounds = {
-    'all_regions': ([0, 0, 0], [10, 10, 10]),
-    'class_ 1': ([0, 0, 0], [10, 10, 10]),
-    'class_ 3': ([0, 2, 2], [10, 10, 10]),
-    'class_ 17': ([0, 0, 0], [10, 10, 10]),
-    'class_ 18': ([0, 0, 0], [0.125, 10, 10]), # same as 21
-    'class_ 21': ([0, 0, 0], [10, 10, 10]),
-    'high': ([0, 0, 0], [10, 10, 10]),
-    'china': ([0, 0, 0], [0.5, 10, 10]),
-    'low': ([0, 2, 2], [10, 10, 10]),
-    'very_low': ([0, 0, 0], [0.5, 10, 10])}
+    'all_regions': ([0, 0, 0], [1, 20, 100]),
+    'class_ 1': ([0, 0, 0], [1, 20, 100]),
+    'class_ 3': ([0, 0, 0], [1, 20, 100]),
+    'class_ 17': ([0, 0, 0], [1, 20, 100]),
+    'class_ 18': ([0, 0, 0], [1, 20, 100]), # same as 21
+    'class_ 21': ([0, 0, 0], [1, 20, 100]),
+    'high': ([0, 0, 0], [1, 20, 100]),
+    'china': ([0, 0, 0], [1, 20, 100]),
+    'low': ([0, 0, 0], [1, 20, 100]),
+    'very_low': ([0, 0, 0], [1, 20, 100])}
 
     # enforce that for all groups gompertz model is selected as best fit
     steel.fit_models(best_rmse_models={'all_regions' : 'gompertz model',
@@ -171,7 +172,7 @@ def steel_projection(scenario: str, path_input_data, path_input_data_image):
                                     'very_low': 'gompertz model'
                                     },
                                     bounds=bounds)  
-    
+    steel.get_X_max_scaling_factor()
     steel.assign_fit_to_groups_not_fitted(spreaded, 
                                         assign_model='all_regions', 
                                         model_nr=6)
@@ -252,12 +253,12 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
     }
 
     bounds = {
-        'all_regions' : ([0, 0, 0], [10, 10, 10]),
-        'russia' : ([0, 1, 1], [10, 10, 10]),
-        'north_america' : ([0, 1, 1], [10, 10, 10]),
-        'china' : ([0, 0, 0], [0.03, 10, 10]),
-        'europe' : ([0, 0, 0], [0.01, 10, 10]),
-        'low' : ([0, 1, 1], [0.01, 10, 10])
+        'all_regions' : ([0, 0, 0], [1, 20, 100]),
+        'russia' : ([0, 0, 0], [1, 20, 100]),
+        'north_america' : ([0, 0, 0], [1, 20, 100]),
+        'china' : ([0, 0, 0], [1, 20, 100]),
+        'europe' : ([0, 0, 0], [1, 20, 100]),
+        'low' : ([0, 0, 0], [1, 20, 100])
     }
 
     aluminium.fit_models(best_rmse_models, bounds)
@@ -268,6 +269,9 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
             aluminium.region_model_match[key] = None
 
     aluminium.create_region_model_match_per_image(IAI_TO_IMAGE_CLASSES)
+    aluminium.get_X_max_scaling_factor(regions_dict=IAI_TO_IMAGE_CLASSES, 
+                                       alu_regions=aluminium_regions, 
+                                       overwrite_max_model_match=True)
 
     aluminium.assign_fit_to_groups_not_fitted(IAI_TO_IMAGE_CLASSES.get("Estimated Unreported to IAI"), 
                                         assign_model='low', 

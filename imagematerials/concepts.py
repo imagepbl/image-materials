@@ -435,6 +435,68 @@ def create_region_graph():
 knowledge_graph = KnowledgeGraph(*create_building_graph()._items, *create_vehicle_graph()._items)
 
 
+def create_class_region_graph():
+    #TODO move to seperate file
+    
+    region_knowledge_graph = KnowledgeGraph()
+
+    # Add target regions as main nodes (non-numeric)
+    target_regions = [
+        "Latin America", "Middle East and Northern Africa",
+        "Other Asia", "Other OECD", "Reforming Economies", "Subsaharan Africa"
+    ]
+    for region in target_regions:
+        region_knowledge_graph.add(Node(region))
+
+    # Add numeric region nodes first with full synonyms
+    numeric_region_map = {
+        "class_ 1": ["Canada", "CAN"],
+        "class_ 2": ["USA", "US"],
+        "class_ 3": ["Mexico", "MEX"],
+        "class_ 4": ["Rest of Central America", "RCAM", "Rest C.Am."],
+        "class_ 5": ["Brazil", "BRA"],
+        "class_ 6": ["Rest of South America", "RSAM", "Rest S.Am."],
+        "class_ 7": ["Northern Africa", "NAF", "N.Africa"],
+        "class_ 8": ["Western Africa", "WAF", "W.Africa"],
+        "class_ 9": ["Eastern Africa", "EAF", "E.Africa"],
+        "class_ 10": ["South Africa", "SAF"],
+        "class_ 11": ["Western Europe", "WEU", "W.Europe"],
+        "class_ 12": ["Central Europe", "CEU", "C.Europe"],
+        "class_ 13": ["Turkey", "TUR"],
+        "class_ 14": ["Ukraine +", "UKR", "Ukraine"],
+        "class_ 15": ["Asian-Stan", "STAN", "Stan"],
+        "class_ 16": ["Russia +", "RUS", "Russia"],
+        "class_ 17": ["Middle East", "ME", "M.East"],
+        "class_ 18": ["India +", "INDIA", "India"],
+        "class_ 19": ["Korea", "KOR"],
+        "class_ 20": ["China +", "CHN", "China"],
+        "class_ 21": ["Southeastern Asia", "SEAS", "SE.Asia"],
+        "class_ 22": ["Indonesia +", "INDO", "Indonesia"],
+        "class_ 23": ["Japan", "JAP"],
+        "class_ 24": ["Oceania", "OCE"],
+        "class_ 25": ["Rest of South Asia", "RSAS", "Rest S.Asia"],
+        "class_ 26": ["Rest of Southern Africa", "RSAF", "Rest S.Africa"]
+    }
+
+    subregion_division = {
+        "Latin America": {"RCAM", "BRA", "RSAM"},
+        "Middle East and Northern Africa": {"NAF", "ME"},
+        "Subsaharan Africa": {"WAF", "EAF", "SAF", "RSAF"},
+        "Reforming Economies": {"UKR", "STAN", "RUS"},
+        "Other Asia": {"KOR", "SEAS", "INDO", "RSAS"},
+        "Other OECD": {"TUR", "OCE", "MEX"},
+    }
+
+    for number, synonyms in numeric_region_map.items():
+        inherits_from = None
+        for super_region, regions in subregion_division.items():
+            if len(regions.intersection(synonyms)) > 0:
+                inherits_from = super_region
+                break
+        region_knowledge_graph.add(Node(number, synonyms=synonyms, inherits_from=inherits_from))
+
+    return region_knowledge_graph
+
 
 def create_electricity_graph():
     """

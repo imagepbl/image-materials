@@ -95,6 +95,7 @@ def estimate_models(cons_capita: pd.DataFrame, gdp_pc: pd.DataFrame, bounds:tupl
         log_gauss_saturate_model = None
 
 
+
     return (log_log_model, semi_log_model, log_inverse_model, log_log_inverse_model, 
             log_log_square_model, non_linerar_inv_model, gompertz_model, 
             logistic_growth_model, bw_model, log_gauss_saturate_model)

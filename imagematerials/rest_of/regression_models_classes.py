@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
-from scipy.optimize import curve_fit
+from scipy.optimize import curve_fit, minimize
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -281,12 +281,17 @@ class GOMPERTZ_Model(NLS_Model):
         bounds = kwargs.get("bounds")
         # check if bound is none or if its has the correct length
         if bounds is None or (len(bounds) != 2 or len(bounds[0]) != 3 or len(bounds[1]) != 3):
-            bounds = ([0, 0, 0], [10, 10, 10])
+            bounds = ([0, 0, 0], [10, 10, 20])
 
         super().__init__(y, *X, bounds=bounds)
 
     def _transform_X(self, X: np.array):
-        X = np.divide(X, 10_000)
+        # Normalize X by its maximum value so that SciPy.curve_fit has a stable approximation.
+        # If X is too large, then the Gompertz function evaluates to the asymptote 'a'.
+        # TODO: Normalize also for other NLS_models below.
+        self.X_max = X.max()
+        # print(X, X_max)
+        X = np.divide(X, self.X_max) 
         return X
     
     def _transform_y(self, y: np.array):
