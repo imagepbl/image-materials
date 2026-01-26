@@ -5,7 +5,7 @@ implementation_rate = 'linear'
 
 [buildings.eol_recycling_rate_2060]
 steel = 0.92
-concrete = 1
+concrete = 0.37
 wood = 0.30
 copper = 0.92
 glass = 0.95

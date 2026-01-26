@@ -91,8 +91,7 @@ def _get_buildings_sector(prep_data):
 
 
 def _get_end_of_life_prep_data(base_dir, circular_economy_scenario_dirs):
-    circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
-    prep_data = prep_eol(base_dir, circular_economy_config)
+    prep_data = prep_eol(base_dir, circular_economy_scenario_dirs)
     return prep_data
 
 def _get_end_of_life_sector(prep_data):
