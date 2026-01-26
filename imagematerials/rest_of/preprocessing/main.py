@@ -138,8 +138,6 @@ def read_image_gdp_cap_data(base_directory, image_scenario_directory):
     gdp_per_capita_xr = knowledge_graph_region.rebroadcast_xarray(gdp_per_capita_xr, output_coords=IMAGE_REGIONS, dim="Region")
 
     downscaled_gdp_per_capita_xr = gdp_per_capita_xr/max_x # downscale gdp to avoid numerical issues
-    print('Gdp per capita data read and downscaled successfully.')
-
     return downscaled_gdp_per_capita_xr
 
 

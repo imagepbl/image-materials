@@ -107,7 +107,7 @@ def cement_projection(scenario: str, path_input_data, path_input_data_image):
 
     bounds = {
         'all' : ([0, 0, 0], [1, 20, 100]),
-        'group_1' : ([0, 0, -100], [1, 20, 100]),
+        'group_1' : ([0, 0, 0], [1, 20, 100]),
         'group_2' : ([0.01, 1, 25], [20, 10, 100]),
         'group_3' : ([0.01, 1, 0], [20, 10, 100]),
         'group_4' : ([0, 0, 0], [1, 20, 100]),
@@ -136,7 +136,7 @@ def cement_projection(scenario: str, path_input_data, path_input_data_image):
                         end_year_adjust=2100, 
                         min_alpha=None)
     
-    cement.remove_regions_with_no_good_fit_from_region_model_match(excluded)
+    cement.remove_regions_with_no_good_fit_from_region_model_match(exclude)
 
     return cement
 
