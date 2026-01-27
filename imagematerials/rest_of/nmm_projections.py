@@ -155,8 +155,7 @@ def limestone_projection(scenario: str, path_input_data, path_input_data_image):
 
     group_1 = ['class_ 1']
     group_2 = ['class_ 2']
-    group_3 = [ 'class_ 7', 'class_ 17', 
-                'class_ 24', 'class_ 26']
+    group_3 = [ 'class_ 7', 'class_ 17', 'class_ 24']
     group_4 = ['class_ 11', 'class_ 12', 'class_ 21'] 
     group_5 = ['class_ 19', 'class_ 23']
     group_6 = ['class_ 4', 'class_ 6', 'class_ 22']
@@ -164,13 +163,9 @@ def limestone_projection(scenario: str, path_input_data, path_input_data_image):
     group_8 = ['class_ 20']
     group_9 = ['class_ 18']
 
-    diff = ['class_ 5', 'class_ 10', 'class_ 13', 'class_ 16', 'class_ 25', 'class_ 26']
+    diff = ['class_ 13', 'class_ 16', 'class_ 5', 'class_ 10']
     other = ['class_ 8', 'class_ 9', 'class_ 25', 'class_ 26']
     exclude = []
-
-    # what is in rest will not be fitted because of outliers - will follow global projections
-    rest = all_regions_list_class[:-1]
-    rest = [r for r in rest if r not in (group_1+group_2+group_3+group_4+group_5+group_6+group_7+group_8+exclude+diff)]
 
     limestone_grouping = {'all_regions' : all_regions_list_class[:-1],
                         'group_1': group_1,
@@ -213,22 +208,19 @@ def limestone_projection(scenario: str, path_input_data, path_input_data_image):
         'group_6': ([0, 0, 0], [15, 20, 100]),
         'group_7': ([0, 0, 0], [15, 20, 100]),
         'group_8': ([0, 0, 0], [15, 20, 100]),
-        'group_9': ([0, 0, 0], [15, 20, 100]),
+        'group_9': ([0, 0, 0], [15, 10, 100]),
     }
 
     limestone.get_X_max_scaling_factor()
     limestone.fit_models(best_rmse_models, bounds)
 
-    limestone.assign_fit_to_groups_not_fitted(['class_ 5', 'class_ 10', 'class_ 18'], 
-                                assign_model='group_6', 
-                                model_nr=6)
-                                
-    limestone.assign_fit_to_groups_not_fitted(['class_ 13', 'class_ 16'], 
+
+    limestone.assign_fit_to_groups_not_fitted(diff, 
                             assign_model='all_regions', 
                             model_nr=6)
-
+    
     limestone.assign_fit_to_groups_not_fitted(other, 
-                            assign_model='group_9', 
+                            assign_model='group_4', 
                             model_nr=6)
 
     limestone.remove_regions_with_no_good_fit_from_region_model_match(exclude)
@@ -259,7 +251,7 @@ def sand_projections(scenario: str, path_input_data, path_input_data_image):
 
     # collect these above defined groups in a dictionary
     SAND_GROUPING_REGIONS = {
-        'all': [k for k in CLASS_TO_REGION_DICT.keys() if k != 'class_ 27'],
+        'all_regions': [k for k in CLASS_TO_REGION_DICT.keys() if k != 'class_ 27'],
         'group_1':  group_1,
         'group_2':  group_2,
         'group_3':  group_3,
@@ -290,7 +282,7 @@ def sand_projections(scenario: str, path_input_data, path_input_data_image):
     sand.calculate_regressors(sand.historic_other_fraction_consumption)
 
     # Fit models 
-    rmse_models = {'all': 'gompertz model',
+    rmse_models = {'all_regions': 'gompertz model',
     'group_1': 'gompertz model',
     'group_2': 'gompertz model',
     'group_3': 'gompertz model',
@@ -304,25 +296,26 @@ def sand_projections(scenario: str, path_input_data, path_input_data_image):
     'group_11': 'gompertz model'}
 
     bounds = {
-        'all' : ([1.5, 0, 0], [15, 20, 100]),
-        'group_1' : ([1.5, 0, 0], [15, 20, 100]),
-        'group_2' : ([1.5, 0, 80], [15, 20, 300]),
-        'group_3' : ([3.0, 0, 20], [15, 50, 100]),
-        'group_4' : ([1.5, 0, 0], [15, 20, 100]),
-        'group_5' : ([1.5, 0, 0], [4, 20, 100]),
-        'group_6' : ([1.5, 0, 0], [15, 20, 100]),
-        'group_7' : ([1.5, 0, 10], [15, 50, 200]),
-        'group_8' : ([1.5, 0, 35], [15, 20, 300]),
-        'group_9' : ([1.5, 0, 10], [15, 20, 200]),
-        'group_10' : ([4.5, 0, 20], [15, 20, 200]),
-        'group_11' : ([1.5, 0, 0], [15, 20, 100]),
+        'all_regions' : ([0, 0, 0], [15, 20, 100]),
+        'group_1' : ([0, 0, 0], [15, 20, 100]),
+        'group_2' : ([0, 0, 0], [15, 20, 100]),
+        'group_3' : ([0, 0, 0], [15, 20, 100]),
+        'group_4' : ([0, 0, 0], [15, 20, 100]),
+        'group_5' : ([0, 0, 0], [15, 20, 100]),
+        'group_6' : ([0, 0, 0], [15, 20, 100]),
+        'group_7' : ([0, 0, 0], [15, 20, 100]),
+        'group_8' : ([0, 0, 0], [15, 20, 100]),
+        'group_9' : ([0, 0, 0], [15, 20, 100]),
+        'group_10' : ([0, 0, 0], [15, 20, 100]),
+        'group_11' : ([0, 0, 0], [15, 20, 100]),
     }
+
 
     sand.get_X_max_scaling_factor()
     sand.fit_models(best_rmse_models=rmse_models, bounds=bounds)
 
     sand.assign_fit_to_groups_not_fitted(scattered_regions, 
-                                assign_model='all', 
+                                assign_model='all_regions', 
                                 model_nr=6)
     
     sand.remove_regions_with_no_good_fit_from_region_model_match(exclude)
@@ -358,12 +351,7 @@ def clay_projections(scenario: str, path_input_data, path_input_data_image):
 
 
     # trajectory not to forseen, will be fitted with global regression
-
-    # what is in rest will not be fitted because of outliers - will follow global projections       
-    rest = all_regions_list_class[:-1]
-    rest = [r for r in rest if r not in (high_steady+medium+low_steady+china)]
-
-    clay_grouping = {'all' : all_regions_list_class[:-1],
+    clay_grouping = {'all_regions' : all_regions_list_class[:-1],
                     'low_steady' : low_steady,
                     'high_steady' : high_steady,
                     'medium' : medium,
@@ -377,7 +365,7 @@ def clay_projections(scenario: str, path_input_data, path_input_data_image):
     clay.calculate_regressors(clay.historic_consumption_data)
 
     best_rmse_models = {
-        'all': 'gompertz model',
+        'all_regions': 'gompertz model',
         'low_steady' : 'gompertz model',
         'high_steady' : 'gompertz model',
         'medium' : 'gompertz model',
@@ -385,17 +373,17 @@ def clay_projections(scenario: str, path_input_data, path_input_data_image):
     }
 
     bounds = {
-        'all': ([0, 0, 0], [15, 20, 100]),
-        'low_steady': ([0, 0, 0], [15, 20, 100]),
-        'high_steady': ([0, 0, 0], [15, 20, 100]),
-        'medium' : ([0, 0, 0], [15, 20, 100]),
-        'china' : ([0, 0, 0], [15, 20, 100])
+        'all_regions': ([0, 0, 0], [10, 20, 100]),
+        'low_steady': ([0, 0, 0], [10, 20, 100]),
+        'high_steady': ([0, 0, 0], [10, 20, 100]),
+        'medium' : ([0, 0, 0], [10, 20, 100]),
+        'china' : ([0, 0, 0], [10, 20, 100])
     }
 
     clay.get_X_max_scaling_factor()
     clay.fit_models(best_rmse_models, bounds)
     clay.assign_fit_to_groups_not_fitted(low_gdp, 
-                                     assign_model='low_steady', 
+                                     assign_model='all_regions', 
                                      model_nr=6)
 
     clay.assign_fit_to_groups_not_fitted(no_trajectory_forseen+outliers, 
