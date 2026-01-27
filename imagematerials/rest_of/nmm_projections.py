@@ -155,8 +155,7 @@ def limestone_projection(scenario: str, path_input_data, path_input_data_image):
 
     group_1 = ['class_ 1']
     group_2 = ['class_ 2']
-    group_3 = [ 'class_ 7', 'class_ 17', 
-                'class_ 24', 'class_ 26']
+    group_3 = [ 'class_ 7', 'class_ 17', 'class_ 24']
     group_4 = ['class_ 11', 'class_ 12', 'class_ 21'] 
     group_5 = ['class_ 19', 'class_ 23']
     group_6 = ['class_ 4', 'class_ 6', 'class_ 22']
@@ -164,13 +163,9 @@ def limestone_projection(scenario: str, path_input_data, path_input_data_image):
     group_8 = ['class_ 20']
     group_9 = ['class_ 18']
 
-    diff = ['class_ 5', 'class_ 10', 'class_ 13', 'class_ 16', 'class_ 25', 'class_ 26']
+    diff = ['class_ 13', 'class_ 16', 'class_ 5', 'class_ 10']
     other = ['class_ 8', 'class_ 9', 'class_ 25', 'class_ 26']
     exclude = []
-
-    # what is in rest will not be fitted because of outliers - will follow global projections
-    rest = all_regions_list_class[:-1]
-    rest = [r for r in rest if r not in (group_1+group_2+group_3+group_4+group_5+group_6+group_7+group_8+exclude+diff)]
 
     limestone_grouping = {'all_regions' : all_regions_list_class[:-1],
                         'group_1': group_1,
@@ -219,20 +214,13 @@ def limestone_projection(scenario: str, path_input_data, path_input_data_image):
     limestone.get_X_max_scaling_factor()
     limestone.fit_models(best_rmse_models, bounds)
 
-    # limestone.assign_fit_to_groups_not_fitted(['class_ 5', 'class_ 10', 'class_ 18'], 
-    #                             assign_model='group_6', 
-    #                             model_nr=6)
-                                
-    limestone.assign_fit_to_groups_not_fitted(['class_ 13', 'class_ 16', 'class_ 5', 'class_ 10', 'class_ 18'], 
+
+    limestone.assign_fit_to_groups_not_fitted(diff, 
                             assign_model='all_regions', 
                             model_nr=6)
     
-    # limestone.assign_fit_to_groups_not_fitted(other, 
-    #                     assign_model='group_9', 
-    #                     model_nr=6)
-
     limestone.assign_fit_to_groups_not_fitted(other, 
-                            assign_model='all_regions', 
+                            assign_model='group_4', 
                             model_nr=6)
 
     limestone.remove_regions_with_no_good_fit_from_region_model_match(exclude)
@@ -363,11 +351,6 @@ def clay_projections(scenario: str, path_input_data, path_input_data_image):
 
 
     # trajectory not to forseen, will be fitted with global regression
-
-    # what is in rest will not be fitted because of outliers - will follow global projections       
-    rest = all_regions_list_class[:-1]
-    rest = [r for r in rest if r not in (high_steady+medium+low_steady+china)]
-
     clay_grouping = {'all_regions' : all_regions_list_class[:-1],
                     'low_steady' : low_steady,
                     'high_steady' : high_steady,

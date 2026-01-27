@@ -177,8 +177,7 @@ class ResourceModel():
             self.region_groups = {k: v for k, v in self.region_groups.items() if k not in drop_regions}
                
     def get_X_max_scaling_factor(self, regions_dict = None, 
-                                 alu_regions = None,
-                                 overwrite_max_model_match = False):
+                                 alu_regions = None):
         # get scaling factor to adapt X_max of logistic growth model
             self.max_x_values = {}
             self.region_max_gdp_pc_match = {}

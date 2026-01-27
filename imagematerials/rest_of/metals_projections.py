@@ -200,7 +200,6 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
                         path_input_data_image=path_input_data_image
                         )
 
-    # removed outlier reginos so they are not represented in the global fit
     all_regions = ['Africa',
             'Estimated Unreported to IAI', 
             'Gulf Cooperation Council',
@@ -212,12 +211,12 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
             'Asia (ex China)',
             'Oceania',
             'China (Estimated)']
-
     russia = ['Russia & Eastern Europe']
-
     north_america = ['North America']
-
     europe = ['Western & Central Europe']
+    japan = ['Japan']
+    oceania = ['Oceania']
+    south_america = ['South America']
 
     low = ['Africa', 'Asia (ex China)',]
 
@@ -226,19 +225,20 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
 
     # will be fitted to global curve or according to IMAGE Mat with some additions
     rest = ['Estimated Unreported to IAI', 
-            'South America',
-            'Oceania', 
-            'Japan'
-        ]
+    ]
 
     aluminium_regions = {
-        'all_regions' : all_regions,
-        'russia' : russia,
-        'north_america' : north_america,
-        'china' : china,
-        'europe' : europe,
-        'low' : low
-}
+    'all_regions' : all_regions,
+    'russia' : russia,
+    'north_america' : north_america,
+    'china' : china,
+    'europe' : europe,
+    'low' : low,
+    'japan' : japan,
+    'oceania' : oceania,
+    'south_america' : south_america,
+    'rest' : rest
+    }
     
     aluminium.data_grouped_regions(regions_grouping = aluminium_regions) 
 
@@ -256,20 +256,25 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
         'north_america' : 'gompertz model',
         'china' : 'gompertz model',
         'europe' : 'gompertz model', 
-        'low' : 'gompertz model'
+        'low' : 'gompertz model',
+        'japan' : 'gompertz model',
+        'oceania' : 'gompertz model',
+        'south_america' : 'gompertz model',
+        'rest' : 'gompertz model'
     }
 
     bounds = {
-        'all': ([0, 0, 0], [1, 20, 100]),
-        'class_ 1': ([0, 0, 0], [1, 20, 100]),
-        'class_ 3': ([0, 0, 0], [1, 20, 100]),
-        'class_ 17': ([0, 0, 0], [1, 20, 100]),
-        'class_24': ([0, 0, 0], [1, 20, 100]),
-        'high': ([0, 0, 0], [1, 20, 100]),
-        'china': ([0, 0, 0], [1, 20, 200]),
-        'low': ([0, 0, 0], [1, 20, 100]),
-        'very_low': ([0, 0, 0], [1, 20, 100])
-        }
+        'all_regions' : ([0, 0, 0], [0.02, 20, 100]),
+        'russia' : ([0, 0, 0], [0.02, 20, 100]),
+        'north_america' : ([0, 0, 0], [0.02, 20, 100]),
+        'china' : ([0, 0, 0], [0.02, 20, 100]),
+        'europe' : ([0, 0, 0], [0.02, 20, 100]),
+        'low' : ([0, 0, 0], [0.02, 20, 100]),
+        'japan' : ([0, 0, 0], [0.02, 20, 100]),
+        'oceania' : ([0, 0, 0], [0.015, 20, 100]),
+        'south_america' : ([0, 0, 0], [0.003, 20, 100]),
+        'rest' : ([0, 0, 0], [0.02, 20, 100])
+    }
 
     aluminium.fit_models(best_rmse_models, bounds)
 
@@ -280,19 +285,19 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
 
     aluminium.create_region_model_match_per_image(IAI_TO_IMAGE_CLASSES)
     aluminium.get_X_max_scaling_factor(regions_dict=IAI_TO_IMAGE_CLASSES, 
-                                       alu_regions=aluminium_regions, 
-                                       overwrite_max_model_match=True)
+                                       alu_regions=aluminium_regions)
 
     aluminium.assign_fit_to_groups_not_fitted(IAI_TO_IMAGE_CLASSES.get("Estimated Unreported to IAI"), 
                                         assign_model='low', 
-                                        model_nr=6)
-    aluminium.assign_fit_to_groups_not_fitted(IAI_TO_IMAGE_CLASSES.get("South America"), 
-                                    assign_model='low', 
-                                    model_nr=6)
-    aluminium.assign_fit_to_groups_not_fitted(IAI_TO_IMAGE_CLASSES.get("Oceania") +  
-                                              IAI_TO_IMAGE_CLASSES.get("Japan"),
-                                           assign_model='all_regions', 
-                                           model_nr=6)
+                                        model_nr=6, 
+                                        overwrite_existing=True)
+    # aluminium.assign_fit_to_groups_not_fitted(IAI_TO_IMAGE_CLASSES.get("South America"), 
+    #                                 assign_model='low', 
+    #                                 model_nr=6)
+    # aluminium.assign_fit_to_groups_not_fitted(IAI_TO_IMAGE_CLASSES.get("Oceania") +  
+    #                                           IAI_TO_IMAGE_CLASSES.get("Japan"),
+    #                                        assign_model='all_regions', 
+    #                                        model_nr=6)
     
 
     
