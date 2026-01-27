@@ -41,12 +41,13 @@ class ResourceModel():
             
         else: 
             self.production = pd.read_csv(f'{path_input_data}/{resource_group}/{self.resource}_production.csv', 
-                                                        index_col=0).loc[:end_year]
+                                                        index_col=0)
             self.net_trade = pd.read_csv(f'{path_input_data}/{resource_group}/{self.resource}_net_trade.csv', 
-                                                        index_col=0).loc[:end_year]
+                                                        index_col=0)
             self.historic_consumption_data = self.production - self.net_trade
             # make a copy of historic_consumption_data
             self.historic_consumption_data_complete = self.historic_consumption_data.copy()
+            self.historic_consumption_data = self.historic_consumption_data.loc[:end_year]
 
         if convert_image == True:
             self.historic_consumption_data = self.historic_consumption_data/convert_to_tons # convert IMAGE output to tons
@@ -161,9 +162,11 @@ class ResourceModel():
         
         # get dict of regions that are fitted together (list of names, gdp per cap and cons per cap)
         (self.cons_pc_groups, 
-         self.gdp_pc_groups) = calculate_material_consumption_pc_and_gdp_pc_groups(self.region_groups, 
+         self.gdp_pc_groups, 
+         self.gdp_pc_100_groups) = calculate_material_consumption_pc_and_gdp_pc_groups(self.region_groups, 
                                                                                    self.gdp_pc, 
-                                                                                   self.cons_capita)
+                                                                                   self.cons_capita,
+                                                                                   self.gdp_pc_100)
         
         # in case a region should not be fitted because of skewed data, use this
         if drop_regions is not None:
@@ -174,8 +177,7 @@ class ResourceModel():
             self.region_groups = {k: v for k, v in self.region_groups.items() if k not in drop_regions}
                
     def get_X_max_scaling_factor(self, regions_dict = None, 
-                                 alu_regions = None,
-                                 overwrite_max_model_match = False):
+                                 alu_regions = None):
         # get scaling factor to adapt X_max of logistic growth model
             self.max_x_values = {}
             self.region_max_gdp_pc_match = {}
@@ -192,18 +194,6 @@ class ResourceModel():
 
                     for region in region_list:
                         self.region_max_gdp_pc_match[region] = self.max_x_values[group_name]
-
-            # if overwrite_max_model_match == True:
-            # # add regions to regions model match that are not in there yet becaused they are fitted to the global average
-
-            #     self.region_max_gdp_pc_match = {f'class_ {i}': None for i in range(1, 27)}
-
-            #     for group_name, classes in regions_dict.items():
-            #         print(group_name, classes)
-            #         for class_ in classes:
-            #             print('region_max_gdp_pc_match', self.region_max_gdp_pc_match)
-            #             print('max_x_values', self.max_x_values[alu_regions[group_name]])
-            #             # self.region_max_gdp_pc_match[class_] = self.max_x_values[group_name]  
 
 
     def fit_models(self, best_rmse_models: dict, bounds:dict=None):
@@ -231,17 +221,17 @@ class ResourceModel():
             """
             for region in list_regions:
                 if overwrite_existing == True:
-                    # assign fit of low steady model
+                    # assign fit
                     self.region_model_match[region] = self.model_groups[assign_model][model_nr]
-                    print(assign_model, "assigned to", region)
+                    print(self.resource, assign_model, "assigned to", region)
                     
             # check if region is in self.region_model_match
                 if region in self.region_model_match and self.region_model_match[region] is not None:
                     pass
                 else:
-                    # assign fit of low steady model
+                    # assign fit 
                     self.region_model_match[region] = self.model_groups[assign_model][model_nr]
-                    print(assign_model, self.resource, "assigned to", region)
+                    print(self.resource, assign_model, "assigned to", region)
 
 
     def create_region_model_match_per_image(self, regions_dict, overwrite_region_model_match = True):

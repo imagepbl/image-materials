@@ -36,19 +36,22 @@ def prepare_regression_data(y: pd.DataFrame = None, *X: tuple[pd.DataFrame]):
     """
     # Flatten data
     y = y.to_numpy().flatten().reshape((-1, 1))
+    # find max, and make sure it's float, so skip all strings
+    # print('max X', X_max)
     X = [regressor.to_numpy().flatten().reshape((-1, 1)) for regressor in X]
+    X_max = max(max(X))
     # Remove NaNs
     y, *X = remove_nan(y, *X)
     # Concatenate regressors to matrix
     X = np.concatenate(X, axis=1)
     
-    return y, X
+    return y, X, X_max
 
 
 class OLS_Model:
     def __init__(self, y: pd.DataFrame, *X: tuple[pd.DataFrame]):
         # Prepare regression data
-        y, X = prepare_regression_data(y, *X)
+        y, X, self.X_max = prepare_regression_data(y, *X)
         self._y = self._transform_y(y)
         self._X = self._transform_X(X)
         y, self._y, self._X = remove_nan(y, self._y, self._X)
@@ -117,7 +120,7 @@ class NLS_Model:
     def __init__(self, y: pd.DataFrame, *X: tuple[pd.DataFrame], **kwargs):
         bounds = kwargs.get("bounds")
         # Prepare regression data
-        y, X = prepare_regression_data(y, *X)
+        y, X, self.X_max = prepare_regression_data(y, *X)
         self._y = self._transform_y(y)
         self._X = self._transform_X(X)
         # remove nan again in case of division by zero error, log(-x), ... after transformation
@@ -289,8 +292,6 @@ class GOMPERTZ_Model(NLS_Model):
         # Normalize X by its maximum value so that SciPy.curve_fit has a stable approximation.
         # If X is too large, then the Gompertz function evaluates to the asymptote 'a'.
         # TODO: Normalize also for other NLS_models below.
-        self.X_max = X.max()
-        # print(X, X_max)
         X = np.divide(X, self.X_max) 
         return X
     

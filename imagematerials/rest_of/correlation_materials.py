@@ -170,13 +170,16 @@ def sum_total_over_grouped_regions(regions_dict: dict, image_mat_data: pd.DataFr
 
 def calculate_material_consumption_pc_and_gdp_pc_groups(regions_groups_dict: dict, 
                                                         gdp_pc: pd.DataFrame,
-                                                        cons_capita: pd.DataFrame):
+                                                        cons_capita: pd.DataFrame,
+                                                        gdp_pc_100: pd.DataFrame):
     cons_pc_groups = {}
     gdp_pc_groups = {}
+    gdp_pc_100_groups = {}
     
     # for every clustered group of regions calculate consumption and gdp per capita
     for key, value in regions_groups_dict.items():
         cons_pc_groups[key] = cons_capita[value]
         gdp_pc_groups[key] = gdp_pc[value]
+        gdp_pc_100_groups[key] = gdp_pc_100[value]
     
-    return cons_pc_groups, gdp_pc_groups
+    return cons_pc_groups, gdp_pc_groups, gdp_pc_100_groups
