@@ -98,7 +98,6 @@ class ResourceModel():
                                                                   self.pop_original, 
                                                                   self.pop_100_original, 
                                                                   self.gdp_pc_100_original)
-
         
         
     def match_MAT_data_to_regions_year(self, match_external_regions: bool):  
@@ -174,7 +173,39 @@ class ResourceModel():
             self.gdp_pc_groups = {k: v for k, v in self.gdp_pc_groups.items() if k not in drop_regions}
             self.region_groups = {k: v for k, v in self.region_groups.items() if k not in drop_regions}
                
-    
+    def get_X_max_scaling_factor(self, regions_dict = None, 
+                                 alu_regions = None,
+                                 overwrite_max_model_match = False):
+        # get scaling factor to adapt X_max of logistic growth model
+            self.max_x_values = {}
+            self.region_max_gdp_pc_match = {}
+
+            for group in self.region_groups:
+                max_x = self.gdp_pc_groups.get(group).max().max()
+                # print(f'Max GDP pc for {group}: {max_x}')
+                self.max_x_values[group] = max_x
+        
+            for group_name, region_list in self.region_groups.items():
+                    if isinstance(region_list, str):
+                        # if only one region is given, make it a list to proceed
+                        region_list = [region_list]
+
+                    for region in region_list:
+                        self.region_max_gdp_pc_match[region] = self.max_x_values[group_name]
+
+            # if overwrite_max_model_match == True:
+            # # add regions to regions model match that are not in there yet becaused they are fitted to the global average
+
+            #     self.region_max_gdp_pc_match = {f'class_ {i}': None for i in range(1, 27)}
+
+            #     for group_name, classes in regions_dict.items():
+            #         print(group_name, classes)
+            #         for class_ in classes:
+            #             print('region_max_gdp_pc_match', self.region_max_gdp_pc_match)
+            #             print('max_x_values', self.max_x_values[alu_regions[group_name]])
+            #             # self.region_max_gdp_pc_match[class_] = self.max_x_values[group_name]  
+
+
     def fit_models(self, best_rmse_models: dict, bounds:dict=None):
         # fit all groups of regions to mathematical models and do statistical analysis (RMSE and R2)
         
@@ -188,7 +219,7 @@ class ResourceModel():
         (self.best_rmse_models, 
          self.region_model_match) = match_regions_to_best_model(self.rmse_r2_groups, 
                                                                 self.model_groups, 
-                                                                self.region_groups, 
+                                                                 self.region_groups, 
                                                                 best_rmse_models)
 
     def assign_fit_to_groups_not_fitted(self, list_regions: list, 
@@ -213,14 +244,11 @@ class ResourceModel():
                     print(assign_model, self.resource, "assigned to", region)
 
 
-
     def create_region_model_match_per_image(self, regions_dict, overwrite_region_model_match = True):
         '''
         use to spread fit models to IMAGE classes
         '''
         self.region_model_match_per_image = {}
-
-
         # create dict from class_ 1 to class_ 26 that is empty
         self.region_model_match_per_image = {f'class_ {i}': None for i in range(1, 27)}
 
@@ -272,7 +300,6 @@ class ResourceModel():
             self.total_material_demand = self.projection_per_region_total + self.image_mat_data
         else:
             self.total_material_demand = self.projection_per_region_total
-
 
 
     def project_on_total_IMAGE_regions(self, REGION_TO_CLASS_DICT, GROUPS_TO_IMAGE_DICT):
@@ -386,7 +413,7 @@ class ResourceModel():
 
 
             # fill region with NaN if no model is available
-            projected_data = self.gompertz_function(gdp_pc_region/10_000, 
+            projected_data = self.gompertz_function(gdp_pc_region/self.region_max_gdp_pc_match.get(region), 
                                     alpha_df[region].loc[start_year_projection:].values, 
                                     *self.region_model_match.get(region)._coefs[1:])
             
