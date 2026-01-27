@@ -219,7 +219,7 @@ class ResourceModel():
         (self.best_rmse_models, 
          self.region_model_match) = match_regions_to_best_model(self.rmse_r2_groups, 
                                                                 self.model_groups, 
-                                                                self.region_groups, 
+                                                                 self.region_groups, 
                                                                 best_rmse_models)
 
     def assign_fit_to_groups_not_fitted(self, list_regions: list, 

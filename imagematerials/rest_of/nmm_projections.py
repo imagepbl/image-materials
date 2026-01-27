@@ -247,19 +247,19 @@ def sand_projections(scenario: str, path_input_data, path_input_data_image):
 
     group_1 = ['class_ 1']  # Canada
     group_2 = ['class_ 20']  # China
-    group_3 = ['class_ 5', 'class_ 12', 'class_ 13', 'class_ 15', 
-            'class_ 16', 'class_ 17', 'class_ 19', 
-            'class_ 7', 'class_ 21']  # Average
+    group_3 = ['class_ 7']  # Average ASSIGN GLOBAL FIT
     group_4 = ['class_ 3', 'class_ 6', 'class_ 10']  # Lower
     group_5 = ['class_ 23']  # Japan
     group_6 = ['class_ 2', 'class_ 24', 'class_ 11']  # High
     group_7 = ['class_ 14', 'class_ 15']  # lower average
     group_8 = ['class_ 18', 'class_ 22']  # indonesia
     group_9 = ['class_ 4', 'class_ 10']  # South africa
+    group_10 = ['class_ 12', 'class_ 13', 'class_ 16', 'class_ 19']
+    group_11 = ['class_ 17']
 
     # collect these above defined groups in a dictionary
     SAND_GROUPING_REGIONS = {
-        'all_regions': [k for k in CLASS_TO_REGION_DICT.keys() if k != 'class_ 27'],
+        'all': [k for k in CLASS_TO_REGION_DICT.keys() if k != 'class_ 27'],
         'group_1':  group_1,
         'group_2':  group_2,
         'group_3':  group_3,
@@ -269,11 +269,15 @@ def sand_projections(scenario: str, path_input_data, path_input_data_image):
         'group_7':  group_7,
         'group_8':  group_8,
         'group_9':  group_9,
+        'group_10': group_10,
+        'group_11': group_11
     }
     
-    # no projection, take group 4 model
-    other = ['class_ 8', 'class_ 9','class_ 25', 'class_ 26']  
-    exclude = []
+    # assign to other fit
+    scattered_regions = ['class_ 5', 'class_ 15', 'class_ 21']  # 'Average' region
+
+    # no projection, take average
+    exclude = ['class_ 8', 'class_ 9','class_ 25', 'class_ 26']  # Exclude 'Rest of World' region
 
     sand.data_grouped_regions(regions_grouping = SAND_GROUPING_REGIONS) #list(sand_AVERAGE_REGIONS_TO_IMAGE.keys()
     sand.sum_IMAGE_drivers_regions(regions_dict=None)
@@ -286,7 +290,7 @@ def sand_projections(scenario: str, path_input_data, path_input_data_image):
     sand.calculate_regressors(sand.historic_other_fraction_consumption)
 
     # Fit models 
-    rmse_models = {'all_regions': 'gompertz model',
+    rmse_models = {'all': 'gompertz model',
     'group_1': 'gompertz model',
     'group_2': 'gompertz model',
     'group_3': 'gompertz model',
@@ -295,27 +299,32 @@ def sand_projections(scenario: str, path_input_data, path_input_data_image):
     'group_6': 'gompertz model',
     'group_7': 'gompertz model',
     'group_8': 'gompertz model',
-    'group_9': 'gompertz model',}
+    'group_9': 'gompertz model',
+    'group_10': 'gompertz model',
+    'group_11': 'gompertz model'}
 
     bounds = {
-        'all_regions' : ([0, 0, 0], [1, 20, 100]),
-        'group_1' : ([0, 0, 0], [1, 20, 100]),
-        'group_2' : ([0, 0, 0], [1, 20, 100]),
-        'group_3' : ([0, 0, 0], [1, 20, 100]),
-        'group_4' : ([0, 0, 0], [1, 20, 100]),
-        'group_5' : ([0, 0, 0], [1, 20, 100]),
-        'group_6' : ([0, 0, 0], [1, 20, 100]),
-        'group_7' : ([0, 0, 0], [1, 20, 100]),
-        'group_8' : ([0, 0, 0], [1, 20, 100]),
-        'group_9' : ([0, 0, 0], [1, 20, 100]),
+        'all' : ([1.5, 0, 0], [15, 20, 100]),
+        'group_1' : ([1.5, 0, 0], [15, 20, 100]),
+        'group_2' : ([1.5, 0, 80], [15, 20, 300]),
+        'group_3' : ([3.0, 0, 20], [15, 50, 100]),
+        'group_4' : ([1.5, 0, 0], [15, 20, 100]),
+        'group_5' : ([1.5, 0, 0], [4, 20, 100]),
+        'group_6' : ([1.5, 0, 0], [15, 20, 100]),
+        'group_7' : ([1.5, 0, 10], [15, 50, 200]),
+        'group_8' : ([1.5, 0, 35], [15, 20, 300]),
+        'group_9' : ([1.5, 0, 10], [15, 20, 200]),
+        'group_10' : ([4.5, 0, 20], [15, 20, 200]),
+        'group_11' : ([1.5, 0, 0], [15, 20, 100]),
     }
 
     sand.get_X_max_scaling_factor()
     sand.fit_models(best_rmse_models=rmse_models, bounds=bounds)
 
-    sand.assign_fit_to_groups_not_fitted(other, 
-                                assign_model='group_8', 
+    sand.assign_fit_to_groups_not_fitted(scattered_regions, 
+                                assign_model='all', 
                                 model_nr=6)
+    
     sand.remove_regions_with_no_good_fit_from_region_model_match(exclude)
 
     return sand

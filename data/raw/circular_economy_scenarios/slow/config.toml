@@ -1,5 +1,5 @@
 [buildings]
-base_year = 2020
+base_year = 2025
 target_year = 2060
 
 [buildings.residential.lifetime_2020]
