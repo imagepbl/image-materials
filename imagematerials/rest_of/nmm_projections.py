@@ -85,25 +85,25 @@ def cement_projection(scenario: str, path_input_data, path_input_data_image):
     # Fit models 
     cement.calculate_regressors(cement.historic_other_fraction_consumption)
 
-    best_rmse_models={
-        'all' : 'gompertz model',
-        'group_1' : 'gompertz model',
-        'group_2' : 'gompertz model',
-        'group_3' : 'gompertz model',
-        'group_4' : 'gompertz model',
-        'group_5' : 'gompertz model',
-        'group_6' :  'gompertz model',
-        'group_8' : 'gompertz model',
-        'group_9' : 'gompertz model',
-        'group_10' : 'gompertz model',
-        'group_11' : 'gompertz model',
-        'group_12' : 'gompertz model',
-        'group_13' : 'gompertz model',
-        'group_14' : 'gompertz model',
-        'group_15' : 'gompertz model',
-        'group_17' : 'gompertz model',
-        'china': 'gompertz model',
-    }
+    # best_rmse_models={
+    #     'all' : 'gompertz model',
+    #     'group_1' : 'gompertz model',
+    #     'group_2' : 'gompertz model',
+    #     'group_3' : 'gompertz model',
+    #     'group_4' : 'gompertz model',
+    #     'group_5' : 'gompertz model',
+    #     'group_6' :  'gompertz model',
+    #     'group_8' : 'gompertz model',
+    #     'group_9' : 'gompertz model',
+    #     'group_10' : 'gompertz model',
+    #     'group_11' : 'gompertz model',
+    #     'group_12' : 'gompertz model',
+    #     'group_13' : 'gompertz model',
+    #     'group_14' : 'gompertz model',
+    #     'group_15' : 'gompertz model',
+    #     'group_17' : 'gompertz model',
+    #     'china': 'gompertz model',
+    # }
 
     bounds = {
         'all' : ([0, 0, 0], [1, 20, 100]),
@@ -126,15 +126,7 @@ def cement_projection(scenario: str, path_input_data, path_input_data_image):
     }
 
     cement.get_X_max_scaling_factor()
-    cement.fit_models(best_rmse_models, bounds)
-
-    # project based on best model
-    cement.project_on_total(all_regions_list_class[:-1])
-    cement.smooth_out_interpolation_all(10, 2012)
-    cement.adjust_alpha_and_project(all_regions_list_class[:-1], 
-                        start_year_adjust=2025, 
-                        end_year_adjust=2100, 
-                        min_alpha=None)
+    cement.fit_models(bounds=bounds)
     
     cement.remove_regions_with_no_good_fit_from_region_model_match(exclude)
 
@@ -185,18 +177,18 @@ def limestone_projection(scenario: str, path_input_data, path_input_data_image):
 
     # calculate regressors
     limestone.calculate_regressors(limestone.historic_consumption_data)
-    best_rmse_models = {
-        'all_regions': 'gompertz model',
-        'group_1': 'gompertz model',
-        'group_2': 'gompertz model',
-        'group_3': 'gompertz model',
-        'group_4': 'gompertz model',
-        'group_5': 'gompertz model',
-        'group_6': 'gompertz model',
-        'group_7': 'gompertz model',
-        'group_8': 'gompertz model',
-        'group_9': 'gompertz model'
-    }
+    # best_rmse_models = {
+    #     'all_regions': 'gompertz model',
+    #     'group_1': 'gompertz model',
+    #     'group_2': 'gompertz model',
+    #     'group_3': 'gompertz model',
+    #     'group_4': 'gompertz model',
+    #     'group_5': 'gompertz model',
+    #     'group_6': 'gompertz model',
+    #     'group_7': 'gompertz model',
+    #     'group_8': 'gompertz model',
+    #     'group_9': 'gompertz model'
+    # }
 
     bounds = {
         'all_regions': ([0, 0, 0], [15, 20, 100]),
@@ -212,16 +204,16 @@ def limestone_projection(scenario: str, path_input_data, path_input_data_image):
     }
 
     limestone.get_X_max_scaling_factor()
-    limestone.fit_models(best_rmse_models, bounds)
+    limestone.fit_models(bounds=bounds)
 
 
     limestone.assign_fit_to_groups_not_fitted(diff, 
                             assign_model='all_regions', 
-                            model_nr=6)
+                            model_nr=1)
     
     limestone.assign_fit_to_groups_not_fitted(other, 
                             assign_model='group_4', 
-                            model_nr=6)
+                            model_nr=1)
 
     limestone.remove_regions_with_no_good_fit_from_region_model_match(exclude)
 
@@ -284,19 +276,19 @@ def sand_projections(scenario: str, path_input_data, path_input_data_image):
     # calculate regressors
     sand.calculate_regressors(sand.historic_other_fraction_consumption)
 
-    # Fit models 
-    rmse_models = {'all_regions': 'gompertz model',
-    'group_1': 'gompertz model',
-    'group_2': 'gompertz model',
-    'group_3': 'gompertz model',
-    'group_4': 'gompertz model',
-    'group_5': 'gompertz model',
-    'group_6': 'gompertz model',
-    'group_7': 'gompertz model',
-    'group_8': 'gompertz model',
-    'group_9': 'gompertz model',
-    'group_10': 'gompertz model',
-    'group_11': 'gompertz model'}
+    # # Fit models 
+    # rmse_models = {'all_regions': 'gompertz model',
+    # 'group_1': 'gompertz model',
+    # 'group_2': 'gompertz model',
+    # 'group_3': 'gompertz model',
+    # 'group_4': 'gompertz model',
+    # 'group_5': 'gompertz model',
+    # 'group_6': 'gompertz model',
+    # 'group_7': 'gompertz model',
+    # 'group_8': 'gompertz model',
+    # 'group_9': 'gompertz model',
+    # 'group_10': 'gompertz model',
+    # 'group_11': 'gompertz model'}
 
     bounds = {
         'all_regions' : ([0, 0, 0], [15, 20, 100]),
@@ -315,15 +307,15 @@ def sand_projections(scenario: str, path_input_data, path_input_data_image):
 
 
     sand.get_X_max_scaling_factor()
-    sand.fit_models(best_rmse_models=rmse_models, bounds=bounds)
+    sand.fit_models(bounds=bounds)
 
     sand.assign_fit_to_groups_not_fitted(scattered_regions, 
                                 assign_model='all_regions', # global trajectory
-                                model_nr=6)
+                                model_nr=1)
     
     sand.assign_fit_to_groups_not_fitted(exclude_to_group5, 
                                     assign_model='group_5', # mid range trajectory 
-                                    model_nr=6)
+                                    model_nr=1)
     
     sand.remove_regions_with_no_good_fit_from_region_model_match(exclude)
 
@@ -356,7 +348,6 @@ def clay_projections(scenario: str, path_input_data, path_input_data_image):
     
     exclude = []
 
-
     # trajectory not to forseen, will be fitted with global regression
     clay_grouping = {'all_regions' : all_regions_list_class[:-1],
                     'low_steady' : low_steady,
@@ -371,13 +362,13 @@ def clay_projections(scenario: str, path_input_data, path_input_data_image):
     # calculate regressors
     clay.calculate_regressors(clay.historic_consumption_data)
 
-    best_rmse_models = {
-        'all_regions': 'gompertz model',
-        'low_steady' : 'gompertz model',
-        'high_steady' : 'gompertz model',
-        'medium' : 'gompertz model',
-        'china' : 'gompertz model'
-    }
+    # best_rmse_models = {
+    #     'all_regions': 'gompertz model',
+    #     'low_steady' : 'gompertz model',
+    #     'high_steady' : 'gompertz model',
+    #     'medium' : 'gompertz model',
+    #     'china' : 'gompertz model'
+    # }
 
     bounds = {
         'all_regions': ([0, 0, 0], [10, 20, 100]),
@@ -388,14 +379,14 @@ def clay_projections(scenario: str, path_input_data, path_input_data_image):
     }
 
     clay.get_X_max_scaling_factor()
-    clay.fit_models(best_rmse_models, bounds)
+    clay.fit_models(bounds=bounds)
     clay.assign_fit_to_groups_not_fitted(low_gdp, 
                                      assign_model='all_regions', 
-                                     model_nr=6)
+                                     model_nr=1)
 
     clay.assign_fit_to_groups_not_fitted(no_trajectory_forseen+outliers, 
                                         assign_model='all_regions', 
-                                        model_nr=6)
+                                        model_nr=1)
     # will take historic average instead
     clay.remove_regions_with_no_good_fit_from_region_model_match(exclude) # exclude+low_gdp 
 

@@ -8,7 +8,7 @@ Created on Tue Aug 27 13:31:40 2024
 import pandas as pd
 import numpy as np
 
-from imagematerials.rest_of.const import (path_input_data_cons, path_input_data)
+from imagematerials.rest_of.const import path_input_data_cons, path_input_data, models_output_dict
 
 from imagematerials.rest_of.correlation_materials import (calculate_gdp, summarize_IMAGE_regions, 
                                    calculate_material_consumption_pc_and_gdp_pc_groups, 
@@ -196,7 +196,7 @@ class ResourceModel():
                         self.region_max_gdp_pc_match[region] = self.max_x_values[group_name]
 
 
-    def fit_models(self, best_rmse_models: dict, bounds:dict=None):
+    def fit_models(self, best_rmse_models: dict = None, bounds:dict=None):
         # fit all groups of regions to mathematical models and do statistical analysis (RMSE and R2)
         
         (self.model_groups, 
@@ -209,6 +209,7 @@ class ResourceModel():
         (self.best_rmse_models, 
          self.region_model_match) = match_regions_to_best_model(self.rmse_r2_groups, 
                                                                 self.model_groups, 
+                                                                models_output_dict,
                                                                  self.region_groups, 
                                                                 best_rmse_models)
 

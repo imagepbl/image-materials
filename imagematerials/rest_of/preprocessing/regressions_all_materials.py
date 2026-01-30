@@ -105,7 +105,10 @@ def make_gompertz_coefs_da(results_models, material_order=None, region_order=Non
                     "material": material,
                     "a": model.coefs[0],
                     "b": model.coefs[1],
-                    "c": model.coefs[2]
+                    "c": model.coefs[2],
+                    # set d nan if not used (only needed for gauss saturation model)
+                    "d": model.coefs[3] if len(model.coefs)==4 else np.nan
+
                 })
             else:
                 rows.append({
@@ -113,7 +116,8 @@ def make_gompertz_coefs_da(results_models, material_order=None, region_order=Non
                     "material": material,
                     "a": np.nan,
                     "b": np.nan,
-                    "c": np.nan
+                    "c": np.nan,
+                    "d": np.nan
                 })
 
     coefs_df = pd.DataFrame(rows)
@@ -131,13 +135,13 @@ def make_gompertz_coefs_da(results_models, material_order=None, region_order=Non
     )
 
     # Convert to xarray Dataset
-    coefs_xr = coefs_df[['a', 'b', 'c']].to_xarray()
+    coefs_xr = coefs_df[['a', 'b', 'c', 'd']].to_xarray()
 
-    # Stack the 'a', 'b', 'c' variables into a new 'coef' dimension
+    # Stack the 'a', 'b', 'c', 'd' variables into a new 'coef' dimension
     coefs_da = xr.concat(
-        [coefs_xr['a'], coefs_xr['b'], coefs_xr['c']],
+        [coefs_xr['a'], coefs_xr['b'], coefs_xr['c'], coefs_xr['d']],
         dim='coef'
-    ).assign_coords(coef=['a', 'b', 'c'])
+    ).assign_coords(coef=['a', 'b', 'c', 'd'])
 
     # Expand to include 'Time' dimension 
     years = np.arange(start_year, end_year + 1)
