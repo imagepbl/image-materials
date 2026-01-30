@@ -106,6 +106,7 @@ def sand_gravel_crushed_rock_equivalent(total_inflow: xr.DataArray, rename= Fals
         if rename == True:
             inflow_sand_in_cement = inflow_sand_in_cement.assign_coords(material = 'sand')
             inflow_sand_in_glass = inflow_sand_in_glass.assign_coords(material = 'sand')
+        
         if sand_available == True:
             sand = total_inflow.sel(material = 'sand')
             inflow_material = inflow_sand_in_cement + inflow_sand_in_glass + sand
