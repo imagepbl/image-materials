@@ -4,13 +4,13 @@
 # biomass, fossil fuels, metal ores and non-metal ores. This indicator is
 # calculated as raw material equivalent of imports (RMEIM) plus domestic
 # extraction (DE) minus raw material equivalents of exports (RMEEX).(...)".
-- Material Footprint|{Demand Sector}|{Raw Material}:
+- Material Footprint|{Demand Sector Disaggregated}|{Raw Material}:
     description: Material footprint, (Raw Material), of final consumption of
       products in (Demand Sector) - system-wide raw material consumption
     unit: Mt/yr
 
 # Total material footprint
-- Total Material Footprint|{Demand Sector}:
+- Total Material Footprint|{Demand Sector Disaggregated}:
     description: Total material footprint of final consumption of products in
       (Demand Sector) - system-wide raw material consumption
     unit: Mt/yr

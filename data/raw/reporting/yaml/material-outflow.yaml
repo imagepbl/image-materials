@@ -1,5 +1,5 @@
 # Total material outflow from use phase by engineered material and by demand sector
-- Material Outflow|{Engineered Material}|{Demand Sector}:
+- Material Outflow|{Engineered Material}|{Demand Sector Disaggregated}:
     description: Use phase outflow of (Engineered Material) from (Demand Sector),
       F_7_8 - flow of (Engineered Material) from (Demand Sector), process 7, Use
       phase, to market and transport process 8, Used products trade

@@ -1,4 +1,4 @@
-- Demand Sector:
+- Demand Sector Disaggregated:
     - Transportation:
         description: All modes of transporting people and goods, including road, rail, air, and water transport
     - Transportation|Road:
@@ -13,13 +13,13 @@
         description: Non-motorized two-wheeled vehicles
     - Transportation|Rail:
         description: Vehicles operating on fixed tracks for transportation of passengers or goods
-    - Transportation|Rail|Passenger Trains:
+    - Transportation|Rail|Passenger:
         description: Trains designed to transport people, including high-speed rail, intercity rail, and urban transit systems
-    - Transportation|Rail|Cargo Trains:
+    - Transportation|Rail|Cargo:
         description: Trains specifically designed for the transportation of goods, typically comprising multiple freight cars
-    - Transportation|Air|Passenger Planes:
+    - Transportation|Air|Passenger:
         description: Aircraft designed to carry passengers, including domestic and international flights operated by commercial airlines
-    - Transportation|Air|Cargo Planes:
+    - Transportation|Air|Cargo:
         description: Aircraft specifically designed or modified to transport freight, including parcels, bulk goods, and other cargo
     - Transportation|Water|Ships:
         description: Waterborne vessels used for the transportation of passengers or goods, including cargo ships, tankers, ferries, and cruise ships
@@ -33,7 +33,7 @@
         description: Single-family residential buildings sharing one common wall with an adjacent dwelling
     - Buildings|Residential|Apartments:
         description: Multi-family residential buildings with individual units, typically in low- to mid-rise structures
-    - Buildings|Residential|Residential Towers:
+    - Buildings|Residential|Residential High-Rise:
         description: Multi-family residential buildings in high-rise structures, often with shared amenities
     - Buildings|Residential|Informal:
         description: Residential structures in informal settlements, including slums or unregulated housing typeS
@@ -71,15 +71,17 @@
           description: Infrastructure involved in delivering electricity from generation facilities to end users, including high-voltage transmission lines and local distribution networks
     - Electricity|Storage:
           description: Technologies and systems used to store electricity for later use, including batteries, pumped hydro storage, and other energy storage methods
-    - Infrastructure|Mobility:
+    - Transportation Infrastructure:
         description: Infrastructure supporting the movement of people and goods, including roads, railways, airports, seaports, and related services
-    - Infrastructure|Mobility|Road:
+    - Transportation Infrastructure|Road:
         description: Paved or unpaved pathways for vehicle transportation
-    - Infrastructure|Mobility|Rail:
+    - Transportation Infrastructure|Rail:
         description: Tracks for train-based passenger and freight transport
-    - Infrastructure|Mobility|Bridge:
+    - Transportation Infrastructure|Bridge:
         description: Structures spanning obstacles to support transportation routes
-    - Infrastructure|Mobility|Tunnel:
+    - Transportation Infrastructure|Tunnel:
         description: Underground or submerged passages for transport routes
-    - Infrastructure|Mobility|Parking:
+    - Transportation Infrastructure|Parking:
         description: Designated areas for vehicle storage and parking
+    - Other:
+        description: Demand sectors not explicitly represented in other categories.
