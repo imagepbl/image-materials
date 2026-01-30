@@ -311,12 +311,12 @@ class LG_Model(NLS_Model): #logistic_growth_model
         bounds = kwargs.get("bounds")
         # check if bound is none or if its has the correct length
         if bounds is None or (len(bounds) != 2 or len(bounds[0]) != 3 or len(bounds[1]) != 3):
-            bounds = ([-300, -300, -300], [300, 300, 300])
+            bounds = ([0, 0, 0], [300, 300, 300])
 
         super().__init__(y, *X, bounds=bounds)    
     
     def _transform_X(self, X: np.array):
-        X = np.divide(X, 10_000)
+        X = np.divide(X, self.X_max)
         return X
     
     def _transform_y(self, y: np.array):
@@ -335,12 +335,12 @@ class BW_Model(NLS_Model):
         bounds = kwargs.get("bounds")
         # check if bound is none or if its has the correct length
         if bounds is None or (len(bounds) != 2 or len(bounds[0]) != 3 or len(bounds[1]) != 3):
-            bounds = ([-300, -300, -300], [300, 300, 300])
+            bounds = ([0, 0, 0], [300, 300, 300])
 
         super().__init__(y, *X, bounds=bounds)
 
     def _transform_X(self, X: np.array):
-        X = np.divide(X, 10_000)
+        X = np.divide(X, self.X_max)
         return X
     
     def _transform_y(self, y: np.array):
@@ -361,12 +361,13 @@ class Log_Gauss_Saturate_Model(NLS_Model):
         if bounds is None or (len(bounds) != 2 or len(bounds[0]) != 4 or len(bounds[1]) != 4):
             # raise ValueError("Bounds must be a tuple of two lists with 4 elements each.")
             # Default: 4 parameters
-            bounds = ([-300, -300, -300, -300], [300, 300, 300, 300])
+            bounds = ([0, 0, 0, 0], [300, 300, 300, 300])
 
         super().__init__(y, *X, bounds=bounds)
 
     def _transform_X(self, X: np.array):
         X = np.asarray(X, dtype=float)
+        X = np.divide(X, self.X_max)
         X[X <= 0] = np.nan
         return X
 

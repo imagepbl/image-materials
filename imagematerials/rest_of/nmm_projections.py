@@ -269,7 +269,10 @@ def sand_projections(scenario: str, path_input_data, path_input_data_image):
     scattered_regions = ['class_ 5', 'class_ 15', 'class_ 21']  # 'Average' region
 
     # no projection, take average
-    exclude = ['class_ 8', 'class_ 9','class_ 25', 'class_ 26']  # Exclude 'Rest of World' region
+    exclude_to_group5 = ['class_ 8', 'class_ 9','class_ 25', 'class_ 26']  # Exclude 'Rest of World' region
+    exclude = []
+
+     # for these models a regression will be made
 
     sand.data_grouped_regions(regions_grouping = SAND_GROUPING_REGIONS) #list(sand_AVERAGE_REGIONS_TO_IMAGE.keys()
     sand.sum_IMAGE_drivers_regions(regions_dict=None)
@@ -315,8 +318,12 @@ def sand_projections(scenario: str, path_input_data, path_input_data_image):
     sand.fit_models(best_rmse_models=rmse_models, bounds=bounds)
 
     sand.assign_fit_to_groups_not_fitted(scattered_regions, 
-                                assign_model='all_regions', 
+                                assign_model='all_regions', # global trajectory
                                 model_nr=6)
+    
+    sand.assign_fit_to_groups_not_fitted(exclude_to_group5, 
+                                    assign_model='group_5', # mid range trajectory 
+                                    model_nr=6)
     
     sand.remove_regions_with_no_good_fit_from_region_model_match(exclude)
 
@@ -324,7 +331,7 @@ def sand_projections(scenario: str, path_input_data, path_input_data_image):
 
 def clay_projections(scenario: str, path_input_data, path_input_data_image):
     # clay
-    clay = ResourceModel(resource_group = 'nmm', resource = 'clays', 
+    clay = ResourceModel(resource_group = 'nmm', resource = 'clay', 
                         image_mat_available = False, start_year = 1970, 
                         scenario=scenario,
                         path_input_data=path_input_data,
@@ -390,6 +397,6 @@ def clay_projections(scenario: str, path_input_data, path_input_data_image):
                                         assign_model='all_regions', 
                                         model_nr=6)
     # will take historic average instead
-    clay.remove_regions_with_no_good_fit_from_region_model_match(exclude+low_gdp)
+    clay.remove_regions_with_no_good_fit_from_region_model_match(exclude) # exclude+low_gdp 
 
     return clay
