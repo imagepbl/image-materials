@@ -205,6 +205,7 @@ def mean_historic_other_fraction_consumption_to_xr(results_models):
     diff_cons_all = knowledge_graph_region.rebroadcast_xarray(diff_cons_all, output_coords=IMAGE_REGIONS, dim="Region")
 
     diff_cons_all.to_netcdf('../../../data/raw/rest-of/gompertz_values/diff_cons_all_mean.nc')
+    return diff_cons_all
 
 
 def historic_other_fraction_consumption_to_xr(results_models):

@@ -55,15 +55,15 @@ def copper_projection(scenario: str, path_input_data, path_input_data_image):
     copper.historic_other_fraction_consumption[copper.historic_other_fraction_consumption < 0] = np.nan
 
     # Fit models 
-    # best_rmse_models= {
-    #     'all_regions' : 'gompertz model',
-    #     'group_1' : 'gompertz model',
-    #     'group_2': 'gompertz model',
-    #     'group_3': 'gompertz model',
-    #     'group_4': 'gompertz model',
-    #     'group_5': 'gompertz model',
-    #     'group_6': 'gompertz model'
-    # }
+    best_rmse_models= {
+        'all_regions' : 'gompertz model',
+        'group_1' : 'gompertz model',
+        'group_2': 'gompertz model',
+        'group_3': 'gompertz model',
+        'group_4': 'gompertz model',
+        'group_5': 'gompertz model',
+        'group_6': 'gompertz model'
+    }
 
     bounds = {
         'all_regions' : ([0, 0, 0], [1, 20, 100]),
@@ -77,7 +77,7 @@ def copper_projection(scenario: str, path_input_data, path_input_data_image):
 
     copper.calculate_regressors(copper.historic_other_fraction_consumption)
     copper.get_X_max_scaling_factor()
-    copper.fit_models(bounds=bounds)
+    copper.fit_models(best_rmse_models=best_rmse_models, bounds=bounds)
     
     # copper.assign_fit_to_groups_not_fitted(list_regions=['class_ 18', "class_ 21",  "class_ 22"], 
     #                                        assign_model='group_1', model_nr=6)
@@ -148,15 +148,15 @@ def steel_projection(scenario: str, path_input_data, path_input_data_image):
     # Fit models 
     steel.calculate_regressors(steel.historic_other_fraction_consumption)
 
-    # best_rmse_models={'all_regions' : 'gompertz model',
-    #                                     'class_ 1': 'gompertz model',
-    #                                     'class_ 3': 'gompertz model',
-    #                                     'class_ 17': 'gompertz model',
-    #                                     'class_24': 'gompertz model',
-    #                                     'high': 'gompertz model',
-    #                                     'china': 'gompertz model',
-    #                                     'low': 'gompertz model',
-    #                                     'very_low': 'gompertz model'}
+    best_rmse_models={'all_regions' : 'gompertz model',
+                                        'class_ 1': 'gompertz model',
+                                        'class_ 3': 'gompertz model',
+                                        'class_ 17': 'gompertz model',
+                                        'class_24': 'gompertz model',
+                                        'high': 'gompertz model',
+                                        'china': 'gompertz model',
+                                        'low': 'gompertz model',
+                                        'very_low': 'gompertz model'}
     bounds = {
     'all_regions':          ([0, 0, 0], [0.5, 20, 100]),
     'class_ 1':     ([0, 0, 0], [0.5, 20, 100]),
@@ -169,7 +169,7 @@ def steel_projection(scenario: str, path_input_data, path_input_data_image):
     'very_low':     ([0, 0, 0], [0.5, 20, 100])}
 
     # enforce that for all groups gompertz model is selected as best fit
-    steel.fit_models(bounds=bounds)  
+    steel.fit_models(best_rmse_models=best_rmse_models, bounds=bounds)  
     
     steel.get_X_max_scaling_factor()
     steel.assign_fit_to_groups_not_fitted(spreaded_and_global, 
@@ -249,18 +249,18 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
     # Fit models
     aluminium.calculate_regressors(aluminium.historic_other_fraction_consumption)
 
-    # best_rmse_models= {
-    #     'all_regions' : 'gompertz model',
-    #     'russia' : 'gompertz model',
-    #     'north_america' : 'gompertz model',
-    #     'china' : 'gompertz model',
-    #     'europe' : 'gompertz model', 
-    #     'low' : 'gompertz model',
-    #     'japan' : 'gompertz model',
-    #     'oceania' : 'gompertz model',
-    #     'south_america' : 'gompertz model',
-    #     'rest' : 'gompertz model'
-    # }
+    best_rmse_models= {
+        'all_regions' : 'gompertz model',
+        'russia' : 'gompertz model',
+        'north_america' : 'gompertz model',
+        'china' : 'gompertz model',
+        'europe' : 'gompertz model', 
+        'low' : 'gompertz model',
+        'japan' : 'gompertz model',
+        'oceania' : 'gompertz model',
+        'south_america' : 'gompertz model',
+        'rest' : 'gompertz model'
+    }
 
     bounds = {
         'all_regions' : ([0, 0, 0], [0.02, 20, 100]),
@@ -275,7 +275,7 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
         'rest' : ([0, 0, 0], [0.02, 20, 100])
     }
 
-    aluminium.fit_models(bounds=bounds)
+    aluminium.fit_models(best_rmse_models=best_rmse_models, bounds=bounds)
 
     # add regions to regions model match that are not in there yet becaused they are fitted to the global average
     for key in IAI_TO_IMAGE_CLASSES.keys():
