@@ -3,56 +3,83 @@ UNIT_CONVERSIONS:
   # FINAL PRODUCT DEMAND
   # -------------------------------
   Final Product Demand:
-    "Final Product Demand|Transportation|{Vehicles}":
+    "Final Product Demand|Transportation|{Vehicle Types}":
       factor: 1e-3       
       to: "thousand/yr"
     "Final Product Demand|Buildings|{Building Types}":
       factor: 1
-      to: "m2/yr" 
+      to: "m2/yr"
+    Final Product Demand|Electricity|Generation|*:
+      factor: 1e-3
+      to: GW
+    Final Product Demand|Electricity|Transmission and Distribution:
+      factor: 1e-3
+      to: GWkm  
+    Final Product Demand|Electricity|Storage:
+      factor: 1e-3
+      to: GWh      
   
   # -------------------------------
   # PRODUCT STOCK
   # -------------------------------
   Product Stock:
-    "Product Stock|Transportation|{Vehicles}":
+    "Product Stock|Transportation|{Vehicle Types}":
       factor: 1e-3 
       to: "thousand"           
     "Product Stock|Buildings|{Building Types}":
       factor: 1
-      to: "m2"         
+      to: "m2"   
+    Product Stock|Electricity|Generation|*:
+      factor: 1e-3
+      to: GW
+    Product Stock|Electricity|Transmission and Distribution:
+      factor: 1e-3
+      to: GWkm  
+    Product Stock|Electricity|Storage:
+      factor: 1e-3
+      to: GWh        
 
   # -------------------------------
   # STOCK RETIREMENT
   # -------------------------------
   Stock Retirement:
-    "Stock Retirement|Transportation|{Vehicles}":
+    "Stock Retirement|Transportation|{Vehicle Types}":
       factor: 1e-3
       to: "thousand/yr"
     "Stock Retirement|Buildings|{Building Types}":
       factor: 1
       to: "m2/yr"
+    Stock Retirement|Electricity|Generation|*:
+      factor: 1e-3
+      to: GW
+    Stock Retirement|Electricity|Transmission and Distribution:
+      factor: 1e-3
+      to: GWkm  
+    Stock Retirement|Electricity|Storage:
+      factor: 1e-3
+      to: GWh
 
   # -------------------------------
   # FINAL MATERIAL DEMAND
   # -------------------------------
   Final Material Demand:
-    "Final Material Demand|{Engineered Material}|{Demand Sector}":
+    "Final Material Demand|{Engineered Material}|{Demand Sector Disaggregated}":
       factor: 1e-9               
       to: "Mt/yr"
-    "Final Material Demand|{Engineered Material}|{Demand Sector}|Reused":
+    "Final Material Demand|{Engineered Material}|{Demand Sector Disaggregated}|Reused":
       factor: 1e-9               
       to: "Mt/yr"
-    "Final Material Demand|{Engineered Material}|{Demand Sector}|Recycled":
+    "Final Material Demand|{Engineered Material}|{Demand Sector Disaggregated}|Recycled":
       factor: 1e-9               
       to: "Mt/yr"
-    "Final Material Demand|{Engineered Material}|{Demand Sector}|Virgin Input":
+    "Final Material Demand|{Engineered Material}|{Demand Sector Disaggregated}|Virgin Input":
       factor: 1e-9               
       to: "Mt/yr"
   # -------------------------------
   # MATERIAL STOCK
   # -------------------------------
   Material Stock:
-    "Material Stock|{Engineered Material}|{Demand Sector}":
+    "Material Stock|{Engineered Material}|{Demand Sector Disaggregated}":
       factor: 1e-9
       to: "Mt"
 
@@ -60,7 +87,7 @@ UNIT_CONVERSIONS:
   # MATERIAL OUTFLOW 
   # -------------------------------
   Material Outflow:
-    "Material Outflow|{Engineered Material}|{Demand Sector}":
+    "Material Outflow|{Engineered Material}|{Demand Sector Disaggregated}":
       factor: 1e-9
       to: "Mt/yr"
 
@@ -76,7 +103,7 @@ UNIT_CONVERSIONS:
   # SCRAP
   # -------------------------------
   Scrap:
-    "Scrap|{Engineered Material}|{Demand Sector}":
+    "Scrap|{Engineered Material}|{Demand Sector Disaggregated}":
       factor: 1e-9
       to: "Mt/yr"
     "Scrap|Iron and Steel|Steel":

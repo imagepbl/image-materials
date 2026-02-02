@@ -1,4 +1,4 @@
-- Vehicles:
+- Vehicle Types:
     - Road:
         description: Transportation vehicles that operate on paved or unpaved roads, including motorized and non-motorized vehicles
     - Road|Cars:
