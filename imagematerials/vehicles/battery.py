@@ -19,10 +19,6 @@ class LinkModule(prism.Model):
     """ Calculates # batteries, energy capacity and materials per battery type for inflow, stock, outflow
     in electric vehicles.
 
-
-    Notes
-    -----
-        Assumption: battery lifetime = vehicle lifetime (no explicit battery stock calculation)
     """
 
     # Input data

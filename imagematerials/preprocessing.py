@@ -10,6 +10,7 @@ from imagematerials.eol.preprocessing import eol_preprocessing as prep_eol
 from imagematerials.electricity.preprocessing import get_preprocessing_data_gen as prep_elc_gen
 from imagematerials.electricity.preprocessing import get_preprocessing_data_grid as prep_elc_grid
 from imagematerials.electricity.preprocessing import get_preprocessing_data_stor as prep_elc_stor
+from imagematerials.electricity.preprocessing import get_preprocessing_data_evbattery as prep_battery
 
 
 from imagematerials.factory import Sector
@@ -30,6 +31,16 @@ def _get_vehicles_prep_data(base_dir, climate_policy_scenario_dir, circular_econ
         climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
         circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
         prep_data = prep_vhc(base_dir, climate_policy_config, circular_economy_config)
+
+    return prep_data
+
+def _get_ev_battery_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_scenario_dirs, scenario, year_start, year_end, year_out):
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
+        circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
+        prep_data = prep_battery(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
 
     return prep_data
 
@@ -84,6 +95,12 @@ def _get_electricity_sector(prep_data):
     sec_elc = [sec_elc_gen, sec_elc_grid_lines, sec_elc_grid_add, sec_elc_stor_phs, sec_elc_stor_other]
 
     return sec_elc
+
+def _get_ev_battery_sector(prep_data):
+
+    sec_ev_battery = Sector("ev_battery", prep_data)
+
+    return sec_ev_battery
 
 
 def _get_buildings_sector(prep_data):
@@ -175,6 +192,14 @@ def get_preprocessing_data(
                                                    year_start,
                                                    year_end,
                                                    year_out)
+            
+        elif sector == "ev_battery":
+            prep_data = _get_ev_battery_prep_data(base_dir, climate_policy_scenario_dir,
+                                                   circular_economy_scenario_dirs,
+                                                   standard_scenario,
+                                                   year_start,
+                                                   year_end,
+                                                   year_out)
 
         elif sector == "eol": 
             prep_data = _get_end_of_life_prep_data(base_dir,circular_economy_scenario_dirs)
@@ -192,6 +217,8 @@ def get_preprocessing_data(
         return _get_buildings_sector(prep_data)
     elif sector == "electricity":
         return _get_electricity_sector(prep_data)
+    elif sector == "ev_battery":
+        return _get_ev_battery_sector(prep_data)
     elif sector == "eol":
         return _get_end_of_life_sector(prep_data)
     raise ValueError(f"Unknown sector {sector}")
