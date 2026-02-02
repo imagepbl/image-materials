@@ -1,4 +1,4 @@
-- Mobility Infrastructure Types:
+- Transportation Infrastructure Types:
     - Road|Length:
         description: Paved or unpaved pathways for vehicle transportation
         unit: km

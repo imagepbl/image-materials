@@ -1,6 +1,14 @@
 # Total final material demand of use phase (process 7, CIRCOMOD material cycle system
-# definition) by engineered material and by demand sector
-- Final Material Demand|{Engineered Material}|{Demand Sector}:
+# definition) by engineered material
+- Final Material Demand|{Engineered Material}:
+    description: Total final consumption of (Engineered Material) across demand sectors, 
+      F_6_7 - flow of (Engineered Material) from market and transport process 6, 
+      Final products trade, to (Demand Sector), process 7, Use phase
+    unit: Mt/yr
+
+# Total final material demand of use phase (process 7, CIRCOMOD material cycle system
+# definition) by engineered material and by disaggregated demand sector
+- Final Material Demand|{Engineered Material}|{Demand Sector Disaggregated}:
     description: Final consumption of (Engineered Material) in (Demand Sector), 
       F_6_7 - flow of (Engineered Material) from market and transport process 6, 
       Final products trade, to (Demand Sector), process 7, Use phase
@@ -37,15 +45,16 @@
 
 # Circular economy input rates: reuse and recycling shares by engineered material and
 # by demand sector
-- Final Material Demand|Recycling [Share]|{Engineered Material}|{Demand Sector}:
+- Final Material Demand|Recycling Share|{Engineered Material}|{Demand Sector}:
     description: Share of recycled (Engineered Material) in total (Engineered
       Material) consumption by (Demand Sector), F_6_7(part)/F_6_7*100 -
       percentage share of flow of recycled (Engineered Material) in flow of
       total (Engineered Material) from process 6 to process 7
     unit: "%"
-- Final Material Demand|Reuse [Share]|{Engineered Material}|{Demand Sector}:
-    description: Share of reused (Engineered Material) in total (Engineered
+
+- Final Material Demand|Reuse Share|{Engineered Material}|{Demand Sector}:
+    description: Share of recycled (Engineered Material) in total (Engineered
       Material) consumption by (Demand Sector), F_6_7(part)/F_6_7*100 -
-      percentage share of flow of reused (Engineered Material) in flow of total
-      (Engineered Material) from process 6 to process 7
+      percentage share of flow of recycled (Engineered Material) in flow of
+      total (Engineered Material) from process 6 to process 7
     unit: "%"
