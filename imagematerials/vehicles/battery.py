@@ -11,56 +11,96 @@ COHORT = prism.Dimension("Cohort")
 TIME = prism.Dimension("Time")
 MATERIAL_TYPE = prism.Dimension("material")
 BATTERY_TYPE = prism.Dimension("BatteryType")
+UnitFlexibleStock = prism.DynamicUnit("my_unit_stock")
 
 
 
 @prism.interface
-class LinkModule(prism.Model):
-    """ Calculates # batteries, energy capacity and materials per battery type for inflow, stock, outflow
-    in electric vehicles.
+class EvBatteryLinkModule(prism.Model):
+    """ Module to calculate remaining electricity storage in the grid after 
+    accounting for electric vehicle battery storage.  
 
+    Attributes
+    ----------
+    stocks_0 : xr.DataArray
+        Initial stock of electricity storage by time, region, SuperType. SuperType only has 
+        one coordinate "Other storage".
+    stock_battery_kWh_v2g : xr.DataArray
+        EV battery stock in kWh by time, battery type, vehicle type, and region.
+    knowledge_graph_elc : KnowledgeGraph
+        Knowledge graph with electricity sector relationships.
+    set_unit_flexible : prism.VarUnit[UnitFlexibleStock]
+        Unit object defining the flexible unit of electricity storage.
+    Type : prism.Coords[STOCK_TYPE]
+        Vehicle stock type coordinate.
+    Region : prism.Coords[REGION]
+        Region coordinate.
+    SuperType : prism.Coords[STOCK_SUPERTYPE]
+        Storage supertype coordinate.
+    Time : prism.Coords[TIME]
+        Timeline coordinate.
+    stocks : prism.TimeVariable
+        Output time series of remaining electricity storage after EV battery allocation.
+
+    Notes
+    -----
+    The pumped hydropower storage was subtracted from the storage demand in the
+    storage preprocessing.
     """
 
     # Input data
-    stocks:                 xr.DataArray
+    stocks_0:                 xr.DataArray
     stock_battery_kWh_v2g:  xr.DataArray
     knowledge_graph_elc:    KnowledgeGraph
+    set_unit_flexible:   prism.VarUnit[UnitFlexibleStock]
     
 
     # Dimensions
-    Type:         prism.Coords[STOCK_TYPE]
-    # BatteryType:  prism.Coords[BATTERY_TYPE]
-    Region:       prism.Coords[REGION]
-    # Cohort:       prism.Coords[COHORT]
+    Type:       prism.Coords[STOCK_TYPE]
+    Region:     prism.Coords[REGION]
     SuperType:  prism.Coords[STOCK_SUPERTYPE]
-    Time:         prism.Coords[TIME]
+    Time:       prism.Coords[TIME]
 
     # Data dependencies
-    input_data: tuple[str] = ("stock_battery_kWh_v2g", "stocks", "knowledge_graph_elc") # input from vehicle stock module
-    output_data: tuple[str] = ("stocks")
+    input_data: tuple[str] = ("stock_battery_kWh_v2g", "stocks_0", "knowledge_graph_elc", "set_unit_flexible") # input from vehicle stock module
+    output_data: tuple[str] = ("stocks",) # a 1-element tuple requires a trailing comma
 
     # Output
-    
+    # stocks: prism.TimeVariable[REGION, STOCK_SUPERTYPE, UnitFlexibleStock] = prism.export()
 
     def compute_initial_values(self, time: prism.Timeline):
+        """ Initialize the output stock variable `stocks` for the full timeline.  
+
+        The initial values are set to zero with the appropriate units 
+        and coordinates matching `stocks_0`. The variable will be updated 
+        in `compute_values` during simulation.  
         """
-        """
-        pass
+        self.stocks = xr.DataArray(
+            0.0,
+            dims=("Time", "Region", "SuperType"),
+            coords={"Time":     self.Time,
+                    "Region":   self.Region,
+                    "SuperType":   self.stocks_0.coords["SuperType"]})
+        self.stocks = prism.Q_(self.stocks, self.set_unit_flexible)
         
 
         
     def compute_values(self, time: prism.Time):
+        """ Compute the remaining electricity storage for a single timestep.  
+
+        At timestep `t`, subtract the total EV battery storage from the initial 
+        electricity stock and ensure the remaining stock is non-negative.   
+
+        Parameters
+        ----------
+        time : prism.Time
+            The current timestep object containing `.t` (index) and `.dt` (timestep size).
+
         """
-        
-        """
-         
         t, dt = time.t, time.dt
 
-        stock_ev_storage = self.stock_battery_kWh_v2g.loc[t].sum(["BatteryType","Type"]) 
-        print("stock_ev_storage", stock_ev_storage)
-        # stock_ev_storage has dims (Time, Region)
-        # stocks has dims (Time, Region, SuperType)
-        self.stocks.loc[t] = self.stocks.loc[t] - stock_ev_storage
+        stock_ev_storage = self.stock_battery_kWh_v2g.loc[t].sum(["BatteryType","Type"]) # stock_ev_storage has dims (Time, Region)
+        self.stocks.loc[t] = (self.stocks_0.loc[t] - stock_ev_storage).clip(min=prism.Q_(0,self.set_unit_flexible)) # clip: cannot be negative
 
 
 

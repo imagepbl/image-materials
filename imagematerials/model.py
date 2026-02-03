@@ -86,8 +86,7 @@ class GenericStocks(prism.Model):
         time : prism.Timeline
             The simulation timeline.
         """
-        # pass unit from stocks
-        unit = str(self.stocks.pint.units)
+  
         survival = ScipySurvival(self.lifetimes, self.stocks.coords["Type"],
                                  knowledge_graph=self.knowledge_graph)
         self.survival_matrix = SurvivalMatrix(survival)
@@ -98,7 +97,7 @@ class GenericStocks(prism.Model):
                     "Cohort": self.Cohort,
                     "Region": self.Region,
                     "Type": self.Type})
-        self.stock_by_cohort = prism.Q_(self.stock_by_cohort, unit)
+        self.stock_by_cohort = prism.Q_(self.stock_by_cohort, self.set_unit_flexible) # pass unit from stocks: set_unit_flexible should contain stocks unit
 
     def compute_values(self, time: prism.Time):
         """
@@ -109,11 +108,10 @@ class GenericStocks(prism.Model):
         time : prism.Time
             The current simulation time step.
         """
-        # pass unit from stocks
-        unit = str(self.stocks.pint.units)
+        
         t, dt = time.t, time.dt
-        self.inflow[t].loc[:] = prism.Q_(0.0, unit)
-        self.outflow_by_cohort[t].loc[:] = prism.Q_(0.0, unit)
+        self.inflow[t].loc[:] = prism.Q_(0.0, self.set_unit_flexible)
+        self.outflow_by_cohort[t].loc[:] = prism.Q_(0.0, self.set_unit_flexible)
 
         # copy only for readability
         input_stock = self.stocks
@@ -131,7 +129,7 @@ class GenericStocks(prism.Model):
 
         # Prevent out of bounds error, assume first outflow to be 0.
         if t-1 < time.start:
-            self.outflow_by_cohort[t] = prism.Q_(0.0, unit)
+            self.outflow_by_cohort[t] = prism.Q_(0.0, self.set_unit_flexible)
         else:
             # for previous cohorts: calculate outflow by subtracting stocks of previous - current year
             self.outflow_by_cohort[t].loc[:, :, :t-1] = self.stock_by_cohort.loc[t-1, :t-1] - self.stock_by_cohort.loc[t, :t-1]
@@ -209,8 +207,7 @@ class SharesInflowStocks(prism.Model):
         time : prism.Timeline
             The simulation timeline.
         """
-        # pass unit from stocks
-        unit = str(self.stocks.pint.units)
+        
         survival = ScipySurvival(self.lifetimes, self.shares.coords["Type"],
                                  knowledge_graph=self.knowledge_graph)
         self.survival_matrix = SurvivalMatrix(survival)
@@ -221,7 +218,7 @@ class SharesInflowStocks(prism.Model):
                     "Cohort":   self.Cohort,
                     "Region":   self.Region,
                     "Type":     self.shares.coords["Type"]})
-        self.stock_by_cohort = prism.Q_(self.stock_by_cohort, unit)
+        self.stock_by_cohort = prism.Q_(self.stock_by_cohort, self.set_unit_flexible) # pass unit from stocks
 
 
     def compute_values(self, time: prism.Time):
@@ -241,10 +238,9 @@ class SharesInflowStocks(prism.Model):
             The current simulation time step.
         """
         # pass unit from stocks
-        unit = str(self.stocks.pint.units)
         t, dt = time.t, time.dt
-        self.inflow[t].loc[:] = prism.Q_(0.0, unit)
-        self.outflow_by_cohort[t].loc[:] = prism.Q_(0.0, unit)
+        self.inflow[t].loc[:] = prism.Q_(0.0, self.set_unit_flexible)
+        self.outflow_by_cohort[t].loc[:] = prism.Q_(0.0, self.set_unit_flexible)
 
         input_stock = self.stocks # copy only for readability
         # calculate missing stock to fulfill demand (input stock) -> for this aggregate over sub-technologies in stock_by_cohort to compare to input_stock which is by super-type
@@ -260,7 +256,7 @@ class SharesInflowStocks(prism.Model):
 
         # Prevent out of bounds error, assume first outflow to be 0.
         if t-1 < time.start:
-            self.outflow_by_cohort[t] = prism.Q_(0.0, unit)
+            self.outflow_by_cohort[t] = prism.Q_(0.0, self.set_unit_flexible)
         else:
             # for previous cohorts: calculate outflow by subtracting stocks of previous - current year
             self.outflow_by_cohort[t].loc[:, :, :t-1] = self.stock_by_cohort.loc[t-1, :t-1] - self.stock_by_cohort.loc[t, :t-1]

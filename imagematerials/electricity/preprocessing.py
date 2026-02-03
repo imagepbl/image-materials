@@ -1075,6 +1075,8 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
     prep_data_phs["stocks"] =           knowledge_graph_region.rebroadcast_xarray(prep_data_phs["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
     prep_data_oth_storage["stocks"] =   knowledge_graph_region.rebroadcast_xarray(prep_data_oth_storage["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
 
+    prep_data_oth_storage["stocks_0"] = prep_data_oth_storage.pop("stocks")
+
 
     return prep_data_phs, prep_data_oth_storage
 

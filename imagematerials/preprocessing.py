@@ -98,7 +98,7 @@ def _get_electricity_sector(prep_data):
 
 def _get_ev_battery_sector(prep_data):
 
-    sec_ev_battery = Sector("ev_battery", prep_data)
+    sec_ev_battery = Sector("ev_battery", prep_data, check_coordinates=False)
 
     return sec_ev_battery
 
