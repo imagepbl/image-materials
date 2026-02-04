@@ -5,6 +5,7 @@ from typing import Optional, Union
 import numpy as np
 
 from imagematerials.buildings.preprocessing.main import buildings_preprocessing as prep_bld
+from imagematerials.rest_of.preprocessing.main import rest_of_preprocessing as prep_rest
 from imagematerials.vehicles.preprocessing.main import vehicles_preprocessing as prep_vhc
 from imagematerials.eol.preprocessing import eol_preprocessing as prep_eol
 from imagematerials.electricity.preprocessing import get_preprocessing_data_gen as prep_elc_gen
@@ -59,6 +60,12 @@ def _get_buildings_prep_data(base_dir, climate_policy_scenario_dir, circular_eco
     return prep_data
 
 
+def _get_rest_prep_data(base_dir, climate_policy_scenario_dir, scenario_name):
+    prep_data = prep_rest(base_dir, climate_policy_scenario_dir, scenario_name)
+    sector_rest = Sector("rest_of", prep_data)
+    return sector_rest
+
+
 def _get_vehicles_sector(prep_data):
     output_coords_type = list(prep_data["stocks"].Type.values)
     knowledge_graph = prep_data["knowledge_graph"]
@@ -101,6 +108,7 @@ def get_preprocessing_data(
         sector, base_dir=None,
         climate_policy_scenario_dir: Union[str, Path, None] = None,
         circular_economy_scenario_dirs: Optional[dict[str, Union[Path, str]]] = None,
+        scenario_name=None,
         cache: Union[bool, Path, str] = False,
         standard_scenario: str = "SSP2",
         year_start: int = 1971,
@@ -118,6 +126,8 @@ def get_preprocessing_data(
         The climate policy scenario directory, by default None
     circular_economy_scenario_dirs, optional
         The circular economy scenario directories, by default None
+    scenario_name, optional
+        The scenario name for the rest_of sector, by default None
     cache, optional
         Where to cache the preprocessing data, by default False in which case the result won't be
         cached.
@@ -174,6 +184,9 @@ def get_preprocessing_data(
                                                    year_start,
                                                    year_end,
                                                    year_out)
+        elif sector == "rest_of":
+            prep_data = _get_rest_prep_data(base_dir, climate_policy_scenario_dir,
+                                            scenario_name)
 
         elif sector == "eol": 
             prep_data = _get_end_of_life_prep_data(base_dir,circular_economy_scenario_dirs)
@@ -191,6 +204,8 @@ def get_preprocessing_data(
         return _get_buildings_sector(prep_data)
     elif sector == "electricity":
         return _get_electricity_sector(prep_data)
+    elif sector == "rest_of":
+        return _get_rest_prep_data(base_dir, climate_policy_scenario_dir, scenario_name)
     elif sector == "eol":
         return _get_end_of_life_sector(prep_data)
     raise ValueError(f"Unknown sector {sector}")
