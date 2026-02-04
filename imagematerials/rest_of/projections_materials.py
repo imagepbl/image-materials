@@ -59,11 +59,11 @@ def estimate_models(cons_capita: pd.DataFrame, gdp_pc: pd.DataFrame, bounds:tupl
 
     """
     # estimate every model
-    log_log_model = Log_Log_Model(cons_capita, gdp_pc)
-    semi_log_model = Semi_Log_Model(cons_capita, gdp_pc)
-    log_inverse_model = Log_Inverse_Model(cons_capita, gdp_pc)
-    log_log_inverse_model = Log_Log_Inverse_Model(cons_capita, gdp_pc)
-    log_log_square_model = Log_Log_Square_Model(cons_capita, gdp_pc)
+    # log_log_model = Log_Log_Model(cons_capita, gdp_pc)
+    # semi_log_model = Semi_Log_Model(cons_capita, gdp_pc)
+    # log_inverse_model = Log_Inverse_Model(cons_capita, gdp_pc)
+    # log_log_inverse_model = Log_Log_Inverse_Model(cons_capita, gdp_pc)
+    # log_log_square_model = Log_Log_Square_Model(cons_capita, gdp_pc)
     non_linerar_inv_model = NLI_Model(cons_capita, gdp_pc, bounds = bounds)
 
     # try and except for these models, as they might have a runtime error and not produce results
@@ -96,8 +96,7 @@ def estimate_models(cons_capita: pd.DataFrame, gdp_pc: pd.DataFrame, bounds:tupl
 
 
 
-    return (log_log_model, semi_log_model, log_inverse_model, log_log_inverse_model, 
-            log_log_square_model, non_linerar_inv_model, gompertz_model, 
+    return (non_linerar_inv_model, gompertz_model, 
             logistic_growth_model, bw_model, log_gauss_saturate_model)
 
     
@@ -121,16 +120,16 @@ def rmse_r2_models(models_output: tuple) -> pd.DataFrame:
     """
     # from tuple that is given as input create a dictionary that assigns the models to names
     models_output_dict = {
-        models_output[0]: 'log-log model',
-        models_output[1] : 'semi-log model',
-        models_output[2] : 'log-inverse model',
-        models_output[3] : 'log-log-inverse model',
-        models_output[4] : 'log-log-square model',
-        models_output[5] : 'non-linear inverse model',
-        models_output[6] : 'gompertz model',
-        models_output[7] : 'logistic growth model',
-        models_output[8] : 'limited growth model', # (beschraenktes Wachstum)
-        models_output[9] : 'log gauss saturate model'
+        # models_output[0]: 'log-log model',
+        # models_output[1] : 'semi-log model',
+        # models_output[2] : 'log-inverse model',
+        # models_output[3] : 'log-log-inverse model',
+        # models_output[4] : 'log-log-square model',
+        models_output[0] : 'non-linear inverse model',
+        models_output[1] : 'gompertz model',
+        models_output[2] : 'logistic growth model',
+        models_output[3] : 'limited growth model', # (beschraenktes Wachstum)
+        models_output[4] : 'log gauss saturate model'
         }
     
     #loop over models in dict to calculate RMSE and R2
@@ -195,7 +194,9 @@ def estimate_models_per_region_group(regions_groups_dict: dict,
 
 
 
-def match_regions_to_best_model(rmse_r2_groups: dict, model_groups: dict,
+def match_regions_to_best_model(rmse_r2_groups: dict, 
+                                model_groups: dict,
+                                models_output_dict: dict,
                                 regions_groups_dict: dict[str, list[str]], 
                                 best_rmse_models: dict = None):
     """
