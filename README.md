@@ -6,9 +6,9 @@
 
 ## Installation
 
-### Setting Up a Python Environment
+### Setting up your Environment
 
-It is recommended to use a virtual environment for installing dependencies. See [this guide](https://docs.python.org/3/tutorial/venv.html) for instructions on creating and managing Python environments.
+Please refer to the [Default way of setting up your environment within IMAGE](docs/PYTHON_HOW_TO.md)
 
 ### Prerequisites
 
