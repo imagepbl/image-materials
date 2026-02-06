@@ -8,7 +8,7 @@
 
 ### Setting up your Environment
 
-Please refer to the [Default way of setting up your environment within IMAGE](docs/PYTHON_HOW_TO.md)
+Please refer to the [Default way of setting up your environment within IMAGE](docs/PYTHON_HOWTO.md)
 
 ### Prerequisites
 
