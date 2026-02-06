@@ -156,20 +156,15 @@ Users can extend the model by adding new modules for additional sectors. (More d
 - Code should be **PEP8-compliant**.
 - Follow **recursive modeling principles** and align with the **prism package**.
 
-## License & Citation
+## Licence & Citation
 ### Licence
-- please refer to the licence statement in LICENCE.md
-
-### How to Cite
-
-Citation details to be added.
+- please refer to our [licence statement](LICENCE.md)
 
 ## Contact & Support
 
 ### Questions & Issues
 
 - Submit questions via **GitHub Issues**.
-- Contact information to be added.
 
 ---
 
