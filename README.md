@@ -149,7 +149,7 @@ Users can extend the model by adding new modules for additional sectors. (More d
 
 ### Contributing
 
-- please refer to our [Collaboration Guidelines](CONTRIBUTE.md) 
+- please refer to our [Collaboration Guidelines](CONTRIBUTING.md) 
 
 ### Coding Standards
 
