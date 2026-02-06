@@ -8,8 +8,7 @@
 
 ### Setting up your Environment
 
-**Note:** At this point in time, while our code is public, we still depend on packages from the IMAGE framework that are not public yet.  
-So you will unfortunately not yet be able to run IMAGE Materials. 
+**Note:** At this point in time, while our code is public, we still depend on packages from the IMAGE framework that are not public yet.
 
 Please refer to the [Default way of setting up your environment within IMAGE](docs/PYTHON_HOWTO.md)
 
