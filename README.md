@@ -6,9 +6,9 @@
 
 ## Installation
 
-### Setting Up a Python Environment
+### Setting up your Environment
 
-It is recommended to use a virtual environment for installing dependencies. See [this guide](https://docs.python.org/3/tutorial/venv.html) for instructions on creating and managing Python environments.
+Please refer to the [Default way of setting up your environment within IMAGE](docs/PYTHON_HOWTO.md)
 
 ### Prerequisites
 
@@ -149,30 +149,22 @@ Users can extend the model by adding new modules for additional sectors. (More d
 
 ### Contributing
 
-Contributions are welcome! Follow these steps:
-
-1. Create a branch.
-2. Submit a pull request.
+- please refer to our [Collaboration Guidelines](CONTRIBUTING.md) 
 
 ### Coding Standards
 
 - Code should be **PEP8-compliant**.
 - Follow **recursive modeling principles** and align with the **prism package**.
 
-## License & Citation
+## Licence
 ### Licence
-- please refer to the licence statement in LICENCE.md
-
-### How to Cite
-
-Citation details to be added.
+- please refer to our [licence statement](LICENCE.md)
 
 ## Contact & Support
 
 ### Questions & Issues
 
 - Submit questions via **GitHub Issues**.
-- Contact information to be added.
 
 ---
 
