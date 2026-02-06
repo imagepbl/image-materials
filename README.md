@@ -156,7 +156,7 @@ Users can extend the model by adding new modules for additional sectors. (More d
 - Code should be **PEP8-compliant**.
 - Follow **recursive modeling principles** and align with the **prism package**.
 
-## Licence & Citation
+## Licence
 ### Licence
 - please refer to our [licence statement](LICENCE.md)
 
