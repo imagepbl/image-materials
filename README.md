@@ -149,10 +149,7 @@ Users can extend the model by adding new modules for additional sectors. (More d
 
 ### Contributing
 
-Contributions are welcome! Follow these steps:
-
-1. Create a branch.
-2. Submit a pull request.
+- please refer to our [Collaboration Guidelines](CONTRIBUTE.md) 
 
 ### Coding Standards
 
