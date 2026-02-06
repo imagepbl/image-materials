@@ -29,13 +29,13 @@ def copper_projection(scenario: str, path_input_data, path_input_data_image):
     group_5 = ["class_ 2"]
     group_6 = ["class_ 19"]
 
-    # trajectory not to forseen, will be fitted with global regression
-  
-    # take average of last years for exclude and scattered
+    # not enough data to make a projection, exclude
     exclude = ["class_ 4", "class_ 5", "class_ 6", "class_ 7", "class_ 8",  
-               "class_ 9", "class_ 14", "class_ 17", "class_ 18", "class_ 22", "class_ 25", "class_ 26"]
-    
-    scattered = ["class_ 10", "class_ 12"]
+                "class_ 9", "class_ 14", "class_ 17", "class_ 25", "class_ 26"]
+
+    scattered = ["class_ 10", "class_ 12"] # assign global fit
+    low = ['class_ 18', "class_ 21",  "class_ 22"] # assign lowest fit
+
 
     # for these models a regression will be made
     # all reginos that are not in the high, medium, low will be fitted with the global regression
@@ -79,12 +79,10 @@ def copper_projection(scenario: str, path_input_data, path_input_data_image):
     copper.get_X_max_scaling_factor()
     copper.fit_models(best_rmse_models=best_rmse_models, bounds=bounds)
     
-    # copper.assign_fit_to_groups_not_fitted(list_regions=['class_ 18', "class_ 21",  "class_ 22"], 
-    #                                        assign_model='group_1', model_nr=1)
-    copper.assign_fit_to_groups_not_fitted(list_regions=['class_ 18', "class_ 21",  "class_ 22"], 
-                                        assign_model='group_1', model_nr=1)
+    copper.assign_fit_to_groups_not_fitted(list_regions=low, 
+                                        assign_model='group_3', model_nr=1)
     copper.assign_fit_to_groups_not_fitted(list_regions=scattered, 
-                                           assign_model='group_3', model_nr=1)
+                                           assign_model='all_regions', model_nr=1)
 
     copper.remove_regions_with_no_good_fit_from_region_model_match(exclude)
 

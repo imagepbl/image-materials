@@ -229,7 +229,7 @@ def sand_projections(scenario: str, path_input_data, path_input_data_image):
     # assign to other fit
     scattered_regions = ['class_ 5']  # global
     # no projection, take low
-    low = ['class_ 8', 'class_ 9','class_ 25', 'class_ 26']  # Exclude 'Rest of World' region
+    low = ['class_ 8', 'class_ 9', 'class_ 25', 'class_ 26']  # Exclude 'Rest of World' region
     exclude = []
 
      # for these models a regression will be made
@@ -268,7 +268,7 @@ def sand_projections(scenario: str, path_input_data, path_input_data_image):
         'group_7' : ([0, 0, 0], [12.5, 20, 100]),
         'group_8' : ([0, 0, 0], [12.5, 20, 100]),
         'group_9' : ([0, 0, 0], [12.5, 20, 100]),
-        'group_10' : ([0, 0, 0], [12.5, 20, 5]),
+        'group_10' : ([0, 4, 0], [12.5, 20, 6]),
     }
 
     sand.get_X_max_scaling_factor()
@@ -276,11 +276,11 @@ def sand_projections(scenario: str, path_input_data, path_input_data_image):
 
     sand.assign_fit_to_groups_not_fitted(scattered_regions, 
                                          assign_model='all_regions', # global trajectory
-                                model_nr=1)
+                                         model_nr=1)
     
     sand.assign_fit_to_groups_not_fitted(low, 
-                                    assign_model='group_10', # mid range trajectory 
-                                    model_nr=1)
+                                         assign_model='group_10',
+                                         model_nr=1)
     
     sand.remove_regions_with_no_good_fit_from_region_model_match(exclude)
 
