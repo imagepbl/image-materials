@@ -160,12 +160,8 @@ Contributions are welcome! Follow these steps:
 - Follow **recursive modeling principles** and align with the **prism package**.
 
 ## License & Citation
-
-### License
-
-This repository is currently under copyright by the IMAGE Materials team, Utrecht University 2026. This repository will be integrated into the IMAGE framework, and will be licensed open source under the license chosen by the framework.
-
-Copyright IMAGE Materials team, Utrecht University 2026, all rights reserved
+### Licence
+- please refer to the licence statement in LICENCE.md
 
 ### How to Cite
 
