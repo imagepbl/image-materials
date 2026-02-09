@@ -5,7 +5,6 @@ from typing import Dict, List, Tuple
 import re
 import itertools
 import yaml
-from types import SimpleNamespace
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -25,29 +24,42 @@ def _find_time_key(da: xr.DataArray) -> str:
 
 # define years to report (2005 to last in 5-year steps)
 def _years(da: xr.DataArray) -> List[int]:
-    """Pick 2005..last in 5-year steps, always include last."""
+    """
+    Allow only:
+      - 2005, 2010, ..., 2050 (5-year steps)
+      - 2060, 2070, ..., 2100 (10-year steps)
+    and return only those that are available in the DataArray.
+    """
     tkey = _find_time_key(da)
     years = np.asarray(da.coords[tkey].values, dtype=int)
+    years = np.unique(years)
 
-    years = np.unique(years) 
-    if years.size == 0: 
+    if years.size == 0:
         return []
-    last = int(years[-1])
-    if last <= 2005:
-        return [last]
 
-    wanted = list(range(2005, last + 1, 5))
-    if last not in wanted:
-        wanted.append(last)
-    available = set(map(int, years.tolist()))
-    return [years for years in wanted if years in available]
+    allowed = (
+        list(range(2005, 2051, 5)) +
+        list(range(2060, 2101, 10))
+    )
+
+    available = set(years.tolist())
+    return [y for y in allowed if y in available]
+
 
 # list of labels for a given dimension to iterate over (e.g. Regions, Types)
 def _labels(da: xr.DataArray, dim: str) -> List[str]:
-    if dim not in da.coords:
-        raise KeyError(f"Coordinate {dim!r} not found.")
-    vals = da.coords[dim].values
-    return [str(v) for v in np.asarray(vals).tolist()]
+    # allow dimension without an explicit coordinate
+    if (dim not in da.coords) and (dim not in da.dims):
+        raise KeyError(f"Dimension/coordinate {dim!r} not found. dims={da.dims}, coords={list(da.coords)}")
+
+    # If it's a coordinate, use it
+    if dim in da.coords:
+        vals = da.coords[dim].values
+        return [str(v) for v in np.asarray(vals).tolist()]
+
+    # Otherwise fall back to the index of the dimension
+    idx = da.get_index(dim)
+    return [str(v) for v in idx.tolist()]
 
 # unit for a given family/template YAML file
 def _unit(da: xr.DataArray, family: str, template: str) -> str:
@@ -58,6 +70,15 @@ def _unit(da: xr.DataArray, family: str, template: str) -> str:
         if k in da.attrs and da.attrs[k]:
             return str(da.attrs[k])
     return ""
+
+def _restrict_to_whitelist(mapping: Dict[str, List[str]], whitelist: List[str]) -> Dict[str, List[str]]:
+    """Return mapping containing ONLY whitelist keys (if present) and only non-empty lists."""
+    out = {}
+    for k in whitelist:
+        vals = mapping.get(k, [])
+        if vals:
+            out[k] = sorted(set(vals))
+    return out
 
 # load unit conversion factors from YAML file
 def _load_unit_conv(path: Path | None = None) -> Dict:
@@ -193,11 +214,14 @@ def _dedup_lists(d: Dict[str, List[str]]) -> Dict[str, List[str]]:
 # add rollup paths to a mapping (e.g., "Transportation|Road|Cars" -> "Transportation|Road", "Transportation")
 def _with_rollups(mapping: Dict[str, List[str]], allowed_parents: set[str] | None = None) -> Dict[str, List[str]]:
     out = {k: list(v) for k, v in mapping.items()}
+    # for each key, split into parts and create parent keys
     for k, labels in mapping.items():
         parts = k.split("|")
+        # iterate over parent levels
         for i in range(1, len(parts)):
             parent = "|".join(parts[:i])
-            if allowed_parents and parent not in allowed_parents:
+            # skip if not in allowed parents
+            if allowed_parents and parent not in allowed_parents:   
                 continue
             out.setdefault(parent, []).extend(labels)
     return _dedup_lists(out)
@@ -231,57 +255,162 @@ def _map_placeholder(placeholder: str, da: xr.DataArray, sector_name: str | None
         mapping: Dict[str, List[str]] = {}
         if allowed:
             # Assign each Type to every allowed tag that's a prefix of its deep path
+            mapping = {tag: [] for tag in allowed}
             for t, full in deep_paths.items():
                 for tag in allowed:
                     if _prefixes_match(tag, full):
-                        mapping.setdefault(tag, []).append(t)
+                        mapping[tag].append(t)
+            mapping = _restrict_to_whitelist(mapping, list(allowed))
+            return dim, mapping
+        
         else:
             # Fallback: include leaf + parent@depth=2
             for t, full in deep_paths.items():
                 mapping.setdefault(full, []).append(t)
                 p2 = _kg_path(CFG.kgraph_v, t, prefer_depth=2)
                 mapping.setdefault(p2, []).append(t)
-                # If you also want depth=1 rollups (e.g., "Road"), uncomment:
-                # p1 = _kg_path(CFG.kgraph_v, t, prefer_depth=1)
-                # mapping.setdefault(p1, []).append(t)
 
         return dim, {k: sorted(set(v)) for k, v in mapping.items()}
 
-    # ----- Buildings -----
+# ----- Buildings -----
     if ph == "Building Types":
         dim = "Type"
         labels = _labels(da, dim)
 
         deep_paths = {t: _kg_path(CFG.kgraph_b, t) for t in labels}
-        allowed = set(getattr(CFG, "TAG_WHITELISTS", {}).get("Building Types", []))
+        allowed = list(getattr(CFG, "TAG_WHITELISTS", {}).get("Building Types", []))
+        allowed_set = set(allowed)
 
         mapping: Dict[str, List[str]] = {}
+
         if allowed:
+            # Only whitelist tags
+            mapping = {tag: [] for tag in allowed}
+
             for t, full in deep_paths.items():
+                # normalize: if someone accidentally returns Buildings|..., strip Buildings|
+
+                if full == "Buildings":
+                    full_norm = "Buildings"
+                elif full.startswith("Buildings|"):
+                    full_norm = full[len("Buildings|"):]
+                else:
+                    full_norm = full
+
                 for tag in allowed:
-                    if _prefixes_match(tag, full):
-                        mapping.setdefault(tag, []).append(t)
+                    if _prefixes_match(tag, full_norm):
+                        mapping[tag].append(t)
+
+            # keep only whitelist keys that have members
+            mapping = {k: sorted(set(v)) for k, v in mapping.items() if v}
+
         else:
+            # Fallback: include leaf + parent@depth=2, but never create Buildings|Buildings
             for t, full in deep_paths.items():
                 mapping.setdefault(full, []).append(t)
+
                 p2 = _kg_path(CFG.kgraph_b, t, prefer_depth=2)
                 mapping.setdefault(p2, []).append(t)
 
-        # Residential/Commercial rollups
-        res_types = [t for t, full in deep_paths.items() if full.startswith("Residential|")]
-        com_types = [t for t, full in deep_paths.items() if full.startswith("Commercial|")]
+            # Residential/Commercial rollups (based on deep path)
+            res_types = [t for t, full in deep_paths.items() if full.startswith("Residential|")]
+            com_types = [t for t, full in deep_paths.items() if full.startswith("Commercial|")]
 
-        if res_types:
-            mapping.setdefault("Residential", []).extend(res_types)
-        if com_types:
-            mapping.setdefault("Commercial", []).extend(com_types)
+            if res_types:
+                mapping.setdefault("Residential", []).extend(res_types)
+            if com_types:
+                mapping.setdefault("Commercial", []).extend(com_types)
 
-        # roll up to total Buildings
-        mapping.setdefault("Buildings", []).extend(res_types + com_types)
+            # roll up to total Buildings (only from res+com members)
+            if res_types or com_types:
+                mapping.setdefault("Buildings", []).extend(res_types + com_types)
 
-        # clean and return
-        return dim, {k: sorted(set(v)) for k, v in mapping.items()}
+            mapping = {k: sorted(set(v)) for k, v in mapping.items() if v}
 
+        return dim, mapping
+
+
+    # ----- Electricity -----
+    if ph == "Electricity Types":
+        allowed_list = list(getattr(CFG, "TAG_WHITELISTS", {}).get("Electricity Types", []))
+        allowed_set = set(allowed_list)
+
+        # choose dim
+        dim = "Type" if "Type" in da.dims else ("SuperType" if "SuperType" in da.dims else None)
+        if dim is None:
+            raise KeyError(f"Neither 'Type' nor 'SuperType' found for Electricity Types. dims={da.dims}")
+
+        labels = _labels(da, dim)
+
+        # ---- Case A: SuperType already aggregated (Generation / Transmission and Distribution / Storage) ----
+        if dim == "SuperType":
+            # only keep exact matches with whitelist
+            mapping = {}
+            for tag in allowed_list:
+                kept = [t for t in labels if str(t) == tag]
+                if kept:
+                    mapping[tag] = kept  # selecting SuperType is selecting itself
+            return dim, mapping
+
+        # ---- Case B: Type is tech-level: use KG to map each tech to a whitelisted aggregate ----
+        deep_paths = {t: _kg_path(CFG.kgraph_e, t) for t in labels}
+
+        # Build ONLY whitelist keys, each collecting matching types
+        mapping = {tag: [] for tag in allowed_list}
+
+        for t, full in deep_paths.items():
+            for tag in allowed_list:
+                if _prefixes_match(tag, full):
+                    mapping[tag].append(t)
+
+        # ONLY whitelist keys survive
+        mapping = _restrict_to_whitelist(mapping, allowed_list)
+        return dim, mapping
+
+
+    # ----- Demand Sector  -----
+    if ph == "Demand Sector Disaggregated":
+        dim = "Type"
+        labels = _labels(da, dim)
+        mapping: Dict[str, List[str]] = {}
+
+        if sector_name == "vehicles": 
+            for t in labels: 
+                mapping.setdefault("Transportation|" + _kg_path(CFG.kgraph_v, t), []).append(t) 
+                mapping = _with_rollups(mapping, {"Transportation", "Transportation|Road", "Transportation|Rail"}) 
+            return dim, mapping
+
+        if sector_name == "buildings":
+            for t in labels:
+                path = _kg_path(CFG.kgraph_b, t)
+
+                # 🔒 guard: never create Buildings|Buildings
+                if path == "Buildings":
+                    mapping.setdefault("Buildings", []).append(t)
+                else:
+                    mapping.setdefault(f"Buildings|{path}", []).append(t)
+
+            # rollups (only meaningful parents)
+            mapping = _with_rollups(
+                mapping,
+                {
+                    "Buildings",
+                    "Buildings|Residential",
+                    "Buildings|Commercial",
+                },
+            )
+
+            # final cleanup
+            mapping = {k: sorted(set(v)) for k, v in mapping.items()}
+            return dim, mapping
+
+
+        if sector_name == "electricity":
+            for t in labels:
+                path = _kg_path(CFG.kgraph_e, t)
+                mapping.setdefault("Electricity|" + path, []).append(t)
+            mapping = _with_rollups(mapping, {"Electricity", "Electricity|Generation", "Electricity|Transmission and Distribution", "Electricity|Storage"})
+            return dim, mapping
 
     # ----- Materials -----
     
@@ -291,31 +420,14 @@ def _map_placeholder(placeholder: str, da: xr.DataArray, sector_name: str | None
         labels = [m for m in labels if m in CFG.RAW_MATERIALS_KEEP]
         return dim, {CFG.MATERIAL_NAME_MAP.get(m, m): [m] for m in labels}
 
-    # ----- Demand Sector  -----
-    if ph == "Demand Sector Disaggregated":
-        dim = "Type"
-        labels = _labels(da, dim)
-        mapping: Dict[str, List[str]] = {}
-
-        if sector_name == "vehicles":
-            for t in labels:
-                mapping.setdefault("Transportation|" + _kg_path(CFG.kgraph_v, t), []).append(t)
-            mapping = _with_rollups(mapping, {"Transportation", "Transportation|Road", "Transportation|Rail"})
-            return dim, mapping
-
-        if sector_name == "buildings":
-            for t in labels:
-                path = _kg_path(CFG.kgraph_b, t)
-                mapping.setdefault("Buildings|" + path, []).append(t)
-            mapping = _with_rollups(mapping, {"Buildings", "Buildings|Residential", "Buildings|Commercial"})
-            return dim, mapping
-
     raise KeyError(f"Unsupported placeholder {placeholder!r}")
 
 # ---------------------------------------------------------------------
 # Core IAMC reporting
 # ---------------------------------------------------------------------
-
+EXCLUDED_VARIABLES = {
+    "Product Stock|Buildings",
+}
 # Create IAMC reporting DataFrame from all_output, templates, sector, and model name
 def create_iamc_reporting(
     models: Dict[str, object],   # 
@@ -325,7 +437,7 @@ def create_iamc_reporting(
     outdir: str | None = None,
     debug: bool = False,
 ) -> pd.DataFrame:
-    all_rows: List[Dict[str, object]] = []
+    
 
     outdir = Path(outdir) if outdir else None
     if outdir:
@@ -334,6 +446,7 @@ def create_iamc_reporting(
     dfs = []
     # Iterate over scenarios and templates to extract data
     for scen_label, src_model in models.items():
+        all_rows: List[Dict[str, object]] = []
         # for each template, find family and model var
         for tpl in templates:
             try:
@@ -357,7 +470,7 @@ def create_iamc_reporting(
             tkey = _find_time_key(da)
             rkey = "Region"
             years = _years(da)
-            unit = _unit(da, family, tpl)
+            unit_tpl = _unit(da, family, tpl)
             try:
                 factor = _conv_for(family, tpl)
             except Exception:
@@ -377,16 +490,21 @@ def create_iamc_reporting(
                     f"includes at least one placeholder so rollups/aggregation are applied.\n"
                     f"Template: {tpl!r}"
                 )
-                continue
+
             # in case tags DO EXIST:
             # build placeholder specs (list of dicts with ph, dim, map)
-            ph_specs = [ {"ph": ph, "dim": _map_placeholder(ph, da, sector)[0], "map": _map_placeholder(ph, da, sector)[1]} for ph in ph_list ]
-            combos = list(itertools.product(*[list(ps["map"].keys()) for ps in ph_specs])) 
+            ph_specs = []
+            for ph in ph_list:
+                dim, mp = _map_placeholder(ph, da, sector)
+                ph_specs.append({"ph": ph, "dim": dim, "map": mp})
+            # if any placeholder map is empty, skip this template for this DA
+            if any(len(ps["map"]) == 0 for ps in ph_specs):
+                if debug:
+                    empty = [ps["ph"] for ps in ph_specs if len(ps["map"]) == 0]
+                    print(f"[dbg] skipping tpl={tpl} because empty maps for {empty}")
+                continue
 
-            # debugging output
-            if debug:
-                chk = float(np.asarray(da.sum().values))
-                print(f"[dbg] scen={scen_label} sec={sector} fam={family} sum={chk:.3e}")
+            combos = list(itertools.product(*[list(ps["map"].keys()) for ps in ph_specs])) 
 
             # iterate over regions and placeholder combinations to build rows
             for reg in regions:
@@ -403,8 +521,13 @@ def create_iamc_reporting(
 
                     # build variable name by replacing placeholders in template
                     var = tpl
+                    unit = unit_tpl
                     for ph, label in zip(ph_list, combo):
                         var = var.replace(f"{{{ph}}}", label)
+                        if isinstance(unit, str) and "{" in unit:
+                            unit = unit.replace(f"{{{ph}}}", label)
+                    if var in EXCLUDED_VARIABLES:
+                        continue
                     # build row dict and append to all_rows list 
                     row = {
                         "model": model_name,
@@ -426,8 +549,11 @@ def create_iamc_reporting(
         years_cols = sorted([c for c in df.columns if isinstance(c, int)])
         df = df[fixed + years_cols]
         
+
         if outdir:
-            df.to_csv(outdir / f"{scen_label}_{sector}.csv", index=False)
+            scen_dir = outdir / scen_label
+            scen_dir.mkdir(parents=True, exist_ok=True)
+            df.to_csv(scen_dir / f"{sector}.csv", index=False)
 
         dfs.append(df)
 
@@ -452,7 +578,7 @@ def _eol_source_key_for_template(template: str) -> str:
     if "material losses" in tl:
         return "losses_materials"
     if "scrap" in tl:
-        return "collected_materials"
+        return "sum_outflow"
     raise KeyError(f"Don’t know which EoL key to use for template: {template!r}")
 
 def create_iamc_eol(
@@ -460,29 +586,35 @@ def create_iamc_eol(
     templates: List[str],
     sector: str,
     model_name: str,
-    outdir: str | None = None, 
+    outdir: str | None = None,
 ) -> pd.DataFrame:
-    
-    all_rows: List[Dict[str, object]] = []
-    
-    outdir = Path(outdir)   
-    outdir.mkdir(parents=True, exist_ok=True)
 
-    dfs = [] 
-    
+    outdir_path = Path(outdir) if outdir else None
+    if outdir_path:
+        outdir_path.mkdir(parents=True, exist_ok=True)
+
+    dfs = []
+
     for scen_label, src_model in models.items():
-        eol = getattr(src_model, sector)
+        all_rows: List[Dict[str, object]] = []   # ✅ reset per scenario
+
+        eol = getattr(src_model, sector, None)
+        if eol is None:
+            continue
 
         for tpl in templates:
+            # --- family (optional) ---
             try:
                 family = _family_from_template(tpl)
             except ValueError:
                 family = None
 
+            # --- which source key in `eol` dict ---
             try:
                 src_key = _eol_source_key_for_template(tpl)
             except KeyError:
                 continue
+
             if src_key not in eol:
                 continue
 
@@ -490,36 +622,47 @@ def create_iamc_eol(
             da = da_raw if isinstance(da_raw, xr.DataArray) else da_raw.to_array()
             if hasattr(da, "pint"):
                 da = da.pint.dequantify()
-            tkey = _find_time_key(da)
-            print(tkey)
-            ysel = _years(da)
-            print(ysel)
-            regions = _labels(da, "Region")
-            print(regions)
 
-            unit = _unit(da, family or "", tpl) if family else (da.attrs.get("unit") or "")
+            # ✅ normalize time coord to int so _years() works
+            tkey = _find_time_key(da)
             try:
-                factor = _conv_for(family, tpl) if family else 1.0
+                da = da.assign_coords({tkey: da.coords[tkey].astype(int)})
+            except Exception:
+                pass
+
+            ysel = _years(da)
+            if not ysel:
+                # makes the failure explicit instead of silent empty columns
+                raise RuntimeError(f"EoL: no report years found for tpl={tpl!r}. time coord={da.coords[tkey].values[:5]}...")
+
+            regions = _labels(da, "Region")
+
+            # --- unit + factor ---
+            unit_tpl = _unit(da, family or "", tpl) if family else (da.attrs.get("unit") or "")
+            try:
+                factor = _conv_for(family or "", tpl)  # ✅ attempt even if family missing (falls back to 1.0)
             except Exception:
                 factor = 1.0
 
-            # placeholders
-            ph_list = re.findall(r"\{([^}]+)\}", tpl) # captures every set of strings between curly brackets
+            # --- placeholders (same as you had) ---
+            ph_list = re.findall(r"\{([^}]+)\}", tpl)
+
             ph_specs = []
             if "Engineered Material" in ph_list:
                 dim = "material"
-                mat_map = {CFG.MATERIAL_NAME_MAP.get(str(m), str(m)): [m] for m in _labels(da, dim)}
+                mats = _labels(da, dim)
+                mat_map = {CFG.MATERIAL_NAME_MAP.get(str(m), str(m)): [m] for m in mats}
                 ph_specs.append({"ph": "Engineered Material", "dim": dim, "map": mat_map})
-            if "Demand Sector Disaggregated" in ph_list:
+
+            if "Demand Sector" in ph_list:
                 dim = "Type"
                 types_avail = set(_labels(da, dim))
                 ds_map = {}
-                # include top-level + residential + commercial if available
                 for iamc_label, source_types in CFG.EOL_DEMAND_SECTOR_GROUPS.items():
                     kept = [t for t in source_types if t in types_avail]
                     if kept:
                         ds_map[iamc_label] = kept
-                ph_specs.append({"ph": "Demand Sector Disaggregated", "dim": dim, "map": ds_map})
+                ph_specs.append({"ph": "Demand Sector", "dim": dim, "map": ds_map})
 
             combos = list(itertools.product(*[list(ps["map"].keys()) for ps in ph_specs])) or [()]
 
@@ -530,13 +673,18 @@ def create_iamc_eol(
                         sel[ps["dim"]] = ps["map"][label]
                         if ps["dim"] not in sum_dims:
                             sum_dims.append(ps["dim"])
-                    part = da.sel(sel).sum(sum_dims, keep_attrs=True).sel({tkey: ysel})
 
+                    part = da.sel(sel).sum(sum_dims, keep_attrs=True).sel({tkey: ysel})
                     vec = np.asarray(part.sel({"Region": reg}).values, dtype=float).reshape(-1) * factor
 
                     var = tpl
+                    unit = unit_tpl
+
+                    # ✅ replace placeholders in variable + unit (same logic as create_iamc_reporting)
                     for ps, label in zip(ph_specs, combo):
                         var = var.replace(f"{{{ps['ph']}}}", label)
+                        if isinstance(unit, str) and "{" in unit:
+                            unit = unit.replace(f"{{{ps['ph']}}}", label)
 
                     row = {
                         "model": model_name,
@@ -551,15 +699,33 @@ def create_iamc_eol(
         if not all_rows:
             print(f"No EoL rows produced for {scen_label}.")
             continue
+
         df = pd.DataFrame(all_rows)
         fixed = ["model", "scenario", "region", "variable", "unit"]
         year_cols = sorted([c for c in df.columns if isinstance(c, int)])
         df = df[fixed + year_cols]
 
-        if outdir:
-            df.to_csv(outdir / f"{scen_label}_eol.csv", index=False)
+        # ✅ write csv
+        if outdir_path:
+            scen_dir = outdir_path / scen_label
+            scen_dir.mkdir(parents=True, exist_ok=True)
+            df.to_csv(scen_dir / f"{scen_label}_eol.csv", index=False)
+
         dfs.append(df)
-        return pd.concat(dfs, ignore_index=True)
+
+    if not dfs:
+        raise RuntimeError("No EoL rows produced for any scenario.")
+
+    return pd.concat(dfs, ignore_index=True)
+
+
+def _safe_fname(s: str) -> str:
+    # Replace Windows-illegal filename chars with underscore
+    s = re.sub(r'[<>:"/\\|?*]', "_", s)
+    # Also avoid trailing dots/spaces (Windows doesn't like those either)
+    s = s.rstrip(" .")
+    return s
+
 
 # -------------------------------------------------------------
 #                   Single variable reporting
@@ -567,7 +733,6 @@ def create_iamc_eol(
 
 def export_iamc_csv(
     da: xr.DataArray,
-    out_csv: str | Path,
     *,
     model: str,
     scenario: str,
@@ -575,7 +740,8 @@ def export_iamc_csv(
     unit: str,
     factor: float = 1.0,
     years: np.ndarray | None = None,
-    fill: str = "interp_ffill_bfill",  # "none" | "zero" | "interp_ffill_bfill"
+    fill: str = "interp_ffill_bfill",  # "none" | "zero" | "interp_ffill_bfill",
+    outdir: str | None = None,
 ):
     """
     Export a DataArray to a iamc format:
@@ -584,6 +750,9 @@ def export_iamc_csv(
     Assumes da has a region dim and a time dim only! da must be previously reduced by sum.
     Useful for adding extra variables without having the run the code, or to add variables resulting from post-processing calculations.
     """
+    outdir = Path(outdir) if outdir else None
+    if outdir:
+        outdir.mkdir(parents=True, exist_ok=True)
 
     # --- detect time dim ---
     time_dim = next((d for d in ("Time", "time") if d in da.dims), None)
@@ -652,21 +821,7 @@ def export_iamc_csv(
         if y not in wide.columns:
             wide[y] = np.nan
     wide = wide[["model", "scenario", "region", "variable", "unit", *year_cols]]
-
-    out_csv = Path(out_csv)
-    out_csv.parent.mkdir(parents=True, exist_ok=True)
-    wide.to_csv(out_csv, index=False)
+    if outdir:
+        fname = _safe_fname(f"{variable}_{scenario}.csv")
+        wide.to_csv(outdir / fname, index=False)
     return wide
-
-# -------------------------
-# Example
-# -------------------------
-# wide_df = export_iamc_csv(
-#     da,
-#     f"output/reporting/intermediate/my_variable_{scen_id}.csv",
-#     model="IMAGE 3.4",
-#     scenario="base",
-#     variable="Energy Service|Buildings|Commercial|Floor Space",
-#     unit="m2/yr",
-#     factor=1e-9,  # kg -> Mt,
-# )
