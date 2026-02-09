@@ -103,36 +103,15 @@ UNIT_CONVERSIONS:
   # SCRAP
   # -------------------------------
   Scrap:
-    "Scrap|{Engineered Material}|{Demand Sector Disaggregated}":
+    "Scrap|Iron and Steel|Steel|{Demand Sector}":
+      factor: 1e-9
+      to: "Mt/yr"
+    "Scrap|Non-Ferrous Metals|Aluminum|{Demand Sector}":
       factor: 1e-9
       to: "Mt/yr"
     "Scrap|Iron and Steel|Steel":
       factor: 1e-9
       to: "Mt/yr"
-    "Scrap|Non-ferrous Metals|Aluminum":
-      factor: 1e-9
-      to: "Mt/yr"
-    "Scrap|Iron and Steel|Steel|Transportation":
-      factor: 1e-9
-      to: "Mt/yr"
-    "Scrap|Non-ferrous Metals|Aluminum|Transportation":
-      factor: 1e-9
-      to: "Mt/yr"
-    "Scrap|Iron and Steel|Steel|Buildings":
-      factor: 1e-9
-      to: "Mt/yr"
-    "Scrap|Non-ferrous Metals|Aluminum|Buildings":
-      factor: 1e-9
-      to: "Mt/yr"
-    "Scrap|Iron and Steel|Steel|Buildings|Commercial":
-      factor: 1e-9
-      to: "Mt/yr"
-    "Scrap|Non-ferrous Metals|Aluminum|Buildings|Commercial":
-      factor: 1e-9
-      to: "Mt/yr"
-    "Scrap|Iron and Steel|Steel|Buildings|Residential":
-      factor: 1e-9
-      to: "Mt/yr"
-    "Scrap|Non-ferrous Metals|Aluminum|Buildings|Residential":
+    "Scrap|Non-Ferrous Metals|Aluminum":
       factor: 1e-9
       to: "Mt/yr"

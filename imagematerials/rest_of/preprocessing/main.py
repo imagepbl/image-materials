@@ -84,7 +84,9 @@ def read_gompertz_values(base_directory, scenario: str):
     - The function expects regions to be numeric strings for sorting.
     """
 
-    if scenario in ["SSP2_VLLO_LifeTech", "SSP2_narrow_activity","SSP2_narrow", "SSP2_narrow_slow_close"]:
+    if scenario in ["SSP2_VLLO_LifeTech", "SSP2_narrow_activity","SSP2_narrow", "SSP2_narrow_slow_close", 
+                    "SSP2_narrow_act_26_tax","SSP2_narrow_26_tax", "SSP2_narrow_slow_close_26_tax",
+                    "SSP2_narrow_slow_close_19_tax"]:
         print('Using Gompertz coefficients for resource efficiency measures')
         name = "coefs_gompertz_eff.nc"
     else: 
