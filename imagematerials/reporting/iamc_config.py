@@ -39,16 +39,16 @@ SCENARIO_MAP: Dict[str, str] = {
     "SSP2_close": "close",
     "SSP2_narrow_slow_close": "narrow_slow_close",
 
-    "SSP2_26_tax": "base",
-    "SSP2_narrow__act_26_tax": "narrow_activity",
-    "SSP2_narrow_prod_26_tax": "narrow_product",
-    "SSP2_narrow_26_tax": "narrow",
-    "SSP2_slow_26_tax": "slow",
-    "SSP2_close_26_tax": "close",
-    "SSP2_narrow_slow_close_26_tax": "narrow_slow_close",
+    "SSP2_26_tax": "base_26",
+    "SSP2_narrow_act_26_tax": "narrow_activity_26",
+    "SSP2_narrow_prod_26_tax": "narrow_product_26",
+    "SSP2_narrow_26_tax": "narrow_26",
+    "SSP2_slow_26_tax": "slow_26",
+    "SSP2_close_26_tax": "close_26",
+    "SSP2_narrow_slow_close_26_tax": "narrow_slow_close_26",
 
-    "SSP2_19_tax": "base",
-    "SSP2_narrow_slow_close_19": "narrow_slow_close",
+    "SSP2_19_tax": "base_19",
+    "SSP2_narrow_slow_close_19_tax": "narrow_slow_close_19",
 }
 
 # -----------------------------------------------------------------------------
@@ -115,7 +115,7 @@ IAMC_VAR_SPECS: Dict[str, Dict] = {
         "units_per_template": _load_family_templates("Material Outflow")[1],
     },
     "Scrap": {
-        "model_var": "sum_outflows",
+        "model_var": "sum_outflow",
         "templates": _load_family_templates("Scrap")[0],
         "units_per_template": _load_family_templates("Scrap")[1],
     },
@@ -217,16 +217,22 @@ kgraph_b["Govt+"].synonyms.append("Commercial|Public Buildings")
 
 # Electricity knowledge graph
 #kgraph_e.add(Node("Generation", inherits_from="Electricity"))
-kgraph_e.add(Node("Generation|Nuclear", inherits_from="Electricity"))
-kgraph_e.add(Node("Generation|Solar", inherits_from="Electricity"))
-kgraph_e.add(Node("Generation|Wind", inherits_from="Electricity"))
-kgraph_e.add(Node("Generation|Gas", inherits_from="Electricity"))
-kgraph_e.add(Node("Generation|Coal", inherits_from="Electricity"))
-kgraph_e.add(Node("Generation|Biomass", inherits_from="Electricity"))
-kgraph_e.add(Node("Generation|Hydro", inherits_from="Electricity"))
-kgraph_e.add(Node("Generation|Other", inherits_from="Electricity"))
+kgraph_e.add(Node("Generation|Nuclear", inherits_from="Generation"))
+kgraph_e.add(Node("Generation|Solar", inherits_from="Generation"))
+kgraph_e.add(Node("Generation|Wind", inherits_from="Generation"))
+kgraph_e.add(Node("Generation|Gas", inherits_from="Generation"))
+kgraph_e.add(Node("Generation|Coal", inherits_from="Generation"))
+kgraph_e.add(Node("Generation|Biomass", inherits_from="Generation"))
+kgraph_e.add(Node("Generation|Hydro", inherits_from="Generation"))
+kgraph_e.add(Node("Generation|Other", inherits_from="Generation"))
 kgraph_e.add(Node("Transmission and Distribution", inherits_from="Electricity"))
-#kgraph_e.add(Node("Storage", inherits_from="Electricity"))
+kgraph_e.add(Node("Transmission and Distribution|Lines", inherits_from="Transmission and Distribution"))
+kgraph_e.add(Node("Transmission and Distribution|Transformers", inherits_from="Transmission and Distribution"))
+kgraph_e.add(Node("Transmission and Distribution|Substations", inherits_from="Transmission and Distribution"))
+
+#kgraph_e.add("Storage", inherits_from="Electricity"))
+kgraph_e.add(Node("Storage|PHS", inherits_from="Storage"))
+kgraph_e.add(Node("Storage|Other", inherits_from="Storage"))
 
 # generation types
 for solar_types in ["SPV", "SPVR", "CSP"]:
@@ -238,7 +244,7 @@ for wind_types in ["WON", "WOFF"]:
 for biomass_types in ["BioST","BioCC","BioCS","BioCHP","BioCHPCS" ]:
     kgraph_e[biomass_types].inherits_from = "Generation|Biomass"
 
-for nuclear_types in ["NUC"]:
+for nuclear_types in ["NUC"]:                            
     kgraph_e[nuclear_types].inherits_from = "Generation|Nuclear"
 
 for hydro_types in ["HYD"]:
@@ -250,23 +256,105 @@ for gas_types in ['NGOT',"NGCC","NGCS","NGCHP","NGCHPCS"]:
 for coal_types in ["ClST", "IGCC","ClCS","ClCHP","ClCHPCS"]:
     kgraph_e[coal_types].inherits_from = "Generation|Coal"
 
-for other_types in ["WAVE","OREN","GEO","H2P","OlST", "OlCC","OlCS", "OlCHP","OlCHPCS","GeoCHP", "H2CHP"]:
+for other_types in ["WAVE","OREN","GEO","H2P","OlST", "OlCC","OlCS", "OlCHP","OlCHPCS","GeoCHP", "H2CHP", "FREE12"]:   # added FREE12 here bcs otherwise it crashes and it should be 0 anyway - TODO: improve this...
     kgraph_e[other_types].inherits_from = "Generation|Other"
 
 # transmission and distribution types
-for trans_dist_types in ['HV - Lines - Overhead', 'HV - Lines - Underground','MV - Lines - Overhead', 'MV - Lines - Underground',
- 'LV - Lines - Overhead', 'LV - Lines - Underground',
- # count of tranformers and substations are not yet included in reporting
- #'HV - Transformers', 'HV - Substations', 'MV - Transformers', 'MV - Substations', 
- #'LV - Transformers', 'LV - Substations'
- ]:
-    kgraph_e[trans_dist_types].inherits_from = "Transmission and Distribution"
+for line_types in ['HV - Lines - Overhead', 'HV - Lines - Underground','MV - Lines - Overhead', 'MV - Lines - Underground',
+ 'LV - Lines - Overhead', 'LV - Lines - Underground']:
+    kgraph_e[line_types].inherits_from = "Transmission and Distribution|Lines"
+
+for transformer_types in ['HV - Transformers', 'MV - Transformers', 'LV - Transformers']:
+    kgraph_e[transformer_types].inherits_from = "Transmission and Distribution|Transformers"
+    
+for substation_types in ['HV - Substations', 'MV - Substations','LV - Substations']:
+    kgraph_e[substation_types].inherits_from = "Transmission and Distribution|Substations"
 
 # storage types
-for storage_types in ['PHS','Compressed Air', 'Deep-cycle Lead-Acid', 'Flywheel', 'Hydrogen FC', 'LFP',
- 'LMO', 'LTO', 'Lithium Ceramic', 'Lithium Sulfur', 'Lithium-air', 'NCA', 'NMC',
- 'NiMH', 'Sodium-Sulfur', 'Vanadium Redox' ,'ZEBRA', 'Zinc-Bromide']:
-    kgraph_e[storage_types].inherits_from = "Storage"
+for PHS_type in ['PHS']:
+    kgraph_e[PHS_type].inherits_from = "Storage|PHS"
+
+# for V2G_type in ['V2G']:                                  # remove the hasthag once V2G is included.
+#     kgraph_e[PHS_type].inherits_from = "Storage|V2G"
+
+for mechanical_storage_types in ['Compressed Air', 'Flywheel']:
+    kgraph_e[mechanical_storage_types].inherits_from = "Storage|Other"
+
+for lithium_battery_types in ['LFP', 'LMO', 'LTO', 'Lithium Ceramic', 'Lithium Sulfur', 'Lithium-air', 'NCA', 'NMC']:
+    kgraph_e[lithium_battery_types].inherits_from = "Storage|Other"
+
+# for molten_salt_and_flow_battery_types in []:
+#     kgraph_e[molten_salt_and_flow_battery_types].inherits_from = "Molten Salt and Flow Battery"
+
+for other_types in ['Deep-cycle Lead-Acid','Hydrogen FC', 'NiMH','Sodium-Sulfur', 'Vanadium Redox' ,'ZEBRA', 'Zinc-Bromide']: 
+    kgraph_e[other_types].inherits_from = "Storage|Other"
+
+
+TAG_WHITELISTS ={
+   # =========================
+    # BUILDINGS
+    # =========================
+    "Building Types": [
+        # totals
+        "Residential",
+        "Commercial",
+
+        # residential breakdown
+        "Residential|Detached Houses",
+        "Residential|Semi-Detached Houses",
+        "Residential|Apartments",
+        "Residential|Residential High-Rise",
+        "Residential|Informal",
+
+        # commercial breakdown
+        "Commercial|Retail",
+        "Commercial|Hotels",
+        "Commercial|Offices",
+        "Commercial|Public Buildings",
+        "Commercial|Other",
+    ],
+
+    # =========================
+    # VEHICLES
+    # =========================
+    "Vehicle Types": [
+        # road
+    
+        "Road|Cars",
+        "Road|Buses",
+        "Road|Trucks",
+        "Road|Bicycles",
+
+        # rail
+
+        "Rail|Passenger",
+        "Rail|Cargo",
+
+        # air
+        "Air|Passenger",
+        "Air|Cargo",
+
+        # water
+        "Water|Ships",
+    ],
+   # =========================
+    # ELECTRICITY
+    # =========================
+    "Electricity Types": [
+        "Generation",
+        "Generation|Solar",
+        "Generation|Wind",
+        "Generation|Gas",
+        "Generation|Coal",
+        "Generation|Biomass",
+        "Generation|Hydro",
+        "Generation|Nuclear",
+        "Generation|Other",
+        "Transmission and Distribution",
+        "Storage",
+    ]
+} 
+
 
 # -----------------------------------------------------------------------------
 # Renaming materials
@@ -300,31 +388,6 @@ EOL_DEMAND_SECTOR_GROUPS = {
 }
 
 # -----------------------------------------------------------------------------
-# Routing: requested model variable name → IAMC family
-# -----------------------------------------------------------------------------
-ROUTE_MODELVAR_TO_IAMC: Dict[str, str] = {
-    "inflow_materials": "Final Material Demand",
-    "inflow": "Final Product Demand",
-    "stock_by_cohort": "Product Stock",
-    "outflow_by_cohort": "Stock Retirement",
-    "stock_by_cohort_materials": "Material Stock",
-    "stocks": "Material Stock",
-    "outflow_by_cohort_materials": "Material Outflow",
-    "outflow_materials": "Material Outflow",
-    "losses_materials": "Material Losses",
-    "sum_outflow": "Scrap",
-}
-
-# -----------------------------------------------------------------------------
-# Sector bindings
-# -----------------------------------------------------------------------------
-SECTOR_MODULES: Dict[str, Dict] = {
-    "vehicles":  {"module_attr": "vehicles",  "placeholders": ["Vehicles"]},
-    "buildings": {"module_attr": "buildings", "placeholders": ["Building Types"]},
-    "eol":       {"module_attr": "eol",       "placeholders": []},
-}
-
-# -----------------------------------------------------------------------------
 # list f
 # -----------------------------------------------------------------------------
 __all__ = [
@@ -336,10 +399,6 @@ __all__ = [
     "CORE_DIMS",
     "SCENARIO_MAP",
     "IAMC_VAR_SPECS",
-    "ROUTE_MODELVAR_TO_IAMC",
-    "SECTOR_MODULES",
-    "TAG_DIM_SPECS",
-    "TAG_RENAMES",
     "MATERIAL_NAME_MAP",
-    "validate_config",
+    "TAG_WHITELISTS",
 ]
