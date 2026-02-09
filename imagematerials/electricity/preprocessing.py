@@ -920,7 +920,7 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
 
     # Calculate the fractions of the storage capacity that is provided through pumped hydro-storage, electric vehicles or other storage (larger than 1 means the capacity superseeds the demand for energy storage, in terms of power in MW or enery in MWh) 
     phs_storage_fraction = phs_projections_IMAGE.divide(storage_power.loc[:year_out]).clip(upper=1) # the phs storage fraction deployed to fulfill storage demand, both phs & storage_power here are expressed in MW
-    storage_remaining = storage.loc[:year_out] * (1 - phs_storage_fraction)
+    storage_remaining = storage.loc[:year_out] * (1 - phs_storage_fraction) # asumption here (?): share in MW = share in GHh (not really true, though since both are very high for PHS for early years, this might be okey)
 
     if SENS_ANALYSIS == 'high_stor':
         oth_storage_fraction = 0.5 * storage_remaining 
@@ -941,11 +941,13 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
     oth_storage = oth_storage_fraction * storage.loc[:year_out]
 
     #output for Main text figure 2 (storage reservoir, in MWh for 3 storage types)
-    storage_out_phs = pd.concat([phs_storage], keys=['phs'], names=['type']) 
-    storage_out_evs = pd.concat([evs_storage], keys=['evs'], names=['type']) 
-    storage_out_oth = pd.concat([oth_storage], keys=['oth'], names=['type']) 
-    storage_out = pd.concat([storage_out_phs, storage_out_evs, storage_out_oth])
-    # storage_out.to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test'  / 'storage_by_type_MWh.csv')        # in MWh
+    # storage_out_phs = pd.concat([phs_storage], keys=['phs'], names=['type']) 
+    # storage_out_evs = pd.concat([evs_storage], keys=['evs'], names=['type']) 
+    # storage_out_oth = pd.concat([oth_storage], keys=['oth'], names=['type']) 
+    # storage_out = pd.concat([storage_out_phs, storage_out_evs, storage_out_oth])
+    # storage_out.to_csv(path_base /  'electricity' / 'test'  / 'storage_by_type_MWh.csv')        # in MWh
+    # storage_frac = pd.concat([phs_storage_fraction, evs_storage_fraction, oth_storage_fraction])
+    # storage_frac.to_csv(path_base /  'electricity' / 'test'  / 'storage_by_type_fraction.csv')
 
     # derive inflow & outflow (in MWh) for PHS, for later use in the material calculations 
     PHS_kg_perkWh = 26.8   # kg per kWh storage capacity (as weight addition to existing hydro plants to make them pumped) 
@@ -1075,7 +1077,7 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
     prep_data_phs["stocks"] =           knowledge_graph_region.rebroadcast_xarray(prep_data_phs["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
     prep_data_oth_storage["stocks"] =   knowledge_graph_region.rebroadcast_xarray(prep_data_oth_storage["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
 
-    prep_data_oth_storage["stocks_0"] = prep_data_oth_storage.pop("stocks")
+    prep_data_oth_storage["stocks_non_phs"] = prep_data_oth_storage.pop("stocks") # stocks_0
 
 
     return prep_data_phs, prep_data_oth_storage

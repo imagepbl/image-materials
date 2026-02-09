@@ -22,7 +22,7 @@ class EvBatteryLinkModule(prism.Model):
 
     Attributes
     ----------
-    stocks_0 : xr.DataArray
+    stocks_non_phs : xr.DataArray
         Initial stock of electricity storage by time, region, SuperType. SuperType only has 
         one coordinate "Other storage".
     stock_battery_kWh_v2g : xr.DataArray
@@ -49,10 +49,10 @@ class EvBatteryLinkModule(prism.Model):
     """
 
     # Input data
-    stocks_0:                 xr.DataArray
+    stocks_non_phs:         xr.DataArray
     stock_battery_kWh_v2g:  xr.DataArray
     knowledge_graph_elc:    KnowledgeGraph
-    set_unit_flexible:   prism.VarUnit[UnitFlexibleStock]
+    set_unit_flexible:      prism.VarUnit[UnitFlexibleStock]
     
 
     # Dimensions
@@ -62,7 +62,7 @@ class EvBatteryLinkModule(prism.Model):
     Time:       prism.Coords[TIME]
 
     # Data dependencies
-    input_data: tuple[str] = ("stock_battery_kWh_v2g", "stocks_0", "knowledge_graph_elc", "set_unit_flexible") # input from vehicle stock module
+    input_data: tuple[str] = ("stock_battery_kWh_v2g", "stocks_non_phs", "knowledge_graph_elc", "set_unit_flexible") # input from vehicle stock module
     output_data: tuple[str] = ("stocks",) # a 1-element tuple requires a trailing comma
 
     # Output
@@ -72,7 +72,7 @@ class EvBatteryLinkModule(prism.Model):
         """ Initialize the output stock variable `stocks` for the full timeline.  
 
         The initial values are set to zero with the appropriate units 
-        and coordinates matching `stocks_0`. The variable will be updated 
+        and coordinates matching `stocks_non_phs`. The variable will be updated 
         in `compute_values` during simulation.  
         """
         self.stocks = xr.DataArray(
@@ -80,7 +80,7 @@ class EvBatteryLinkModule(prism.Model):
             dims=("Time", "Region", "SuperType"),
             coords={"Time":     self.Time,
                     "Region":   self.Region,
-                    "SuperType":   self.stocks_0.coords["SuperType"]})
+                    "SuperType":   self.stocks_non_phs.coords["SuperType"]})
         self.stocks = prism.Q_(self.stocks, self.set_unit_flexible)
         
 
@@ -100,7 +100,7 @@ class EvBatteryLinkModule(prism.Model):
         t, dt = time.t, time.dt
 
         stock_ev_storage = self.stock_battery_kWh_v2g.loc[t].sum(["BatteryType","Type"]) # stock_ev_storage has dims (Time, Region)
-        self.stocks.loc[t] = (self.stocks_0.loc[t] - stock_ev_storage).clip(min=prism.Q_(0,self.set_unit_flexible)) # clip: cannot be negative
+        self.stocks.loc[t] = (self.stocks_non_phs.loc[t] - stock_ev_storage).clip(min=prism.Q_(0,self.set_unit_flexible)) # clip: cannot be negative
 
 
 
@@ -215,106 +215,7 @@ class ElectricVehicleBatteries(prism.Model):
         self.stock_battery_kWh_v2g.loc[dict(Time=t, Type=self._types_v2g)]  = (stock_v2g.sel(Time=t).drop_vars("Time") * self.capacity_fraction_v2g).sum(["Cohort"])
         
 
-
-@prism.interface
-class ElectricVehicleBatteries_TV(prism.Model):
-    """ Calculates # batteries, energy capacity and materials per battery type for inflow, stock, outflow
-    in electric vehicles.
-
-
-    Notes
-    -----
-        Assumption: battery lifetime = vehicle lifetime (no explicit battery stock calculation)
-    """
-
-    # Input data
-    weights:             xr.DataArray
-    shares:              xr.DataArray
-    material_fractions:  xr.DataArray
-    energy_density:      xr.DataArray
-    knowledge_graph_vhc: KnowledgeGraph
-    # inflow:              prism.TimeVariable
-    # stock_by_cohort:     xr.DataArray   
-    # outflow_by_cohort:   prism.TimeVariable
-    
-
-    # Dimensions
-    Type:         prism.Coords[STOCK_TYPE]
-    BatteryType:  prism.Coords[BATTERY_TYPE]
-    Region:       prism.Coords[REGION]
-    Cohort:       prism.Coords[COHORT]
-    material:     prism.Coords[MATERIAL_TYPE]
-    Time:         prism.Coords[TIME]
-
-    # Data dependencies
-    input_data: tuple[str] = ("shares", "weights", "material_fractions", "energy_density", "knowledge_graph_vhc",
-                              "stock_by_cohort", "inflow", "outflow_by_cohort") # from vehicle stock module
-    output_data: tuple[str] = ("inflow_battery","stock_battery","outflow_battery",
-                               "inflow_battery_kWh","stock_battery_kWh","outflow_battery_kWh",
-                               "inflow_battery_materials","stock_battery_materials","outflow_battery_materials")
-
-    # Output
-    inflow_battery:            prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, "count"] = prism.export()
-    stock_battery:             prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, COHORT, "count"] = prism.export()
-    outflow_battery:           prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, COHORT, "count"] = prism.export()
-    inflow_battery_kWh:        prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, "kWh"] = prism.export()
-    stock_battery_kWh:         prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, COHORT, "kWh"] = prism.export()
-    outflow_battery_kWh:       prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, COHORT, "kWh"] = prism.export()
-    inflow_battery_materials:  prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, MATERIAL_TYPE, "kg"] = prism.export()
-    stock_battery_materials:   prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, MATERIAL_TYPE, COHORT, "kg"] = prism.export()
-    outflow_battery_materials: prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, MATERIAL_TYPE, COHORT, "kg"] = prism.export()
-
-
-    def compute_initial_values(self, time: prism.Timeline):
-        """
-        """
-
-        pass
-
-        
-
-    def compute_values(self, time: prism.Time, inflow, stock_by_cohort, outflow_by_cohort):
-        """
-        
-        """
-         
-        t, dt = time.t, time.dt
-
-        # drop non-electric vehicles, otherwise not compatible with battery data
-        inflow = inflow.to_array()
-        inflow = inflow.drop_sel(Type=["Bikes", "Freight Planes", "Passenger Planes","Small Ships", "Medium Ships", 
-                                                 "Large Ships", "Very Large Ships", "Inland Ships", "Freight Trains", "Trains", "High Speed Trains"])
-        outflow_by_cohort = outflow_by_cohort.to_array()
-        outflow_by_cohort = outflow_by_cohort.drop_sel(Type=["Bikes", "Freight Planes", "Passenger Planes","Small Ships", "Medium Ships", 
-                                                 "Large Ships", "Very Large Ships", "Inland Ships", "Freight Trains", "Trains", "High Speed Trains"])
-        stock_by_cohort = stock_by_cohort.drop_sel(Type=["Bikes", "Freight Planes", "Passenger Planes","Small Ships", "Medium Ships", 
-                                                 "Large Ships", "Very Large Ships", "Inland Ships", "Freight Trains", "Trains", "High Speed Trains"])
-
-
-        # 1. Calculate batteries inflow, stock, outflow ("count")
-        self.inflow_battery[t]  = inflow.loc[t] * self.shares.sel(Cohort = t).drop_vars("Cohort")
-        self.stock_battery[t]   = (stock_by_cohort.loc[t] * self.shares) #.sum(["Cohort","battery"])
-        self.outflow_battery[t] = (outflow_by_cohort.loc[t] * self.shares)
-
-        # 2. Intermediate variable: battery mass inflow, stock, outflow (kg)
-        inflow_battery_kg   = self.inflow_battery[t]  * self.weights.sel(Cohort = t).drop_vars("Cohort")
-        stock_battery_kg    = self.stock_battery[t]  * self.weights
-        outflow_battery_kg  = self.outflow_battery[t]  * self.weights
-
-        # 3. Calculate battery materials (copper, ..) inflow, stock, outflow (kg)
-        self.inflow_battery_materials[t]  = (inflow_battery_kg * self.material_fractions.sel(Cohort = t).drop_vars("Cohort"))
-        self.stock_battery_materials[t]   = (stock_battery_kg * self.material_fractions)
-        self.outflow_battery_materials[t] = (outflow_battery_kg * self.material_fractions)
-
-        # 4. Calculate battery energy capacity inflow, stock, outflow (kWh)
-        self.inflow_battery_kWh[t]  = inflow_battery_kg / self.energy_density.sel(Cohort = t).drop_vars("Cohort")
-        self.stock_battery_kWh[t]   = stock_battery_kg / self.energy_density
-        self.outflow_battery_kWh[t] = outflow_battery_kg / self.energy_density
-
-
-
-
-
+# OLD VERSION:
 @prism.interface
 class BatteryMaterials(prism.Model):
     """ Module to calculate material use for vehicle batteries.
