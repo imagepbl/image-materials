@@ -211,8 +211,8 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
     china = ['China (Estimated)', 'Gulf Cooperation Council']
 
     # will be fitted to global curve or according to IMAGE Mat with some additions
-    rest = ['Estimated Unreported to IAI', 
-    ]
+    # rest = ['Estimated Unreported to IAI'] # not necessary, are in low
+    exclude = ['class_ 6', 'class_ 8', 'class_ 10', 'class_ 26'] 
 
     aluminium_regions = {
     'all_regions' : all_regions,
@@ -224,7 +224,6 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
     'japan' : japan,
     'oceania' : oceania,
     'south_america' : south_america,
-    'rest' : rest
     }
     
     aluminium.data_grouped_regions(regions_grouping = aluminium_regions) 
@@ -274,14 +273,7 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
     aluminium.get_X_max_scaling_factor(regions_dict=IAI_TO_IMAGE_CLASSES, 
                                        alu_regions=aluminium_regions)
 
-    aluminium.assign_fit_to_groups_not_fitted(IAI_TO_IMAGE_CLASSES.get("Estimated Unreported to IAI"), 
-                                        assign_model='low', 
-                                        model_nr=1, 
-                                        overwrite_existing=True)   
-
-    
-    aluminium.remove_regions_with_no_good_fit_from_region_model_match(['class_ 6', 'class_ 8', 
-                                                                       'class_ 10', 'class_ 26'])
+    aluminium.remove_regions_with_no_good_fit_from_region_model_match(exclude)
 
     return aluminium
 
