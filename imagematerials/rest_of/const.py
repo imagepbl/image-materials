@@ -186,7 +186,7 @@ IAI_TO_IMAGE_CLASSES = {
         'class_ 26'  # Rest S.Africa
     ],
     'Asia (ex China)': [
-        'class_ 17',  # M.East
+        # 'class_ 17',  # M.East
         'class_ 18',  # India
         'class_ 19',  # Korea
         'class_ 21',  # SE.Asia
@@ -639,7 +639,7 @@ sand_in_glass_conversion = 0.7
 
 R5_mapping = {
     "OECD & EU" : ["1", "12", "23", "24", "13", "2", "11"],
-    "Reforming Economies" : ["16", "15", "14"],
+    "Eastern Europe and Central Asia" : ["16", "15", "14"],
     "Asia" : ["20", "18", "22", "19", "25", "21"],
     "Middle East & Africa" : ["9", "17", "7", "26", "10", "8"],
     "Latin America" : ["5", "3", "4", "6"]
