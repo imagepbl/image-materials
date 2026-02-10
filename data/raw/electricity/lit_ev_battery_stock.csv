@@ -1,0 +1,5 @@
+Time,source,scenario,type_data,unit,Region,Technology,value
+2020,Deetman_2021,SSP2_BL,stock,kg,World,all_modes,8000000000
+2030,Deetman_2021,SSP2_BL,stock,kg,World,all_modes,18000000000
+2040,Deetman_2021,SSP2_BL,stock,kg,World,all_modes,35000000000
+2050,Deetman_2021,SSP2_BL,stock,kg,World,all_modes,66000000000
