@@ -121,13 +121,13 @@ def limestone_projection(scenario: str, path_input_data, path_input_data_image):
     group_1 = ['class_ 1']
     group_2 = ['class_ 2']
     group_3 = [ 'class_ 7', 'class_ 17', 
-            'class_ 24', 'class_ 26']
+            'class_ 24', 'class_ 26', 
+            'class_ 3', 'class_ 5', 'class_ 14', 'class_ 15']
     group_4 = ['class_ 11', 'class_ 12', 'class_ 21'] 
     group_5 = ['class_ 19', 'class_ 23']
     group_6 = ['class_ 4', 'class_ 6', 'class_ 22']
-    group_7 = ['class_ 3', 'class_ 5', 'class_ 14', 'class_ 15']
-    group_8 = ['class_ 20']
-    group_9 = ['class_ 18']
+    group_7 = ['class_ 20']
+    group_8 = ['class_ 18']
 
     scattered = ['class_ 10', 'class_ 13', 'class_ 16'] # get global fit assigned
     low = ['class_ 8', 'class_ 9', 'class_ 25', 'class_ 26'] # assign lowest fit
@@ -142,7 +142,6 @@ def limestone_projection(scenario: str, path_input_data, path_input_data_image):
                         'group_6': group_6,
                         'group_7': group_7,
                         'group_8': group_8,
-                        'group_9': group_9,
                         }
 
 
@@ -160,8 +159,7 @@ def limestone_projection(scenario: str, path_input_data, path_input_data_image):
         'group_5': 'gompertz model',
         'group_6': 'gompertz model',
         'group_7': 'gompertz model',
-        'group_8': 'gompertz model',
-        'group_9': 'gompertz model'
+        'group_8': 'gompertz model'
     }
 
     bounds = {
@@ -173,8 +171,7 @@ def limestone_projection(scenario: str, path_input_data, path_input_data_image):
         'group_5': ([0, 0, 0], [15, 20, 100]),
         'group_6': ([0, 0, 0], [15, 20, 100]),
         'group_7': ([0, 0, 0], [15, 20, 100]),
-        'group_8': ([0, 0, 0], [15, 20, 100]),
-        'group_9': ([0, 0, 0], [15, 10, 100]),
+        'group_8': ([0, 0, 0], [15, 20, 100])
     }
 
     limestone.get_X_max_scaling_factor()
