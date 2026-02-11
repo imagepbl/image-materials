@@ -1,3 +1,4 @@
+#%%
 import pandas as pd
 import numpy as np
 import os
@@ -105,7 +106,7 @@ storage_lifetime = pd.read_csv(path_external_data_standard / 'storage_lifetime.c
 kilometrage = pd.read_csv(path_external_data_scenario / 'kilometrage.csv', index_col='t') #annual car mileage in kms/yr, based  mostly  on  Pauliuk  et  al.  (2012a)
 
 # material compositions (storage) in wt%
-storage_materials = pd.read_csv(path_external_data_standard / 'storage_materials_dynamic.csv',index_col=[0,1]).transpose()  # wt% of total battery weight for various materials, total battery weight is given by the density file above
+storage_materials = pd.read_csv(path_external_data_standard / 'storage_materials_dynamic.csv',index_col=[0,1], usecols=lambda col: col != "unit").transpose()  # wt% of total battery weight for various materials, total battery weight is given by the density file above
 
 # Hydro-dam power capacity (also MW) within 5 regions reported by the IHA (international Hydropwer Association)
 phs_projections = pd.read_csv(path_external_data_standard / 'PHS.csv', index_col='t')   # pumped hydro storage capacity (MW)
@@ -118,7 +119,8 @@ battery_weights = pd.read_csv(path_external_data_standard / "battery_weights_kg.
 
 # read TIMER installed storage capacity (MWh, reservoir)
 storage = read_mym_df(path_image_output.joinpath("StorResTot.out"))   #storage capacity in MWh (reservoir, so energy capacity, not power capacity, the latter is used later on in the pumped hydro storage calculations)
-    
+storage_0 = read_mym_df(path_image_output.joinpath("StorResTot.out"))   #storage capacity in MWh (reservoir, so energy capacity, not power capacity, the latter is used later on in the pumped hydro storage calculations)
+ 
 #storage capacity in MW (power capacity), to compare it to Pumped hydro storage projections (also given in MW, power capacity)
 storage_power = read_mym_df(path_image_output / 'StorCapTot.out')  
 
@@ -334,6 +336,76 @@ for year in range(YEAR_FIRST_GRID,YEAR_START):
 storage_remaining = storage_remaining.sort_index(axis=0)
 
 
+
+#%% PLOTS TEST ###################################################################################
+
+
+path_comparison_data = Path(path_base, "data", "raw", "electricity")
+df_power_s =    pd.read_csv(Path(path_comparison_data,"lit_grid_storage_stock_power_GW.csv"), index_col = [0])
+df_energy_s =   pd.read_csv(Path(path_comparison_data,"lit_grid_storage_stock_energy_GWh.csv"), index_col = [0])
+
+
+# PHS Power (GW) --------------------------------------------------
+df_sel = df_power_s[(df_power_s["technology"] == "PHS")]
+phs_projections_0 = pd.read_csv(path_external_data_standard / 'PHS.csv', index_col='t') 
+phs_projections_0["global"] = phs_projections_0.sum(axis=1)/1000
+phs_projections["global"] = phs_projections.sum(axis=1)/1000
+phs_projections_IMAGE["global"] = phs_projections_IMAGE.sum(axis=1)/1000
+storage_power["global"] = storage_power.sum(axis=1)/1000
+
+
+fig, ax = plt.subplots(figsize=(10,6))
+# ax.plot(phs_projections_0.index, phs_projections_0["global"], label="PHS Projections (IHA)", color='blue')
+ax.scatter(phs_projections.index, phs_projections["global"], label="IHA (used in model)", color='purple', s=20)
+ax.plot(phs_projections_IMAGE.index, phs_projections_IMAGE["global"], label="IMAGE-Materials", color='orange', linestyle ='--')
+ax.plot(storage_power.index, storage_power["global"], label="SSP2_M_CP TIMER StorCapTot", color='black')
+for row in range(len(df_sel)):
+    src = df_sel["source"].iloc[row]
+    scen = df_sel["scenario"].iloc[row]
+    plt.scatter(df_sel.index[row], df_sel["value"].iloc[row], label=f"{src} – {scen}", linewidth=1)
+
+ax.hlines(y=0, xmin=ax.get_xlim()[0], xmax=ax.get_xlim()[1],color='grey', linestyle=':', alpha=0.6) 
+ax.set_xlim(2000,2050)
+ax.set_ylim(-200,4000)
+ax.set_xlabel("Year")
+ax.set_ylabel("PHS Capacity (GW)")
+ax.set_title("PHS Power Capacity (GW)")
+ax.grid(alpha=0.3)
+ax.legend()
+
+
+# PHS Energy (GWh) --------------------------------------------------
+df_sel = df_energy_s[(df_energy_s["technology"] == "PHS")]
+df_sel_total = df_energy_s[(df_energy_s["category"] == "total")]
+phs_storage["global"] = phs_storage.sum(axis=1)/1000 # IMAGE-Materials
+storage["global"] = storage.sum(axis=1)/1000 # TIMER
+
+
+fig, ax = plt.subplots(figsize=(10,6))
+# ax.plot(phs_projections_0.index, phs_projections_0["global"], label="PHS Projections (IHA)", color='blue')
+# ax.scatter(phs_projections.index, phs_projections["global"], label="IHA (used in model)", color='purple', s=20)
+ax.plot(phs_storage.index, phs_storage["global"], label="IMAGE-Materials PHS", color='orange', linestyle ='--')
+ax.plot(storage.index, storage["global"], label="SSP2_M_CP TIMER StorResTot", color='black')
+for row in range(len(df_sel)):
+    src = df_sel["source"].iloc[row]
+    scen = df_sel["scenario"].iloc[row]
+    plt.scatter(df_sel.index[row], df_sel["value"].iloc[row], label=f"{src} – {scen}", linewidth=1)
+for row in range(len(df_sel_total)):
+    src = df_sel_total["source"].iloc[row]
+    scen = df_sel_total["scenario"].iloc[row]
+    plt.scatter(df_sel_total.index[row], df_sel_total["value"].iloc[row], label=f"{src} – {scen} (total storage)", linewidth=1, marker='x')
+
+ax.set_xlim(2000,2100)
+ax.set_ylim(-200,55000)
+ax.set_xlabel("Year")
+ax.set_ylabel("PHS Capacity (GWh)")
+ax.set_title("PHS Energy Capacity (GWh)")
+ax.grid(alpha=0.3)
+ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.1), ncol=3, fontsize=12, frameon=False)
+# ax.legend()
+
+
+
 # THIS INTO AdjustElectricityStocks MODEL? ------------------------------------------------
 # if SENS_ANALYSIS == 'high_stor':
 #     oth_storage_fraction = 0.5 * storage_remaining 
@@ -488,3 +560,27 @@ prep_data_oth_storage["stocks"] = prism.Q_(prep_data_oth_storage["stocks"], "MWh
 prep_data_oth_storage["material_intensities"] = prism.Q_(prep_data_oth_storage["material_intensities"], "kg/kWh")
 prep_data_oth_storage["shares"] = prism.Q_(prep_data_oth_storage["shares"], "share")
 prep_data_oth_storage["set_unit_flexible"] = prism.U_(prep_data_oth_storage["stocks"]) # prism.U_ gives the unit back
+
+
+##########################################################
+#%% Plots check
+
+stor2 = storage_0/1000 # MWh->GWh
+stor2["total"] = stor2.sum(axis=1)
+
+storage_timer = storage/1000 # MWh->GWh
+storage_timer["total"] = storage_timer.sum(axis=1)
+resstor = prep_data_oth_storage["stocks"].sum(["Region", "SuperType"]).pint.to("GWh")
+phs = prep_data_phs["stocks"].sum(["Region", "Type"]).pint.to("GWh")
+
+fig, ax = plt.subplots(figsize=(8,6))
+ax.plot(resstor["Time"], resstor, label="Res. storage", c="darkorange")
+ax.plot(phs["Time"], phs, label="PHS", c="purple")
+ax.plot(storage_timer.index, storage_timer["total"], linewidth=1.5, c="black", label="TIMER")
+ax.plot(stor2.index, stor2["total"], linewidth=1.5, c="red", label="TIMER - right after read in")
+
+ax.set_xlabel("Time", fontsize=14)
+ax.set_ylabel(f"Storage (GWh)", fontsize=14)
+ax.set_title("Storage plotted in preprocessing", fontweight="bold")
+ax.legend()
+plt.tight_layout()

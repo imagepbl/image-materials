@@ -17,6 +17,6 @@ time,source,scenario,type_data,unit,region,category,technology,sub_technology,va
 2050,Deetman_2021,SSP2_2D,stock,GWh,World,grid_scale_storage,PHS,,600
 2050,Deetman_2021,SSP2_2D,stock,GWh,World,grid_scale_storage,battery,,600
 2050,Deetman_2021,SSP2_2D,stock,GWh,World,v2g,battery,,250
-2020,IEA,historic,stock,GWh,World,grid_scale_storage,PHS,,8500
+2040,IEA,SDS,stock,GWh,World,total,,,10000
 2100,Blakers_et_al,potential,stock,GWh,World,grid_scale_storage,PHS,,23000000
 

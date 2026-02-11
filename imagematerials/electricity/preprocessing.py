@@ -922,23 +922,27 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
     phs_storage_fraction = phs_projections_IMAGE.divide(storage_power.loc[:year_out]).clip(upper=1) # the phs storage fraction deployed to fulfill storage demand, both phs & storage_power here are expressed in MW
     storage_remaining = storage.loc[:year_out] * (1 - phs_storage_fraction) # asumption here (?): share in MW = share in GHh (not really true, though since both are very high for PHS for early years, this might be okey)
 
-    if SENS_ANALYSIS == 'high_stor':
-        oth_storage_fraction = 0.5 * storage_remaining 
-        oth_storage_fraction += ((storage_remaining * 0.5) - storage_vehicles).clip(lower=0)    
-        oth_storage_fraction = oth_storage_fraction.divide(storage).where(oth_storage_fraction > 0, 0).clip(lower=0) 
-        evs_storage_fraction = 1 - (phs_storage_fraction + oth_storage_fraction)     # electric vehicle storage (BEV + PHEV) capacity and total storage demand are expressed as MWh
-    else: 
-        oth_storage_fraction = (storage_remaining - storage_vehicles).clip(lower=0)    
-        oth_storage_fraction = oth_storage_fraction.divide(storage.loc[:year_out]).where(oth_storage_fraction > 0, 0).clip(lower=0)      
-        evs_storage_fraction = 1 - (phs_storage_fraction + oth_storage_fraction)     # electric vehicle storage (BEV + PHEV) capacity and total storage demand are expressed as MWh
-    
-    checksum = phs_storage_fraction + evs_storage_fraction + oth_storage_fraction   # should be 1 for all fields
+    phs_storage = storage.loc[:year_out] * phs_storage_fraction
+    oth_storage = storage_remaining 
 
-    # absolute storage capacity (MWh)
-    phs_storage_theoretical = phs_projections_IMAGE.divide(storage_power) * storage.loc[:year_out] # ??? theoretically available PHS storage (MWh; fraction * total) only used in the graphs that show surplus capacity
-    phs_storage = phs_storage_fraction * storage.loc[:year_out]
-    evs_storage = evs_storage_fraction * storage.loc[:year_out]
-    oth_storage = oth_storage_fraction * storage.loc[:year_out]
+
+    # if SENS_ANALYSIS == 'high_stor':
+    #     oth_storage_fraction = 0.5 * storage_remaining 
+    #     oth_storage_fraction += ((storage_remaining * 0.5) - storage_vehicles).clip(lower=0)    
+    #     oth_storage_fraction = oth_storage_fraction.divide(storage).where(oth_storage_fraction > 0, 0).clip(lower=0) 
+    #     evs_storage_fraction = 1 - (phs_storage_fraction + oth_storage_fraction)     # electric vehicle storage (BEV + PHEV) capacity and total storage demand are expressed as MWh
+    # else: 
+    #     oth_storage_fraction = (storage_remaining - storage_vehicles).clip(lower=0)    
+    #     oth_storage_fraction = oth_storage_fraction.divide(storage.loc[:year_out]).where(oth_storage_fraction > 0, 0).clip(lower=0)      
+    #     evs_storage_fraction = 1 - (phs_storage_fraction + oth_storage_fraction)     # electric vehicle storage (BEV + PHEV) capacity and total storage demand are expressed as MWh
+    
+    # checksum = phs_storage_fraction + evs_storage_fraction + oth_storage_fraction   # should be 1 for all fields
+
+    # # absolute storage capacity (MWh)
+    # phs_storage_theoretical = phs_projections_IMAGE.divide(storage_power) * storage.loc[:year_out] # ??? theoretically available PHS storage (MWh; fraction * total) only used in the graphs that show surplus capacity
+    # phs_storage = phs_storage_fraction * storage.loc[:year_out]
+    # evs_storage = evs_storage_fraction * storage.loc[:year_out]
+    # oth_storage = oth_storage_fraction * storage.loc[:year_out]
 
     #output for Main text figure 2 (storage reservoir, in MWh for 3 storage types)
     # storage_out_phs = pd.concat([phs_storage], keys=['phs'], names=['type']) 
