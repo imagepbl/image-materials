@@ -43,6 +43,7 @@ documentation = "https://github.com/imagepbl/image-materials"
 
 [project.optional-dependencies]
 test = [
+    "Cython"
     "pylint",
     "pytest",
     "pytest-cov",
