@@ -43,7 +43,6 @@ documentation = "https://github.com/imagepbl/image-materials"
 
 [project.optional-dependencies]
 test = [
-    "h5py>=3.10",
     "pylint",
     "pytest",
     "pytest-cov",
