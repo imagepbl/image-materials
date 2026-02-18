@@ -43,7 +43,6 @@ documentation = "https://github.com/imagepbl/image-materials"
 
 [project.optional-dependencies]
 test = [
-    "Cython"
     "pylint",
     "pytest",
     "pytest-cov",
@@ -51,7 +50,8 @@ test = [
     "mypy",
     "types-tqdm",
     "ruff"
-]
+    ]
+
 docs = [
     "sphinx<8", "sphinx-rtd-theme", "sphinxcontrib-napoleon",
     "sphinx-autodoc-typehints", "sphinx_inline_tabs", "sphinx_copybutton",
