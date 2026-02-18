@@ -23,16 +23,15 @@ classifiers = [
 ]
 
 dependencies = [
-    "prism>=0.2",
+    "prism>=0.7.8",
     "pandas<3.0",
     "xarray",
     "netCDF4",
     "pint",
-    "pandas",
     "numpy",
     "scipy",
     "scikit-learn",
-    "pint-xarray@git+https://github.com/xarray-contrib/pint-xarray@20a9301b0dac02bf16d4c883c68c2eb9231e68b9",
+    "pint-xarray",
     "matplotlib"
 ]
 

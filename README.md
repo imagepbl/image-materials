@@ -15,29 +15,20 @@ Please refer to the [Default way of setting up your environment within IMAGE](do
 ### Prerequisites
 
 General dependencies are listed in the pyproject.toml file and will be installed automatically when you install the image-materials package.
-For developers: to install additional dependencies for documentation and testing, run
+Additionally you need to install 2 packages of the IMAGE-Framework (pym and prism) that are not published yet. 
+**Note:** therefore, you need to have access to the IMAGEPBL GitHub repository
+
+For **pym** and **prism** install it using:
+
+```bash
+pip install git+https://github.com/imagepbl/pym
+pip install git+https://github.com/imagepbl/prism
+```
+
+Then install the other packages using:
 
 ```bash
 pip install -e ".[all]"
-```
-after you installed the package.
-
-For **pint-xarray**, install it using:
-
-```bash
-pip install git+https://github.com/xarray-contrib/pint-xarray
-```
-
-Additionally, install **pym** and **prism** in the same environment from the IMAGEPBL GitHub repository:
-1. Clone the repository
-```bash
-git clone https://github.com/imagepbl/pym.git
-git clone https://github.com/imagepbl/prism.git
-```
-2. Install the packages
-```bash
-pip install ./pym
-pip install ./prism
 ```
 
 ### Installing image-materials
