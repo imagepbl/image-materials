@@ -53,14 +53,18 @@ jobs:
           ssh-key: ${{ secrets.PRISM_DEPLOY_PRIVATE_KEY }}
 
       - name: Install prism without isolation
-        run: pip install --no-build-isolation ./prism
-       
+        run: pip install ./prism
+
       - name: Checkout imagematerials
         uses: actions/checkout@v3
 
       - name: Install imagematerials
         run: pip install -e ".[all]"
 
+      - name: Restore setuptools
+        run: python -m pip install --upgrade setuptools
+
       - name: Run tests
         run: pytest tests
+      
 
