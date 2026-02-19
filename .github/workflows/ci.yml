@@ -29,7 +29,7 @@ jobs:
         run: |
           python -m pip install -U pip setuptools wheel
           pip config set global.only-binary :all:
-      
+
       - name: Checkout imagematerials
         uses: actions/checkout@v3
 
@@ -51,6 +51,9 @@ jobs:
           ref: ${{ env.PRISM_VERSION }}
           path: prism
           ssh-key: ${{ secrets.PRISM_DEPLOY_PRIVATE_KEY }}
+
+      - name: Ensure setuptools for runtime
+        run: pip install --upgrade setuptools
 
       - name: Install prism
         run: pip install ./prism
