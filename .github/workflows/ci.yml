@@ -58,7 +58,7 @@ jobs:
         run: pip install cython numpy
 
       - name: Install imagematerials
-        run: pip install imagematerials[test,docs]
+        run: pip install ."[test,docs]"
 
       - name: Run tests
         run: pytest tests
