@@ -52,9 +52,9 @@ jobs:
           path: prism
           ssh-key: ${{ secrets.PRISM_DEPLOY_PRIVATE_KEY }}
 
-      - name: Install prism
-        run: pip install ./prism
-
+      - name: Install prism without isolation
+        run: pip install --no-build-isolation ./prism
+       
       - name: Checkout imagematerials
         uses: actions/checkout@v3
 
