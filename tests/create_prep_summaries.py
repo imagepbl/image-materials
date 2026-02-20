@@ -8,15 +8,17 @@ from imagematerials.util import (
     summarize_prep_data
 )
 
+test_scen = "SSP2_M_CP"
+
 if __name__ == "__main__":
     # Vehicles summary
-    vhc_sector = get_preprocessing_data("vehicles", Path("data", "raw"))
+    vhc_sector = get_preprocessing_data("vehicles", Path("data", "raw", "image"), test_scen)
     summary_vhc = summarize_prep_data(vhc_sector.prep_data)
     with open(Path("tests", "data", "vehicles_summary.json"), "w", encoding="utf8") as handle:
         json.dump(summary_vhc, handle)
 
     # Buildings summary
-    bld_sector = get_preprocessing_data("buildings", Path("data", "raw"))
+    bld_sector = get_preprocessing_data("buildings", Path("data", "raw", "image"), test_scen)
     summary_bld = summarize_prep_data(bld_sector.prep_data)
     with open(Path("tests", "data", "buildings_summary.json"), "w", encoding="utf8") as handle:
         json.dump(summary_bld, handle)
@@ -25,7 +27,7 @@ if __name__ == "__main__":
     VARIANT = "VLHO"
     SCEN = "SSP2"
     scen_folder = SCEN + "_" + VARIANT
-    climate_policy_scenario_dir = Path("data", "raw", "image", scen_folder)
+    climate_policy_scenario_dir = Path("data", "raw", "image", test_scen)
 
     elc_sector = get_preprocessing_data("electricity", base_dir=Path("data", "raw"),
                                         climate_policy_scenario_dir=climate_policy_scenario_dir,
