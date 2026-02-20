@@ -225,13 +225,13 @@ class ResourceModel():
                     # assign fit
                     self.region_model_match[region] = self.model_groups[assign_model][model_nr]
                     print(self.resource, assign_model, "assigned to", region)
-                    
-            # check if region is in self.region_model_match
-                if region in self.region_model_match and self.region_model_match[region] is not None:
-                    pass
                 else:
-                    # assign fit 
-                    self.region_model_match[region] = self.model_groups[assign_model][model_nr]
+                # check if region is in self.region_model_match
+                    if region in self.region_model_match and self.region_model_match[region] is not None:
+                        pass
+                    else:
+                        # assign fit 
+                        self.region_model_match[region] = self.model_groups[assign_model][model_nr]
                     print(self.resource, assign_model, "assigned to", region)
 
 
