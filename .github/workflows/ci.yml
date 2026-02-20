@@ -9,7 +9,7 @@ on:
       - development
 
 env:
-  PYM_VERSION: v0.3.2
+  PYM_VERSION: v0.3.4
   PRISM_VERSION: v0.7.8
 
 permissions:
