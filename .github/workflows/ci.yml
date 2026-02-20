@@ -25,11 +25,14 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Setup base tools
+      - name: Install system deps
         run: |
-          python -m pip install -U pip wheel
-          python -m pip install --no-binary=setuptools setuptools
-          pip install --only-binary=h5py h5py
+          sudo apt-get update
+          sudo apt-get install -y libhdf5-dev pkg-config
+
+      - name: Setup Python
+        run: |
+          python -m pip install -U pip setuptools wheel
       
       - name: Checkout imagematerials
         uses: actions/checkout@v3
