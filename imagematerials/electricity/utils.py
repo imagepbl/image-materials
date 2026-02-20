@@ -635,7 +635,7 @@ def calculate_storage_market_shares(
 
     Returns
     -------
-    xr.DataArray
+    storage_market_share: xr.DataArray
         Market shares of storage technologies over time, indexed by year
         (``Cohort``) and technology type.
 

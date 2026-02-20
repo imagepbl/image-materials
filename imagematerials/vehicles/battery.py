@@ -256,8 +256,8 @@ class ElectricVehicleBatteriesWeights(prism.Model):
     stock_battery_kWh:         prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, COHORT, "kWh"] = prism.export()
     outflow_battery_kWh:       prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, COHORT, "kWh"] = prism.export()
     inflow_battery_kg:         prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, "kg"] = prism.export()
-    stock_battery_kg:          prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, COHORT, "kg"] = prism.export()
-    outflow_battery_kg:        prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, COHORT, "kg"] = prism.export()
+    stock_battery_kg:          prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, "kg"] = prism.export()
+    outflow_battery_kg:        prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, "kg"] = prism.export()
     inflow_battery_materials:  prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, MATERIAL_TYPE, "kg"] = prism.export()
     stock_battery_materials:   prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, MATERIAL_TYPE, "kg"] = prism.export() # COHORT,
     outflow_battery_materials: prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, MATERIAL_TYPE, "kg"] = prism.export() # COHORT,
