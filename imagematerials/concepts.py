@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass, field
-from typing import Sequence, Union
 from pathlib import Path
+from typing import Sequence, Union
 
 import prism
 import xarray as xr
