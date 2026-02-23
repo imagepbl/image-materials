@@ -1,18 +1,29 @@
 import json
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Sequence, Union
+from pathlib import Path
 
-import xarray as xr
 import prism
+import xarray as xr
 
 
 @dataclass
 class Node():
+    """Node for one concept in the knowledge graph.
+
+    Raises
+    ------
+    ValueError
+        When the name is the same as one of the synonyms or if the node inherits from itself.
+
+    """
+
     name: str
     synonyms: list[str] = field(default_factory=list)
     inherits_from: list[str] = field(default_factory=list)
 
     def __post_init__(self):
+        """Do some post init validation checks."""
         if self.inherits_from is None:
             self.inherits_from = []
         elif isinstance(self.inherits_from, str):
@@ -28,7 +39,27 @@ class Node():
             except KeyError:
                 pass
 
-    def match_coords(self, input_coords):
+    def match_coords(self, input_coords: Union[list[str], str]):
+        """Find the node inside a list of coordinates.
+
+        When the coordinates contain a synonym, that synonym is returned instead of the
+        main name of the node.
+
+        Parameters
+        ----------
+        input_coords
+            List of coordinates to find the node in.
+
+        Returns
+        -------
+            Name or synonym of the node that is in the input list of coordinates.
+
+        Raises
+        ------
+        KeyError
+            If the name or synonyms are not present in the input list of coordinates.
+
+        """
         if isinstance(input_coords, str):
             input_coords = [input_coords]
         name_list = [self.name] + self.synonyms
@@ -39,14 +70,68 @@ class Node():
                 return name
 
     def to_dict(self) -> str:
+        """Serizalize the node to a dictionary.
+
+        Returns
+        -------
+            A dictionary with the name synonyms and relationships to other concepts.
+
+        """
         return {"name": self.name, "synonyms": self.synonyms,
-                           "inherits_from": self.inherits_from}
+                "inherits_from": self.inherits_from}
+
     @classmethod
-    def from_dict(cls, node_dict):
+    def from_dict(cls, node_dict: dict):
+        """Create a node from a dictionary.
+
+        Used to deserialize complete knowledge graphs.
+
+        Parameters
+        ----------
+        node_dict
+            Dictionary containing the name, synonyms and inheritance properties of the node.
+
+        Returns
+        -------
+            A newly created node.
+
+        """
         return cls(**node_dict)
 
 class KnowledgeGraph():
+    """Contains concepts and the relations between those concepts.
+
+    Concepts are for example: vehicle, car, BEV car. The relationships between concepts are
+    mostly the "is a" type of relations. For example a car is a vehicle would be denoted by
+    the "inherits_from='vehicle'" attribute. Note that concepts can inherit from multiple sources.
+    So, BEV could inherit from car and it can also inherit from has_battery for example.
+
+    One of the goals of the knowledge graph is to facilitate easier computation when concept
+    synonyms or concept inheritance is used inside of the data. For example, say that you have data
+    for the average lifespan of cars, but not specifically for BEV cars. Then you can use the
+    knowledge graph to use the lifespan of cars for all cars that do not have more specific data
+    available. This feature is written for xarray DataArrays.
+
+    The knowledge graph class is built progressively, so the order in which the nodes are added is
+    important. You should add the root nodes (most basic concept such as "vehicle") first and then
+    more detailed concepts. Note that you can't create cycles of A -> B -> C -> A with inheritance,
+    since you will get an error message beforehand.
+
+    Parameters
+    ----------
+    items:
+        Nodes to add to the knowledge graph. Note that the order matters.
+        A general way to build this knowledge graph is to initialize the knowledge graph without
+        any items, but add them later one by one with the :meth:`add` method.
+
+    Examples
+    --------
+    >>> KnowledgeGraph(Node("A"), Node("B", inherits_from="A"))
+
+    """
+
     def __init__(self, *items):
+        """Initialize the knowledge graph."""
         self._items: list[Node] = []
         for item in items:
             self.add(item)
@@ -74,7 +159,16 @@ class KnowledgeGraph():
 
         self._items.append(node)
 
-    def __contains__(self, node_name) -> bool:
+    def __contains__(self, node_name: str) -> bool:
+        """Check whether a node_name already exists in the knowledge tree.
+
+        Examples
+        --------
+        >>> kgraph = KnowledgeGraph(Node("a", synonyms=["b"]))
+        >>> ("a" in kgraph, "b" in kgraph, "c" in kgraph)
+        (True, True, False)
+
+        """
         try:
             self[node_name]
         except KeyError:
@@ -82,6 +176,7 @@ class KnowledgeGraph():
         return True
 
     def __getitem__(self, node_name) -> Node:
+        """Get a node with a name or synonym."""
         for item in self._items:
             if item.name == node_name:
                 return item
@@ -89,13 +184,60 @@ class KnowledgeGraph():
                 return item
         raise KeyError(f"Key {node_name} does not exist")
 
-    def find_relations(self, input_coords, output_coords):
+    def find_relations(self, input_coords: Sequence[str], output_coords) -> dict[str, str]:
+        """Find the connections from the input coordinates to output coordinates.
+
+        Parameters
+        ----------
+        input_coords:
+            Coordinates in the xarray DataArray that you might want to transform.
+        output_coords:
+            Coordinates in the output xarray DataArray that you want to transform to.
+
+        Examples
+        --------
+        >>> kg = KnowledgeGraph(Node("car", synonyms=["automobile"]))
+        >>> kg.find_relations(["autombile"], ["car"])
+        {
+            "car": "automobile"
+        }
+
+        Returns
+        -------
+        relations:
+            Dictionary containing keys for each output coordinate, and values for each input
+            that is linked by synonym, parent or child node and is present in the list of
+            input coordinates.
+
+        """
         relations = {}
         for cur_out_coord in output_coords:
             relations[cur_out_coord] = self.find_one_relation(input_coords, cur_out_coord)
         return relations
 
     def find_one_relation(self, input_coords: list[str], output_name: str) -> list[str]:
+        """Find a related object from a list of inputs.
+
+        Parameters
+        ----------
+        input_coords
+            Coordinates in an xarray DataArray in which related concepts are attempted to be
+            found for the output name.
+        output_name
+            Output name for which related terms are to be found.
+
+        Returns
+        -------
+            A list of related terms to the output_name.
+
+        Raises
+        ------
+        ValueError
+            If the output_name has both ancestors and descendants in the input coordinates.
+        ValueError
+            If no known relations are known.
+
+        """
         if output_name in input_coords:
             return [output_name]
 
@@ -113,14 +255,32 @@ class KnowledgeGraph():
             descendants = []
 
         if len(ancestors) > 0 and len(descendants) > 0:
-            raise ValueError(f"Cannot find relations, because {output_node} has both ancestors ({ancestors}) "
-                             f"and descendants ({descendants})")
+            raise ValueError(f"Cannot find relations, because {output_node} has both ancestors "
+                             f"({ancestors}) and descendants ({descendants})")
         if len(ancestors) + len(descendants) == 0:
             raise ValueError(f"Cannot find relations of {output_node} in input coordinates.")
 
         return list(set(ancestors + descendants))
 
     def find_relations_inverse(self, input_coords, output_coords):
+        """Find which coordinates in the input match the coordinates in the output.
+
+        Similar to :meth:`find_relations`, but inverse of that.
+
+        Parameters
+        ----------
+        input_coords
+            Input coordinates for the xarray DataArray.
+        output_coords
+            Output coordinates for which the inputs need to be transformed.
+
+        Returns
+        -------
+        inverse_relations:
+            A dictionary with keys that input coordinates as keys, and lists of
+            output coordinates as values.
+
+        """
         relations = self.find_relations(input_coords, output_coords)
         inverse_relations = {}
         for cur_output, cur_input_list in relations.items():
@@ -128,6 +288,7 @@ class KnowledgeGraph():
         return inverse_relations
 
     def _find_ancestors(self, input_coords, output_node):
+        """Find an ancestor/parent using recursion."""
         try:
             return [output_node.match_coords(input_coords)]
         except KeyError:
@@ -141,6 +302,7 @@ class KnowledgeGraph():
 
 
     def _find_descendants(self, input_coords, output_node):
+        """Find a descendant/child using recursion."""
         try:
             return [output_node.match_coords(input_coords)]
         except KeyError:
@@ -152,9 +314,13 @@ class KnowledgeGraph():
                 all_descendants.extend(self._find_descendants(input_coords, item))
         return all_descendants
 
-    def rebroadcast_xarray(self, input_array, output_coords, dim="Type", shares=None, dim_shares=None):
-        """Disaggregates supertypes into subtypes. If shares for the subtypes are provided,
-        the values of the input_array data is adjusted accordingly (value of supertype * shares = values of subtypes).
+    def rebroadcast_xarray(self, input_array, output_coords, dim="Type", shares=None,
+                           dim_shares=None):
+        """Disaggregate supertypes into subtypes.
+
+        If shares for the subtypes are provided,
+        the values of the input_array data is adjusted accordingly
+        (value of supertype * shares = values of subtypes).
         If no shares are provided, the value of the supertype is taken for all subtypes.
 
         Parameters
@@ -168,15 +334,15 @@ class KnowledgeGraph():
         shares, optional
             Shares to be used for rebroadcasting, by default None. Must have the dimension "Type".
         dim_shares, optional
-            Dimension of the shares DataArray. By default None. If shares is defined and dim_shares not, dim is used.
-            In case the shares have a different dimension name than the input_array, it can be specified here.
+            Dimension of the shares DataArray. By default None. If shares is defined and
+            dim_shares not, dim is used. In case the shares have a different dimension name than
+            the input_array, it can be specified here.
 
         Returns
         -------
             Disaggregated xr.DataArray.
 
         """
-
         if shares is not None and dim_shares is None:
             dim_shares = dim
 
@@ -189,7 +355,8 @@ class KnowledgeGraph():
         keep_coords = []
         new_array = xr.DataArray(0.0, dims=input_array.dims, coords=new_coords)
         if input_array.pint.units:
-            new_array = prism.Q_(new_array, input_array.pint.units) # check if input array had a unit and if so, reapply this unit to new array
+            # check if input array had a unit and if so, reapply this unit to new array
+            new_array = prism.Q_(new_array, input_array.pint.units)
         for cur_coord in list(output_coords):
             if cur_coord in input_coords:
                 keep_coords.append(cur_coord)
@@ -207,9 +374,10 @@ class KnowledgeGraph():
             else:
                 # disaggregate, by just taking the value of the parent
                 new_array.loc[{dim: cur_coord}] = input_array.loc[{dim: parent}]
-        # Copy data for all coordinates that exist in both the input_array and output_coords (`keep_coords`) -> only new coordinates are filled through disaggregation logic above
+        # Copy data for all coordinates that exist in both the input_array and output_coords
+        # (`keep_coords`) -> only new coordinates are filled through disaggregation logic above
         new_array.loc[{dim: keep_coords}] = input_array.loc[{dim: keep_coords}]
-        # Preserve metadata 
+        # Preserve metadata
         new_array.attrs = input_array.attrs.copy()
         new_array.name = input_array.name
         # new_array.encoding = input_array.encoding.copy() # do wee need this?
@@ -241,15 +409,41 @@ class KnowledgeGraph():
         output_xr.coords[dim] = output_coords
         return output_xr
 
-    def to_netcdf(self, out_fp, **kwargs):
+    def to_netcdf(self, out_fp: Path|str, **kwargs):
+        """Store the knowledge graph in a netCDF file as an attribute.
+
+        The attribute will be called 'knowledge_graph' and is stored
+        in the root of the netCDF file.
+
+        Parameters
+        ----------
+        out_fp
+            Output netCDF file.
+        kwargs:
+            Extra keyword arguments that are passed on to the xr.DataArray.to_netcdf() method.
+
+        """
         json_items = [x.to_dict() for x in self._items]
         data = xr.DataArray()
         data.attrs["knowledge_graph"] = json.dumps(json_items)
         data.to_netcdf(out_fp, **kwargs)
 
     @classmethod
-    def from_dataarray(cls, data):
-        # data = xr.open_dataarray(in_fp, **kwargs)
+    def from_dataarray(cls, data: xr.DataArray|Path|str):
+        """Create the knowledge graph from a xarray data array.
+
+        Parameters
+        ----------
+        data
+            xr.DataArray that contains an attribute called 'knowledge_graph' which is
+            a serialized version of the knowledge graph.
+
+        Returns
+        -------
+        knowledge_graph:
+            An initialized knowledge graph.
+
+        """
         json_str = data.attrs["knowledge_graph"]
         knowledge_list = json.loads(json_str)
         items = [Node.from_dict(item) for item in knowledge_list]
@@ -259,6 +453,7 @@ class KnowledgeGraph():
 
 
 def create_vehicle_graph():
+    """Create the knowledge graph for the vehicle/transport sector."""
     vehicle_subtypes = ["BEV", "FCV", "HEV", "ICE", "PHEV", "Trolley"]
     vehicle_supertypes = ["Cars", "Heavy Freight Trucks", "Light Commercial Vehicles",
                         "Medium Freight Trucks", "Regular Buses", "Midi Buses"]
@@ -293,11 +488,13 @@ def create_vehicle_graph():
         else:
             vehicle_knowledge_graph.add(Node(name=super_type))
         for sub_type in vehicle_subtypes:
-            vehicle_knowledge_graph.add(Node(f"{super_type} - {sub_type}", inherits_from=super_type))
+            vehicle_knowledge_graph.add(
+                Node(f"{super_type} - {sub_type}", inherits_from=super_type))
     return vehicle_knowledge_graph
 
 
 def create_building_graph():
+    """Create the knowledge graph for the buildings sector."""
     building_nodes = [
     Node("Buildings"),
 
@@ -365,14 +562,15 @@ def create_class_region_graph():
 
     for number, synonyms in numeric_region_map.items():
         inherits_from = None
-        class_region_knowledge_graph.add(Node(number, synonyms=synonyms, inherits_from=inherits_from))
+        class_region_knowledge_graph.add(
+            Node(number, synonyms=synonyms, inherits_from=inherits_from))
 
     return class_region_knowledge_graph
 
 
 def create_region_graph():
     #TODO move to seperate file
-    
+
     region_knowledge_graph = KnowledgeGraph()
 
     # Add target regions as main nodes (non-numeric)
