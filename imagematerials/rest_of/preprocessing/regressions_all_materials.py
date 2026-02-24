@@ -21,9 +21,9 @@ from pathlib import Path
 
 def fit_models_all_materials(scenarios_list: list = ["SSP2_M_CP"], path_input_data=None, path_input_data_image=None):
     if path_input_data is None:
-        path_input_data = Path("../../../data/raw/rest-of/")
+        path_input_data = Path("../data/raw/rest-of/")
     if path_input_data_image is None:
-        path_input_data_image = Path("../../../data/raw/image/")
+        path_input_data_image = Path("../data/raw/image/")
 
     results = {}
 
@@ -156,7 +156,7 @@ def make_gompertz_coefs_da(results_models, material_order=None, region_order=Non
     coefs_da = knowledge_graph_region.rebroadcast_xarray(coefs_da, output_coords=IMAGE_REGIONS, dim="Region")
 
     # coefs_da now has dims ('Region', 'material', 'coef')
-    coefs_da.to_netcdf('../../../data/raw/rest-of/gompertz_values/coefs_gompertz.nc')
+    coefs_da.to_netcdf('../data/raw/rest-of/gompertz_values/coefs_gompertz.nc')
     return coefs_da
 
 
@@ -204,7 +204,7 @@ def mean_historic_other_fraction_consumption_to_xr(results_models):
     knowledge_graph_region = create_region_graph()
     diff_cons_all = knowledge_graph_region.rebroadcast_xarray(diff_cons_all, output_coords=IMAGE_REGIONS, dim="Region")
 
-    diff_cons_all.to_netcdf('../../../data/raw/rest-of/gompertz_values/diff_cons_all_mean.nc')
+    diff_cons_all.to_netcdf('../data/raw/rest-of/gompertz_values/diff_cons_all_mean.nc')
     return diff_cons_all
 
 
@@ -259,7 +259,7 @@ def historic_other_fraction_consumption_to_xr(results_models):
     knowledge_graph_region = create_region_graph()
     diff_cons_all = knowledge_graph_region.rebroadcast_xarray(diff_cons_all, output_coords=IMAGE_REGIONS, dim="Region")
 
-    diff_cons_all.to_netcdf('../../../data/raw/rest-of/gompertz_values/diff_cons_all.nc')
+    diff_cons_all.to_netcdf('../data/raw/rest-of/gompertz_values/diff_cons_all.nc')
 
     return diff_cons_all
 
@@ -297,7 +297,7 @@ def get_X_max_scaling_factor(results, create_class_region_graph, IAI_TO_IMAGE_CL
 
     max_x_da = xr.concat(arrays, dim='material')
     max_x_da = max_x_da.sortby('material')
-    max_x_da.to_netcdf('../../../data/raw/rest-of/gompertz_values/max_x_regressor.nc')
+    max_x_da.to_netcdf('../data/raw/rest-of/gompertz_values/max_x_regressor.nc')
 
     # convert to x_array with IMAGE regions
     return max_x_da
