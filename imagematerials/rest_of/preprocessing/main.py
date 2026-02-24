@@ -5,17 +5,11 @@ import prism
 
 from pathlib import Path
 
-from imagematerials.concepts import create_class_region_graph
-
-
 from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.concepts import create_region_graph
 
 from imagematerials.read_mym import read_mym_df
 from imagematerials.buildings.preprocessing.population import compute_population
-
-from imagematerials.rest_of.const import IAI_TO_IMAGE_CLASSES
-from imagematerials.rest_of.preprocessing.resource_efficiency_measures import adapt_gompertz_regional
 
 from imagematerials.rest_of.preprocessing.regressions_all_materials import (fit_models_all_materials,
                                                                             make_gompertz_coefs_da, 
@@ -115,8 +109,6 @@ def read_historic_diff_cons_data(base_directory):
 
     return diff_consumption
 
-# TODO: read in max X data
-
 
 def read_image_gdp_cap_data(base_directory, image_scenario_directory):
     max_x = xr.open_dataset(base_directory / "rest-of" / "gompertz_values" / "max_x_regressor.nc", engine="netcdf4")
@@ -143,14 +135,21 @@ def read_image_gdp_cap_data(base_directory, image_scenario_directory):
     return downscaled_gdp_per_capita_xr
 
 
+def fit_all_materials_save_corrseponding_input_data(path_input_data, path_input_data_image):
+    results = fit_models_all_materials(
+        path_input_data=path_input_data,
+        path_input_data_image=path_input_data_image
+        )
+    gompertz = make_gompertz_coefs_da(results)
+    mean_historic_other_fraction_consumption_to_xr(results)
+    all_historic_data_xr = historic_other_fraction_consumption_to_xr(results)
+
+
 def rest_of_preprocessing(base_directory, image_scenario_directory, scenario: str, 
                           refit = False):
     
     if refit == True:
-        results = fit_models_all_materials()
-        make_gompertz_coefs_da(results)
-        mean_historic_other_fraction_consumption_to_xr(results)
-        historic_other_fraction_consumption_to_xr(results)
+        fit_all_materials_save_corrseponding_input_data()
         print('Materials regression refitted and preprocessing data updated.')
 
     gompertz_values = read_gompertz_values(base_directory, scenario)
