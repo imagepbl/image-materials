@@ -62,7 +62,7 @@ class EvBatteryLinkModule(prism.Model):
     Time:       prism.Coords[TIME]
 
     # Data dependencies
-    input_data: tuple[str] = ("stock_battery_kWh_v2g", "stocks_non_phs", "knowledge_graph_elc", "set_unit_flexible") # input from vehicle stock module
+    input_data: tuple[str] = ("stock_battery_kWh_v2g", "stocks_non_phs", "knowledge_graph_elc", "set_unit_flexible") # stock_battery_kWh_v2g is input from battery module, stocks_non_phs from sector storage_other itself
     output_data: tuple[str] = ("stocks",) # a 1-element tuple requires a trailing comma
 
     # Output
@@ -86,10 +86,11 @@ class EvBatteryLinkModule(prism.Model):
 
         
     def compute_values(self, time: prism.Time):
-        """ Compute the remaining electricity storage for a single timestep.  
+        """ Compute the remaining electricity storage demand for a single timestep.  
 
-        At timestep `t`, subtract the total EV battery storage from the initial 
-        electricity stock and ensure the remaining stock is non-negative.   
+        At timestep `t`, subtract the total EV battery storage (V2G) from the given 
+        storage stock demand (where storage capacity provided by PHS was already subtracted 
+        in preprocessing) and ensure the remaining stock demand is non-negative.   
 
         Parameters
         ----------
@@ -99,9 +100,8 @@ class EvBatteryLinkModule(prism.Model):
         """
         t, dt = time.t, time.dt
 
-        stock_ev_storage = self.stock_battery_kWh_v2g.loc[t].sum(["BatteryType","Type"]) # stock_ev_storage has dims (Time, Region)
+        stock_ev_storage = self.stock_battery_kWh_v2g.loc[t].sum(["BatteryType","Type"]) # stock_ev_storage has dims ('Region',)
         self.stocks.loc[t] = (self.stocks_non_phs.loc[t] - stock_ev_storage).clip(min=prism.Q_(0,self.set_unit_flexible)) # clip: cannot be negative
-
 
 
 @prism.interface
