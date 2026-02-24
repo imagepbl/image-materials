@@ -1,0 +1,2 @@
+# Ensures that jupyter notebook output is not included in commits
+*.ipynb filter=strip-notebook-output
