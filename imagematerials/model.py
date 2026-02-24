@@ -114,9 +114,9 @@ class GenericStocks(prism.Model):
         self.outflow_by_cohort[t].loc[:] = prism.Q_(0.0, self.set_unit_flexible)
 
         # copy only for readability
-        input_stock = self.stocks
+        stock_demand = self.stocks
         # calculate missing stock to fulfill demand (input stock)
-        stock_diff = input_stock.loc[t] - self.stock_by_cohort.loc[t].sum("Cohort")
+        stock_diff = stock_demand.loc[t] - self.stock_by_cohort.loc[t].sum("Cohort")
         # stock_diff cannot be negative (no negative inflow); when positive, divide by survival matrix in case there is a loss in the first year (inflow needs to be larger than input stock)
         stock_diff = xr.where(stock_diff>0, stock_diff/self.survival_matrix[t, t].drop("Cohort"), 0)
 
@@ -242,9 +242,9 @@ class SharesInflowStocks(prism.Model):
         self.inflow[t].loc[:] = prism.Q_(0.0, self.set_unit_flexible)
         self.outflow_by_cohort[t].loc[:] = prism.Q_(0.0, self.set_unit_flexible)
 
-        input_stock = self.stocks # copy only for readability
-        # calculate missing stock to fulfill demand (input stock) -> for this aggregate over sub-technologies in stock_by_cohort to compare to input_stock which is by super-type
-        stock_diff = input_stock.loc[t] - self.knowledge_graph.aggregate_sum(self.stock_by_cohort.loc[t].sum("Cohort"), self.stocks.coords["SuperType"].values, dim="Type").rename({"Type": "SuperType"}) # rename needed for the difference calculation - cannot subtract over different dims
+        stock_demand = self.stocks # copy only for readability
+        # calculate missing stock to fulfill demand (input stock) -> for this aggregate over sub-technologies in stock_by_cohort to compare to stock_demand which is by super-type
+        stock_diff = stock_demand.loc[t] - self.knowledge_graph.aggregate_sum(self.stock_by_cohort.loc[t].sum("Cohort"), self.stocks.coords["SuperType"].values, dim="Type").rename({"Type": "SuperType"}) # rename needed for the difference calculation - cannot subtract over different dims
         # calculate the inflow by sub-technology by rebroadcasting the stock_diff (by super-type) to sub-technologies according to their shares in the inflow
         inflow_tech = self.knowledge_graph.rebroadcast_xarray(stock_diff, self.stock_by_cohort.coords["Type"].values, dim="SuperType", shares=self.shares.sel(Cohort=t), dim_shares="Type").rename({"SuperType": "Type"})
         # stock_diff cannot be negative (no negative inflow); when positive, divide by survival matrix in case there is a loss in the first year (inflow needs to be larger than input stock)
