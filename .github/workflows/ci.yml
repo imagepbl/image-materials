@@ -9,8 +9,8 @@ on:
       - development
 
 env:
-  PYM_VERSION: v0.3.2 # check this is compatible with the dependency in pyproject.toml
-  PRISM_VERSION: v0.7.2
+  PYM_VERSION: v0.3.4
+  PRISM_VERSION: v0.7.8
 
 permissions:
   contents: read
@@ -45,7 +45,7 @@ jobs:
           path: prism
           ssh-key: ${{ secrets.PRISM_DEPLOY_PRIVATE_KEY }}
 
-      - name: Install prism
+      - name: Install prism without isolation
         run: pip install ./prism
 
       - name: Checkout imagematerials
@@ -55,4 +55,6 @@ jobs:
         run: pip install -e ".[all]"
 
       - name: Run tests
-        run:  pytest tests
+        run: pytest tests
+
+
