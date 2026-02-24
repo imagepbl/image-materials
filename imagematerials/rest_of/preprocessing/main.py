@@ -5,17 +5,11 @@ import prism
 
 from pathlib import Path
 
-from imagematerials.concepts import create_class_region_graph
-
-
 from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.concepts import create_region_graph
 
 from imagematerials.read_mym import read_mym_df
 from imagematerials.buildings.preprocessing.population import compute_population
-
-from imagematerials.rest_of.const import IAI_TO_IMAGE_CLASSES
-from imagematerials.rest_of.preprocessing.resource_efficiency_measures import adapt_gompertz_regional
 
 from imagematerials.rest_of.preprocessing.regressions_all_materials import (fit_models_all_materials,
                                                                             make_gompertz_coefs_da, 
