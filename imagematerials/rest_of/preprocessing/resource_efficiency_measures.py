@@ -1,88 +1,123 @@
-import numpy as np
+# TODO write this as normal .py script
+import matplotlib.pyplot as plt
 import xarray as xr
+import pym
+
+from imagematerials.factory import ModelFactory
+from imagematerials.read_mym import read_mym_df
+from imagematerials.rest_of.util import sum_inflows_for_all_sectors, calculate_cement_equivalent, sand_gravel_crushed_rock_equivalent
+from imagematerials.constants import IMAGE_REGIONS
 
 
-def adapt_gompertz_regional(xr_gompertz, scenario: str, 
-                            start_implementation_year=2030,
-                            end_implementation_year=2100):
-    """
-    Adapt the 'a' (alpha) coefficient in a Gompertz parameter xarray DataArray for resource efficiency scenarios.
 
-    For each material and region:
-    - The region with the lowest 'a' value at year 2030 remains unchanged.
-    - All other regions:
-        - If their 'a' value at 2030 is less than twice the lowest value, it is linearly reduced by 20% from 2030 to 2100,
-          but never below the lowest value.
-        - If their 'a' value at 2030 is greater than or equal to twice the lowest value, it is linearly reduced to
-          exactly twice the lowest value from 2030 to 2100, but never below the lowest value.
-    - For years before 2030, values remain unchanged.
-    - For years after 2100, the final target value is held constant.
+def load_model_runs(base_scen = 'SSP2_M_CP', 
+                    eff_scen = 'SSP2_M_CP_with_re', 
+                    base_directory = "model_results/", 
+                    scenarios: list = ["SSP2_M_CP", "SSP2_M_CP_with_re"]):
+    model_runs = {scenario_name: ModelFactory.load_pkl(f"{base_directory}{scenario_name}_model.pkl") for scenario_name in scenarios}
+    baseline = model_runs.get(base_scen)
+    resource_eff = model_runs.get(eff_scen)
+    return baseline, resource_eff
 
-    Parameters
-    ----------
-    xr_gompertz : xarray.DataArray
-        Gompertz coefficients with dimensions including 'coef', 'material', 'Region', and 'Time'.
-        The 'a' coefficient is adapted according to the rules above.
-    scenario : str
-        Name of the scenario for which the adaptation is applied. Used for logging.
-    start_implementation_year : int
-        The year when the adaptation starts (default is 2030).
-    end_implementation_year : int
-        The year when the adaptation ends (default is 2100).
+def read_in_population_and_gdp_cap(base_directory = "../data/raw/image/", 
+                                   scenario: str = "SSP2_M_CP"):
+    gdp_cap = read_mym_df(f'{base_directory}{scenario}/Socioeconomic/gdp_pc.scn')
+    population = read_mym_df(f'{base_directory}{scenario}/Socioeconomic/pop.scn')
+    gdp_cap.index.name = "time"
+    population.index.name = "time"
 
-    Returns
-    -------
-    xarray.DataArray
-        The adapted Gompertz coefficients DataArray with updated 'a' values for each region and material.
+    gdp_cap_xr = xr.DataArray(
+        gdp_cap.loc[:, :26].values,
+        dims=["time", "Region"],
+        coords={"time": gdp_cap.index, "Region": IMAGE_REGIONS}
+    )
 
-    Notes
-    -----
-    - This function modifies the input DataArray in-place.
-    - Only the 'a' coefficient is adapted; other coefficients remain unchanged.
-    - The adaptation is applied for years 2030 to 2100.
-    """
-    
-    years = xr_gompertz.coords['Time'].values
-    for material in xr_gompertz.coords['material'].values:
-        a_2030 = xr_gompertz.sel(coef='a', material=material, Time=start_implementation_year).values
-        regions = xr_gompertz.coords['Region'].values
-        valid = ~np.isnan(a_2030)
-        sorted_a = np.sort(a_2030[valid])
-        lowest_a = sorted_a[0]
-        target_a = 2 * lowest_a
+    population_xr = xr.DataArray(
+        population.loc[:, :26].values,
+        dims=["time", "Region"],
+        coords={"time": population.index, "Region": IMAGE_REGIONS}
+    )
 
-        for i, region in enumerate(regions):
-            current_a_2030 = a_2030[i]
-            if np.isnan(current_a_2030):
-                continue
-            # Lowest region stays at its value
-            if current_a_2030 == lowest_a:
-                continue
-            # If current value is lower than 2x lowest, reduce by 20%, but not below lowest_a
-            if current_a_2030 < target_a:
-                reduce_target = max(current_a_2030 * 0.8, lowest_a)
-                for year in years:
-                    if year < start_implementation_year:
-                        continue
-                    elif year >= start_implementation_year and year <= end_implementation_year:
-                        frac = (year - start_implementation_year) / (end_implementation_year - start_implementation_year)
-                        new_a = current_a_2030 + frac * (reduce_target - current_a_2030)
-                        new_a = max(new_a, lowest_a)
-                        xr_gompertz.loc[dict(coef='a', material=material, Region=region, Time=year)] = new_a
-                    elif year > end_implementation_year:
-                        xr_gompertz.loc[dict(coef='a', material=material, Region=region, Time=year)] = reduce_target
-            # Otherwise, reduce to 2x lowest value, but not below lowest_a
-            else:
-                for year in years:
-                    if year < start_implementation_year:
-                        continue
-                    elif year >= start_implementation_year and year <= end_implementation_year:
-                        frac = (year - start_implementation_year) / (end_implementation_year - start_implementation_year)
-                        new_a = current_a_2030 + frac * (target_a - current_a_2030)
-                        new_a = max(new_a, lowest_a)
-                        xr_gompertz.loc[dict(coef='a', material=material, Region=region, Time=year)] = new_a
-                    elif year > end_implementation_year:
-                        xr_gompertz.loc[dict(coef='a', material=material, Region=region, Time=year)] = max(target_a, lowest_a)
-    
-    print("gompertz scaling applied for scenario:", scenario)
-    return xr_gompertz
+    gdp = gdp_cap_xr * population_xr
+    return gdp
+
+def read_gompertz_coefs():
+    # Read gompertz calues from standard run 
+    gompertz_original = xr.open_dataarray('../data/raw/rest-of/gompertz_values/coefs_gompertz.nc')
+    return gompertz_original
+
+
+def calcualte_resource_efficiency_measures():
+    gdp = read_in_population_and_gdp_cap()
+    gompertz_original = read_gompertz_coefs()
+    baseline, resource_eff = load_model_runs()
+    # sum all inflows for both runs
+    list_sum_sectors_all = ["buildings", "vehicles", "elc_gen", "elc_grid_lines", "elc_grid_add", "elc_stor_phs", "elc_stor_other"]
+    total_inflow_base = sum_inflows_for_all_sectors(baseline, 'inflow_materials', list_sum_sectors_all)
+    total_inflow_eff = sum_inflows_for_all_sectors(resource_eff, 'inflow_materials', list_sum_sectors_all)
+
+    for material in gompertz_original.material.values:
+        if material in ['clay', 'limestone']: 
+            # for limestone and clay take sand_gravel_crushed_rock as a proxy
+            inflow = sand_gravel_crushed_rock_equivalent(total_inflow_base, 
+                                                         include_rest_bool = False).sum('Type')
+            inflow_eff = sand_gravel_crushed_rock_equivalent(total_inflow_eff, 
+                                                             include_rest_bool=False).sum('Type')
+            inflow = inflow.assign_coords(material='sand')
+            inflow_eff = inflow_eff.assign_coords(material='sand')
+            # overwrite material name
+            inflow = inflow.assign_coords(material=material)
+            inflow_eff = inflow_eff.assign_coords(material=material)
+        elif material == 'sand':
+            # replace with sand_gravel_crushed_rock_equivalent
+            inflow = sand_gravel_crushed_rock_equivalent(total_inflow_base, 
+                                                         include_rest_bool = False).sum('Type')
+            inflow_eff = sand_gravel_crushed_rock_equivalent(total_inflow_eff, 
+                                                             include_rest_bool=False).sum('Type')
+            inflow = inflow.assign_coords(material='sand')
+            inflow_eff = inflow_eff.assign_coords(material='sand')
+        elif material == 'cement':
+            inflow = calculate_cement_equivalent(total_inflow_base, 
+                                                 include_rest_of=False).sum('Type')
+            inflow_eff = calculate_cement_equivalent(total_inflow_eff, 
+                                                    include_rest_of=False).sum('Type')
+        else:
+            inflow = total_inflow_base.sel(material=material).sum('Type')
+            inflow_eff = total_inflow_eff.sel(material=material).sum('Type')
+
+        # Material intensities per GDP
+        material_intensity_base = inflow / gdp
+        material_intensity_eff = inflow_eff / gdp
+
+        # calculate the percentual resource efficiency
+        resource_eff_procentual = (material_intensity_base - material_intensity_eff) / material_intensity_base * 100
+        # calculate the reduction per year
+        resource_eff_procentual_year = resource_eff_procentual.diff(dim='time').fillna(0)
+
+        # save all materials from material_intensity_base in a new joint xarray under the material dimension
+        if material == 'aluminium':
+            # start to save in new xarray
+            all_materials_resource_eff_procentual = resource_eff_procentual
+            all_materials_resource_eff_per_year = resource_eff_procentual_year
+        else:
+            all_materials_resource_eff_procentual = xr.concat([all_materials_resource_eff_procentual, resource_eff_procentual], dim='material')
+            all_materials_resource_eff_per_year = xr.concat([all_materials_resource_eff_per_year, resource_eff_procentual_year], dim='material')
+
+    # manipuate gompertz coefs
+    a0 = gompertz_original.sel(coef='a')
+    # per-year multiplier (choose sign correctly: reductions -> 1 - r_frac)
+    per_year_multiplier = 1 - (all_materials_resource_eff_procentual / 100.0) 
+
+    # rename coordinate per_year_multiplier from time to Time
+    per_year_multiplier = per_year_multiplier.rename({'time':'Time'})
+
+    a0_expanded = a0.copy()
+    a_t = (a0_expanded * per_year_multiplier)
+    gompertz_eff = gompertz_original.copy()
+
+    # apply a 20-year rolling mean to smoothen & extend to edges
+    a_t_rolling_20 = a_t.rolling(Time=20, center=False, min_periods=1).mean()
+
+    gompertz_eff.loc[dict(coef='a')] = a_t_rolling_20
+    # save new gompertz coefs
+    gompertz_eff.to_netcdf('../data/raw/rest-of/gompertz_values/coefs_gompertz_eff.nc')
