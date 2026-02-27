@@ -17,8 +17,8 @@ COHORTS = 50
 
 
 # Scenario settings ---------------------------------------------
-STANDARD_SCEN_EXTERNAL_DATA = "SSP2_M_CP"
-SCENARIO_DEFAULT = "SSP2_M_CP"
+STANDARD_SCEN_EXTERNAL_DATA = "SSP2_baseline"
+SCENARIO_DEFAULT = "SSP2_baseline"
 
 # Sensitivity Analysis - default, high_stor, high_grid
 SENS_ANALYSIS = "default" 

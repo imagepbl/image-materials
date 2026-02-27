@@ -61,8 +61,8 @@ YEAR_END = 2100
 YEAR_OUT = 2100
 
 SCEN = "SSP2"
-# VARIANT = "VLHO"
-VARIANT = "M_CP"
+# VARIANT = "climate_policy_overshoot"
+VARIANT = "baseline"
 scen_folder = SCEN + "_" + VARIANT
 # path_base = Path().resolve() # TODO absolute path of file "preprocessing.py" ? current solution can differ depending on IDE used (?) 
 path_current = Path().resolve()
