@@ -627,11 +627,11 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
     path_base : str
         Base directory of the project where the data structure is located (image-materials/data/raw/).
     scenario : str
-        Scenario name (e.g., "SSP2_M_CP").
+        Scenario name (e.g., "SSP2_CP").
     climate_policy_config : dict
         Dictionary created from a scenario-specific config.toml file.
         Contains all TOML entries ("data_files" mapping) plus a path:
-        - "config_file_path": pathlib.Path to the scenario directory (e.g. SSP2_M_CP) containing config.toml and all referenced
+        - "config_file_path": pathlib.Path to the scenario directory (e.g. SSP2_CP) containing config.toml and all referenced
         output subfolders. 
         Used to construct full paths to scenario output files, e.g. read_mym_df(climate_policy_config["config_file_path"]/climate_policy_config["data_files"]["variable_x"]).
     year_start : int

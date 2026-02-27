@@ -20,7 +20,7 @@ switch_year = 2100
 # PATHS - set here your own data paths 
 
 # INPUT
-SCENARIO = "SSP2_CP"
+SCENARIO = "SSP2_baseline"
 
 path_input_data = Path(f"../../../data/raw/image/")
 path_input_data_cons = "../../../data/raw/rest-of"
@@ -624,12 +624,10 @@ path_rest_of_data = raw_data / "rest-of"
 
 scenario_base_path = Path("scenario_config")
 
-scenarios = ["SSP2_M_CP", "SSP2_VLLO", "SSP2_VLLO_LifeTech"]
-scenario_list = {"base":("SSP2_M_CP", None),
-                 "climate":("SSP2_VLLO", None),
-                 "narrow":("SSP2_VLLO_LifeTech", ["narrow"])}
-
-scenario_name_resource_model = "SSP2_M_CP"
+scenarios = ["SSP2_baseline", "SSP2_climate_policy", "SSP2_resource_efficiency"]
+scenario_list = {"base":("SSP2_baseline", None),
+                 "climate":("SSP2_climate_policy", None),
+                 "resource_efficiency":("SSP2_resource_efficiency", None)}
 
 cement_in_concrete_factor = 0.12
 sand_in_cement_conversion = 0.17 #(silica)
