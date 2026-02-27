@@ -42,7 +42,7 @@ Therefore we need to define a scenario and the path to the scenario data. Make s
 
 .. code-block:: python
 
-       scenario_name = "SSP2_M_CP"
+       scenario_name = "SSP2_baseline"
        climate_policy_scenario_dir = Path("..", "data", "raw", "image", scenario_name)
 
 

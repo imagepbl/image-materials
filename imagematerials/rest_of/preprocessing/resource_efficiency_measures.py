@@ -8,19 +8,17 @@ from imagematerials.read_mym import read_mym_df
 from imagematerials.rest_of.util import sum_inflows_for_all_sectors, calculate_cement_equivalent, sand_gravel_crushed_rock_equivalent
 from imagematerials.constants import IMAGE_REGIONS
 
-
-
-def load_model_runs(base_scen = 'SSP2_M_CP', 
-                    eff_scen = 'SSP2_M_CP_with_re', 
+def load_model_runs(base_scen = 'SSP2_baseline', 
+                    eff_scen = 'SSP2_baseline_with_re', 
                     base_directory = "model_results/", 
-                    scenarios: list = ["SSP2_M_CP", "SSP2_M_CP_with_re"]):
+                    scenarios: list = ["SSP2_baseline", "SSP2_baseline_with_re"]):
     model_runs = {scenario_name: ModelFactory.load_pkl(f"{base_directory}{scenario_name}_model.pkl") for scenario_name in scenarios}
     baseline = model_runs.get(base_scen)
     resource_eff = model_runs.get(eff_scen)
     return baseline, resource_eff
 
 def read_in_population_and_gdp_cap(base_directory = "../data/raw/image/", 
-                                   scenario: str = "SSP2_M_CP"):
+                                   scenario: str = "SSP2_baseline"):
     gdp_cap = read_mym_df(f'{base_directory}{scenario}/Socioeconomic/gdp_pc.scn')
     population = read_mym_df(f'{base_directory}{scenario}/Socioeconomic/pop.scn')
     gdp_cap.index.name = "time"
