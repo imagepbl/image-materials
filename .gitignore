@@ -189,3 +189,9 @@ prism/
 pym/
 scripts/
 figures_test/
+
+# Energy & emissions data
+data/raw/image/SSP2_baseline/
+data/raw/image/SSP2_climate_policy/
+data/raw/image/SSP2_climate_policy_overshoot/
+data/raw/image/SSP2_resource_efficiency/
