@@ -1,0 +1,13 @@
+[data_files]
+GCap = 'EnergyServices/GCap.out'
+StorCapTot = 'EnergyServices/StorCapTot.out'
+StorResTot = 'EnergyServices/StorResTot.out'
+gdp_pc = 'Socioeconomic/gdp_pc.scn'
+residential_floorspace = 'res_FloorSpace.out'
+transport.freight.Tkm = 'trp_frgt_Tkm.out'
+transport.freight.Vshare_HvyTruck = 'trp_frgt_Vshare_HvyTruck.out'
+transport.freight.Vshare_MedTruck = 'trp_frgt_Vshare_MedTruck.out'
+transport.passenger.load = 'trp_trvl_Load.out'
+transport.passenger.kilometers = 'trp_trvl_pkm.out'
+transport.passenger.Vshare_bus = 'trp_trvl_Vshare_bus.out'
+transport.passenger.Vshare_car = 'trp_trvl_Vshare_car.out'

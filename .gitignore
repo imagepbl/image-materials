@@ -191,7 +191,9 @@ scripts/
 figures_test/
 
 # Energy & emissions data
-data/raw/image/SSP2_baseline/
-data/raw/image/SSP2_climate_policy/
-data/raw/image/SSP2_climate_policy_overshoot/
-data/raw/image/SSP2_resource_efficiency/
+data/raw/image/SSP2_climate_policy/EnergyFlows/
+data/raw/image/SSP2_climate_policy/EnergyServices/
+data/raw/image/SSP2_climate_policy_overshoot/EnergyFlows/
+data/raw/image/SSP2_climate_policy_overshoot/EnergyServices/
+data/raw/image/SSP2_resource_efficiency/EnergyFlows/
+data/raw/image/SSP2_resource_efficiency/EnergyServices/
