@@ -19,7 +19,7 @@ General dependencies are listed in the `pyproject.toml` file and will be install
 If you are working in a **cloned standard IMAGE conda environment**, no additional steps are required. All necessary dependencies, including `pym` and `prism`, are already available.
 
 #### If you are NOT using the standard IMAGE conda environment
-If you are **not building on the standard IMAGE conda environment**, you must manually install two IMAGE Framework packages that are not published on PyPI:
+If you are **not building on the standard IMAGE conda environment**, you must manually install two IMAGE Framework packages that are not published:
 
 - `pym`
 - `prism`
@@ -145,35 +145,37 @@ Users can extend the model by adding new modules for additional sectors. (More d
 ## Testing & Validation
 
 ### Running Tests
-
 - Unit tests are defined in `tests.py`.
 - Tests are **automatically executed** when a pull request is initialized.
 
 ### Example Runs
-
-- Example test cases are included in the `examples` folder.
-- Additional user feedback tests will be added in the future.
+Example test cases are included in the `examples` folder.
 
 ## Development & Collaboration
-
 ### Contributing
 
-- please refer to our [Collaboration Guidelines](CONTRIBUTING.md) 
+Please refer to our [Collaboration Guidelines](CONTRIBUTING.md) 
 
 ### Coding Standards
 
-- Code should be **PEP8-compliant**.
-- Follow **recursive modeling principles** and align with the **prism package**.
+Conding standards should comply with the **IMAGE-prism coding standards**. These can be found in the [README](https://github.com/imagepbl/prism) of prism 
+
+#### Formatting 
+
+Code quality can be checked by running pylint: 
+
+```bash
+pylint prism --rc-file=.pylintrc
+```
+in the root of your working copy.
 
 ## Licence
-### Licence
-- please refer to our [licence statement](LICENCE.md)
+Please refer to our [licence statement](LICENCE.md)
 
 ## Contact & Support
 
 ### Questions & Issues
-
-- Submit questions via **GitHub Issues**.
+Submit questions via **GitHub Issues**.
 
 ---
 
@@ -266,5 +268,3 @@ classDiagram
     GenericMaterials --> GenericStocks : "Depends on stock data"
     Maintenance --> GenericStocks : "Depends on stock data"
 ```
-
-
