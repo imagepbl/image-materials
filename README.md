@@ -55,7 +55,7 @@ Install the package locally in the parent directory of image-materials with:
 pip install image-materials
 ```
 
-This will also install all core dependencies defined for iamge-materials. 
+This will also install all core dependencies defined for image-materials. 
 
 ## Usage
 
