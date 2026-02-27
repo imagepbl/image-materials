@@ -18,10 +18,6 @@ General dependencies are listed in the `pyproject.toml` file and will be install
 #### If you are using the standard IMAGE conda environment
 If you are working in a **cloned standard IMAGE conda environment**, no additional steps are required. All necessary dependencies, including `pym` and `prism`, are already available.
 
-```bash
-pip install -e ".[all]"
-```
-
 #### If you are NOT using the standard IMAGE conda environment
 If you are **not building on the standard IMAGE conda environment**, you must manually install two IMAGE Framework packages that are not published on PyPI:
 
@@ -37,13 +33,29 @@ pip install git+https://github.com/imagepbl/pym
 pip install git+https://github.com/imagepbl/prism
 ```
 
-#### Installing image-materials
+#### Additional packages for Developers
+If you are developing or contributing to image-materials, also install all packages used in image-materials in editable mode:
+
+```bash
+pip install -e ".[all]"
+```
+
+#### Installing image-materials (for Developers)
 Install the package locally in the parent directory of image-materials with:
 
 ```bash
 pip install -e image-materials
 ```
 Using `-e` ensures automatic updates when modifying the package.
+
+#### Installing image-materials (for Users)
+Install the package locally in the parent directory of image-materials with:
+
+```bash
+pip install image-materials
+```
+
+This will also install all core dependencies defined for iamge-materials. 
 
 ## Usage
 
