@@ -9,7 +9,8 @@ from imagematerials.util import (
 )
 
 base_directory = Path("data", "raw")
-climate_policy_scenario_dir = base_directory.joinpath("image", "SSP2_BL")
+
+climate_policy_scenario_dir = base_directory.joinpath("image", "SSP2_baseline")
 
 if __name__ == "__main__":
     # Vehicles summary
