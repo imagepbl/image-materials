@@ -158,7 +158,7 @@ Please refer to our [Collaboration Guidelines](CONTRIBUTING.md)
 
 ### Coding Standards
 
-Conding standards should comply with the **IMAGE-prism coding standards**. These can be found in the [README](https://github.com/imagepbl/prism) of prism 
+Coding standards should comply with the **IMAGE-prism coding standards**. These can be found in the [README](https://github.com/imagepbl/prism) of prism 
 
 #### Formatting 
 
