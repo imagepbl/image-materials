@@ -4,7 +4,7 @@ import pytest
 
 from imagematerials.preprocessing import get_preprocessing_data
 
-path_test_scenario = Path("data", "raw", "image", "SSP2_M_CP")
+path_test_scenario = Path("data", "raw", "image", "SSP2_baseline")
 
 @pytest.fixture(scope="session")
 def vhc_sector():
@@ -28,7 +28,7 @@ def bld_prep_data(bld_sector):
 @pytest.fixture(scope="session")
 def elc_sector():
     path_base = Path("data", "raw")
-    climate_policy_scenario_dir = Path(path_base, "image", "SSP2_M_CP")
+    climate_policy_scenario_dir = Path(path_base, "image", "SSP2_baseline")
     return get_preprocessing_data("electricity", base_dir=path_base,
                                   climate_policy_scenario_dir=climate_policy_scenario_dir)
 
