@@ -165,7 +165,7 @@ Conding standards should comply with the **IMAGE-prism coding standards**. These
 Code quality can be checked by running pylint: 
 
 ```bash
-pylint prism --rc-file=.pylintrc
+pylint imagematerials
 ```
 in the root of your working copy.
 
