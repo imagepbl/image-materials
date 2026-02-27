@@ -1,38 +1,46 @@
-# imagematerials
-
-## Overview
-
-**imagematerials** is a standalone stock and material model that converts service demand data (e.g., kilometers traveled, goods transported, or square meters of built space) into product stock, such as vehicles, buildings, and roads. The model includes a detailed age structure of the product stock based on lifetime distributions and historical assumptions. It is designed for researchers analyzing material use patterns.
+## Introduction
+**IMAGE-Materials** is a standalone stock and material model that converts service demand data (e.g., kilometers traveled, goods transported, or square meters of built space) into product stock, such as vehicles, buildings, and roads. The model includes a detailed age structure of the product stock based on lifetime distributions and historical assumptions. It is designed for researchers analyzing material use patterns.
 
 ## Installation
-
-### Setting up your Environment
-
+### Environment
 **Note:** At this point in time, while our code is public, we still depend on packages from the IMAGE framework that are not public yet.
 
-Please refer to the [Default way of setting up your environment within IMAGE](docs/PYTHON_HOWTO.md)
+> [!TIP]
+> **For IMAGE users:**  
+> Please refer to the guide on the [default setup of Python and your development environment within IMAGE](https://github.com/imagepbl/template-repository/blob/main/docs/PYTHON_HOWTO.md).
+> In general, **Conda environments are recommended**. You can use the [standard IMAGE Conda environments](https://github.com/imagepbl/conda-envs) as a starting point.
+> Please note that **IMAGE-Materials is not pre-installed** in these environments. After setting up the standard environment, follow the additional installation steps below to add IMAGE-Materials.
 
 ### Prerequisites
+General dependencies are listed in the `pyproject.toml` file and will be installed automatically when you install the `image-materials` package.
 
-General dependencies are listed in the pyproject.toml file and will be installed automatically when you install the image-materials package.
-Additionally you need to install 2 packages of the IMAGE-Framework (pym and prism) that are not published yet. 
-**Note:** therefore, you need to have access to the IMAGEPBL GitHub repository
+### Additional Requirements
+#### If you are using the standard IMAGE conda environment
+If you are working in a **cloned standard IMAGE conda environment**, no additional steps are required. All necessary dependencies, including `pym` and `prism`, are already available.
 
-For **pym** and **prism** install it using:
+#### If you are NOT using the standard IMAGE conda environment
+If you are **not building on the standard IMAGE conda environment**, you must manually install two IMAGE Framework packages that are not published:
+
+- `pym`
+- `prism`
+
+> **Note:** Installation requires access to the IMAGEPBL GitHub repository.
+
+Install them using:
 
 ```bash
 pip install git+https://github.com/imagepbl/pym
 pip install git+https://github.com/imagepbl/prism
 ```
 
-Then install the other packages using:
+#### Additional packages for Developers
+If you are developing or contributing to image-materials, also install all packages used in image-materials in editable mode:
 
 ```bash
 pip install -e ".[all]"
 ```
 
-### Installing image-materials
-
+#### Installing image-materials (for Developers)
 Install the package locally in the parent directory of image-materials with:
 
 ```bash
@@ -40,10 +48,18 @@ pip install -e image-materials
 ```
 Using `-e` ensures automatic updates when modifying the package.
 
+#### Installing image-materials (for Users)
+Install the package locally in the parent directory of image-materials with:
+
+```bash
+pip install image-materials
+```
+
+This will also install all core dependencies defined for image-materials. 
+
 ## Usage
 
 ### Example Usage
-
 Example notebooks are available in the `examples` folder (e.g., `vehicles.ipynb`, `buildings.ipynb`). Below is a basic usage example:
 
 ```python
@@ -129,35 +145,37 @@ Users can extend the model by adding new modules for additional sectors. (More d
 ## Testing & Validation
 
 ### Running Tests
-
-- Unit tests are defined in `tests.py`.
+- Unit tests are located in the `tests/` directory and organized into multiple `test_*.py` files.
 - Tests are **automatically executed** when a pull request is initialized.
 
 ### Example Runs
-
-- Example test cases are included in the `examples` folder.
-- Additional user feedback tests will be added in the future.
+Example test cases are included in the `examples` folder.
 
 ## Development & Collaboration
-
 ### Contributing
 
-- please refer to our [Collaboration Guidelines](CONTRIBUTING.md) 
+Please refer to our [Collaboration Guidelines](CONTRIBUTING.md) 
 
 ### Coding Standards
 
-- Code should be **PEP8-compliant**.
-- Follow **recursive modeling principles** and align with the **prism package**.
+Coding standards should comply with the **IMAGE-prism coding standards**. These can be found in the [README](https://github.com/imagepbl/prism) of prism 
+
+#### Formatting 
+
+Code quality can be checked by running pylint: 
+
+```bash
+pylint imagematerials
+```
+in the root of your working copy.
 
 ## Licence
-### Licence
-- please refer to our [licence statement](LICENCE.md)
+Please refer to our [licence statement](LICENCE.md)
 
 ## Contact & Support
 
 ### Questions & Issues
-
-- Submit questions via **GitHub Issues**.
+Submit questions via **GitHub Issues**.
 
 ---
 
@@ -250,5 +268,3 @@ classDiagram
     GenericMaterials --> GenericStocks : "Depends on stock data"
     Maintenance --> GenericStocks : "Depends on stock data"
 ```
-
-
