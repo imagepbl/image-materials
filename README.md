@@ -145,7 +145,7 @@ Users can extend the model by adding new modules for additional sectors. (More d
 ## Testing & Validation
 
 ### Running Tests
-- Unit tests are defined in `tests.py`.
+- Unit tests are located in the `tests/` directory and organized into multiple `test_*.py` files.
 - Tests are **automatically executed** when a pull request is initialized.
 
 ### Example Runs
