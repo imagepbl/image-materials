@@ -27,6 +27,36 @@ def test_buildings_stocks(bld_prep_data):
     model = ModelFactory(sector, complete_timeline).add(GenericStocks).add(MaterialIntensities).finish()
     model.simulate(simulation_timeline)
 
+def test_electricity_gen_stocks(electr_gen_prep_data):
+    time_start = 1960
+    sim_end = 1980
+    complete_timeline = prism.Timeline(time_start, sim_end, 1)
+    simulation_timeline = prism.Timeline(1970, sim_end, 1)
+
+    sector = Sector("electricity_generation", electr_gen_prep_data)
+    model = ModelFactory(sector, complete_timeline).add(GenericStocks).add(MaterialIntensities).finish()
+    model.simulate(simulation_timeline)
+
+def test_electricity_grid_lines_stocks(electr_grid_lines_prep_data):
+    time_start = 1960
+    sim_end = 1980
+    complete_timeline = prism.Timeline(time_start, sim_end, 1)
+    simulation_timeline = prism.Timeline(1970, sim_end, 1)
+
+    sector = Sector("electricity_grid_lines", electr_grid_lines_prep_data)
+    model = ModelFactory(sector, complete_timeline).add(GenericStocks).add(MaterialIntensities).finish()
+    model.simulate(simulation_timeline)
+
+def test_electricity_grid_add_stocks(electr_grid_add_prep_data):
+    time_start = 1960
+    sim_end = 1980
+    complete_timeline = prism.Timeline(time_start, sim_end, 1)
+    simulation_timeline = prism.Timeline(1970, sim_end, 1)
+
+    sector = Sector("electricity_grid_additions", electr_grid_add_prep_data)
+    model = ModelFactory(sector, complete_timeline).add(GenericStocks).add(MaterialIntensities).finish()
+    model.simulate(simulation_timeline)
+
 
 def test_combined_stocks(bld_prep_data, vhc_prep_data):
     time_start = 1960
