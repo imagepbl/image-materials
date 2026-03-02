@@ -212,7 +212,7 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
     # add units
     prep_data["stocks"] = prism.Q_(prep_data["stocks"], "MW")
     prep_data["material_intensities"] = prism.Q_(prep_data["material_intensities"], "g/MW")
-    prep_data["set_unit_flexible"] = prism.U_(prep_data["stocks"]) # prism.U_ gives the unit back
+    prep_data["set_unit_flexible"] = str(prism.U_(prep_data["stocks"])) # prism.U_ gives the unit back
     # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
 
     return prep_data
@@ -584,14 +584,14 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
     prep_data_lines["stocks"]               = grid_lines_interp
     prep_data_lines["material_intensities"] = materials_lines_interp
     prep_data_lines["knowledge_graph"]      = create_electricity_graph()
-    prep_data_lines["set_unit_flexible"]    = prism.U_(prep_data_lines["stocks"]) # add unit (prism.U_ gives the unit back)
+    prep_data_lines["set_unit_flexible"]    = str(prism.U_(prep_data_lines["stocks"])) # add unit (prism.U_ gives the unit back)
     # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
     prep_data_additions = {}
     prep_data_additions["lifetimes"]            = grid_lifetime_interp_conv
     prep_data_additions["stocks"]               = grid_additions_interp
     prep_data_additions["material_intensities"] = materials_additions_interp
     prep_data_additions["knowledge_graph"]      = create_electricity_graph()
-    prep_data_additions["set_unit_flexible"]    = prism.U_(prep_data_additions["stocks"]) # add unit (prism.U_ gives the unit back)
+    prep_data_additions["set_unit_flexible"]    = str(prism.U_(prep_data_additions["stocks"])) # add unit (prism.U_ gives the unit back)
 
     return prep_data_lines, prep_data_additions
 
@@ -995,7 +995,7 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
     prep_data_phs = create_prep_data(results_dict, conversion_table, unit_mapping)
     prep_data_phs["stocks"] = prism.Q_(prep_data_phs["stocks"], "MWh")
     prep_data_phs["material_intensities"] = prism.Q_(prep_data_phs["material_intensities"], "kg/MWh")
-    prep_data_phs["set_unit_flexible"] = prism.U_(prep_data_phs["stocks"]) # prism.U_ gives the unit back
+    prep_data_phs["set_unit_flexible"] = str(prism.U_(prep_data_phs["stocks"])) # prism.U_ gives the unit back
 
 
     # Other storage--------------------------------------------------------------------------------------------
@@ -1056,7 +1056,7 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
     prep_data_oth_storage["stocks"] = prism.Q_(prep_data_oth_storage["stocks"], "MWh")
     prep_data_oth_storage["material_intensities"] = prism.Q_(prep_data_oth_storage["material_intensities"], "kg/kWh")
     prep_data_oth_storage["shares"] = prism.Q_(prep_data_oth_storage["shares"], "share")
-    prep_data_oth_storage["set_unit_flexible"] = prism.U_(prep_data_oth_storage["stocks"]) # prism.U_ gives the unit back
+    prep_data_oth_storage["set_unit_flexible"] = str(prism.U_(prep_data_oth_storage["stocks"])) # prism.U_ gives the unit back
 
 
     # change region names to IMAGE_REGIONS # TODO: this should be done in hte beginning of preprocessing
