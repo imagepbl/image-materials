@@ -351,6 +351,114 @@ storage_market_share_interp = interpolate_xr(storage_market_share, YEAR_FIRST_GR
 # As not all storage technologies are suitable for EV & mobile applications, select only those technologies.
 # normalize the selection of EV battery technologies, so that total market share is 1 again (taking the relative share in the selected battery techs)
 market_share_EVs = normalize_selected_techs(storage_market_share_interp, EV_BATTERIES, dim_type="BatteryType") # TODO: this should be done differently as market shares of EV batteries probably differ from their market shares in total storage market
+
+
+# TEST TEST TEST ==============================================
+# Calculations test ------
+test_allstor = storage_market_share_interp.copy()
+storage_subtypes_categories = ["mechanical storage", "lithium ion battery", "lithium metal battery", "flow battery", "molten salt battery", "lead acid and nickel battery", "fuel cell"]
+# test_allstor = elc_knowledge_graph.aggregate_sum(test_allstor, storage_subtypes_categories, dim="BatteryType")
+tech1 = ['LMO', 'NMC', 'NCA', 'LFP'] #'lithium ion battery'
+tech2 = ['Lithium Sulfur', 'Lithium Ceramic', 'Lithium-air'] #'lithium metal battery'
+print(test_allstor.sel(Cohort=2100, BatteryType = tech1).sum(dim="BatteryType") / test_allstor.sel(Cohort=2100, BatteryType = tech2).sum(dim="BatteryType"))
+
+test_evbat = market_share_EVs.copy()
+storage_subtypes_categories = ["lithium ion battery", "lithium metal battery", "lead acid and nickel battery"]
+# test_evbat = elc_knowledge_graph.aggregate_sum(test_evbat, storage_subtypes_categories, dim="BatteryType")
+tech1 = ['LMO', 'NMC', 'NCA', 'LFP', 'LTO'] #'lithium ion battery'
+tech2 = ['Lithium Sulfur', 'Lithium Ceramic', 'Lithium-air'] #'lithium metal battery'
+print(test_evbat.sel(Cohort=2100, BatteryType = tech1).sum(dim="BatteryType") / test_evbat.sel(Cohort=2100, BatteryType = tech2).sum(dim="BatteryType"))
+
+#------
+test = storage_market_share_interp.copy()
+
+fig, ax = plt.subplots(figsize=(8, 6))
+battery_types = test.BatteryType.values
+ax.stackplot(
+    test.Cohort,
+    [test.sel(BatteryType=bt) for bt in battery_types],
+    labels=battery_types
+)
+ax.set_xlim(1990,2100)
+ax.set_xlabel("Year")
+ax.set_ylabel("Share of total battery stock")
+ax.set_ylim(0, 1)
+ax.legend(loc="center left", bbox_to_anchor=(1.02, 0.5), frameon=False)
+ax.set_title(f"Normalized battery stock by battery type (based on stock in Wh; SSP2_baseline)")
+plt.show()
+
+colormap_storage_subtypes_categories = {
+    "mechanical storage":           "#4387F6", 
+    "lithium ion battery":          "#F0BA3C", 
+    "lithium metal battery":        "#EDCD76", 
+    "flow battery":                 "#5C55D6", 
+    "molten salt battery":          "#31942A", 
+    "lead acid and nickel battery": "#A72C41", 
+    "fuel cell":                    "#6A26D1"}
+
+test2 = storage_market_share_interp.copy()
+
+storage_subtypes_categories = ["mechanical storage", "lithium ion battery", "lithium metal battery", "flow battery", "molten salt battery", "lead acid and nickel battery", "fuel cell"]
+elc_knowledge_graph = create_electricity_graph()
+test2 = elc_knowledge_graph.aggregate_sum(test2, storage_subtypes_categories, dim="BatteryType")
+
+fig, ax = plt.subplots(figsize=(8, 6))
+battery_types = test2.BatteryType.values
+ax.stackplot(
+    test2.Cohort,
+    [test2.sel(BatteryType=bt) for bt in battery_types],
+    labels=battery_types,
+    colors=[colormap_storage_subtypes_categories[bt] for bt in battery_types],
+)
+ax.set_xlim(1990,2100)
+ax.set_xlabel("Year")
+ax.set_ylabel("Share of total battery stock")
+ax.set_ylim(0, 1)
+ax.legend(loc="center left", bbox_to_anchor=(1.02, 0.5), frameon=False)
+ax.set_title(f"Normalized battery stock by battery type (based on stock in Wh; SSP2_baseline)")
+plt.show()
+
+# -----
+test = market_share_EVs.copy()
+fig, ax = plt.subplots(figsize=(8, 6))
+battery_types = test.BatteryType.values
+ax.stackplot(
+    test.Cohort,
+    [test.sel(BatteryType=bt) for bt in battery_types],
+    labels=battery_types
+)
+ax.set_xlim(1990,2100)
+ax.set_xlabel("Year")
+ax.set_ylabel("Share of battery inflow")
+ax.set_ylim(0, 1)
+ax.legend(loc="center left", bbox_to_anchor=(1.02, 0.5), frameon=False)
+ax.set_title(f"Normalized EV battery inflow market shares (based on inflow in count, SSP2_baseline)")
+plt.show()
+
+#----
+test2 = market_share_EVs.copy()
+storage_subtypes_categories = ["lithium ion battery", "lithium metal battery", "lead acid and nickel battery"]
+elc_knowledge_graph = create_electricity_graph()
+test2 = elc_knowledge_graph.aggregate_sum(test2, storage_subtypes_categories, dim="BatteryType")
+
+fig, ax = plt.subplots(figsize=(8, 6))
+battery_types = test2.BatteryType.values
+ax.stackplot(
+    test2.Cohort,
+    [test2.sel(BatteryType=bt) for bt in battery_types],
+    labels=battery_types,
+    colors=[colormap_storage_subtypes_categories[bt] for bt in battery_types],
+)
+ax.set_xlim(1990,2100)
+ax.set_xlabel("Year")
+ax.set_ylabel("Share of battery inflow")
+ax.set_ylim(0, 1)
+ax.legend(loc="center left", bbox_to_anchor=(1.02, 0.5), frameon=False)
+ax.set_title(f"Normalized EV battery inflow market shares (based on inflow in count, SSP2_baseline)")
+plt.show()
+# END TEST TEST ==============================================
+
+
 market_share_EVs = market_share_EVs.expand_dims(Type=vehicle_list).copy() # add vehicle type dimension
 market_share_EVs.loc[dict(Type=vehicle_list_non_ev)] = 0 # set non-EV vehicle types to zero
 

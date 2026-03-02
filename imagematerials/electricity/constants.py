@@ -195,7 +195,16 @@ EV_BATTERIES = ['NiMH', 'LMO', 'NMC', 'NCA', 'LFP', 'Lithium Sulfur', 'Lithium C
 
 PHS_KG_PERKWH = 26.8   # kg per kWh storage capacity (as weight addition to existing hydro plants to make them pumped) 
 
-
+dict_storage_tech_to_groups  = {
+    "nickel battery":           ["NiMH"],
+    "lead-acid battery":        ["Deep-cycle Lead-Acid"],
+    "lithium ion battery":      ["LMO", "NMC", "NCA", "LFP", "LTO"],
+    "flow battery":             ["Zinc-Bromide", "Vanadium Redox"],
+    "molten-salt battery":      ["Sodium-Sulfur", "ZEBRA"],
+    "lithium-metal battery":    ["Lithium Sulfur", "Lithium Ceramic", "Lithium-air"],
+    "mechanical":               ["PHS", "Flywheel", "Compressed Air"],
+    "fuel-cells":               ["Hydrogen FC"]
+}
 
 
 # Visualization related ---------------------------------------------

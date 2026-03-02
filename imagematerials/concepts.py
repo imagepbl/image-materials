@@ -596,7 +596,7 @@ def create_electricity_graph():
     storage_supertypes = ["PHS", "V2G-Batteries", "Other Storage"] # Pumped Hydro Storage, Vehicle-to-Grid Batteries
     # Storage calculations follow a 3 tiered structure: Demand is filled first with PHS, then with (anyway available) V2G-Batteries, and 
     # the residual demand with Other Storage
-    storage_subtypes_categories = ["mechanical storage", "lithium batteries", "molten salt and flow batteries", "other"]
+    storage_subtypes_categories = ["mechanical storage", "lithium battery", "flow battery", "molten salt battery", "lead acid and nickel battery", "fuel cell"]
     storage_subtypes = ["Flywheel", "Compressed Air", "Hydrogen FC", "NiMH", "Deep-cycle Lead-Acid", "LMO",
                         "NMC", "NCA", "LFP", "LTO", "Zinc-Bromide", "Vanadium Redox", "Sodium-Sulfur", "ZEBRA",
                         "Lithium Sulfur", "Lithium Ceramic", "Lithium-air"]
@@ -610,12 +610,20 @@ def create_electricity_graph():
         electricity_knowledge_graph.add(Node(subtype_category, inherits_from="Other Storage"))
     for subtype in ["Flywheel", "Compressed Air"]:
         electricity_knowledge_graph.add(Node(subtype, inherits_from="mechanical storage"))
-    for subtype in ["LMO","NMC", "NCA", "LFP", "LTO","Lithium Sulfur", "Lithium Ceramic", "Lithium-air"]:
-        electricity_knowledge_graph.add(Node(subtype, inherits_from="lithium batteries"))
-    for subtype in ["Zinc-Bromide", "Vanadium Redox", "Sodium-Sulfur", "ZEBRA"]:
-        electricity_knowledge_graph.add(Node(subtype, inherits_from="molten salt and flow batteries"))
-    for subtype in ["Hydrogen FC", "NiMH", "Deep-cycle Lead-Acid"]:
-        electricity_knowledge_graph.add(Node(subtype, inherits_from="other"))
+    for subtype in ["lithium ion battery","lithium metal battery"]:
+        electricity_knowledge_graph.add(Node(subtype, inherits_from="lithium battery"))
+    for subtype in ["LMO","NMC","NCA", "LFP", "LTO"]:
+        electricity_knowledge_graph.add(Node(subtype, inherits_from="lithium ion battery"))
+    for subtype in ["Lithium Sulfur", "Lithium Ceramic", "Lithium-air"]:
+        electricity_knowledge_graph.add(Node(subtype, inherits_from="lithium metal battery"))
+    for subtype in ["Zinc-Bromide", "Vanadium Redox"]:
+        electricity_knowledge_graph.add(Node(subtype, inherits_from="flow battery"))
+    for subtype in ["Sodium-Sulfur", "ZEBRA"]:
+        electricity_knowledge_graph.add(Node(subtype, inherits_from="molten salt battery"))
+    for subtype in ["NiMH", "Deep-cycle Lead-Acid"]:
+        electricity_knowledge_graph.add(Node(subtype, inherits_from="lead acid and nickel battery"))
+    for subtype in ["Hydrogen FC"]:
+        electricity_knowledge_graph.add(Node(subtype, inherits_from="fuel cell"))
     
 
     return electricity_knowledge_graph
