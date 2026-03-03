@@ -1,45 +1,46 @@
-# imagematerials
-
-## Overview
-
-**imagematerials** is a standalone stock and material model that converts service demand data (e.g., kilometers traveled, goods transported, or square meters of built space) into product stock, such as vehicles, buildings, and roads. The model includes a detailed age structure of the product stock based on lifetime distributions and historical assumptions. It is designed for researchers analyzing material use patterns.
+## Introduction
+**IMAGE-Materials** is a standalone stock and material model that converts service demand data (e.g., kilometers traveled, goods transported, or square meters of built space) into product stock, such as vehicles, buildings, and roads. The model includes a detailed age structure of the product stock based on lifetime distributions and historical assumptions. It is designed for researchers analyzing material use patterns.
 
 ## Installation
+### Environment
+**Note:** At this point in time, while our code is public, we still depend on packages from the IMAGE framework that are not public yet.
 
-### Setting Up a Python Environment
-
-It is recommended to use a virtual environment for installing dependencies. See [this guide](https://docs.python.org/3/tutorial/venv.html) for instructions on creating and managing Python environments.
+> [!TIP]
+> **For IMAGE users:**  
+> Please refer to the guide on the [default setup of Python and your development environment within IMAGE](https://github.com/imagepbl/template-repository/blob/main/docs/PYTHON_HOWTO.md).
+> In general, **Conda environments are recommended**. You can use the [standard IMAGE Conda environments](https://github.com/imagepbl/conda-envs) as a starting point.
+> Please note that **IMAGE-Materials is not pre-installed** in these environments. After setting up the standard environment, follow the additional installation steps below to add IMAGE-Materials.
 
 ### Prerequisites
+General dependencies are listed in the `pyproject.toml` file and will be installed automatically when you install the `image-materials` package.
 
-General dependencies are listed in the pyproject.toml file and will be installed automatically when you install the image-materials package.
-For developers: to install additional dependencies for documentation and testing, run
+### Additional Requirements
+#### If you are using the standard IMAGE conda environment
+If you are working in a **cloned standard IMAGE conda environment**, no additional steps are required. All necessary dependencies, including `pym` and `prism`, are already available.
+
+#### If you are NOT using the standard IMAGE conda environment
+If you are **not building on the standard IMAGE conda environment**, you must manually install two IMAGE Framework packages that are not published:
+
+- `pym`
+- `prism`
+
+> **Note:** Installation requires access to the IMAGEPBL GitHub repository.
+
+Install them using:
+
+```bash
+pip install git+https://github.com/imagepbl/pym
+pip install git+https://github.com/imagepbl/prism
+```
+
+#### Additional packages for Developers
+If you are developing or contributing to image-materials, also install all packages used in image-materials in editable mode:
 
 ```bash
 pip install -e ".[all]"
 ```
-after you installed the package.
 
-For **pint-xarray**, install it using:
-
-```bash
-pip install git+https://github.com/xarray-contrib/pint-xarray
-```
-
-Additionally, install **pym** and **prism** in the same environment from the IMAGEPBL GitHub repository:
-1. Clone the repository
-```bash
-git clone https://github.com/imagepbl/pym.git
-git clone https://github.com/imagepbl/prism.git
-```
-2. Install the packages
-```bash
-pip install ./pym
-pip install ./prism
-```
-
-### Installing image-materials
-
+#### Installing image-materials (for Developers)
 Install the package locally in the parent directory of image-materials with:
 
 ```bash
@@ -47,10 +48,18 @@ pip install -e image-materials
 ```
 Using `-e` ensures automatic updates when modifying the package.
 
+#### Installing image-materials (for Users)
+Install the package locally in the parent directory of image-materials with:
+
+```bash
+pip install image-materials
+```
+
+This will also install all core dependencies defined for image-materials. 
+
 ## Usage
 
 ### Example Usage
-
 Example notebooks are available in the `examples` folder (e.g., `vehicles.ipynb`, `buildings.ipynb`). Below is a basic usage example:
 
 ```python
@@ -136,47 +145,37 @@ Users can extend the model by adding new modules for additional sectors. (More d
 ## Testing & Validation
 
 ### Running Tests
-
-- Unit tests are defined in `tests.py`.
+- Unit tests are located in the `tests/` directory and organized into multiple `test_*.py` files.
 - Tests are **automatically executed** when a pull request is initialized.
 
 ### Example Runs
-
-- Example test cases are included in the `examples` folder.
-- Additional user feedback tests will be added in the future.
+Example test cases are included in the `examples` folder.
 
 ## Development & Collaboration
-
 ### Contributing
 
-Contributions are welcome! Follow these steps:
-
-1. Create a branch.
-2. Submit a pull request.
+Please refer to our [Collaboration Guidelines](CONTRIBUTING.md) 
 
 ### Coding Standards
 
-- Code should be **PEP8-compliant**.
-- Follow **recursive modeling principles** and align with the **prism package**.
+Coding standards should comply with the **IMAGE-prism coding standards**. These can be found in the [README](https://github.com/imagepbl/prism) of prism 
 
-## License & Citation
+#### Formatting 
 
-### License
+Code quality can be checked by running pylint: 
 
-This repository is currently under copyright by the IMAGE Materials team, Utrecht University 2026. This repository will be integrated into the IMAGE framework, and will be licensed open source under the license chosen by the framework.
+```bash
+pylint imagematerials
+```
+in the root of your working copy.
 
-Copyright IMAGE Materials team, Utrecht University 2026, all rights reserved
-
-### How to Cite
-
-Citation details to be added.
+## Licence
+Please refer to our [licence statement](LICENCE.md)
 
 ## Contact & Support
 
 ### Questions & Issues
-
-- Submit questions via **GitHub Issues**.
-- Contact information to be added.
+Submit questions via **GitHub Issues**.
 
 ---
 
@@ -269,5 +268,3 @@ classDiagram
     GenericMaterials --> GenericStocks : "Depends on stock data"
     Maintenance --> GenericStocks : "Depends on stock data"
 ```
-
-

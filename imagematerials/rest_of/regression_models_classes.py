@@ -193,10 +193,12 @@ class NLS_Model:
 
 class Log_Log_Model(OLS_Model):
     def _transform_X(self, X: np.array):
+        X = np.asarray(X, dtype=float)
         X[X <= 0] = np.nan
         return np.log(X)
     
     def _transform_y(self, y: np.array):
+        y = np.asarray(y, dtype=float)
         y[y <= 0] = np.nan
         return np.log(y)
     
@@ -206,6 +208,7 @@ class Log_Log_Model(OLS_Model):
 
 class Semi_Log_Model(OLS_Model):
     def _transform_X(self, X: np.array):
+        X = np.asarray(X, dtype=float)
         X[X <= 0] = np.nan
         return np.log(X)
     
@@ -218,10 +221,12 @@ class Semi_Log_Model(OLS_Model):
 
 class Log_Inverse_Model(OLS_Model):
     def _transform_X(self, X: np.array):
+        X = np.asarray(X, dtype=float)
         X[X == 0] = np.nan
         return np.divide(1, X)
     
     def _transform_y(self, y: np.array):
+        y = np.asarray(y, dtype=float)
         y[y <= 0] = np.nan
         return np.log(y)
     
@@ -231,10 +236,12 @@ class Log_Inverse_Model(OLS_Model):
 
 class Log_Log_Inverse_Model(OLS_Model):
     def _transform_X(self, X: np.array):
+        X = np.asarray(X, dtype=float)
         X[X <= 0] = np.nan
         return np.concatenate([np.log(X), 1 / X], axis=1)
     
     def _transform_y(self, y: np.array):
+        y = np.asarray(y, dtype=float)
         y[y <= 0] = np.nan
         return np.log(y)
     
@@ -244,10 +251,12 @@ class Log_Log_Inverse_Model(OLS_Model):
 
 class Log_Log_Square_Model(OLS_Model):
     def _transform_X(self, X: np.array):
+        X = np.asarray(X, dtype=float)
         X[X <= 0] = np.nan
         return np.concatenate([np.log(X), np.power(np.log(X), 2)], axis=1)
     
     def _transform_y(self, y: np.array):
+        y = np.asarray(y, dtype=float)
         y[y <= 0] = np.nan
         return np.log(y)
     
