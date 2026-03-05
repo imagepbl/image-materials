@@ -15,8 +15,10 @@ def _get_new_compare(data, key_list):
     for name, cur_data in data.items():
         if "dims" in cur_data:
             all_compares.append([key_list + [name], cur_data])
+        # elif isinstance(cur_data, str):
+        #     all_compares.append([[name], cur_data])
         elif isinstance(cur_data, str):
-            all_compares.append([[name], cur_data])
+            all_compares.append([key_list + [name], cur_data])
         else:
             all_compares.extend(_get_new_compare(cur_data, key_list + [name]))
     return all_compares
@@ -78,24 +80,22 @@ def test_buildings_prep(bld_summary, key_list, expected):
         assert  np.allclose(data["data"], expected["data"]), (
             f"Name: {data['name']}, New: {np.sum(data['data'])}, Old: {np.sum(expected['data'])}")
 
-# @mark.parametrize("key_list,expected",
-#                   find_data_items(Path("tests", "data", "electricity_summary.json")))
-# def test_electricity_prep(elc_summary, key_list, expected):
-#     data = elc_summary
-#     # Key list contains the name of the dataset, i.e. ["stocks", "Region"] is
-#     # concerns the stocks summed over all dimensions except Region.
-#     key_list_copy = [k for k in key_list]
-#     while len(key_list_copy) > 0:
-#         data = data[key_list_copy[0]]
-#         key_list_copy.pop(0)
-#
-#     if data != expected:
-#         assert data["name"] == expected["name"]
-#         assert data["dims"] == expected["dims"]
-#         assert data["attrs"] == expected["attrs"]
-#         assert data["coords"] == expected["coords"]
-#         assert np.allclose(data["data"], expected["data"]), (
-#             f"Name: {data['name']}, New: {np.sum(data['data'])}, Old: {np.sum(expected['data'])}")
+@mark.parametrize("key_list,expected",
+                  find_data_items(Path("tests", "data", "electricity_summary.json")))
+def test_electricity_prep(elc_summary, key_list, expected):
+    data = elc_summary
+    key_list_copy = [k for k in key_list]
+    while len(key_list_copy) > 0:
+        data = data[key_list_copy[0]]
+        key_list_copy.pop(0)
+
+    if data != expected:
+        assert data["name"] == expected["name"]
+        assert data["dims"] == expected["dims"]
+        assert data["attrs"] == expected["attrs"]
+        assert data["coords"] == expected["coords"]
+        assert np.allclose(data["data"], expected["data"]), (
+            f"Name: {data['name']}, New: {np.sum(data['data'])}, Old: {np.sum(expected['data'])}")
 
 
 def _check_data_same(orig_data, new_data, name=""):
@@ -123,7 +123,8 @@ def _check_data_same(orig_data, new_data, name=""):
     for coord in orig_data.coords:
         assert all(orig_data[coord] == new_data[coord])
 
-@mark.parametrize("prep_data_name", ["vhc_prep_data", "bld_prep_data"]) #,"elc_prep_data"
+#
+@mark.parametrize("prep_data_name", ["vhc_prep_data", "bld_prep_data", "elc_prep_data"])
 def test_save_load_netcdf(prep_data_name, request, tmpdir):
     prep_data = request.getfixturevalue(prep_data_name)
     netcdf_fp = tmpdir / "test.netcdf"

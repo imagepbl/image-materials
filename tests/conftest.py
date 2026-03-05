@@ -34,4 +34,7 @@ def elc_sector():
 
 @pytest.fixture(scope="session")
 def elc_prep_data(elc_sector):
-    return elc_sector.prep_data
+    return {
+        sector.name: sector.prep_data
+        for sector in elc_sector
+    }

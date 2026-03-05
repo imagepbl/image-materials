@@ -161,12 +161,14 @@ def export_to_netcdf(prep_data: dict, out_fp):
     for key, data in new_prep_data.items():
         try:
             data.to_netcdf(out_fp, group=key, mode="a", engine="netcdf4")
+
         except AttributeError:
             with netCDF4.Dataset(out_fp, "a") as rootgrp:
                 if data is None:
                     setattr(rootgrp, key, NONE_SENTINEL)
                 else:
                     setattr(rootgrp, key, data)
+
 
 def import_from_netcdf(in_fp) -> dict:
     """Import the xarray data from a netcdf4 file.
@@ -183,6 +185,7 @@ def import_from_netcdf(in_fp) -> dict:
     """
     prep_data_dict = {}
     lt = xr.open_dataset(in_fp, group="lifetimes", engine="netcdf4").load()
+
     prep_data_dict["lifetimes"] = {dist_name: arr.dropna("Type")
                                             for dist_name, arr in lt.items()}
     # prep_data = xr.open_dataset(in_fp, group="main", engine="netcdf4").load()
@@ -198,6 +201,7 @@ def import_from_netcdf(in_fp) -> dict:
     all_groups.remove("lifetimes")
     for key in all_groups:
         prep_data_dict[key] = xr.open_dataarray(in_fp, group=key, engine="netcdf4").load()
+
         if key == "knowledge_graph":
             prep_data_dict[key] = KnowledgeGraph.from_dataarray(prep_data_dict[key])
     return prep_data_dict
@@ -220,7 +224,8 @@ def summarize_prep_data(data):
             all_summary[data_name] = array
         else:
             raise ValueError(f"Cannot compare data with name '{data_name}' with type {type(array)}")
-    return all_summary
+
+    return normalize_dict(all_summary)
 
 
 def _summarize_array(array):
@@ -266,6 +271,7 @@ def read_climate_policy_config(scenario_folder) -> dict:
     """
     return _read_config(scenario_folder)
 
+
 def read_circular_economy_config(scenario_folders: dict) -> dict:
     """
     Extracts data from multiple .toml-files and joins it together.
@@ -284,6 +290,7 @@ def read_circular_economy_config(scenario_folders: dict) -> dict:
     for key, scenario_folder in scenario_folders.items():
         config_dict[key] = _read_config(scenario_folder)
     return config_dict
+
 
 def _read_config(scenario_folder) -> dict:
     """
@@ -491,8 +498,6 @@ def convert_lifetime_dataarray(lifetime_dataarray: xr.DataArray) -> dict[str, xr
     return ret_scipy_params
 
 
-
-
 def scenario_change(arr: xr.DataArray, base_year: int, target_year: int, change: dict,
                     implementation_rate: str, data_type: Optional[str]=None, steepness: float=0.5) -> xr.DataArray:
 
@@ -588,7 +593,6 @@ def scenario_change(arr: xr.DataArray, base_year: int, target_year: int, change:
     return result.interpolate_na("Time", method="cubic")
 
 
-
 def apply_change_per_region(arr: xr.DataArray, base_year: int, target_year: int, increase: float,
                             implementation_rate: str, data_type: Optional[str]=None,
                             steepness: float=0.5) -> xr.DataArray:
@@ -653,6 +657,7 @@ def overwrite_future_rates(arr: xr.DataArray, target_year: int, supertypes: list
         result.loc[{"Time": target_year,"Type": supertypes, "material": material}] = new_value
     return result
 
+
 def reindex_material(sector, materials):
     """
     Reindex the 'material' coordinate of a sector's data to match a given list of materials.
@@ -678,3 +683,29 @@ def reindex_material(sector, materials):
         )
 
     return sector
+
+
+def normalize_key(key):
+    """
+    Convert dict keys to JSON-safe, stable strings.
+    """
+    if isinstance(key, tuple):
+        # ("EU", "Solar") -> "EU|Solar"
+        return "|".join(str(k) for k in key)
+
+    return str(key)
+
+
+def normalize_dict(d):
+    new = {}
+
+    for k in sorted(d.keys(), key=lambda x: str(x)):
+        v = d[k]
+        nk = normalize_key(k)
+
+        if isinstance(v, dict):
+            v = normalize_dict(v)
+
+        new[nk] = v
+
+    return new

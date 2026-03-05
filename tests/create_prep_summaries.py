@@ -25,9 +25,13 @@ if __name__ == "__main__":
     with open(Path("tests", "data", "buildings_summary.json"), "w", encoding="utf8") as handle:
         json.dump(summary_bld, handle)
 
-    # # Electricity summary
-    # elc_sector = get_preprocessing_data("electricity", base_dir=base_directory,
-    #                                     climate_policy_scenario_dir=climate_policy_scenario_dir)
-    # summary_elc = summarize_prep_data(elc_sector.prep_data)
-    # with open(Path("tests", "data", "electricity_summary.json"), "w", encoding="utf8") as handle:
-    #     json.dump(summary_elc, handle)
+    # Electricity summary
+    elc_sector = get_preprocessing_data("electricity", base_dir=base_directory,
+                                        climate_policy_scenario_dir=climate_policy_scenario_dir)
+
+    elc_sector_dict = {sector.name: sector.prep_data for sector in elc_sector}
+    summary_elc = summarize_prep_data(elc_sector_dict)
+
+    with open(Path("tests", "data", "electricity_summary.json"), "w", encoding="utf8") as handle:
+        json.dump(summary_elc, handle)
+
