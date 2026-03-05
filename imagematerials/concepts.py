@@ -104,7 +104,9 @@ class KnowledgeGraph():
     Concepts are for example: vehicle, car, BEV car. The relationships between concepts are
     mostly the "is a" type of relations. For example a car is a vehicle would be denoted by
     the "inherits_from='vehicle'" attribute. Note that concepts can inherit from multiple sources.
-    So, BEV could inherit from car and it can also inherit from has_battery for example.
+    So, BEV could inherit from car and it can also inherit from has_battery for example. This can
+    be useful if you want to aggregate over both vehicles and object that have batteries (which
+    can include objects that are not vehicles of course).
 
     One of the goals of the knowledge graph is to facilitate easier computation when concept
     synonyms or concept inheritance is used inside of the data. For example, say that you have data
@@ -197,9 +199,9 @@ class KnowledgeGraph():
         Examples
         --------
         >>> kg = KnowledgeGraph(Node("car", synonyms=["automobile"]))
-        >>> kg.find_relations(["autombile"], ["car"])
+        >>> kg.find_relations(["automobile"], ["car"])
         {
-            "car": "automobile"
+            "car": ["automobile"]
         }
 
         Returns
@@ -217,6 +219,9 @@ class KnowledgeGraph():
 
     def find_one_relation(self, input_coords: list[str], output_name: str) -> list[str]:
         """Find a related object from a list of inputs.
+
+        Differs from :meth:`KnowledgeGraph.find_relations` through finding the related inputs
+        for one output coordinate, instead of multiple.
 
         Parameters
         ----------
@@ -236,6 +241,18 @@ class KnowledgeGraph():
             If the output_name has both ancestors and descendants in the input coordinates.
         ValueError
             If no known relations are known.
+
+
+        Examples
+        --------
+        >>> kg = KnowledgeGraph(Node("vehicle", synonyms=["transport_object"])
+        >>>                     Node("car", synonyms=["automobile"], inherits_from="vehicle"),
+        >>>                     Node("bicycle", synonyms=["bike"], inherits_from="vehicle),
+        >>> )
+        >>> kg.find_one_relation(["car, "bike"], "bicycle")
+        ["bike"]
+        >>> kg.find_one_relation(["car", "bike"], "vehicle")
+        ["car", "bike"]
 
         """
         if output_name in input_coords:
@@ -265,7 +282,8 @@ class KnowledgeGraph():
     def find_relations_inverse(self, input_coords, output_coords):
         """Find which coordinates in the input match the coordinates in the output.
 
-        Similar to :meth:`find_relations`, but inverse of that.
+        Similar to :meth:`find_relations`, but inverse of that. Assumes that the input coordinates
+        are unique.
 
         Parameters
         ----------
@@ -279,6 +297,15 @@ class KnowledgeGraph():
         inverse_relations:
             A dictionary with keys that input coordinates as keys, and lists of
             output coordinates as values.
+
+        Examples
+        --------
+        >>> kg = KnowledgeGraph(Node("vehicle", synonyms=["transport_object"])
+        >>>                     Node("car", synonyms=["automobile"], inherits_from="vehicle"),
+        >>>                     Node("bicycle", synonyms=["bike"], inherits_from="vehicle),
+        >>> )
+        >>> kg.find_relations_inverse(["automobile", "bicycle", "vehicle"], ["car", "bicycle"])
+        {"automobile": ["car"], "bicycle": ["vehicle"], "vehicle": ["car", "bicycle"]}
 
         """
         relations = self.find_relations(input_coords, output_coords)
