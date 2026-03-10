@@ -124,10 +124,19 @@ def _check_data_same(orig_data, new_data, name=""):
         assert all(orig_data[coord] == new_data[coord])
 
 #
-@mark.parametrize("prep_data_name", ["vhc_prep_data", "bld_prep_data", "elc_prep_data"])
+@mark.parametrize("prep_data_name", ["vhc_prep_data", "bld_prep_data"])
 def test_save_load_netcdf(prep_data_name, request, tmpdir):
     prep_data = request.getfixturevalue(prep_data_name)
     netcdf_fp = tmpdir / "test.netcdf"
     export_to_netcdf(prep_data, netcdf_fp)
     new_prep_data = import_from_netcdf(netcdf_fp)
     _check_data_same(prep_data, new_prep_data)
+
+
+def test_save_load_netcdf_elc(tmpdir, elc_prep_data):
+    for key, prep_data in elc_prep_data.items():
+        print(prep_data)
+        netcdf_fp = tmpdir / f"test_{key}.netcdf"
+        export_to_netcdf(prep_data, netcdf_fp)
+        new_prep_data = import_from_netcdf(netcdf_fp)
+        _check_data_same(prep_data, new_prep_data)
