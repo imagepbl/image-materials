@@ -917,9 +917,8 @@ class EvBatteryLinkModule(prism.Model):
 
 @prism.interface
 class ElectricVehicleBatteries(prism.Model):
-    """ Calculates # batteries, energy capacity and materials per battery type for inflow, stock, outflow
-    in electric vehicles.
-
+    """ Calculates ev battery energy capacity and ev battery materials per battery type for inflow, stock, outflow
+    in electric vehicles. Calculates also the battery stock that is available for V2G (vehicle to grid) applications.
 
     Notes
     -----
@@ -964,10 +963,21 @@ class ElectricVehicleBatteries(prism.Model):
 
 
     def compute_initial_values(self, time: prism.Timeline):
-        """
+        """ Initialize variables required for the calculation of V2G battery stocks.
+
+        Parameters
+        ----------
+        time : prism.Timeline
+            Timeline object defining the simulation time horizon.
+
+        Notes
+        -----
+        - V2G-capable vehicle types are derived from ``self.vhc_fraction_v2g``.
+        - Only road vehicle types are considered in the battery-related calculations.
         """
         # vhc_fraction_v2g only contains Types that are V2G capable (e.g. "Cars - BEV")
         self._types_v2g = self.vhc_fraction_v2g.Type
+        # TODO: this is not ideal (hardcoding road vehicle types) -> improve!
         self.ROAD_VEHICLE_TYPES = ['Cars - BEV', 'Cars - FCV', 'Cars - HEV', 'Cars - ICE', 
        'Cars - PHEV', 'Cars - Trolley', 'Heavy Freight Trucks - BEV',
        'Heavy Freight Trucks - FCV', 'Heavy Freight Trucks - HEV',
@@ -986,7 +996,7 @@ class ElectricVehicleBatteries(prism.Model):
 
         self.stock_battery_kWh_v2g = xr.DataArray(
             0.0,
-            dims=("Time", "Type", "BatteryType", "Region"), # 
+            dims=("Time", "Type", "BatteryType", "Region"), 
             coords={"Time":         self.Time,
                     "BatteryType":  self.BatteryType,
                     "Type":         self._types_v2g,
@@ -994,9 +1004,45 @@ class ElectricVehicleBatteries(prism.Model):
         self.stock_battery_kWh_v2g = prism.Q_(self.stock_battery_kWh_v2g, "kWh")
 
         
-    def compute_values(self, time: prism.Time, inflow, stock_by_cohort, outflow_by_cohort):
-        """
-        
+    def compute_values(self, 
+                       time: prism.Time, 
+                       inflow: prism.TimeVariable, 
+                       stock_by_cohort: xr.DataArray, 
+                       outflow_by_cohort: prism.TimeVariable):
+        """Compute battery energy capacity flows and stocks and corresponding
+        materials stocks and flows, and V2G-capable battery energy capacity stock for the 
+        current simulation time step.
+
+        For each time step, this method calculates:
+        1. Battery mass inflow, stock, and outflow (kg)
+        2. Battery material inflow, stock, and outflow (kg) based on material
+        composition
+        3. Battery energy capacity inflow, stock, and outflow (kWh) using energy
+        density
+        4. V2G-capable battery energy capacity stock (kWh)
+
+        Parameters
+        ----------
+        time : prism.Time
+            Current time step object containing the index ``t`` and time step
+            length ``dt``.
+        inflow : prism.TimeVariable
+            Vehicle inflow by type and region.
+        stock_by_cohort : xarray.DataArray
+            Vehicle stock by type, and region.
+        outflow_by_cohort : prism.TimeVariable
+            Vehicle outflow by type, and region.
+
+        Notes
+        -----
+        - Battery mass is calculated using vehicle inflow/stock/outflow together
+        with battery shares and battery weights.
+        - Material flows are derived from battery mass using material fractions.
+        - Energy capacity (kWh) is obtained by dividing battery mass by the
+        battery energy density since energy density is in units of kg/kWh.
+        - V2G-capable battery stock is computed using the fraction of vehicles
+        that support V2G and the share of battery capacity available for grid
+        services.
         """
          
         t, dt = time.t, time.dt
