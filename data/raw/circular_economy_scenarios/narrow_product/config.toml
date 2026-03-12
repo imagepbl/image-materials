@@ -1,0 +1,177 @@
+[buildings]
+base_year = 2025
+target_year = 2060
+implementation_rate = 'linear'
+
+#for MI change: 3_SHA_LightWeighting_Buildings_V2.2.xlsx dataset in https://zenodo.org/records/4671644 (ODYM-RECC documentation)
+#SSP1 values were used instead of the SSP2 used in IRP study (see below the penetration rates ranging from 35-93%)
+#now regional penetration rates range from 50-93% according to table below
+#same penetration rates used for residential and nonresidential buildings (thus also diverging from the IRP 2024 Bend the trend, where 40% was used as penetration rate for commercial buildings)
+#material substitution was not implemented
+
+[buildings.material_intensity_change.steel]
+"Asian-Stan" = -8.5
+Brazil = -8.5
+Canada = -15.7
+"Central Europe" = -8.5
+"China +" = -8.5
+"Eastern Africa" = -8.5
+"India +" = -8.5
+"Indonesia +" = -8.5
+Japan = -14.5
+Korea = -8.5
+Mexico = -8.5
+"Middle East" = -8.5
+"Northern Africa" = -8.5
+Oceania = -8.5
+"Rest of Central America" = -8.5
+"Rest of South America" = -8.5
+"Rest of South Asia" = -8.5
+"Rest of Southern Africa" = -8.5
+"Russia +" = -8.5
+"South Africa" = -8.5
+"Southeastern Asia" = -8.5
+Turkey = -8.5
+"Ukraine +" = -8.5
+USA = -15.7
+"Western Africa" = -8.5
+"Western Europe" = -8.5
+
+[buildings.material_intensity_change.concrete]
+"Asian-Stan" = -7.5
+Brazil = -7.5
+Canada = -13.9
+"Central Europe" = -7.5
+"China +" = -7.5
+"Eastern Africa" = -7.5
+"India +" = -7.5
+"Indonesia +" = -7.5
+Japan = -12.8
+Korea = -7.5
+Mexico = -7.5
+"Middle East" = -7.5
+"Northern Africa" = -7.5
+Oceania = -7.5
+"Rest of Central America" = -7.5
+"Rest of South America" = -7.5
+"Rest of South Asia" = -7.5
+"Rest of Southern Africa" = -7.5
+"Russia +" = -7.5
+"South Africa" = -7.5
+"Southeastern Asia" = -7.5
+Turkey = -7.5
+"Ukraine +" = -7.5
+USA = -13.9
+"Western Africa" = -7.5
+"Western Europe" = -7.5
+
+# cement only applied for commercial buildings (cement demand in residential buildings is derived from concrete demand)
+[buildings.material_intensity_change.cement]
+"Asian-Stan" = -7.5
+Brazil = -7.5
+Canada = -13.9
+"Central Europe" = -7.5
+"China +" = -7.5
+"Eastern Africa" = -7.5
+"India +" = -7.5
+"Indonesia +" = -7.5
+Japan = -12.8
+Korea = -7.5
+Mexico = -7.5
+"Middle East" = -7.5
+"Northern Africa" = -7.5
+Oceania = -7.5
+"Rest of Central America" = -7.5
+"Rest of South America" = -7.5
+"Rest of South Asia" = -7.5
+"Rest of Southern Africa" = -7.5
+"Russia +" = -7.5
+"South Africa" = -7.5
+"Southeastern Asia" = -7.5
+Turkey = -7.5
+"Ukraine +" = -7.5
+USA = -13.9
+"Western Africa" = -7.5
+"Western Europe" = -7.5
+
+[buildings.material_intensity_change.aluminium]
+"Asian-Stan" = -9.5
+Brazil = -9.5
+Canada = -17.6
+"Central Europe" = -9.5
+"China +" = -9.5
+"Eastern Africa" = -9.5
+"India +" = -9.5
+"Indonesia +" = -9.5
+Japan = -16.2
+Korea = -9.5
+Mexico = -9.5
+"Middle East" = -9.5
+"Northern Africa" = -9.5
+Oceania = -9.5
+"Rest of Central America" = -9.5
+"Rest of South America" = -9.5
+"Rest of South Asia" = -9.5
+"Rest of Southern Africa" = -9.5
+"Russia +" = -9.5
+"South Africa" = -9.5
+"Southeastern Asia" = -9.5
+Turkey = -9.5
+"Ukraine +" = -9.5
+USA = -17.6
+"Western Africa" = -9.5
+"Western Europe" = -9.5
+
+[vehicles]
+base_year = 2025
+target_year = 2060
+# possibilities for implementation rate are: linear, immediate, s-curve
+implementation_rate = 'linear'
+
+[vehicles.non-road.weight_change_pc]
+'Passenger Planes' = -4.2
+'Freight Planes' = -4.2
+'Trains' = -4.2
+'High Speed Trains' = -4.2
+'Freight Trains' = -4.2
+'Inland Ships' = -4.2
+'Bikes' = -4.2
+
+[vehicles.road.weight_change_pc]
+'Light Commercial Vehicles' = -8.2
+'Medium Freight Trucks' = -8.2
+'Heavy Freight Trucks' = -8.2
+'Midi Buses' = -8.2
+'Regular Buses' = -8.2
+'Cars' = -8.2
+
+[vehicles.mileage]
+"Midi Buses" = 10
+"Regular Buses" = 10
+"Trains" = 10
+"High Speed Trains" = 10
+"Freight Trains" = 10
+"Bikes" = 10
+"Light Commercial Vehicles" = 10
+"Inland Ships" = 10
+
+[vehicles.region_mileage]
+"Cars" = 20
+
+[electricity]
+base_year = 2025
+target_year = 2060
+implementation_rate = 'linear'
+
+[electricity.generation.weight_change_pc]
+'SPV' = -20
+'SPVR' = -10
+'CSP' = -30
+'WON' = -20
+'WOFF' = -10
+'WAVE' = -30
+'HYD' = 0
+
+[electricity.grid_add.weight_change_pc]
+'Transformers' = -10
+'Substations' = -10

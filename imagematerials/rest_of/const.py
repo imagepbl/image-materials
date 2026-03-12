@@ -20,7 +20,7 @@ switch_year = 2100
 # PATHS - set here your own data paths 
 
 # INPUT
-SCENARIO = "SSP2_CP"
+SCENARIO = "SSP2_baseline"
 
 path_input_data = Path(f"../../../data/raw/image/")
 path_input_data_cons = "../../../data/raw/rest-of"
@@ -186,7 +186,7 @@ IAI_TO_IMAGE_CLASSES = {
         'class_ 26'  # Rest S.Africa
     ],
     'Asia (ex China)': [
-        'class_ 17',  # M.East
+        # 'class_ 17',  # M.East
         'class_ 18',  # India
         'class_ 19',  # Korea
         'class_ 21',  # SE.Asia
@@ -278,16 +278,16 @@ def get_key(val, my_dict):
 #%%
 
 models_output_dict = {
-    'log-log model' : 0,
-    'semi-log model' : 1,
-    'log-inverse model' : 2,
-    'log-log-inverse model' : 3,
-    'log-log-square model' : 4,
-    'non-linear inverse model' : 5,
-    'gompertz model' : 6,
-    'logistic growth model' : 7,
-    'limited growth model' : 8,
-    'log gauss saturate model' : 9
+    # 'log-log model' : 0,
+    # 'semi-log model' : 1,
+    # 'log-inverse model' : 2,
+    # 'log-log-inverse model' : 3,
+    # 'log-log-square model' : 4,
+    'non-linear inverse model' : 0,
+    'gompertz model' : 1,
+    'logistic growth model' : 2,
+    'limited growth model' : 3,
+    'log gauss saturate model' : 4
     }
 
 #%% parser function to write query function based on variable names of DIM1 and DIM2
@@ -624,14 +624,12 @@ path_rest_of_data = raw_data / "rest-of"
 
 scenario_base_path = Path("scenario_config")
 
-scenarios = ["SSP2_M_CP", "SSP2_VLLO", "SSP2_VLLO_LifeTech"]
-scenario_list = {"base":("SSP2_M_CP", None),
-                 "climate":("SSP2_VLLO", None),
-                 "narrow":("SSP2_VLLO_LifeTech", ["narrow"])}
+scenarios = ["SSP2_baseline", "SSP2_climate_policy", "SSP2_resource_efficiency"]
+scenario_list = {"base":("SSP2_baseline", None),
+                 "climate":("SSP2_climate_policy", None),
+                 "resource_efficiency":("SSP2_resource_efficiency", None)}
 
-scenario_name_resource_model = "SSP2_M_CP"
-
-cement_in_concrete_factor = 0.1
+cement_in_concrete_factor = 0.12
 sand_in_cement_conversion = 0.17 #(silica)
 sand_in_concrete = cement_in_concrete_factor*sand_in_cement_conversion
 sand_in_glass_conversion = 0.7
@@ -639,7 +637,7 @@ sand_in_glass_conversion = 0.7
 
 R5_mapping = {
     "OECD & EU" : ["1", "12", "23", "24", "13", "2", "11"],
-    "Reforming Economies" : ["16", "15", "14"],
+    "Eastern Europe and Central Asia" : ["16", "15", "14"],
     "Asia" : ["20", "18", "22", "19", "25", "21"],
     "Middle East & Africa" : ["9", "17", "7", "26", "10", "8"],
     "Latin America" : ["5", "3", "4", "6"]

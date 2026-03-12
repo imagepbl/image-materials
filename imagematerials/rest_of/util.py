@@ -37,21 +37,21 @@ def sum_inflows_for_all_sectors(model, get_mfa_data: str, list_sum_sctors: list)
     if "vehicles" in list_sum_sctors:
         inflow_vehicles = model.vehicles.get(get_mfa_data).to_array()
         arrays.append(inflow_vehicles)
-    if "generation" in list_sum_sctors:
-        inflow_generation = model.generation.get(get_mfa_data).to_array()
-        arrays.append(inflow_generation)
-    if "grid" in list_sum_sctors:
-        inflow_grid = model.grid.get(get_mfa_data).to_array()
-        arrays.append(inflow_grid)
-    if "grid_additional" in list_sum_sctors:
-        inflow_grid_additional = model.grid_additional.get(get_mfa_data).to_array()
-        arrays.append(inflow_grid_additional)
-    if "storage_pumped_hydropower" in list_sum_sctors:
-        inflow_storage_pumped_hydropower = model.storage_pumped_hydropower.get(get_mfa_data).to_array()
-        arrays.append(inflow_storage_pumped_hydropower)
-    if "storage_other" in list_sum_sctors:
-        inflow_storage_other = model.storage_other.get(get_mfa_data).to_array()
-        arrays.append(inflow_storage_other)
+    if "elc_gen" in list_sum_sctors:
+        inflow_elc_gen = model.elc_gen.get(get_mfa_data).to_array()
+        arrays.append(inflow_elc_gen)
+    if "elc_grid_lines" in list_sum_sctors:
+        inflow_elc_grid_lines = model.elc_grid_lines.get(get_mfa_data).to_array()
+        arrays.append(inflow_elc_grid_lines)
+    if "elc_grid_add" in list_sum_sctors:
+        inflow_elc_grid_add = model.elc_grid_add.get(get_mfa_data).to_array()
+        arrays.append(inflow_elc_grid_add)
+    if "elc_stor_phs" in list_sum_sctors:
+        inflow_elc_stor_phs = model.elc_stor_phs.get(get_mfa_data).to_array()
+        arrays.append(inflow_elc_stor_phs)
+    if "elc_stor_other" in list_sum_sctors:
+        inflow_elc_stor_other = model.elc_stor_other.get(get_mfa_data).to_array()
+        arrays.append(inflow_elc_stor_other)
 
     # compute union coords
     all_materials = np.unique(np.concatenate([a.coords['material'].values for a in arrays]))
@@ -77,32 +77,43 @@ def sum_inflows_for_all_sectors(model, get_mfa_data: str, list_sum_sctors: list)
     return total_inflow
 
 
-def calculate_cement_equivalent(total_inflow: xr.DataArray):
+def calculate_cement_equivalent(total_inflow: xr.DataArray, include_rest_of = True):
         from imagematerials.rest_of.const import cement_in_concrete_factor
-        cement = total_inflow.sel(material = 'cement')
         concrete = total_inflow.sel(material = 'concrete')
-
+        if include_rest_of is True:
+            cement_rest_of = total_inflow.sel(material = 'cement')
         # convert concrete to cement equivalent
         cement_in_concrete = concrete * cement_in_concrete_factor
-        cement_in_concrete
         # change coordinate of material to 'cement'
         cement_in_concrete = cement_in_concrete.assign_coords(material = 'cement')
-        inflow_material = cement_in_concrete + cement
+        if include_rest_of is True:
+            inflow_material = cement_in_concrete + cement_rest_of
+        else:
+            inflow_material = cement_in_concrete
         print("summed cement and cement in concrete.")
         return inflow_material
 
 
-def sand_gravel_crushed_rock_equivalent(total_inflow: xr.DataArray):
+def sand_gravel_crushed_rock_equivalent(total_inflow: xr.DataArray, rename= False, sand_available = False, include_rest_bool = True):
+ 
         from imagematerials.rest_of.const import sand_in_cement_conversion, sand_in_glass_conversion
-        inflow_sand_in_cement = calculate_cement_equivalent(total_inflow)*sand_in_cement_conversion
+        inflow_sand_in_cement = calculate_cement_equivalent(total_inflow, include_rest_of=include_rest_bool)*sand_in_cement_conversion
         inflow_sand_in_glass = total_inflow.sel(material = 'glass') * sand_in_glass_conversion
         # rename coord material to 'sand'
-        inflow_sand_in_cement = inflow_sand_in_cement.assign_coords(material = 'sand_gravel_crushed_rock')
-        inflow_sand_in_glass = inflow_sand_in_glass.assign_coords(material = 'sand_gravel_crushed_rock')
-        inflow_material = inflow_sand_in_cement + inflow_sand_in_glass
+        if rename == False:
+            inflow_sand_in_cement = inflow_sand_in_cement.assign_coords(material = 'sand_gravel_crushed_rock')
+            inflow_sand_in_glass = inflow_sand_in_glass.assign_coords(material = 'sand_gravel_crushed_rock')
+        if rename == True:
+            inflow_sand_in_cement = inflow_sand_in_cement.assign_coords(material = 'sand')
+            inflow_sand_in_glass = inflow_sand_in_glass.assign_coords(material = 'sand')
+        
+        if sand_available == True:
+            sand = total_inflow.sel(material = 'sand')
+            inflow_material = inflow_sand_in_cement + inflow_sand_in_glass + sand
+        else:
+            inflow_material = inflow_sand_in_cement + inflow_sand_in_glass
         print("summed sand in cement and sand in glass.")
         return inflow_material
-
 
 
 def save_sum_as_csv(total_inflow: xr.DataArray, material_name: str, 

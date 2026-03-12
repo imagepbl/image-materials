@@ -54,7 +54,7 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
     if not path_external_data_scenario.exists():
         path_external_data_scenario = Path(path_base, "electricity", STANDARD_SCEN_EXTERNAL_DATA)
 
-    assert path_external_data_scenario.is_dir()
+    # assert path_external_data_scenario.is_dir()
 
     ###########################################################################################################
     # Read in files #
@@ -169,8 +169,8 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
 
     # Depending on circular economy scenario, apply different measures
     if circular_economy_config is not None:
-        if "narrow" in circular_economy_config.keys():
-            ce_scen = "narrow"
+        if "narrow_product" in circular_economy_config.keys():
+            ce_scen = "narrow_product"
             target_year          = circular_economy_config[ce_scen]['electricity']['target_year']
             base_year            = circular_economy_config[ce_scen]['electricity']['base_year']
             implementation_rate  = circular_economy_config[ce_scen]['electricity']['implementation_rate']
@@ -283,8 +283,8 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
     if not path_external_data_scenario.exists():
         path_external_data_scenario = Path(path_base, "electricity", STANDARD_SCEN_EXTERNAL_DATA)
 
-    assert path_external_data_standard.is_dir()
-    assert path_external_data_scenario.is_dir() 
+    # assert path_external_data_standard.is_dir()
+    # assert path_external_data_scenario.is_dir() 
 
     ###########################################################################################################
     # Read in files #
@@ -539,8 +539,8 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
 
     # Depending on circular economy scenario, apply different measures
     if circular_economy_config is not None:
-        if "narrow" in circular_economy_config.keys():
-            ce_scen = "narrow"
+        if "narrow_product" in circular_economy_config.keys():
+            ce_scen = "narrow_product"
 
             target_year         = circular_economy_config[ce_scen]['electricity']['target_year']
             base_year           = circular_economy_config[ce_scen]['electricity']['base_year']
@@ -682,8 +682,8 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
 
     # print(f"Path to image output: {path_image_output}")
     # assert path_image_output.is_dir()
-    assert path_external_data_standard.is_dir()
-    assert path_external_data_scenario.is_dir()
+    # assert path_external_data_standard.is_dir()
+    # assert path_external_data_scenario.is_dir()
 
     idx = pd.IndexSlice   
 

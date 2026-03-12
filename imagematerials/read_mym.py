@@ -3,9 +3,10 @@ import re as re
 import os.path
 import pandas as pd
 
+from pym import read_mym
 from csv import Sniffer as Sniffer
 from string import whitespace as whitespace
-# ............................................................................ #
+
 def process_header(line):
     raw_data = ''
     # > the header line contains "[d1,d2,...,dn](t) = [t1", with n [di]
@@ -29,7 +30,7 @@ def process_header(line):
             raw_data = line[start_array:]
 
     return has_time, dims, data_length, raw_data
-# ............................................................................ #
+
     
 def produce_df(data, rows, columns, row_names=None, column_names=None):
     """rows is a list of lists that will be used to build a MultiIndex
@@ -37,7 +38,6 @@ def produce_df(data, rows, columns, row_names=None, column_names=None):
     row_index = pd.MultiIndex.from_product(rows, names=row_names)
     col_index = [i for i in range(1,len(columns[0])+1)]
     return pd.DataFrame(data, index=row_index, columns=col_index)
-# ............................................................................ #
 
 
 def read_mym_df(filename,path=''):
@@ -141,11 +141,3 @@ def read_mym_df(filename,path=''):
         df = produce_df(data, rows_in,cols_in,row_names=row_names)
         df.reset_index(inplace=True) 
         return df
-
-
-#if __name__ == "__main__":
-#    print('zeroth order test of read_mym() by reading a file')
-#    try:
-#        read_mym("data\\SSP2_450\\enemisbc.out")
-#    except:
-#        raise

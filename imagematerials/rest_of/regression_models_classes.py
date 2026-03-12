@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
-from scipy.optimize import curve_fit
+from scipy.optimize import curve_fit, minimize
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -36,19 +36,22 @@ def prepare_regression_data(y: pd.DataFrame = None, *X: tuple[pd.DataFrame]):
     """
     # Flatten data
     y = y.to_numpy().flatten().reshape((-1, 1))
+    # find max, and make sure it's float, so skip all strings
+    # print('max X', X_max)
     X = [regressor.to_numpy().flatten().reshape((-1, 1)) for regressor in X]
+    X_max = max(max(X))
     # Remove NaNs
     y, *X = remove_nan(y, *X)
     # Concatenate regressors to matrix
     X = np.concatenate(X, axis=1)
     
-    return y, X
+    return y, X, X_max
 
 
 class OLS_Model:
     def __init__(self, y: pd.DataFrame, *X: tuple[pd.DataFrame]):
         # Prepare regression data
-        y, X = prepare_regression_data(y, *X)
+        y, X, self.X_max = prepare_regression_data(y, *X)
         self._y = self._transform_y(y)
         self._X = self._transform_X(X)
         y, self._y, self._X = remove_nan(y, self._y, self._X)
@@ -117,7 +120,7 @@ class NLS_Model:
     def __init__(self, y: pd.DataFrame, *X: tuple[pd.DataFrame], **kwargs):
         bounds = kwargs.get("bounds")
         # Prepare regression data
-        y, X = prepare_regression_data(y, *X)
+        y, X, self.X_max = prepare_regression_data(y, *X)
         self._y = self._transform_y(y)
         self._X = self._transform_X(X)
         # remove nan again in case of division by zero error, log(-x), ... after transformation
@@ -190,10 +193,12 @@ class NLS_Model:
 
 class Log_Log_Model(OLS_Model):
     def _transform_X(self, X: np.array):
+        X = np.asarray(X, dtype=float)
         X[X <= 0] = np.nan
         return np.log(X)
     
     def _transform_y(self, y: np.array):
+        y = np.asarray(y, dtype=float)
         y[y <= 0] = np.nan
         return np.log(y)
     
@@ -203,6 +208,7 @@ class Log_Log_Model(OLS_Model):
 
 class Semi_Log_Model(OLS_Model):
     def _transform_X(self, X: np.array):
+        X = np.asarray(X, dtype=float)
         X[X <= 0] = np.nan
         return np.log(X)
     
@@ -215,10 +221,12 @@ class Semi_Log_Model(OLS_Model):
 
 class Log_Inverse_Model(OLS_Model):
     def _transform_X(self, X: np.array):
+        X = np.asarray(X, dtype=float)
         X[X == 0] = np.nan
         return np.divide(1, X)
     
     def _transform_y(self, y: np.array):
+        y = np.asarray(y, dtype=float)
         y[y <= 0] = np.nan
         return np.log(y)
     
@@ -228,10 +236,12 @@ class Log_Inverse_Model(OLS_Model):
 
 class Log_Log_Inverse_Model(OLS_Model):
     def _transform_X(self, X: np.array):
+        X = np.asarray(X, dtype=float)
         X[X <= 0] = np.nan
         return np.concatenate([np.log(X), 1 / X], axis=1)
     
     def _transform_y(self, y: np.array):
+        y = np.asarray(y, dtype=float)
         y[y <= 0] = np.nan
         return np.log(y)
     
@@ -241,10 +251,12 @@ class Log_Log_Inverse_Model(OLS_Model):
 
 class Log_Log_Square_Model(OLS_Model):
     def _transform_X(self, X: np.array):
+        X = np.asarray(X, dtype=float)
         X[X <= 0] = np.nan
         return np.concatenate([np.log(X), np.power(np.log(X), 2)], axis=1)
     
     def _transform_y(self, y: np.array):
+        y = np.asarray(y, dtype=float)
         y[y <= 0] = np.nan
         return np.log(y)
     
@@ -281,12 +293,15 @@ class GOMPERTZ_Model(NLS_Model):
         bounds = kwargs.get("bounds")
         # check if bound is none or if its has the correct length
         if bounds is None or (len(bounds) != 2 or len(bounds[0]) != 3 or len(bounds[1]) != 3):
-            bounds = ([0, 0, 0], [10, 10, 10])
+            bounds = ([0, 0, 0], [10, 10, 20])
 
         super().__init__(y, *X, bounds=bounds)
 
     def _transform_X(self, X: np.array):
-        X = np.divide(X, 10_000)
+        # Normalize X by its maximum value so that SciPy.curve_fit has a stable approximation.
+        # If X is too large, then the Gompertz function evaluates to the asymptote 'a'.
+        # TODO: Normalize also for other NLS_models below.
+        X = np.divide(X, self.X_max) 
         return X
     
     def _transform_y(self, y: np.array):
@@ -305,12 +320,12 @@ class LG_Model(NLS_Model): #logistic_growth_model
         bounds = kwargs.get("bounds")
         # check if bound is none or if its has the correct length
         if bounds is None or (len(bounds) != 2 or len(bounds[0]) != 3 or len(bounds[1]) != 3):
-            bounds = ([-300, -300, -300], [300, 300, 300])
+            bounds = ([0, 0, 0], [300, 300, 300])
 
         super().__init__(y, *X, bounds=bounds)    
     
     def _transform_X(self, X: np.array):
-        X = np.divide(X, 10_000)
+        X = np.divide(X, self.X_max)
         return X
     
     def _transform_y(self, y: np.array):
@@ -329,12 +344,12 @@ class BW_Model(NLS_Model):
         bounds = kwargs.get("bounds")
         # check if bound is none or if its has the correct length
         if bounds is None or (len(bounds) != 2 or len(bounds[0]) != 3 or len(bounds[1]) != 3):
-            bounds = ([-300, -300, -300], [300, 300, 300])
+            bounds = ([0, 0, 0], [300, 300, 300])
 
         super().__init__(y, *X, bounds=bounds)
 
     def _transform_X(self, X: np.array):
-        X = np.divide(X, 10_000)
+        X = np.divide(X, self.X_max)
         return X
     
     def _transform_y(self, y: np.array):
@@ -355,12 +370,13 @@ class Log_Gauss_Saturate_Model(NLS_Model):
         if bounds is None or (len(bounds) != 2 or len(bounds[0]) != 4 or len(bounds[1]) != 4):
             # raise ValueError("Bounds must be a tuple of two lists with 4 elements each.")
             # Default: 4 parameters
-            bounds = ([-300, -300, -300, -300], [300, 300, 300, 300])
+            bounds = ([0, 0, 0, 0], [300, 300, 300, 300])
 
         super().__init__(y, *X, bounds=bounds)
 
     def _transform_X(self, X: np.array):
         X = np.asarray(X, dtype=float)
+        X = np.divide(X, self.X_max)
         X[X <= 0] = np.nan
         return X
 

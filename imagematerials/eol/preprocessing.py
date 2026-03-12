@@ -44,6 +44,7 @@ def eol_preprocessing(base_dir, circular_economy_scenario_dirs=None):
     # Only read config if dirs are provided
     if circular_economy_scenario_dirs is not None:
         circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
+        print("CE config:", list(circular_economy_config.keys()))
     else:
         circular_economy_config = {}
 
@@ -53,7 +54,7 @@ def eol_preprocessing(base_dir, circular_economy_scenario_dirs=None):
 
     # renaming columns for consistency
     collection_in = collection_in.rename(columns={'time':'Time','sector': 'Sector', 'regions': 'Region', 'category':'Type'})
-    reuse_in = reuse_in.rename(columns={ 'Element': 'Type'} )
+    reuse_in = reuse_in.rename(columns={'Element': 'Type'} )
     recycling_in = recycling_in.rename(columns={'Element': 'Type'} )
 
     # dropping redundant 'Sector' level
@@ -127,24 +128,31 @@ def eol_preprocessing(base_dir, circular_economy_scenario_dirs=None):
     # scenario implementation
     building_supertypes = ["urban", "rural", "commercial"]
     vehicles_supertypes = ["passenger", "freight"]
+    electricity_supertypes = ["generation", "grid", "storage"]
 
     if "slow" in circular_economy_config.keys():
         reuse_rate_buildings = circular_economy_config["slow"]["buildings"]["eol_reuse_rate_2060"]
         reuse_rate_vehicles = circular_economy_config["slow"]["vehicles"]["eol_reuse_rate_2060"]
+        reuse_rate_electricity = circular_economy_config["slow"]["electricity"]["eol_reuse_rate_2060"]
 
         xr_reuse = overwrite_future_rates(xr_reuse,2060,building_supertypes,reuse_rate_buildings)
         print("implemented 'slow' for Buildings EoL")
         xr_reuse = overwrite_future_rates(xr_reuse,2060,vehicles_supertypes,reuse_rate_vehicles)
         print("implemented 'slow' for Vehicles EoL")
+        xr_reuse = overwrite_future_rates(xr_reuse,2060,electricity_supertypes,reuse_rate_electricity)
+        print("implemented 'slow' for Electricity EoL")
 
     if "close" in circular_economy_config.keys():
         recycling_rate_buildings = circular_economy_config["close"]["buildings"]["eol_recycling_rate_2060"]
         recycling_rate_vehicles = circular_economy_config["close"]["vehicles"]["eol_recycling_rate_2060"]
+        recycling_rate_electricity = circular_economy_config["close"]["electricity"]["eol_recycling_rate_2060"]
         
         xr_recycling = overwrite_future_rates(xr_recycling,2060,building_supertypes,recycling_rate_buildings)
-        print("implemented 'close' for Buildings EoL")    
+        print("implemented 'close' for Buildings EoL")   
         xr_recycling = overwrite_future_rates(xr_recycling,2060,vehicles_supertypes,recycling_rate_vehicles)
-        print("implemented 'close' for Vehicles EoL")    
+        print("implemented 'close' for Vehicles EoL")
+        xr_recycling = overwrite_future_rates(xr_recycling,2060,electricity_supertypes,recycling_rate_electricity)
+        print("implemented 'close' for Electricity EoL")
 
     # inter and extrapolated collection, reuse and recycling xr 
     collection = interpolate_eol_rates(xr_collection, anchor_year=2020, target_year=2060, min_value=0, max_value=1, full_time=full_time)

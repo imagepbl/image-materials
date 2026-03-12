@@ -11,8 +11,6 @@ from imagematerials.concepts import create_region_graph
 from imagematerials.read_mym import read_mym_df
 from imagematerials.buildings.preprocessing.population import compute_population
 
-from imagematerials.rest_of.preprocessing.resource_efficiency_measures import adapt_gompertz_regional
-
 from imagematerials.rest_of.preprocessing.regressions_all_materials import (fit_models_all_materials,
                                                                             make_gompertz_coefs_da, 
                                                                             mean_historic_other_fraction_consumption_to_xr, 
@@ -80,7 +78,9 @@ def read_gompertz_values(base_directory, scenario: str):
     - The function expects regions to be numeric strings for sorting.
     """
 
-    if scenario in ["SSP2_VLLO_LifeTech"]:
+    if scenario in ["SSP2_resource_efficiency", "SSP2_narrow_activity","SSP2_narrow", "SSP2_narrow_slow_close", 
+                    "SSP2_narrow_act_26_tax","SSP2_narrow_26_tax", "SSP2_narrow_slow_close_26_tax",
+                    "SSP2_narrow_slow_close_19_tax"]:
         print('Using Gompertz coefficients for resource efficiency measures')
         name = "coefs_gompertz_eff.nc"
     else: 
@@ -110,8 +110,9 @@ def read_historic_diff_cons_data(base_directory):
     return diff_consumption
 
 
-def read_image_gdp_cap_data(image_scenario_directory):
-
+def read_image_gdp_cap_data(base_directory, image_scenario_directory):
+    max_x = xr.open_dataset(base_directory / "rest-of" / "gompertz_values" / "max_x_regressor.nc", engine="netcdf4")
+    max_x = max_x.to_array().isel(variable=0).drop_vars("variable")
     image_directory = Path(image_scenario_directory)
     gdp_per_capita: pd.DataFrame = read_mym_df(image_directory.joinpath("Socioeconomic", "gdp_pc.scn"))
 
@@ -130,21 +131,29 @@ def read_image_gdp_cap_data(image_scenario_directory):
     knowledge_graph_region = create_region_graph()
     gdp_per_capita_xr = knowledge_graph_region.rebroadcast_xarray(gdp_per_capita_xr, output_coords=IMAGE_REGIONS, dim="Region")
 
-    return gdp_per_capita_xr
+    downscaled_gdp_per_capita_xr = gdp_per_capita_xr/max_x # downscale gdp to avoid numerical issues
+    return downscaled_gdp_per_capita_xr
+
+
+def fit_all_materials_save_corrseponding_input_data(path_input_data, path_input_data_image):
+    results = fit_models_all_materials(
+        path_input_data=path_input_data,
+        path_input_data_image=path_input_data_image
+        )
+    gompertz = make_gompertz_coefs_da(results)
+    mean_historic_other_fraction_consumption_to_xr(results)
+    all_historic_data_xr = historic_other_fraction_consumption_to_xr(results)
 
 
 def rest_of_preprocessing(base_directory, image_scenario_directory, scenario: str, 
                           refit = False):
     
     if refit == True:
-        results = fit_models_all_materials()
-        make_gompertz_coefs_da(results)
-        mean_historic_other_fraction_consumption_to_xr(results)
-        historic_other_fraction_consumption_to_xr(results)
+        fit_all_materials_save_corrseponding_input_data()
         print('Materials regression refitted and preprocessing data updated.')
 
     gompertz_values = read_gompertz_values(base_directory, scenario)
-    gdp_per_capita = read_image_gdp_cap_data(image_scenario_directory)
+    gdp_per_capita = read_image_gdp_cap_data(base_directory, image_scenario_directory)
     historic_diff_consumption_mean = read_historic_diff_cons_data_mean(base_directory)
     historic_diff_consumption_total = read_historic_diff_cons_data(base_directory)
     population = compute_population(image_scenario_directory, base_directory)

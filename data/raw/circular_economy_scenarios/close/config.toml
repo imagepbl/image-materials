@@ -1,18 +1,18 @@
 [buildings]
-base_year = 2020
+base_year = 2025
 target_year = 2060
 implementation_rate = 'linear'
 
 [buildings.eol_recycling_rate_2060]
 steel = 0.92
-concrete = 1
+concrete = 0.37
 wood = 0.30
 copper = 0.92
 glass = 0.95
 aluminium = 0.95
 
 [vehicles]
-base_year = 2019
+base_year = 2025
 target_year = 2060
 # possibilities for implementation rate are: linear, immediate, s-curve
 implementation_rate = 'linear'
@@ -24,7 +24,7 @@ glass = 0.95
 aluminium = 0.95
 
 [electricity]
-base_year = 2020
+base_year = 2025
 target_year = 2060
 implementation_rate = 'linear'
 

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=45", "setuptools-scm[toml]>=6.2"]
+requires = ["setuptools>=70", "setuptools-scm[toml]>=6.2","wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -9,7 +9,7 @@ authors = [
 ]
 description = "Package for IMAGE material calculations"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 keywords = []
 # license = { file = "LICENSE" }
 classifiers = [
@@ -23,14 +23,15 @@ classifiers = [
 ]
 
 dependencies = [
-    "prism>=0.2",
+    "prism>=0.7.8",
+    "pandas<3.0",
     "xarray",
     "netCDF4",
     "pint",
-    "pandas",
     "numpy",
     "scipy",
-    "pint-xarray@git+https://github.com/xarray-contrib/pint-xarray@20a9301b0dac02bf16d4c883c68c2eb9231e68b9",
+    "scikit-learn",
+    "pint-xarray",
     "matplotlib"
 ]
 
@@ -49,7 +50,8 @@ test = [
     "mypy",
     "types-tqdm",
     "ruff"
-]
+    ]
+
 docs = [
     "sphinx<8", "sphinx-rtd-theme", "sphinxcontrib-napoleon",
     "sphinx-autodoc-typehints", "sphinx_inline_tabs", "sphinx_copybutton",
