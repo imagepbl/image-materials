@@ -23,7 +23,6 @@ classifiers = [
 ]
 
 dependencies = [
-    "prism>=0.7.8",
     "pandas<3.0",
     "xarray",
     "netCDF4",
