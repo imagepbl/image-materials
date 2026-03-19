@@ -4,20 +4,25 @@ import numpy as np
 from pathlib import Path
 import pint
 import xarray as xr
+from importlib.resources import files
 
 import prism
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
-from imagematerials.concepts import create_electricity_graph, create_region_graph
+from imagematerials.concepts import create_electricity_graph, create_region_graph, create_vehicle_graph
 from imagematerials.electricity.utils import (
     MNLogit, 
     stock_tail, 
     create_prep_data, 
+    logistic, 
+    quadratic,
     interpolate_xr, 
     add_historic_stock, 
     calculate_grid_growth, 
     calculate_fraction_underground, 
-    apply_ce_measures_to_elc
+    apply_ce_measures_to_elc, 
+    normalize_selected_techs,
+    calculate_storage_market_shares
 )
 
 from imagematerials.constants import IMAGE_REGIONS
@@ -28,6 +33,7 @@ from imagematerials.electricity.constants import (
     SENS_ANALYSIS,
     EPG_TECHNOLOGIES,
     STD_LIFETIMES_ELECTR,
+    EV_BATTERIES,
     unit_mapping
 )
 
@@ -627,11 +633,11 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
     path_base : str
         Base directory of the project where the data structure is located (image-materials/data/raw/).
     scenario : str
-        Scenario name (e.g., "SSP2_CP").
+        Scenario name (e.g., "SSP2_baseline").
     climate_policy_config : dict
         Dictionary created from a scenario-specific config.toml file.
         Contains all TOML entries ("data_files" mapping) plus a path:
-        - "config_file_path": pathlib.Path to the scenario directory (e.g. SSP2_CP) containing config.toml and all referenced
+        - "config_file_path": pathlib.Path to the scenario directory (e.g. SSP2_baseline) containing config.toml and all referenced
         output subfolders. 
         Used to construct full paths to scenario output files, e.g. read_mym_df(climate_policy_config["config_file_path"]/climate_policy_config["data_files"]["variable_x"]).
     year_start : int
@@ -690,10 +696,6 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
 
     # 1. External Data ======================================================================================== 
 
-
-    # read in the storage share in 2016 according to IEA (Technology perspectives 2017)
-    storage_IEA = pd.read_csv(path_external_data_standard / 'storage_IEA2016.csv', index_col=0)
-
     # read in the storage costs according to IRENA storage report & other sources in the SI
     storage_costs = pd.read_csv(path_external_data_standard / 'storage_cost.csv', index_col=0).transpose()
 
@@ -712,7 +714,7 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
     kilometrage = pd.read_csv(path_external_data_scenario / 'kilometrage.csv', index_col='t')   #annual car mileage in kms/yr, based  mostly  on  Pauliuk  et  al.  (2012a)
 
     # material compositions (storage) in wt%
-    storage_materials = pd.read_csv(path_external_data_standard / 'storage_materials_dynamic.csv',index_col=[0,1]).transpose()  # wt% of total battery weight for various materials, total battery weight is given by the density file above
+    storage_materials = pd.read_csv(path_external_data_standard / 'storage_materials_dynamic.csv',index_col=[0,1],usecols=lambda col: col != "unit").transpose()  # wt% of total battery weight for various materials, total battery weight is given by the density file above
 
     # Hydro-dam power capacity (also MW) within 5 regions reported by the IHA (international Hydropwer Association)
     phs_projections = pd.read_csv(path_external_data_standard / 'PHS.csv', index_col='t')   # pumped hydro storage capacity (MW)
@@ -809,7 +811,7 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
 
     # First the lifetime of storage technologies needs to be defined over time, before running the dynamic stock function
     # before 2018
-    for year in reversed(range(year_start,storage_start)):
+    for year in reversed(range(year_start,storage_start)): # TODO: use YEAR_FIRST_GRID instead? -> hen possible to run from earlier on?
         # storage_lifetime_interpol = pd.concat([storage_lifetime_interpol, pd.Series(storage_lifetime_interpol.loc[storage_lifetime_interpol.first_valid_index()], name=year)])
         row = pd.DataFrame([storage_lifetime_interpol.loc[storage_lifetime_interpol.first_valid_index()]])
         storage_lifetime_interpol.loc[year] = row.iloc[0]
@@ -848,6 +850,7 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
         # storage_costs_new = storage_costs_new.append(pd.Series(storage_costs_new.loc[storage_costs_new.first_valid_index()]*(1+(2*decline_used.mean())), name=year)).sort_index(axis=0)
         row = pd.DataFrame([storage_costs_new.loc[storage_costs_new.first_valid_index()]*(1+(2*decline_used.mean()))])
         storage_costs_new.loc[year] = row.iloc[0]
+        storage_costs_new.sort_index(axis=0, inplace=True) 
 
     storage_costs_new.sort_index(axis=0, inplace=True) 
     storage_costs_new.loc[1971:2017,'Deep-cycle Lead-Acid'] = storage_costs_new.loc[2018,'Deep-cycle Lead-Acid'] # restore the exception (set to constant 2018 values)
@@ -862,7 +865,14 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
         # storage_market_share = storage_market_share.append(pd.Series(storage_market_share.loc[storage_market_share.last_valid_index()], name=year))
         row = pd.DataFrame([storage_market_share.loc[storage_market_share.last_valid_index()]])
         storage_market_share.loc[year] = row.iloc[0]
-
+    # fix the market share of storage technologies before YEAR_START
+    for year in range(YEAR_FIRST_GRID,year_start):
+        # storage_market_share = storage_market_share.append(pd.Series(storage_market_share.loc[storage_market_share.last_valid_index()], name=year))
+        row = pd.DataFrame([storage_market_share.loc[storage_market_share.first_valid_index()]])
+        storage_market_share.loc[year] = row.iloc[0]
+        
+    storage_market_share = storage_market_share.sort_index(axis=0)
+    
     # total = storage_market_share.sum(axis=1)
     region_list = list(kilometrage.columns.values)   
     storage.columns = region_list
@@ -910,32 +920,38 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
 
     # Calculate the fractions of the storage capacity that is provided through pumped hydro-storage, electric vehicles or other storage (larger than 1 means the capacity superseeds the demand for energy storage, in terms of power in MW or enery in MWh) 
     phs_storage_fraction = phs_projections_IMAGE.divide(storage_power.loc[:year_out]).clip(upper=1) # the phs storage fraction deployed to fulfill storage demand, both phs & storage_power here are expressed in MW
-    storage_remaining = storage.loc[:year_out] * (1 - phs_storage_fraction)
+    storage_remaining = storage.loc[:year_out] * (1 - phs_storage_fraction) # asumption here (?): share in MW = share in GHh (not really true, though since both are very high for PHS for early years, this might be okey)
 
-    if SENS_ANALYSIS == 'high_stor':
-        oth_storage_fraction = 0.5 * storage_remaining 
-        oth_storage_fraction += ((storage_remaining * 0.5) - storage_vehicles).clip(lower=0)    
-        oth_storage_fraction = oth_storage_fraction.divide(storage).where(oth_storage_fraction > 0, 0).clip(lower=0) 
-        evs_storage_fraction = 1 - (phs_storage_fraction + oth_storage_fraction)     # electric vehicle storage (BEV + PHEV) capacity and total storage demand are expressed as MWh
-    else: 
-        oth_storage_fraction = (storage_remaining - storage_vehicles).clip(lower=0)    
-        oth_storage_fraction = oth_storage_fraction.divide(storage.loc[:year_out]).where(oth_storage_fraction > 0, 0).clip(lower=0)      
-        evs_storage_fraction = 1 - (phs_storage_fraction + oth_storage_fraction)     # electric vehicle storage (BEV + PHEV) capacity and total storage demand are expressed as MWh
+    phs_storage = storage.loc[:year_out] * phs_storage_fraction
+    oth_storage = storage_remaining 
+
+
+    # if SENS_ANALYSIS == 'high_stor':
+    #     oth_storage_fraction = 0.5 * storage_remaining 
+    #     oth_storage_fraction += ((storage_remaining * 0.5) - storage_vehicles).clip(lower=0)    
+    #     oth_storage_fraction = oth_storage_fraction.divide(storage).where(oth_storage_fraction > 0, 0).clip(lower=0) 
+    #     evs_storage_fraction = 1 - (phs_storage_fraction + oth_storage_fraction)     # electric vehicle storage (BEV + PHEV) capacity and total storage demand are expressed as MWh
+    # else: 
+    #     oth_storage_fraction = (storage_remaining - storage_vehicles).clip(lower=0)    
+    #     oth_storage_fraction = oth_storage_fraction.divide(storage.loc[:year_out]).where(oth_storage_fraction > 0, 0).clip(lower=0)      
+    #     evs_storage_fraction = 1 - (phs_storage_fraction + oth_storage_fraction)     # electric vehicle storage (BEV + PHEV) capacity and total storage demand are expressed as MWh
     
-    checksum = phs_storage_fraction + evs_storage_fraction + oth_storage_fraction   # should be 1 for all fields
+    # checksum = phs_storage_fraction + evs_storage_fraction + oth_storage_fraction   # should be 1 for all fields
 
-    # absolute storage capacity (MWh)
-    phs_storage_theoretical = phs_projections_IMAGE.divide(storage_power) * storage.loc[:year_out] # ??? theoretically available PHS storage (MWh; fraction * total) only used in the graphs that show surplus capacity
-    phs_storage = phs_storage_fraction * storage.loc[:year_out]
-    evs_storage = evs_storage_fraction * storage.loc[:year_out]
-    oth_storage = oth_storage_fraction * storage.loc[:year_out]
+    # # absolute storage capacity (MWh)
+    # phs_storage_theoretical = phs_projections_IMAGE.divide(storage_power) * storage.loc[:year_out] # ??? theoretically available PHS storage (MWh; fraction * total) only used in the graphs that show surplus capacity
+    # phs_storage = phs_storage_fraction * storage.loc[:year_out]
+    # evs_storage = evs_storage_fraction * storage.loc[:year_out]
+    # oth_storage = oth_storage_fraction * storage.loc[:year_out]
 
     #output for Main text figure 2 (storage reservoir, in MWh for 3 storage types)
-    storage_out_phs = pd.concat([phs_storage], keys=['phs'], names=['type']) 
-    storage_out_evs = pd.concat([evs_storage], keys=['evs'], names=['type']) 
-    storage_out_oth = pd.concat([oth_storage], keys=['oth'], names=['type']) 
-    storage_out = pd.concat([storage_out_phs, storage_out_evs, storage_out_oth])
-    # storage_out.to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test'  / 'storage_by_type_MWh.csv')        # in MWh
+    # storage_out_phs = pd.concat([phs_storage], keys=['phs'], names=['type']) 
+    # storage_out_evs = pd.concat([evs_storage], keys=['evs'], names=['type']) 
+    # storage_out_oth = pd.concat([oth_storage], keys=['oth'], names=['type']) 
+    # storage_out = pd.concat([storage_out_phs, storage_out_evs, storage_out_oth])
+    # storage_out.to_csv(path_base /  'electricity' / 'test'  / 'storage_by_type_MWh.csv')        # in MWh
+    # storage_frac = pd.concat([phs_storage_fraction, evs_storage_fraction, oth_storage_fraction])
+    # storage_frac.to_csv(path_base /  'electricity' / 'test'  / 'storage_by_type_fraction.csv')
 
     # derive inflow & outflow (in MWh) for PHS, for later use in the material calculations 
     PHS_kg_perkWh = 26.8   # kg per kWh storage capacity (as weight addition to existing hydro plants to make them pumped) 
@@ -995,7 +1011,7 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
     prep_data_phs = create_prep_data(results_dict, conversion_table, unit_mapping)
     prep_data_phs["stocks"] = prism.Q_(prep_data_phs["stocks"], "MWh")
     prep_data_phs["material_intensities"] = prism.Q_(prep_data_phs["material_intensities"], "kg/MWh")
-    prep_data_phs["set_unit_flexible"] = prism.U_(prep_data_phs["stocks"]) # prism.U_ gives the unit back
+    prep_data_phs["set_unit_flexible"] = prism.U_(prep_data_phs["stocks"])
 
 
     # Other storage--------------------------------------------------------------------------------------------
@@ -1047,7 +1063,7 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
 
     results_dict = {
             'oth_storage_stock': oth_storage_stock,
-            'oth_storage_materials': oth_storage_materialintens.sel(Cohort=slice(1971, None)),
+            'oth_storage_materials': oth_storage_materialintens,
             'oth_storage_lifetime_distr': oth_storage_lifetime_distr,
             'oth_storage_shares': storage_market_share
     }
@@ -1056,6 +1072,7 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
     prep_data_oth_storage["stocks"] = prism.Q_(prep_data_oth_storage["stocks"], "MWh")
     prep_data_oth_storage["material_intensities"] = prism.Q_(prep_data_oth_storage["material_intensities"], "kg/kWh")
     prep_data_oth_storage["shares"] = prism.Q_(prep_data_oth_storage["shares"], "share")
+    prep_data_oth_storage["knowledge_graph_elc"] = create_electricity_graph()
     prep_data_oth_storage["set_unit_flexible"] = prism.U_(prep_data_oth_storage["stocks"]) # prism.U_ gives the unit back
 
 
@@ -1064,5 +1081,293 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
     prep_data_phs["stocks"] =           knowledge_graph_region.rebroadcast_xarray(prep_data_phs["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
     prep_data_oth_storage["stocks"] =   knowledge_graph_region.rebroadcast_xarray(prep_data_oth_storage["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
 
+    prep_data_oth_storage["stocks_non_phs"] = prep_data_oth_storage.pop("stocks") # stocks_0
+
 
     return prep_data_phs, prep_data_oth_storage
+
+
+
+def get_preprocessing_data_evbattery(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+    
+    # path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
+    path_external_data_standard = Path(path_base, "electricity", "standard_data")
+    path_external_data_scenario = Path(path_base, "electricity", scenario) #test
+
+    # test if path_external_data_scenario exists and if not set to standard scenario
+    if not path_external_data_scenario.exists():
+        path_external_data_scenario = Path(path_base, "electricity", STANDARD_SCEN_EXTERNAL_DATA)
+
+    units_file = files("imagematerials") / "units.txt"
+    prism.unit_registry.load_definitions(units_file)
+    # prism.unit_registry.load_definitions(path_base / "imagematerials" / "units.txt")
+
+
+    ###########################################################################################################
+    # Read in files #
+    
+    # 1. External Data ======================================================================================== 
+
+    # storage costs according to IRENA storage report & other sources in the SI ($ct/kWh electricity cycled)
+    storage_costs = pd.read_csv(path_external_data_standard / "storage_cost.csv", index_col=0).transpose()
+
+    # assumed malus & bonus of storage costs (malus for advanced technologies, still under development; bonus for batteries currently used in EVs, we assume that a large volume of used EV batteries will be available and used for dedicated electricity storage, thus lowering costs), only the bonus remains by 2030
+    costs_correction = pd.read_csv(path_external_data_standard / "storage_malus.csv", index_col=0).transpose()
+
+    # assumptions on the long-term price decline after 2050. the fraction of the annual growth rate (determined based on 2018-2030) that will be applied after 2030, ranging from 0.25 to 1 - 0.25 means the price decline is not expected to continue strongly, while 1 means that the same (2018-2030) annual price decline is also applied between 2030 and 2050)
+    cost_decline_longterm_correction = pd.Series(pd.read_csv(path_external_data_standard / "storage_ltdecline.csv",index_col=0,  header=None).transpose().iloc[0]) 
+
+    # INVERS energy density (note that the unit is kg/kWh, the invers of energy density: storage capacity - mass required to store one unit of energy —> more mass per energy = worse performance)
+    # TODO: read in directly IRENA data?
+    energy_density = pd.read_csv(path_external_data_standard / "storage_density_kg_per_kwh.csv",index_col=0).transpose()
+    # lifetime of storage technologies (in yrs). The lifetime is assumed to be 1.5* the number of cycles divided by the number of days in a year (assuming diurnal use, and 50% extra cycles before replacement, representing continued use below 80% remaining capacity) OR the maximum lifetime in years, which-ever comes first 
+    storage_lifetime = pd.read_csv(path_external_data_standard / "storage_lifetime.csv",index_col=0).transpose()
+
+    # material compositions (storage) in wt%
+    storage_materials_data = pd.read_csv(path_external_data_standard / 'storage_materials_dynamic.csv', usecols=lambda col: col != "unit")  # wt% of total battery weight for various materials, total battery weight is given by the density file above
+
+    # Using the 250 Wh/kg on the kWh of the various batteries a weight (in kg) of the battery per vehicle category is determined
+    # TODO: where is this data from? kWh per battery type?
+    battery_weights_data = pd.read_csv(path_external_data_standard / "battery_weights_kg.csv", index_col=[0,1])
+
+    # usable capacity of EV batteries for V2G applications (relative: fraction of the total battery capacity that can be used for V2G)
+    if SENS_ANALYSIS == 'high_stor':
+    # pessimistic sensitivity variant (meaning more additional storage is needed) -> smaller fraction of the EV capacities is usable as storage compared to the normal case
+    #    capacity_usable_PHEV = 0.025   # 2.5% of capacity of PHEV is usable as storage (in the pessimistic sensitivity variant)
+    #    capacity_usable_BEV  = 0.05    # 5  % of capacity of BEVs is usable as storage (in the pessimistic sensitivity variant)
+        ev_capacity_fraction_v2g = pd.read_csv(path_external_data_standard / "ev_battery_capacity_usable_for_v2g_variant_high_storage.csv")
+    else:
+        ev_capacity_fraction_v2g = pd.read_csv(path_external_data_standard / "ev_battery_capacity_usable_for_v2g.csv")
+
+    # fraction of EVs available for V2G (considering that not all EVs are capable of bi-directional loading, economic incentives are still missing, and not all owners are willing to provide V2G services)
+    ev_fraction_v2g_data = pd.read_csv(path_external_data_standard / "ev_fraction_available_for_v2g.csv", index_col=[0])
+
+
+    ###########################################################################################################
+    # Transform to xarray #
+
+    # create list of all vehicle types (combinations of vehicles type (Cars, Medium Freight Trucks,...) and drive trains (ICE, BEV,...))
+    # vehicle_list = [f"{super_type} - {sub_type}" for super_type, sub_type in product(typical_modes, drive_trains)]
+    vehicle_list = ['Cars - BEV', 'Cars - FCV', 'Cars - HEV', 'Cars - ICE', 'Cars - PHEV',
+       'Cars - Trolley', 'Heavy Freight Trucks - BEV',
+       'Heavy Freight Trucks - FCV', 'Heavy Freight Trucks - HEV',
+       'Heavy Freight Trucks - ICE', 'Heavy Freight Trucks - PHEV',
+       'Heavy Freight Trucks - Trolley', 'Light Commercial Vehicles - BEV',
+       'Light Commercial Vehicles - FCV', 'Light Commercial Vehicles - HEV',
+       'Light Commercial Vehicles - ICE', 'Light Commercial Vehicles - PHEV',
+       'Light Commercial Vehicles - Trolley', 'Medium Freight Trucks - BEV',
+       'Medium Freight Trucks - FCV', 'Medium Freight Trucks - HEV',
+       'Medium Freight Trucks - ICE', 'Medium Freight Trucks - PHEV',
+       'Medium Freight Trucks - Trolley', 'Midi Buses - BEV',
+       'Midi Buses - FCV', 'Midi Buses - HEV', 'Midi Buses - ICE',
+       'Midi Buses - PHEV', 'Midi Buses - Trolley', 'Regular Buses - BEV',
+       'Regular Buses - FCV', 'Regular Buses - HEV', 'Regular Buses - ICE',
+       'Regular Buses - PHEV', 'Regular Buses - Trolley']
+    vehicle_list_non_ev = ['Cars - ICE', 'Cars - HEV', 'Cars - FCV', 'Cars - Trolley', 
+        'Regular Buses - ICE', 'Regular Buses - HEV', 'Regular Buses - FCV', 
+        'Regular Buses - Trolley', 'Midi Buses - ICE', 'Midi Buses - HEV',
+       'Midi Buses - FCV', 'Midi Buses - Trolley', 'Heavy Freight Trucks - ICE',
+       'Heavy Freight Trucks - HEV', 'Heavy Freight Trucks - FCV',
+       'Heavy Freight Trucks - Trolley', 'Medium Freight Trucks - ICE',
+       'Medium Freight Trucks - HEV', 'Medium Freight Trucks - FCV',
+       'Medium Freight Trucks - Trolley', 'Light Commercial Vehicles - ICE',
+       'Light Commercial Vehicles - HEV', 'Light Commercial Vehicles - FCV',
+       'Light Commercial Vehicles - Trolley']
+    vhc_knowledge_graph = create_vehicle_graph()
+
+    # 1. Market Shares -----------------------------------------------------------------------------
+
+    # 1.1 storage costs
+    years = storage_costs.index.astype(int) #.astype(int) to convert years from strings to integers
+    techs = storage_costs.columns
+    data_array = storage_costs.to_numpy()
+    xr_storage_costs = xr.DataArray(
+        data_array,
+        dims=("Cohort", "BatteryType"),
+        coords={
+            "Cohort": years,
+            "BatteryType": techs
+        },
+        name="StorageCosts"
+    )
+    xr_storage_costs = prism.Q_(xr_storage_costs, "USD_cent/kWh")
+
+    # 1.2 storage costs correction (malus/bonus multiplicative factor) 
+    years = costs_correction.index.astype(int)
+    techs = costs_correction.columns
+    data_array = costs_correction.to_numpy()
+    xr_costs_correction = xr.DataArray(
+        data_array,
+        dims=("Cohort", "BatteryType"),
+        coords={
+            "Cohort": years,
+            "BatteryType": techs
+        },
+        name="StorageCostsCorrection"
+    )
+    xr_costs_correction = prism.Q_(xr_costs_correction, "dimensionless")
+
+    # 1.3 storage costs longterm decline factor
+    techs = cost_decline_longterm_correction.index.rename(None)
+    data_array = cost_decline_longterm_correction.to_numpy()
+    xr_cost_decline_longterm_correction = xr.DataArray(
+        data_array,
+        dims=("BatteryType",),
+        coords={
+            "BatteryType": techs
+        },
+        name="StorageCostsDeclineLongterm"
+    )
+    xr_cost_decline_longterm_correction = prism.Q_(xr_cost_decline_longterm_correction, "fraction")
+
+
+    # 2. battery weigths -----------------------------------------------------------------------
+
+    xr_battery_weights = (
+        battery_weights_data
+        .rename_axis(index={"time": "Cohort", "type": "Drivetrain"})
+        .to_xarray()                        # Convert the pandas DataFrame to xarray with dims: Cohort, Drivetrain, Vehicle
+        .to_array("Vehicle")                # Move the DataFrame columns into an explicit xarray dimension
+        .rename("BatteryWeights")
+    )
+    # Combine Vehicle and Drivetrain into a single dimension
+    xr_battery_weights = xr_battery_weights.stack(Type=("Vehicle", "Drivetrain"))
+    # combine Type string labels: ('Cars', 'BEV') -> 'Cars - BEV'
+    new_type = [f"{v} - {d}" for v, d in xr_battery_weights.indexes["Type"]]
+
+    xr_battery_weights = (
+        xr_battery_weights
+        .drop_vars(["Vehicle", "Drivetrain"]) # Remove now-redundant level coordinates
+        .assign_coords(Type=new_type) # Replace the stacked MultiIndex with the combined string labels
+    )
+    xr_battery_weights = prism.Q_(xr_battery_weights, "kg")
+    # rebroadcast so that the Type coordinates have the correct sequence
+    xr_battery_weights = vhc_knowledge_graph.rebroadcast_xarray(xr_battery_weights, output_coords=vehicle_list, dim="Type")
+
+
+    # 3. material intensities -----------------------------------------------------------------------
+    
+    # Reshape the DataFrame long format: Each material column (steel, aluminium, etc.) is converted into rows,
+    # with 'material' indicating the material type and 'MaterialFractions' the corresponding value.
+    storage_materials = storage_materials_data.melt(id_vars=['Cohort', 'Type'], var_name='material', value_name='MaterialFractions')
+    # Make sure Cohort and Type are treated as categorical (to preserve order)
+    storage_materials['Cohort'] = storage_materials['Cohort'].astype(int)
+    storage_materials['Type'] = storage_materials['Type'].astype(str)
+    # Create xarray DataArray directly
+    xr_storage_materials = storage_materials.set_index(['material', 'Cohort', 'Type'])['MaterialFractions'].to_xarray()
+    # Ensure correct dimension order
+    xr_storage_materials = xr_storage_materials.transpose('material', 'Cohort', 'Type')
+    xr_storage_materials = xr_storage_materials.rename({'Type': 'BatteryType'})
+    xr_storage_materials = prism.Q_(xr_storage_materials, "fraction")
+    xr_battery_materials = xr_storage_materials.sel(BatteryType=EV_BATTERIES)
+
+
+    # 4. energy density -----------------------------------------------------------------------------
+    years = energy_density.index.astype(int)
+    energy_density.columns.name = None # remove header "kg/kWh" to avoid issues
+    techs = energy_density.columns
+    data_array = energy_density.to_numpy()
+    xr_energy_density = xr.DataArray(
+        data_array,
+        dims=("Cohort", "BatteryType"),
+        coords={
+            "Cohort": years,
+            "BatteryType": techs
+        },
+        name="EnergyDensity"
+    )
+    xr_energy_density = prism.Q_(xr_energy_density, "kg/kWh")
+    xr_energy_density = xr_energy_density.sel(BatteryType=EV_BATTERIES) # Select only those technologies from the storage technologies that are suitable for EV & mobile applications
+
+
+    # 5. EV fraction available for V2G --------------------------------------------------------------------
+    # For this variable first the interpolations are done and then the conversion to xarray DataArray
+    x = ev_fraction_v2g_data.reindex(range(ev_fraction_v2g_data.index[0],ev_fraction_v2g_data.index[-1]+1)).interpolate(method="linear")
+    y = logistic(x, L=x.iloc[-1].values)
+    # y = quadratic(x)
+    ev_fraction_v2g = ev_fraction_v2g_data.reindex(range(YEAR_FIRST_GRID,year_out+1)).interpolate(method="linear") # create dataframe with full index; values before first data points will be Nans, between data points interpolated linearly, after last data point will be last known value
+    ev_fraction_v2g.loc[:ev_fraction_v2g_data.index[0]] = 0 # set values before first data point to 0
+    ev_fraction_v2g.loc[ev_fraction_v2g_data.index[0]:ev_fraction_v2g_data.index[1]] = y # set values between (originally) first and last data point to quadratic/logistic interpolation
+    # Build xarray DataArray
+    years = ev_fraction_v2g.index.astype(int).rename(None)
+    techs = ev_fraction_v2g.columns
+    data_array = ev_fraction_v2g.to_numpy()    # shape (Time, Type)
+    data_array = data_array[:, :, np.newaxis]   # shape (Time, Type, 1)
+    data_array = np.broadcast_to(data_array, data_array.shape[:2] + (len(IMAGE_REGIONS),)) # (Time, Type, Region) - add region dimension, though all regions have the same values for now
+    xr_vhc_fraction_v2g = xr.DataArray(
+        data_array,
+        dims=("Time", "Type", "Region"),
+        coords={
+            "Time": years,
+            "Type": techs,
+            "Region": IMAGE_REGIONS
+        },
+        name="VehicleFractionV2G"
+    )
+    xr_vhc_fraction_v2g = prism.Q_(xr_vhc_fraction_v2g, "fraction")
+    # xr_vhc_fraction_v2g = vhc_knowledge_graph.rebroadcast_xarray(xr_vhc_fraction_v2g, output_coords=vehicle_list, dim="Type")
+
+    # 6. capacity used for V2G -----------------------------------------------------------------------------
+    # Note: xr_capacity_fraction_v2g must have same Type coords than xr_vhc_fraction_v2g (otherwise ElectricVehicleBatteries model will crash)
+    # Build xarray DataArray
+    techs = ev_capacity_fraction_v2g.columns
+    data_array = ev_capacity_fraction_v2g.to_numpy().ravel()  # flatten to 1D
+    xr_capacity_fraction_v2g = xr.DataArray(
+        data_array,
+        dims=("Type"),
+        coords={
+            "Type": techs
+        },
+        name="CapacityFractionV2g"
+    )
+    xr_capacity_fraction_v2g = prism.Q_(xr_capacity_fraction_v2g, "fraction")
+
+
+    ###########################################################################################################
+    # Calculations #
+
+    # 1. Market Shares -----------------------------------------------------------------------------
+
+    # calc. storage market shares based on cost developments & multinomial logit model for the years 1970-2050
+    storage_market_share = calculate_storage_market_shares(
+        xr_storage_costs,
+        xr_costs_correction,
+        xr_cost_decline_longterm_correction,
+        mnlogit_param=-0.2,
+        t_start_interpolation=year_start,
+        t_end_interpolation=2050
+    )
+
+    # fix the market share of storage technologies before year_start and after 2050
+    storage_market_share_interp = interpolate_xr(storage_market_share, YEAR_FIRST_GRID, year_out)
+    # Select only those technologies from the storage technologies that are suitable for EV & mobile applications
+    # normalize the selection of EV battery technologies, so that total market share is 1 again (taking the relative share in the selected battery techs)
+    market_share_EVs = normalize_selected_techs(storage_market_share_interp, EV_BATTERIES, dim_type="BatteryType") # TODO: this should be done differently as market shares of EV batteries probably differ from their market shares in total storage market
+    market_share_EVs = market_share_EVs.expand_dims(Type=vehicle_list).copy() # add vehicle type dimension
+    market_share_EVs.loc[dict(Type=vehicle_list_non_ev)] = 0 # set non-EV vehicle types to zero
+
+    # 2. Battery Weights ----------------------------------------------------------------
+    xr_battery_weights_interp = interpolate_xr(xr_battery_weights, YEAR_FIRST_GRID, year_out)
+
+    # 3. Material Intensities ----------------------------------------------------------------
+    xr_battery_materials_interp = interpolate_xr(xr_battery_materials, YEAR_FIRST_GRID, year_out)
+
+    #  4. Energy Density ----------------------------------------------------------------
+    xr_energy_density_interp = interpolate_xr(xr_energy_density, YEAR_FIRST_GRID, year_out)
+
+
+    ###########################################################################################################
+    # Prep_data File #
+
+    # bring preprocessing data into a generic format for the model
+    prep_data = {}
+    prep_data["shares"] = market_share_EVs
+    prep_data["weights"] = xr_battery_weights_interp
+    prep_data["material_fractions"] = xr_battery_materials_interp
+    prep_data["energy_density"] = xr_energy_density_interp
+    prep_data["vhc_fraction_v2g"] = xr_vhc_fraction_v2g
+    prep_data["capacity_fraction_v2g"] = xr_capacity_fraction_v2g
+    prep_data["knowledge_graph_elc"] = create_electricity_graph()
+    prep_data["knowledge_graph_vhc"] = create_vehicle_graph()
+
+    return prep_data

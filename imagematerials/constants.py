@@ -25,32 +25,32 @@ SUBTYPE_SEPARATOR = " - "
 
 # Regions
 IMAGE_REGIONS = [
-    "CAN",
-    "USA",
-    "MEX",
-    "RCAM",
-    "BRA",
-    "RSAM",
-    "NAF",
-    "WAF",
-    "EAF",
-    "SAF",
-    "WEU",
-    "CEU",
-    "TUR",
-    "UKR",
-    "STAN",
-    "RUS",
-    "ME",
-    "INDIA",
-    "KOR",
-    "CHN",
-    "SEAS",
-    "INDO",
-    "JAP",
-    "OCE",
-    "RSAS",
-    "RSAF"
+    "CAN",  # Canada
+    "USA",  # USA
+    "MEX",  # Mexico
+    "RCAM", # ? Central America
+    "BRA",  # Brazil
+    "RSAM", # Rest of South America
+    "NAF",  # Northern Africa
+    "WAF",  # Western Africa
+    "EAF",  # Eastern Africa
+    "SAF",  # South Africa
+    "WEU",  # Western Europe
+    "CEU",  # Central Europe
+    "TUR",  # Turkey
+    "UKR",  # Ukraine region
+    "STAN", # ? Central Asia
+    "RUS",  # Russia region
+    "ME",   # Middle East
+    "INDIA",# India
+    "KOR",  # Korea region
+    "CHN",  # China region
+    "SEAS", # Southeastern Asia
+    "INDO", # Indonesia region
+    "JAP",  # Japan
+    "OCE",  # Oceania
+    "RSAS", # Rest of South Asia
+    "RSAF"  # Rest of Southern Africa
 ]
 Region = prism.Dimension('region', IMAGE_REGIONS + ["World"])  # World regions
 ExtendedRegion = prism.Dimension('region', Region.coords + ["World2"])
