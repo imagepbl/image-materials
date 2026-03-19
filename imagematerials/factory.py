@@ -27,8 +27,7 @@ class Sector():
             (Extra) coordinates for the sectors. Any coordinates available in the preprocessing
             are added when creating the sector, by default None.
         check_coordinates, optional
-            Whether to check the compatibility of the coordinates of the sector, by default True.
-            Warning: putting this to False might break your code in unexpected ways.
+            Whether to check the compatibility of the coordinates of the sector, by default True
 
         """
         self.name = name
@@ -45,27 +44,27 @@ class Sector():
         # Keep track of the arrays in which coordinates were present, used for error messages.
         coordinate_sources = {name: "manually set" for name in coordinates}
         # Add the new coordinates
-        for array_name, array in data.items():
-            if not isinstance(array, xr.DataArray):  # Coordinates can only be extracted from arrays
+        for input_name, array in data.items():
+            if not isinstance(array, xr.DataArray):
                 continue
             for coord in array.coords.values():
                 coord_list = list(coord.values)
                 # New coordinate
                 if coord.name not in coordinates:
                     coordinates[coord.name] = coord_list
-                    coordinate_sources[coord.name] = [array_name]
+                    coordinate_sources[coord.name] = [input_name]
                 elif self.check_coordinates:
-                    try:
-                        if coord_list != coordinates[coord.name]:
-                            raise ValueError(
-                                f"Mismatch in coordinates with dimension '{coord.name}'"
-                                f" with data array '{array_name}' having different coordinates"
-                                f" than previously assumed in '{coordinate_sources[coord.name]}'."
-                                f"New: {coord_list}\n\nOld:{coordinates[coord.name]}")
-                        coordinate_sources[coord.name].append(array_name)
-                    except ValueError as e:
-                        print(e)
-                        continue  # Skip this coordinate and continue with the next
+                            try:
+                                if coord_list != coordinates[coord.name]:
+                                    raise ValueError(
+                                        f"Mismatch in coordinates with dimension '{coord.name}'"
+                                        f" with data array '{input_name}' having different coordinates"
+                                        f" than previously assumed in '{coordinate_sources[coord.name]}'."
+                                        f"New: {coord_list}\n\nOld:{coordinates[coord.name]}")
+                                coordinate_sources[coord.name].append(input_name)
+                            except ValueError as e:
+                                print(e)
+                                continue  # Skip this coordinate and continue with the next
         return coordinates, coordinate_sources
 
 
@@ -131,12 +130,10 @@ class ModelFactory():
 
         """
         # Parse sectors argument
-        if isinstance(sector_name, (list, tuple, set)):
-            # Add the model_class for each of the sectors with recursion.
+        if isinstance(sector_name, (list, tuple)):
             for sec in sector_name:
                 self.add(model_class, sector_name=sec, input_sources=input_sources)
             return self
-
         if sector_name is None:
             if len(self.sectors) != 1:
                 raise ValueError(f"Cannot add model '{model_class}', need a value for sector,"
@@ -144,7 +141,6 @@ class ModelFactory():
             sector_name = list(self.sectors)[0]
         sector = self.sectors[sector_name]
 
-        # Continue here.
         if sector_name not in self.sectors:
             raise KeyError(f"Cannot find sector '{sector_name}'. Available: {list(self.sectors)}.")
 
