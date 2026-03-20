@@ -10,11 +10,6 @@ from imagematerials.vehicles.constants import (
     FOLDER
 )
 from imagematerials.concepts import create_vehicle_graph
-# from imagematerials.vehicles.preprocessing.battery import (
-#     get_battery_materials,
-#     get_battery_shares,
-#     get_battery_weights
-# )
 from imagematerials.vehicles.preprocessing.materials import (
     get_maintenance_materials,
     get_material_fractions
@@ -41,9 +36,6 @@ def vehicles_preprocessing(base_directory: str, climate_policy_config: dict,
 
     # Collect results
     return {
-        # "battery_materials": get_battery_materials(scenario_data_directory),
-        # "battery_shares": get_battery_shares(general_data_directory),
-        # "battery_weights": get_battery_weights(scenario_data_directory),
         "knowledge_graph": knowledge_graph_vehicle,
         "lifetimes": get_lifetimes(scenario_data_directory, circular_economy_config),
         "maintenance_material_fractions": get_maintenance_materials(general_data_directory),

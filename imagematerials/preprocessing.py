@@ -11,7 +11,7 @@ from imagematerials.eol.preprocessing import eol_preprocessing as prep_eol
 from imagematerials.electricity.preprocessing import get_preprocessing_data_gen as prep_elc_gen
 from imagematerials.electricity.preprocessing import get_preprocessing_data_grid as prep_elc_grid
 from imagematerials.electricity.preprocessing import get_preprocessing_data_stor as prep_elc_stor
-from imagematerials.electricity.preprocessing import get_preprocessing_data_evbattery as prep_battery
+from imagematerials.vehicles.preprocessing.battery import get_preprocessing_data_evbattery as prep_battery
 
 
 from imagematerials.factory import Sector

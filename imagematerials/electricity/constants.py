@@ -10,7 +10,7 @@ ureg = pint.UnitRegistry(force_ndarray_like=True)
 # --- Settings & constants
 
 YEAR_FIRST_GRID = 1926  # UK Electricity supply act - https://www.bbc.com/news/uk-politics-11619751   
-YEAR_FIRST = 1807       # first_year_vehicle.values.min()
+YEAR_FIRST_VEHICLES = 1807       # first_year_vehicle.values.min()
 YEAR_SWITCH = 1990      # year after which other batteries than lead-acid are allowed
 REGIONS = 26
 COHORTS = 50
