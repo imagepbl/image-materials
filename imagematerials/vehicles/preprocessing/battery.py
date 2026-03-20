@@ -24,7 +24,73 @@ from imagematerials.electricity.constants import (
 )
 
 
-def get_preprocessing_data_evbattery(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+def get_preprocessing_data_evbattery(
+    path_base: str,
+    climate_policy_config: dict,
+    circular_economy_config: dict,
+    scenario: str,
+    year_start: int,
+    year_end: int,
+    year_out: int
+):
+    """ Load, process, and transform input data required for the electric vehicle (EV) battery module.
+
+    This function reads external datasets related to battery technologies, including costs,
+    material compositions, energy densities, and vehicle battery characteristics. It converts
+    these datasets into xarray DataArrays with consistent dimensions and units, performs
+    interpolations over time, and computes derived quantities such as technology market shares
+    and vehicle-to-grid (V2G) participation parameters.
+
+    The processed data are returned in a standardized dictionary format for use in the EV battery module.
+
+    Parameters
+    ----------
+    path_base : str
+        Base directory containing input data folders for electricity and vehicle datasets (data/raw/).
+    climate_policy_config : dict
+        Configuration dictionary specifying climate policy assumptions (currently not used directly).
+    circular_economy_config : dict
+        Configuration dictionary specifying circular economy assumptions (currently not used directly).
+    scenario : str
+        Scenario identifier used for selecting or organizing input data (not explicitly used here).
+    year_start : int
+        First year for interpolation of market shares and other time-dependent variables.
+    year_end : int
+        Last year of the simulation horizon (currently not explicitly used in this function).
+    year_out : int
+        Output year.
+
+    Returns
+    -------
+    dict
+        Dictionary containing preprocessed data as xarray DataArrays and auxiliary objects:
+        - "shares": Market shares of EV battery technologies by vehicle type and time.
+        - "weights": Battery weights per vehicle type and cohort.
+        - "material_fractions": Material composition of EV batteries.
+        - "energy_density": Energy density (kg/kWh) of EV battery technologies.
+        - "vhc_fraction_v2g": Fraction of vehicles available for vehicle-to-grid (V2G).
+        - "capacity_fraction_v2g": Fraction of battery capacity usable for V2G.
+        - "knowledge_graph_elc": Electricity system knowledge graph.
+        - "knowledge_graph_vhc": Vehicle system knowledge graph.
+
+    Notes
+    -----
+    - All numerical data are converted to xarray DataArrays and assigned physical units using `prism`.
+    - Market shares of battery technologies are computed using a multinomial logit model based on
+      cost developments.
+    - Vehicle types not associated with electric drivetrains are explicitly assigned zero battery shares.
+
+    Dependencies
+    ------------
+    Requires external helper functions and global variables, including:
+    - `calculate_storage_market_shares`
+    - `interpolate_xr`
+    - `normalize_selected_techs`
+    - `create_vehicle_graph`, `create_electricity_graph`
+    - `logistic`
+    - `EV_BATTERIES`, `IMAGE_REGIONS`, `YEAR_FIRST_GRID`, `SENS_ANALYSIS`
+
+    """
     
     # path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
     path_external_data_standard_elc = Path(path_base, "electricity", "standard_data")
