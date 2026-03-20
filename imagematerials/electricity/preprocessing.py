@@ -1081,8 +1081,10 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
     prep_data_phs["stocks"] =           knowledge_graph_region.rebroadcast_xarray(prep_data_phs["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
     prep_data_oth_storage["stocks"] =   knowledge_graph_region.rebroadcast_xarray(prep_data_oth_storage["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
 
-    prep_data_oth_storage["stocks_non_phs"] = prep_data_oth_storage.pop("stocks") # stocks_0
-
+    # Have both stocks and stocks_non_phs in the prep_data_oth_storage. In case vehicle-to-grid (V2G) is considered and the ev battery + Link module is added
+    # to the joined model run, stocks_non_phs is used and stocks is replaced with the remaining storage demand after subtracting the EV battery storage. In 
+    # case V2G is not considered, stocks is used directly and represents the storage demand fulfilled by dedicated grid storage technologies (non-PHS).
+    prep_data_oth_storage["stocks_non_phs"] = prep_data_oth_storage["stocks"].copy()
 
     return prep_data_phs, prep_data_oth_storage
 
