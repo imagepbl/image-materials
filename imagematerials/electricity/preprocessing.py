@@ -4,6 +4,7 @@ import numpy as np
 from pathlib import Path
 import pint
 import xarray as xr
+from importlib.resources import files
 
 import prism
 from imagematerials.read_mym import read_mym_df
@@ -13,11 +14,15 @@ from imagematerials.electricity.utils import (
     MNLogit, 
     stock_tail, 
     create_prep_data, 
+    logistic, 
+    quadratic,
     interpolate_xr, 
     add_historic_stock, 
     calculate_grid_growth, 
     calculate_fraction_underground, 
-    apply_ce_measures_to_elc
+    apply_ce_measures_to_elc, 
+    normalize_selected_techs,
+    calculate_storage_market_shares
 )
 
 from imagematerials.constants import IMAGE_REGIONS
@@ -28,6 +33,7 @@ from imagematerials.electricity.constants import (
     SENS_ANALYSIS,
     EPG_TECHNOLOGIES,
     STD_LIFETIMES_ELECTR,
+    EV_BATTERIES,
     unit_mapping
 )
 
@@ -627,11 +633,11 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
     path_base : str
         Base directory of the project where the data structure is located (image-materials/data/raw/).
     scenario : str
-        Scenario name (e.g., "SSP2_CP").
+        Scenario name (e.g., "SSP2_baseline").
     climate_policy_config : dict
         Dictionary created from a scenario-specific config.toml file.
         Contains all TOML entries ("data_files" mapping) plus a path:
-        - "config_file_path": pathlib.Path to the scenario directory (e.g. SSP2_CP) containing config.toml and all referenced
+        - "config_file_path": pathlib.Path to the scenario directory (e.g. SSP2_baseline) containing config.toml and all referenced
         output subfolders. 
         Used to construct full paths to scenario output files, e.g. read_mym_df(climate_policy_config["config_file_path"]/climate_policy_config["data_files"]["variable_x"]).
     year_start : int
@@ -690,10 +696,6 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
 
     # 1. External Data ======================================================================================== 
 
-
-    # read in the storage share in 2016 according to IEA (Technology perspectives 2017)
-    storage_IEA = pd.read_csv(path_external_data_standard / 'storage_IEA2016.csv', index_col=0)
-
     # read in the storage costs according to IRENA storage report & other sources in the SI
     storage_costs = pd.read_csv(path_external_data_standard / 'storage_cost.csv', index_col=0).transpose()
 
@@ -712,7 +714,7 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
     kilometrage = pd.read_csv(path_external_data_scenario / 'kilometrage.csv', index_col='t')   #annual car mileage in kms/yr, based  mostly  on  Pauliuk  et  al.  (2012a)
 
     # material compositions (storage) in wt%
-    storage_materials = pd.read_csv(path_external_data_standard / 'storage_materials_dynamic.csv',index_col=[0,1]).transpose()  # wt% of total battery weight for various materials, total battery weight is given by the density file above
+    storage_materials = pd.read_csv(path_external_data_standard / 'storage_materials_dynamic.csv',index_col=[0,1],usecols=lambda col: col != "unit").transpose()  # wt% of total battery weight for various materials, total battery weight is given by the density file above
 
     # Hydro-dam power capacity (also MW) within 5 regions reported by the IHA (international Hydropwer Association)
     phs_projections = pd.read_csv(path_external_data_standard / 'PHS.csv', index_col='t')   # pumped hydro storage capacity (MW)
@@ -809,7 +811,7 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
 
     # First the lifetime of storage technologies needs to be defined over time, before running the dynamic stock function
     # before 2018
-    for year in reversed(range(year_start,storage_start)):
+    for year in reversed(range(year_start,storage_start)): # TODO: use YEAR_FIRST_GRID instead? -> hen possible to run from earlier on?
         # storage_lifetime_interpol = pd.concat([storage_lifetime_interpol, pd.Series(storage_lifetime_interpol.loc[storage_lifetime_interpol.first_valid_index()], name=year)])
         row = pd.DataFrame([storage_lifetime_interpol.loc[storage_lifetime_interpol.first_valid_index()]])
         storage_lifetime_interpol.loc[year] = row.iloc[0]
@@ -848,6 +850,7 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
         # storage_costs_new = storage_costs_new.append(pd.Series(storage_costs_new.loc[storage_costs_new.first_valid_index()]*(1+(2*decline_used.mean())), name=year)).sort_index(axis=0)
         row = pd.DataFrame([storage_costs_new.loc[storage_costs_new.first_valid_index()]*(1+(2*decline_used.mean()))])
         storage_costs_new.loc[year] = row.iloc[0]
+        storage_costs_new.sort_index(axis=0, inplace=True) 
 
     storage_costs_new.sort_index(axis=0, inplace=True) 
     storage_costs_new.loc[1971:2017,'Deep-cycle Lead-Acid'] = storage_costs_new.loc[2018,'Deep-cycle Lead-Acid'] # restore the exception (set to constant 2018 values)
@@ -862,7 +865,14 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
         # storage_market_share = storage_market_share.append(pd.Series(storage_market_share.loc[storage_market_share.last_valid_index()], name=year))
         row = pd.DataFrame([storage_market_share.loc[storage_market_share.last_valid_index()]])
         storage_market_share.loc[year] = row.iloc[0]
-
+    # fix the market share of storage technologies before YEAR_START
+    for year in range(YEAR_FIRST_GRID,year_start):
+        # storage_market_share = storage_market_share.append(pd.Series(storage_market_share.loc[storage_market_share.last_valid_index()], name=year))
+        row = pd.DataFrame([storage_market_share.loc[storage_market_share.first_valid_index()]])
+        storage_market_share.loc[year] = row.iloc[0]
+        
+    storage_market_share = storage_market_share.sort_index(axis=0)
+    
     # total = storage_market_share.sum(axis=1)
     region_list = list(kilometrage.columns.values)   
     storage.columns = region_list
@@ -910,32 +920,38 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
 
     # Calculate the fractions of the storage capacity that is provided through pumped hydro-storage, electric vehicles or other storage (larger than 1 means the capacity superseeds the demand for energy storage, in terms of power in MW or enery in MWh) 
     phs_storage_fraction = phs_projections_IMAGE.divide(storage_power.loc[:year_out]).clip(upper=1) # the phs storage fraction deployed to fulfill storage demand, both phs & storage_power here are expressed in MW
-    storage_remaining = storage.loc[:year_out] * (1 - phs_storage_fraction)
+    storage_remaining = storage.loc[:year_out] * (1 - phs_storage_fraction) # asumption here (?): share in MW = share in GHh (not really true, though since both are very high for PHS for early years, this might be okey)
 
-    if SENS_ANALYSIS == 'high_stor':
-        oth_storage_fraction = 0.5 * storage_remaining 
-        oth_storage_fraction += ((storage_remaining * 0.5) - storage_vehicles).clip(lower=0)    
-        oth_storage_fraction = oth_storage_fraction.divide(storage).where(oth_storage_fraction > 0, 0).clip(lower=0) 
-        evs_storage_fraction = 1 - (phs_storage_fraction + oth_storage_fraction)     # electric vehicle storage (BEV + PHEV) capacity and total storage demand are expressed as MWh
-    else: 
-        oth_storage_fraction = (storage_remaining - storage_vehicles).clip(lower=0)    
-        oth_storage_fraction = oth_storage_fraction.divide(storage.loc[:year_out]).where(oth_storage_fraction > 0, 0).clip(lower=0)      
-        evs_storage_fraction = 1 - (phs_storage_fraction + oth_storage_fraction)     # electric vehicle storage (BEV + PHEV) capacity and total storage demand are expressed as MWh
+    phs_storage = storage.loc[:year_out] * phs_storage_fraction
+    oth_storage = storage_remaining 
+
+
+    # if SENS_ANALYSIS == 'high_stor':
+    #     oth_storage_fraction = 0.5 * storage_remaining 
+    #     oth_storage_fraction += ((storage_remaining * 0.5) - storage_vehicles).clip(lower=0)    
+    #     oth_storage_fraction = oth_storage_fraction.divide(storage).where(oth_storage_fraction > 0, 0).clip(lower=0) 
+    #     evs_storage_fraction = 1 - (phs_storage_fraction + oth_storage_fraction)     # electric vehicle storage (BEV + PHEV) capacity and total storage demand are expressed as MWh
+    # else: 
+    #     oth_storage_fraction = (storage_remaining - storage_vehicles).clip(lower=0)    
+    #     oth_storage_fraction = oth_storage_fraction.divide(storage.loc[:year_out]).where(oth_storage_fraction > 0, 0).clip(lower=0)      
+    #     evs_storage_fraction = 1 - (phs_storage_fraction + oth_storage_fraction)     # electric vehicle storage (BEV + PHEV) capacity and total storage demand are expressed as MWh
     
-    checksum = phs_storage_fraction + evs_storage_fraction + oth_storage_fraction   # should be 1 for all fields
+    # checksum = phs_storage_fraction + evs_storage_fraction + oth_storage_fraction   # should be 1 for all fields
 
-    # absolute storage capacity (MWh)
-    phs_storage_theoretical = phs_projections_IMAGE.divide(storage_power) * storage.loc[:year_out] # ??? theoretically available PHS storage (MWh; fraction * total) only used in the graphs that show surplus capacity
-    phs_storage = phs_storage_fraction * storage.loc[:year_out]
-    evs_storage = evs_storage_fraction * storage.loc[:year_out]
-    oth_storage = oth_storage_fraction * storage.loc[:year_out]
+    # # absolute storage capacity (MWh)
+    # phs_storage_theoretical = phs_projections_IMAGE.divide(storage_power) * storage.loc[:year_out] # ??? theoretically available PHS storage (MWh; fraction * total) only used in the graphs that show surplus capacity
+    # phs_storage = phs_storage_fraction * storage.loc[:year_out]
+    # evs_storage = evs_storage_fraction * storage.loc[:year_out]
+    # oth_storage = oth_storage_fraction * storage.loc[:year_out]
 
     #output for Main text figure 2 (storage reservoir, in MWh for 3 storage types)
-    storage_out_phs = pd.concat([phs_storage], keys=['phs'], names=['type']) 
-    storage_out_evs = pd.concat([evs_storage], keys=['evs'], names=['type']) 
-    storage_out_oth = pd.concat([oth_storage], keys=['oth'], names=['type']) 
-    storage_out = pd.concat([storage_out_phs, storage_out_evs, storage_out_oth])
-    # storage_out.to_csv(path_base / 'imagematerials' / 'electricity' / 'out_test'  / 'storage_by_type_MWh.csv')        # in MWh
+    # storage_out_phs = pd.concat([phs_storage], keys=['phs'], names=['type']) 
+    # storage_out_evs = pd.concat([evs_storage], keys=['evs'], names=['type']) 
+    # storage_out_oth = pd.concat([oth_storage], keys=['oth'], names=['type']) 
+    # storage_out = pd.concat([storage_out_phs, storage_out_evs, storage_out_oth])
+    # storage_out.to_csv(path_base /  'electricity' / 'test'  / 'storage_by_type_MWh.csv')        # in MWh
+    # storage_frac = pd.concat([phs_storage_fraction, evs_storage_fraction, oth_storage_fraction])
+    # storage_frac.to_csv(path_base /  'electricity' / 'test'  / 'storage_by_type_fraction.csv')
 
     # derive inflow & outflow (in MWh) for PHS, for later use in the material calculations 
     PHS_kg_perkWh = 26.8   # kg per kWh storage capacity (as weight addition to existing hydro plants to make them pumped) 
@@ -995,7 +1011,7 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
     prep_data_phs = create_prep_data(results_dict, conversion_table, unit_mapping)
     prep_data_phs["stocks"] = prism.Q_(prep_data_phs["stocks"], "MWh")
     prep_data_phs["material_intensities"] = prism.Q_(prep_data_phs["material_intensities"], "kg/MWh")
-    prep_data_phs["set_unit_flexible"] = prism.U_(prep_data_phs["stocks"]) # prism.U_ gives the unit back
+    prep_data_phs["set_unit_flexible"] = prism.U_(prep_data_phs["stocks"])
 
 
     # Other storage--------------------------------------------------------------------------------------------
@@ -1047,7 +1063,7 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
 
     results_dict = {
             'oth_storage_stock': oth_storage_stock,
-            'oth_storage_materials': oth_storage_materialintens.sel(Cohort=slice(1971, None)),
+            'oth_storage_materials': oth_storage_materialintens,
             'oth_storage_lifetime_distr': oth_storage_lifetime_distr,
             'oth_storage_shares': storage_market_share
     }
@@ -1056,6 +1072,7 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
     prep_data_oth_storage["stocks"] = prism.Q_(prep_data_oth_storage["stocks"], "MWh")
     prep_data_oth_storage["material_intensities"] = prism.Q_(prep_data_oth_storage["material_intensities"], "kg/kWh")
     prep_data_oth_storage["shares"] = prism.Q_(prep_data_oth_storage["shares"], "share")
+    prep_data_oth_storage["knowledge_graph_elc"] = create_electricity_graph()
     prep_data_oth_storage["set_unit_flexible"] = prism.U_(prep_data_oth_storage["stocks"]) # prism.U_ gives the unit back
 
 
@@ -1064,5 +1081,10 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
     prep_data_phs["stocks"] =           knowledge_graph_region.rebroadcast_xarray(prep_data_phs["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
     prep_data_oth_storage["stocks"] =   knowledge_graph_region.rebroadcast_xarray(prep_data_oth_storage["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
 
+    # Have both stocks and stocks_non_phs in the prep_data_oth_storage. In case vehicle-to-grid (V2G) is considered and the ev battery + Link module is added
+    # to the joined model run, stocks_non_phs is used and stocks is replaced with the remaining storage demand after subtracting the EV battery storage. In 
+    # case V2G is not considered, stocks is used directly and represents the storage demand fulfilled by dedicated grid storage technologies (non-PHS).
+    prep_data_oth_storage["stocks_non_phs"] = prep_data_oth_storage["stocks"].copy()
 
     return prep_data_phs, prep_data_oth_storage
+
