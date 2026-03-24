@@ -113,16 +113,39 @@ REGIONS_TIMER = [ # TODO: check if this is true
 
 # Electricity Generation related constants ---------------------------------------------
 
-TECH_GEN = 4   # number of electricity generation technologies -> 3 technologies + 1 empty row
+TECH_GEN = 27   # number of fossil  technologies -> 26 technologies + 1 empty row
 
 # names of generation technologies as in the input files (e.g. composition_generation.csv) from Sebastiaan - should be renamed in files to match TIMER names in the future
 GEN_TYPES_FOSSIL = ["Coal", "Oil", "Gas"]
 
 # names of fossil fuel types (check with TIMER model)
 FF_TECHNOLOGIES = [
-    "coal",
-    "oil",
-    "gas"  
+    "coal open cast",
+    "coal underground",
+    "oil onshore extraction",
+    "oil offshore extraction",
+    "gas onshore extraction",
+    "gas offshore extraction",
+    "coal preparation",
+    "oil storage",
+    "oil refinery",
+    "gas processing",
+    "coal truck",
+    "coal train",
+    "coal ocean ship",
+    "coal inland ship",
+    "oil truck",
+    "oil train",
+    "oil ocean ship",
+    "oil inland ship",
+    "gas truck",
+    "gas train",
+    "gas ocean ship",
+    "gas inland ship"
+    "oil crude composition pipeline",
+    "oil product pipeline",
+    "gas distribution pipeline",
+    "gas transmission pipeline"
 ]
 
 # Define mapping: technology -> category

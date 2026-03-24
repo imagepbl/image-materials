@@ -10,34 +10,36 @@
 #2: Read in files for the extraction stage for each fuel (coal, oil, gas)
 # a lifetimes 
 # b material intensities (steel, alumnium, copper?, I could add other ones?)
-# C image/timer data (this is where I am unsure) but I know we need a step to actually give information about the quantity of this type of infrastructure
+# C Import capacity files that are made from the stock calculation (FUMA) output (for each fuel: coal, oil, gas) which is labelled as fuma.py and are found under stock_calculation/output/SSP1_ML (or the relevant scenario)
 # d Transform to xarray and add units using the knowledge graph 
 
 #3: Read in files for the processing stage for each fuel
 # a lifetimes 
 # b material intensities
-# C image/timer data (made from stock calculation (FUMA) output)
+# C Import capacity files that are made from the stock calculation (FUMA) output (for each fuel: coal, oil, gas) which is labelled as fuma.py and are found under stock_calculation/output/SSP1_ML (or the relevant scenario)
 # d Transform to xarray and add units using the knowledge graph 
 
 #4: Read in files for the transport stage for each fuel
 # a lifetimes 
 # b material intensities
-# C image/timer data (made from stock calculation (FUMA) output)
+# C Import capacity files that are made from the stock calculation (FUMA) output (for each fuel: coal, oil, gas) which is labelled as fuma.py and are found under stock_calculation/output/SSP1_ML (or the relevant scenario)
 # d Transform to xarray and add units using the knowledge graph 
 
 #5: Read in files for the pipelines stage for each fuel
 # a lifetimes 
 # b material intensities
-# C image/timer data (made from stock calculation (FUMA) output)
+# C Import capacity files that are made from the stock calculation (FUMA) output (for each fuel: coal, oil, gas) which is labelled as fuma.py and are found under stock_calculation/output/SSP1_ML (or the relevant scenario)
 # d Transform to xarray and add units using the knowledge graph 
 
-#6 interpolate data (i am not sure if this will be necessary)
+#6 interpolate data/make material lifetimes and intensities constant for all years 
 
 #7 Make prep_data dictionary with all the pre-processed data, and return it
 
 # 8 Adjust as necessary to fit into the IMAGE framework (so its runs with ELMA)
 
-# 9 Make output figures 
+# 9 Make knowledge graph for fossil fuel so that figure can combine many types of infrastructure for each fuel type
+
+# 10 Make output figures 
 
 
 #%% Import modules and constants
@@ -63,6 +65,9 @@ from imagematerials.electricity.utils import (
    calculate_fraction_underground, 
    apply_ce_measures_to_elc
 )
+
+import warnings
+warnings.filterwarnings("ignore", message="The unit of the quantity is stripped")
 
 #from prism.prism.examples.fuel import scenario
 scenario = "SSP1_ML"
@@ -110,7 +115,6 @@ extraction_lifetime_data = pd.read_csv(
     'Extraction/FF Intensity & LT - Extraction lifetimes.csv',
     index_col=["Year", "Tech Type"]
 ) 
-
 print(extraction_lifetime_data.head())
 print(extraction_lifetime_data.columns)
 print(extraction_lifetime_data.index)
@@ -123,11 +127,11 @@ extraction_materials_data = pd.read_csv('Extraction/FF Intensity & LT - Extracti
     # 2. IMAGE/TIMER files -----------------------------------------
 #Stock of each type of extraction infrastructure (stock demand per generation technology) per region per year
 
-extraction_coal = Path(path_base, "Fossil_test", "stock_calculation", "output", scenario, "coal_extraction_stock_kg.csv")
+extraction_coal = Path(path_base, "Fossil_test_check", "stock_calculation", "output", scenario, "coal_extraction_stock_kg.csv")
 df_extraction_coal = pd.read_csv(extraction_coal)
-extraction_oil = Path(path_base, "Fossil_test", "stock_calculation", "output", scenario, "oil_extraction_stock_kg.csv")
+extraction_oil = Path(path_base, "Fossil_test_check", "stock_calculation", "output", scenario, "oil_extraction_stock_kg.csv")
 df_extraction_oil = pd.read_csv(extraction_oil)
-extraction_gas = Path(path_base, "Fossil_test", "stock_calculation", "output", scenario, "gas_extraction_stock_kg.csv")
+extraction_gas = Path(path_base, "Fossil_test_check", "stock_calculation", "output", scenario, "gas_extraction_stock_kg.csv")
 df_extraction_gas = pd.read_csv(extraction_gas)
 df_extraction_coal["fuel"] = "coal"
 df_extraction_oil["fuel"] = "oil"
@@ -144,12 +148,12 @@ df_extraction_all = df_extraction_all.melt(
     value_name='value'
 )
 
-df_extraction_all = df_extraction_all.drop(columns=['stage', 'unit'])
+df_extraction_all['Tech Type'] = df_extraction_all['fuel'].str.strip() + ' ' + df_extraction_all['type'].str.strip()
 
+df_extraction_all = df_extraction_all.drop(columns=['stage', 'unit', 'type', 'fuel'])  # drop columns that are not needed for the analysis
 
 #print(df_extraction_all.shape)
 #print(df_extraction_all.columns.tolist())
-
 #print("COLUMNS:", df_extraction_all.columns)
 #print(df_extraction_all.head())
 
@@ -219,17 +223,17 @@ extraction_materials_xr = prism.Q_(extraction_materials_xr, "kg/kg/year")
     # Extract coordinate labels
 years = sorted(df_extraction_all['time'].unique())
 regions = sorted(df_extraction_all['DIM_1'].unique())
-fuels = sorted(df_extraction_all['fuel'].unique())
-types = sorted(df_extraction_all['type'].unique())
+techtypes = sorted(df_extraction_all['Tech Type'].unique())
+
 #print(df_extraction_all['type'].unique())
 #df_sorted = df_extraction_all.sort_values(['time', 'DIM_1', 'fuel', 'type'])
     # Convert to 3D array: (Year, Region, Fuel, Type)
 #data_array = df_sorted['value'].to_numpy().reshape(len(years), len(regions), len(fuels), len(types))
 extractioncap_xr = (
     df_extraction_all
-    .set_index(['time', 'DIM_1', 'fuel', 'type'])
+    .set_index(['time', 'DIM_1', 'Tech Type'])
     .to_xarray()['value']
-    .rename({'time': 'Time', 'DIM_1': 'Region', 'fuel': 'Fuel', 'type': 'Type'})
+    .rename({'time': 'Time', 'DIM_1': 'Region', 'Tech Type': 'Type'})
 )
     # Build xarray DataArray
 #extractioncap_xr = xr.DataArray(
@@ -260,26 +264,26 @@ extraction_materials_xr_interp = interpolate_xr(extraction_materials_xr, YEAR_FI
     # TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
 extractioncap_xr_interp = add_historic_stock(extractioncap_xr, YEAR_FIRST_GRID)
 
-print(extraction_lifetime_xr_interp.head())
-print(extraction_materials_xr_interp.head())
-print(extractioncap_xr_interp.head())
+#print(extraction_lifetime_xr_interp.head())
+#print(extraction_materials_xr_interp.head())
+#print(extractioncap_xr_interp.head())
 
 #%% Processing stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 
 ###########################################################################################################
 ###########################################################################################################
 # Processing stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
-def get_preprocessing_data_processing(path_base: str, climate_policy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+#def get_preprocessing_data_processing(path_base: str, climate_policy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
-    path_external_data_scenario = Path(path_base, "fossil", scenario)
+    #path_external_data_scenario = Path(path_base, "fossil", scenario)
 
     # test if path_external_data_scenario exists and if not set to standard scenario
-    if not path_external_data_scenario.exists():
-        path_external_data_scenario = Path(path_base, "fossil", STANDARD_SCEN_EXTERNAL_DATA)
+    #if not path_external_data_scenario.exists():
+        #path_external_data_scenario = Path(path_base, "fossil", STANDARD_SCEN_EXTERNAL_DATA)
 
-    assert path_external_data_scenario.is_dir()
+    #assert path_external_data_scenario.is_dir()
 
-    return path_external_data_scenario
+    #return path_external_data_scenario
 ###########################################################################################################
     # Read in files #
 
@@ -300,18 +304,33 @@ processing_materials_data = pd.read_csv('Processing/FF Intensity & LT - Processi
 #Processing capacity (stock demand per generation technology) in MW peak capacity
 #Stock of each type of extraction infrastructure (stock demand per generation technology) per region per year
 
-processing_coal = Path(path_base, "Fossil_test", "stock_calculation", "output", scenario, "coal_preparation_stock_kg.csv")
+processing_coal = Path(path_base, "Fossil_test_check", "stock_calculation", "output", scenario, "coal_preparation_stock_kg.csv")
 df_processing_coal = pd.read_csv(processing_coal)
-processing_storage_oil = Path(path_base, "Fossil_test", "stock_calculation", "output", scenario, "oil_storage_volume_m3.csv")
+processing_storage_oil = Path(path_base, "Fossil_test_check", "stock_calculation", "output", scenario, "oil_storage_volume_m3.csv")
 df_processing_oil = pd.read_csv(processing_storage_oil)
-processing_refinery_oil = Path(path_base, "Fossil_test", "stock_calculation", "output", scenario, "oil_refinery_stock_kg.csv")
+processing_refinery_oil = Path(path_base, "Fossil_test_check", "stock_calculation", "output", scenario, "oil_refinery_stock_kg.csv")
 df_processing_refinery_oil = pd.read_csv(processing_refinery_oil)
-processing_gas = Path(path_base, "Fossil_test", "stock_calculation", "output", scenario, "gas_processing_stock_kg.csv")
+processing_gas = Path(path_base, "Fossil_test_check", "stock_calculation", "output", scenario, "gas_processing_stock_kg.csv")
 df_processing_gas = pd.read_csv(processing_gas)
 df_processing_all = pd.concat(
     [df_processing_coal, df_processing_oil, df_processing_refinery_oil, df_processing_gas],
     ignore_index=True
 )
+
+df_processing_all = df_processing_all.melt(
+    id_vars=['type', 'time', 'fuel', 'stage', 'unit'],  
+    var_name='DIM_1',
+    value_name='value'
+)
+
+df_processing_all['Tech Type'] = df_processing_all['fuel'].str.strip() + ' ' + df_processing_all['type'].str.strip()
+
+df_processing_all = df_processing_all.drop(columns=['stage', 'unit', 'type', 'fuel'])  # drop columns that are not needed for the analysis
+
+print(df_processing_all.shape)
+print(df_processing_all.columns.tolist())
+print("COLUMNS:", df_processing_all.columns)
+print(df_processing_all.head())
 
 
    # test if path_external_data_scenario exists and if not set to standard scenario
@@ -374,32 +393,29 @@ processing_materials_xr = prism.Q_(processing_materials_xr, "kg/kg/year")
 # Gcap ------
 
 # combine the processing data for coal, oil, gas into one df and then put it into this 
-
-df_processing_all
-
 df_processing_all = df_processing_all.loc[~df_processing_all['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
-df_processing_all  = df_processing_all .loc[df_processing_all ['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', *range(1, len(FF_TECHNOLOGIES)+1)]]  # only keep relevant years and technology columns
+df_processing_all  = df_processing_all .loc[df_processing_all ['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', 'value', 'Tech Type']]  # only keep relevant years and technology columns
     # Extract coordinate labels
-years = sorted(df_processing_all ['time'].unique())
-regions = sorted(df_processing_all ['DIM_1'].unique())
-techs = list(range(1, len(FF_TECHNOLOGIES)+1))
-    # Convert to 3D array: (Year, Region, Tech)
-data_array = df_processing_all [techs].to_numpy().reshape(len(years), len(regions), len(techs))
-    # Build xarray DataArray
-processing_capacities_xr = xr.DataArray(
-        data_array,
-        dims=('Time', 'Region', 'Type'),
-        coords={
-            'Time': years,
-            'Region': [str(r) for r in regions],
-            'Type': [str(r) for r in techs]
-        },
-        name='ProcessingCapacities'
-    )
-processing_capacities_xr = prism.Q_(processing_capacities_xr, "MW")
+
+years = sorted(df_processing_all['time'].unique())
+regions = sorted(df_processing_all['DIM_1'].unique())
+techtypes = sorted(df_processing_all['Tech Type'].unique())
+
+#print(df_processing_all['type'].unique())
+#df_sorted = df_processing_all.sort_values(['time', 'DIM_1', 'fuel', 'type'])
+    # Convert to 3D array: (Year, Region, Fuel, Type)
+#data_array = df_sorted['value'].to_numpy().reshape(len(years), len(regions), len(fuels), len(types))
+processingcap_xr = (
+    df_processing_all
+    .set_index(['time', 'DIM_1', 'Tech Type'])
+    .to_xarray()['value']
+    .rename({'time': 'Time', 'DIM_1': 'Region', 'Tech Type': 'Type'})
+)
+
+processingcap_xr = prism.Q_(processingcap_xr, "MW")
 #processing_capacities_xr = knowledge_graph_region.rebroadcast_xarray(processing_capacities_xr, output_coords=IMAGE_REGIONS, dim="Region") 
 #processing_capacities_xr = knowledge_graph_coal.rebroadcast_xarray(processing_capacities_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
-processing_capacities_xr = processing_capacities_xr.assign_coords(Type=np.array(processing_capacities_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
+processingcap_xr = processingcap_xr.assign_coords(Type=np.array(processingcap_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
     ###########################################################################################################
     # Interpolate #
@@ -411,46 +427,44 @@ processing_lifetime_xr_interp.loc[dict(DistributionParams="stdev")] = processing
 processing_materials_xr_interp = interpolate_xr(processing_materials_xr, YEAR_FIRST_GRID, year_out)
 
     # TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
-processing_capacities_xr_interp = add_historic_stock(processing_capacities_xr, YEAR_FIRST_GRID)
+processingcap_xr_interp = add_historic_stock(processingcap_xr, YEAR_FIRST_GRID)
 
 #%% Transport/Vehicles stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 
 ###########################################################################################################
 ###########################################################################################################
 # Transport/Vehicles stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
-def get_preprocessing_data_processing(path_base: str, climate_policy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+#def get_preprocessing_data_processing(path_base: str, climate_policy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
     #path_external_data_scenario = Path(path_base, "fossil", scenario)
 
     # test if path_external_data_scenario exists and if not set to standard scenario
-   # if not path_external_data_scenario.exists():
-    #    path_external_data_scenario = Path(path_base, "fossil", STANDARD_SCEN_EXTERNAL_DATA)
+# if not path_external_data_scenario.exists():
+#    path_external_data_scenario = Path(path_base, "fossil", STANDARD_SCEN_EXTERNAL_DATA)
 
-    #assert path_external_data_scenario.is_dir()
+#assert path_external_data_scenario.is_dir()
 ###########################################################################################################
-    # Read in files #
+# Read in files #
 
-    # 1. External Data --------------------------------------------- 
+# 1. External Data --------------------------------------------- 
 
-    # lifetimes of transport tech in years
- transport_lifetime_data = pd.read_csv(
-    'Transport/FF Intensity & LT - Transport lifetimes.csv',
-    index_col=["Year", "Tech Type"]
-) 
-    # material compositions of transport infrastructure in kg/kg/year
+# lifetimes of transport tech in years
+transport_lifetime_data = pd.read_csv('Transport/FF Intensity & LT - Transport lifetimes.csv',index_col=["Year", "Tech Type"]) 
+#print(transport_lifetime_data.columns.tolist())
+
+# material compositions of transport infrastructure in kg/kg/year
 transport_materials_data = pd.read_csv('Transport/FF Intensity & LT - Transport materials.csv')
-transport_lifetime_data = pd.read_csv('Transport/FF Intensity & LT - Transport Lifetime.csv', index_col=["Year", "Tech Type"])
 
 #print(extraction_materials_data.columns)
 #print(extraction_materials_data.head())
 
     # 2. IMAGE/TIMER files -----------------------------------------
 #Transport capacity (stock demand per generation technology) in MW peak capacity
-transport_coal = Path(path_base, "Fossil_test", "stock_calculation", "output", scenario, "coal_transport_stock_kg.csv")
+transport_coal = Path(path_base, "Fossil_test_check", "stock_calculation", "output", scenario, "coal_transport_stock_kg.csv")
 df_transport_coal = pd.read_csv(transport_coal)
-transport_oil = Path(path_base, "Fossil_test", "stock_calculation", "output", scenario, "oil_transport_stock_kg.csv")
+transport_oil = Path(path_base, "Fossil_test_check", "stock_calculation", "output", scenario, "oil_transport_stock_kg.csv")
 df_transport_oil = pd.read_csv(transport_oil)
-transport_gas = Path(path_base, "Fossil_test", "stock_calculation", "output", scenario, "gas_transport_stock_kg.csv")
+transport_gas = Path(path_base, "Fossil_test_check", "stock_calculation", "output", scenario, "gas_transport_stock_kg.csv")
 df_transport_gas = pd.read_csv(transport_gas)
 df_transport_coal["fuel"] = "coal"
 df_transport_oil["fuel"] = "oil"
@@ -461,6 +475,20 @@ df_transport_all = pd.concat(
     ignore_index=True
 )
 
+df_transport_all = df_transport_all.melt(
+    id_vars=['type', 'time', 'fuel', 'stage', 'unit'],  
+    var_name='DIM_1',
+    value_name='value'
+)
+
+df_transport_all['Tech Type'] = df_transport_all['fuel'].str.strip() + ' ' + df_transport_all['type'].str.strip()
+
+df_transport_all = df_transport_all.drop(columns=['stage', 'unit', 'type', 'fuel'])  # drop columns that are not needed for the analysis
+
+#print(df_transport_all.shape)
+#print(df_transport_all.columns.tolist())
+#print("COLUMNS:", df_transport_all.columns)
+#print(df_transport_all.head())
    # test if path_external_data_scenario exists and if not set to standard scenario
 # if not path_external_data_scenario.exists():
   #       path_external_data_scenario = Path(path_base, "fossil", STANDARD_SCEN_EXTERNAL_DATA)
@@ -474,7 +502,7 @@ df_transport_all = pd.concat(
     
 
     # Lifetimes -------
-values = transport_lifetime_data["Lifetime"].unstack().to_numpy(dtype=float)
+values = transport_lifetime_data["Lifetimes"].unstack().to_numpy(dtype=float)
 #Create coordinates
 times = transport_lifetime_data.index.levels[0].to_numpy()
 types = transport_lifetime_data.index.levels[1].to_numpy()
@@ -519,25 +547,26 @@ transport_materials_xr = prism.Q_(transport_materials_xr, "kg/kg/year")
 #transport_materials_xr = transport_materials_xr.assign_coords(Type=np.array(transport_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
 # Transport capacity ------
-df_transport_all = df_transport_all.loc[~df_transport_all['Region'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
-df_transport_all = df_transport_all.loc[df_transport_all['time'].isin(range(year_start, year_end + 1)), ['time', 'Region', *range(1, len(FF_TECHNOLOGIES) + 1)]]  # only keep relevant years and technology columns
-    # Extract coordinate labels
+df_transport_all = df_transport_all.loc[~df_transport_all['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
+df_transport_all = df_transport_all.loc[df_transport_all['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', 'value', 'Tech Type']]  # only keep relevant years and technology columns
+   
+# Extract coordinate labels
+
 years = sorted(df_transport_all['time'].unique())
-regions = sorted(df_transport_all['Region'].unique())
-techs = list(range(1, len(FF_TECHNOLOGIES)+1))
-    # Convert to 3D array: (Year, Region, Tech)
-data_array = df_transport_all[techs].to_numpy().reshape(len(years), len(regions), len(techs))
-    # Build xarray DataArray
-transportcap_xr = xr.DataArray(
-        data_array,
-        dims=('Time', 'Region', 'Type'),
-        coords={
-            'Time': years,
-            'Region': [str(r) for r in regions],
-            'Type': [str(r) for r in techs]
-        },
-        name='TransportCap'
-    )
+regions = sorted(df_transport_all['DIM_1'].unique())
+techtypes = sorted(df_transport_all['Tech Type'].unique())
+
+#print(df_transport_all['type'].unique())
+#df_sorted = df_transport_all.sort_values(['time', 'Region', 'fuel', 'type'])
+    # Convert to 3D array: (Year, Region, Fuel, Type)
+#data_array = df_sorted['value'].to_numpy().reshape(len(years), len(regions), len(fuels), len(types))
+transportcap_xr = (
+    df_transport_all
+    .set_index(['time', 'DIM_1', 'Tech Type'])
+    .to_xarray()['value']
+    .rename({'time': 'Time', 'DIM_1': 'Region', 'Tech Type': 'Type'})
+)
+
 transportcap_xr = prism.Q_(transportcap_xr, "MW")
 #transportcap_xr = knowledge_graph_region.rebroadcast_xarray(transportcap_xr, output_coords=IMAGE_REGIONS, dim="Region") 
 #transportcap_xr = knowledge_graph_coal.rebroadcast_xarray(transportcap_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
@@ -585,9 +614,9 @@ pipelines_materials_data = pd.read_csv('Pipelines/FF Intensity & LT - Pipelines 
 
     # 2. IMAGE/TIMER files -----------------------------------------
 #Transport capacity (stock demand per generation technology) in MW peak capacity
-pipelines_oil = Path(path_base, "image-materials","Fossil_test", "stock_calculation", "output", scenario, "oil_pipelines_length_km.csv")
+pipelines_oil = Path(path_base, "Fossil_test_check", "stock_calculation", "output", scenario, "oil_pipelines_length_km.csv")
 df_pipelines_oil = pd.read_csv(pipelines_oil)
-pipelines_gas = Path(path_base, "image-materials","Fossil_test", "stock_calculation", "output", scenario, "gas_pipelines_length_km.csv")
+pipelines_gas = Path(path_base, "Fossil_test_check", "stock_calculation", "output", scenario, "gas_pipelines_length_km.csv")
 df_pipelines_gas = pd.read_csv(pipelines_gas)
 
 df_pipelines_oil["fuel"] = "oil"
@@ -598,6 +627,20 @@ df_pipelines_all = pd.concat(
     ignore_index=True
 )
 
+df_pipelines_all = df_pipelines_all.melt(
+    id_vars=['type', 'time', 'fuel', 'stage', 'unit'],  
+    var_name='DIM_1',
+    value_name='value'
+)
+
+df_pipelines_all['Tech Type'] = df_pipelines_all['fuel'].str.strip() + ' ' + df_pipelines_all['type'].str.strip()
+
+df_pipelines_all = df_pipelines_all.drop(columns=['stage', 'unit', 'type', 'fuel'])  # drop columns that are not needed for the analysis
+
+#print(df_pipelines_all.shape)
+#print(df_pipelines_all.columns.tolist())
+#print("COLUMNS:", df_pipelines_all.columns)
+#print(df_pipelines_all.head())
    # test if path_external_data_scenario exists and if not set to standard scenario
 # if not path_external_data_scenario.exists():
   #       path_external_data_scenario = Path(path_base, "fossil", STANDARD_SCEN_EXTERNAL_DATA)
@@ -611,7 +654,7 @@ df_pipelines_all = pd.concat(
     
 
     # Lifetimes -------
-values = pipelines_lifetime_data["Lifetime"].unstack().to_numpy(dtype=float)
+values = pipelines_lifetime_data["Lifetimes"].unstack().to_numpy(dtype=float)
 #Create coordinates
 times = pipelines_lifetime_data.index.levels[0].to_numpy()
 types = pipelines_lifetime_data.index.levels[1].to_numpy()
@@ -657,24 +700,23 @@ pipelines_materials_xr = prism.Q_(pipelines_materials_xr, "kg/kg/year")
 
 # Pipeline capacity ------
 df_pipelines_all = df_pipelines_all.loc[~df_pipelines_all['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
-df_pipelines_all = df_pipelines_all.loc[df_pipelines_all['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', *range(1, len(FF_TECHNOLOGIES) + 1)]]  # only keep relevant years and technology columns
+df_pipelines_all = df_pipelines_all.loc[df_pipelines_all['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', 'value', 'Tech Type']]  # only keep relevant years and technology columns
     # Extract coordinate labels
+
 years = sorted(df_pipelines_all['time'].unique())
 regions = sorted(df_pipelines_all['DIM_1'].unique())
-techs = list(range(1, len(FF_TECHNOLOGIES)+1))
-    # Convert to 3D array: (Year, Region, Tech)
-data_array = df_pipelines_all[techs].to_numpy().reshape(len(years), len(regions), len(techs))
-    # Build xarray DataArray
-pipelinecap_xr = xr.DataArray(
-        data_array,
-        dims=('Time', 'Region', 'Type'),
-        coords={
-            'Time': years,
-            'Region': [str(r) for r in regions],
-            'Type': [str(r) for r in techs]
-        },
-        name='PipelineCap'
-    )
+techtypes = sorted(df_pipelines_all['Tech Type'].unique())
+
+#print(df_pipelines_all['type'].unique())
+#df_sorted = df_pipelines_all.sort_values(['time', 'Region', 'fuel', 'type'])
+    # Convert to 3D array: (Year, Region, Fuel, Type)
+#data_array = df_sorted['value'].to_numpy().reshape(len(years), len(regions), len(fuels), len(types))
+pipelinecap_xr = (
+    df_pipelines_all
+    .set_index(['time', 'DIM_1', 'Tech Type'])
+    .to_xarray()['value']
+    .rename({'time': 'Time', 'DIM_1': 'Region', 'Tech Type': 'Type'})
+)
 pipelinecap_xr = prism.Q_(pipelinecap_xr, "MW")
 #pipelinecap_xr = knowledge_graph_region.rebroadcast_xarray(pipelinecap_xr, output_coords=IMAGE_REGIONS, dim="Region") 
 #pipelinecap_xr = knowledge_graph_coal.rebroadcast_xarray(pipelinecap_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
