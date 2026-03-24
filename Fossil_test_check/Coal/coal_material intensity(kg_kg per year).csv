@@ -1,0 +1,8 @@
+Year,FuelTech,Steel  ,Copper,Aluminium,Wood,Concrete,Cement
+2025,coal preparation (kg/kg per year),0.000179,,,,,
+2025,coal production open cast,0.0003,0.000009,,0,0.00009,0
+2025,coal production underground,0.0006,0.000002,,0,0.00727999,0
+2025,coal rail,0.9445,0.0015,0.0541,,,
+2025,coal inland ship,0.8858,0.0032,0.0125,,,
+2025,coal ocean ship,0.8858,0.0032,0.0125,,,
+2025,coal truck,0.6905,0.004,0.0225,,,

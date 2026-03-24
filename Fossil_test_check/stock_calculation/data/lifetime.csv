@@ -1,0 +1,4 @@
+﻿,Open_cast,Underground,Onshore_extraction,Offshore_extraction,Onshore_pipelines,Offshore_pipelines,Crude_storage,Gas_storage,Product_Storage,Rail,Inland_ship,Ocean_ship,Trucks,Processing_plant,Refinery,Coal_preparation
+Coal,30,30,,,,,,,,26,26,26.8,12,,,30
+Gas,,,50,15,50,50,,50,,26,26,27,12,60,,
+Oil,,,30,15,50,50,20,,20,26,26,26.7,12,,47,
