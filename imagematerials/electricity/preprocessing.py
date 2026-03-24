@@ -1073,7 +1073,7 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
     prep_data_oth_storage["material_intensities"] = prism.Q_(prep_data_oth_storage["material_intensities"], "kg/kWh")
     prep_data_oth_storage["shares"] = prism.Q_(prep_data_oth_storage["shares"], "share")
     prep_data_oth_storage["set_unit_flexible"] = str(prism.U_(prep_data_oth_storage["stocks"])) # prism.U_ gives the unit back
-    prep_data_oth_storage["knowledge_graph_elc"] = create_electricity_graph()
+    prep_data_oth_storage["knowledge_graph"] = create_electricity_graph()
 
 
     # change region names to IMAGE_REGIONS # TODO: this should be done in hte beginning of preprocessing
