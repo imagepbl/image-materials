@@ -24,6 +24,9 @@ from imagematerials.electricity.utils import (
     normalize_selected_techs,
     calculate_storage_market_shares
 )
+from imagematerials.electricity.preprocessing.circular_economy_measures import (
+    apply_ce_measures_to_elc_grid
+)
 
 from imagematerials.constants import IMAGE_REGIONS
 
@@ -351,46 +354,54 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
     ###########################################################################################################
     # CE measures #
 
+    
+
+
     # Depending on circular economy scenario, apply different measures
     if circular_economy_config is not None:
-        if "narrow_product" in circular_economy_config.keys():
-            ce_scen = "narrow_product"
 
-            target_year         = circular_economy_config[ce_scen]['electricity']['target_year']
-            base_year           = circular_economy_config[ce_scen]['electricity']['base_year']
-            implementation_rate = circular_economy_config[ce_scen]['electricity']['implementation_rate']
+        materials_additions_interp, grid_lifetime_interp = apply_ce_measures_to_elc_grid(materials_additions_interp,
+                                                                                          grid_lifetime_interp,
+                                                                                          circular_economy_config)
+        # if "narrow_product" in circular_economy_config.keys():
+        #     ce_scen = "narrow_product"
 
-            gen_weight_change_pc = circular_economy_config[ce_scen]['electricity']['grid_add']['weight_change_pc']
+        #     target_year         = circular_economy_config[ce_scen]['electricity']['target_year']
+        #     base_year           = circular_economy_config[ce_scen]['electricity']['base_year']
+        #     implementation_rate = circular_economy_config[ce_scen]['electricity']['implementation_rate']
 
-            materials_additions_interp = apply_ce_measures_to_elc(
-                materials_additions_interp,
-                base_year=base_year,
-                target_year=target_year,
-                change=gen_weight_change_pc,
-                implementation_rate=implementation_rate,
-                data_sector = "electricity grid"
-            )
-            print("narrow|lightweighting applied to ", materials_additions_interp.name)
+        #     gen_weight_change_pc = circular_economy_config[ce_scen]['electricity']['grid_add']['weight_change_pc']
+
+        #     materials_additions_interp = apply_ce_measures_to_elc(
+        #         materials_additions_interp,
+        #         base_year=base_year,
+        #         target_year=target_year,
+        #         change=gen_weight_change_pc,
+        #         implementation_rate=implementation_rate,
+        #         data_sector = "electricity grid"
+        #     )
+        #     print("narrow|lightweighting applied to ", materials_additions_interp.name)
 
 
-        if "slow" in circular_economy_config.keys():
-            ce_scen = "slow"
-            target_year          = circular_economy_config[ce_scen]['electricity']['target_year']
-            base_year            = circular_economy_config[ce_scen]['electricity']['base_year']
-            implementation_rate  = circular_economy_config[ce_scen]['electricity']['implementation_rate']
-            gen_lifetime_change_pc = circular_economy_config[ce_scen]['electricity']['grid_add']['lifetime_increase_percent']
+        # if "slow" in circular_economy_config.keys():
+        #     ce_scen = "slow"
+        #     target_year          = circular_economy_config[ce_scen]['electricity']['target_year']
+        #     base_year            = circular_economy_config[ce_scen]['electricity']['base_year']
+        #     implementation_rate  = circular_economy_config[ce_scen]['electricity']['implementation_rate']
+        #     gen_lifetime_change_pc = circular_economy_config[ce_scen]['electricity']['grid_add']['lifetime_increase_percent']
 
-            x = apply_ce_measures_to_elc(
-                grid_lifetime_interp,
-                base_year           = base_year,
-                target_year         = target_year,
-                change              = gen_lifetime_change_pc,
-                implementation_rate = implementation_rate,
-                data_sector         = "electricity grid",
-                data_type           = "lifetime"
-            )
-            print("slow|lifetime increase applied to ", grid_lifetime_interp.name)           
+        #     x = apply_ce_measures_to_elc(
+        #         grid_lifetime_interp,
+        #         base_year           = base_year,
+        #         target_year         = target_year,
+        #         change              = gen_lifetime_change_pc,
+        #         implementation_rate = implementation_rate,
+        #         data_sector         = "electricity grid",
+        #         data_type           = "lifetime"
+        #     )
+        #     print("slow|lifetime increase applied to ", grid_lifetime_interp.name)           
 
+        # print(life_before.equals(grid_lifetime_interp))
 
     ###########################################################################################################
     # Prep_data File #

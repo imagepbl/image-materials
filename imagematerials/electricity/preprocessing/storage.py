@@ -18,9 +18,6 @@ from imagematerials.electricity.utils import (
     quadratic,
     interpolate_xr, 
     add_historic_stock, 
-    calculate_grid_growth, 
-    calculate_fraction_underground, 
-    apply_ce_measures_to_elc, 
     normalize_selected_techs,
     calculate_storage_market_shares
 )
@@ -31,9 +28,7 @@ from imagematerials.electricity.constants import (
     STANDARD_SCEN_EXTERNAL_DATA,
     YEAR_FIRST_GRID,
     SENS_ANALYSIS,
-    EPG_TECHNOLOGIES,
     STD_LIFETIMES_ELECTR,
-    EV_BATTERIES,
     unit_mapping
 )
 
