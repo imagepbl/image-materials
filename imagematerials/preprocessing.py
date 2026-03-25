@@ -8,9 +8,9 @@ from imagematerials.buildings.preprocessing.main import buildings_preprocessing 
 from imagematerials.rest_of.preprocessing.main import rest_of_preprocessing as prep_rest
 from imagematerials.vehicles.preprocessing.main import vehicles_preprocessing as prep_vhc
 from imagematerials.eol.preprocessing import eol_preprocessing as prep_eol
-from imagematerials.electricity.preprocessing import get_preprocessing_data_gen as prep_elc_gen
-from imagematerials.electricity.preprocessing import get_preprocessing_data_grid as prep_elc_grid
-from imagematerials.electricity.preprocessing import get_preprocessing_data_stor as prep_elc_stor
+from imagematerials.electricity.preprocessing.generation import get_preprocessing_data_gen as prep_elc_gen
+from imagematerials.electricity.preprocessing.grid import get_preprocessing_data_grid as prep_elc_grid
+from imagematerials.electricity.preprocessing.storage import get_preprocessing_data_stor as prep_elc_stor
 from imagematerials.vehicles.preprocessing.battery import get_preprocessing_data_evbattery as prep_battery
 
 
