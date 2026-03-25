@@ -912,6 +912,33 @@ def apply_ce_measures_to_elc(arr: xr.DataArray, base_year: int, target_year: int
         return result
 
 def expand_change_dict_for_grid_items(dict_change: dict) -> dict:
+    """Expand generic grid component categories into voltage-specific categories.
+
+    This function takes a dictionary describing changes for grid components and
+    expands generic keys ("Transformers", "Substations") into their corresponding
+    voltage-level-specific keys:
+        - Transformers → "HV - Transformers", "MV - Transformers", "LV - Transformers"
+        - Substations → "HV - Substations", "MV - Substations", "LV - Substations"
+
+    Expansion only occurs if:
+        - The generic key (e.g. "Transformers") is present, AND
+        - None of the corresponding expanded keys are already present.
+
+    If expansion is performed, the generic key is removed and replaced by the
+    expanded keys, all assigned the same value.
+
+    Parameters
+    ----------
+    dict_change : dict
+        Dictionary mapping grid component categories (str) to values.
+
+    Returns
+    -------
+    dict
+        A new dictionary where generic categories are expanded into
+        voltage-specific categories when applicable.
+    """
+
     transformer_expanded = {
         "HV - Transformers",
         "MV - Transformers",
@@ -941,151 +968,4 @@ def expand_change_dict_for_grid_items(dict_change: dict) -> dict:
         dict_change_expanded.pop("Substations")
 
     return dict_change_expanded
-
-
-
-
-
-
-
-# STOCK MODELLING OLD -----------------------------------------------------------------------------------------------------
-
-# weibull_shape = 1.89  # for what was this used??
-# weibull_scale = 10.3
-# stdev_mult = 0.214      # multiplier that defines the standard deviation (standard deviation = mean * multiplier)
-
-# calculate inflow & outflow with market shares in inflow (generation, storage other)
-def stock_share_calc(stock, market_share, init_tech, techlist):
-    YEAR_START = 1971  # start year of the simulation period
-    YEAR_END = 2060    # end year of the calculations
-    YEAR_OUT = 2060    # year of output generation = last year of reporting
-
-    # Here, we define the market share of the stock based on a pre-calculation with several steps: 
-    # 1) use Global total stock development, the market shares of the inflow and technology specific lifetimes to derive 
-    # the shares in the stock, assuming that pre-1990 100% of the stock was determined by Lead-acid batteries. 
-    # 2) Then, apply the global stock-related market shares to disaggregate the stock to technologies in all regions 
-    # (assuming that battery markets are global markets)
-    # As the development of the total stock of dedicated electricity storage is known, but we don't know the inflow, 
-    # and only the market share related to the inflow we need to calculate the inflow first. 
-
-    # first we define the survival of the 1990 stock (assumed 100% Lead-acid, for each cohort in 1990)
-    pre_time = 20                           # the years required for the pre-calculation of the Lead-acid stock
-    cohorts = YEAR_OUT-YEAR_SWITCH            # nr. of cohorts in the stock calculations (after YEAR_SWITCH)
-    timeframe = np.arange(0,cohorts+1)      # timeframe for the pre-calcluation
-    pre_year_list = list(range(YEAR_SWITCH-pre_time,YEAR_SWITCH+1))   # list of years to pre-calculate the Lead-acid stock for
-
-    #define new dataframes
-    stock_cohorts = pd.DataFrame(index=pd.MultiIndex.from_product([stock.columns,range(YEAR_SWITCH,YEAR_OUT+1)]), columns=pd.MultiIndex.from_product([techlist, range(YEAR_SWITCH-pre_time,YEAR_END+1)])) # year, by year, by tech
-    inflow_by_tech = pd.DataFrame(index=pd.MultiIndex.from_product([stock.columns,range(YEAR_SWITCH,YEAR_OUT+1)]), columns=techlist)
-    outflow_cohorts = pd.DataFrame(index=pd.MultiIndex.from_product([stock.columns,range(YEAR_SWITCH,YEAR_OUT+1)]), columns=pd.MultiIndex.from_product([techlist, range(YEAR_SWITCH-pre_time,YEAR_END+1)])) # year by year by tech
-    
-    #specify lifetime & other settings
-    mean = storage_lifetime_interpol.loc[YEAR_SWITCH,init_tech] # select the mean lifetime for Lead-acid batteries in 1990
-    stdev = mean * stdev_mult               # we use thesame standard-deviation as for generation technologies, given that these apply to 'energy systems' more generally
-    survival_init = scipy.stats.foldnorm.sf(timeframe, mean/stdev, 0, scale=stdev)
-    techlist_new = techlist
-    techlist_new.remove(init_tech)          # techlist without Lead-acid (or other init_tech)
-    
-    # actual inflow & outflow calculations, this bit takes long!
-    # loop over regions, technologies and years to calculate the inflow, stock & outflow of storage technologies, given their share of the inflow.
-    for region in stock.columns:
-        
-        # pre-calculate the stock by cohort of the initial stock of Lead-acid
-        multiplier_pre = stock.loc[YEAR_SWITCH,region]/survival_init.sum()   # the stock is subdivided by the previous cohorts according to the survival function (only allowed when assuming steady stock inflow) 
-        
-        #pre-calculate the stock as lists (for efficiency)
-        initial_stock_years = [np.flip(survival_init[0:pre_time+1]) * multiplier_pre]
-            
-        for year in range(1, (YEAR_OUT-YEAR_SWITCH)+1):      # then fill the columns with the remaining fractions
-            initial_stock_years.append(initial_stock_years[0] * survival_init[year])
-    
-        stock_cohorts.loc[idx[region,:],idx[init_tech, list(range(YEAR_SWITCH-pre_time,YEAR_SWITCH+1))]] = initial_stock_years       # fill the stock dataframe according to the pre-calculated stock 
-        outflow_cohorts.loc[idx[region,:],idx[init_tech, list(range(YEAR_SWITCH-pre_time,YEAR_SWITCH+1))]] = stock_cohorts.loc[idx[region,:],idx[init_tech, list(range(YEAR_SWITCH-pre_time,YEAR_SWITCH+1))]].shift(1, axis=0) - stock_cohorts.loc[idx[region,:],idx[init_tech, list(range(YEAR_SWITCH-pre_time,YEAR_SWITCH+1))]]
-    
-        # set the other stock cohorts to zero
-        stock_cohorts.loc[idx[region,:],idx[techlist_new, pre_year_list]] = 0
-        outflow_cohorts.loc[idx[region,:],idx[techlist_new, pre_year_list]] = 0
-        inflow_by_tech.loc[idx[region, YEAR_SWITCH], techlist_new] = 0                                                   # inflow of other technologies in 1990 = 0
-        
-        # except for outflow and inflow in 1990 (YEAR_SWITCH), which can be pre-calculated for Deep-cycle Lead Acid (@ steady state inflow, inflow = outflow = stock/lifetime)
-        outflow_cohorts.loc[idx[region, YEAR_SWITCH], idx[init_tech,:]] = outflow_cohorts.loc[idx[region, YEAR_SWITCH+1], idx[init_tech,:]]     # given the assumption of steady state inflow (pre YEAR_SWITCH), we can determine that the outflow is the same in switchyear as in switchyear+1                                        
-        inflow_by_tech.loc[idx[region, YEAR_SWITCH], init_tech] =   stock.loc[YEAR_SWITCH,region]/mean                                          # given the assumption of steady state inflow (pre YEAR_SWITCH), we can determine the inflow to be the same as the outflow at a value of stock/avg. lifetime                                                          
-        
-        # From YEAR_SWITCH onwards, define a stock-driven model with a known market share (by tech) of the new inflow 
-        for year in range(YEAR_SWITCH+1,YEAR_OUT+1):
-            
-            # calculate the remaining stock as the sum of all cohorts in a year, for each technology
-            remaining_stock = 0 # reset remaining stock
-            for tech in inflow_by_tech.columns:
-                remaining_stock += stock_cohorts.loc[idx[region,year],idx[tech,:]].sum()
-               
-            # total inflow required (= required stock - remaining stock);    
-            inflow = max(0, stock.loc[year, region] - remaining_stock)   # max 0 avoids negative inflow, but allows for idle stock surplus in case the size of the required stock is declining more rapidly than it's natural decay
-            
-            stock_cohorts_list = []
-                   
-            # enter the new inflow & apply the survival rate, which is different for each technology, so calculate the surviving fraction in stock for each technology  
-            for tech in inflow_by_tech.columns:
-                # apply the known market share to the inflow
-                inflow_by_tech.loc[idx[region,year],tech] = inflow * market_share.loc[year,tech]
-                # first calculate the  (based on lifetimes specific to the year of inflow)
-                survival = scipy.stats.foldnorm.sf(np.arange(0,(YEAR_OUT+1)-year), storage_lifetime_interpol.loc[year,tech]/(storage_lifetime_interpol.loc[year,tech]*0.2), 0, scale=storage_lifetime_interpol.loc[year,tech]*0.2)           
-                # then apply the survival to the inflow in current cohort, both the inflow & the survival are entered into the stock_cohort dataframe in 1 step
-                stock_cohorts_list.append(inflow_by_tech.loc[idx[region,year],tech]  *  survival)
-                
-            stock_cohorts.loc[idx[region,list(range(year,YEAR_OUT+1))],idx[:,year]] = list(map(list, zip(*stock_cohorts_list)))        
-        
-    # separate the outflow (by cohort) calculation (separate shift calculation for each region & tech is MUCH more efficient than including it in additional loop over years)
-    # calculate the outflow by cohort based on the stock by cohort that was just calculated
-    for region in stock.columns:
-        for tech in inflow_by_tech.columns:
-            outflow_cohorts.loc[idx[region,:],idx[tech,:]] = stock_cohorts.loc[idx[region,:],idx[tech,:]].shift(1,axis=0) - stock_cohorts.loc[idx[region,:],idx[tech,:]]
-
-    return inflow_by_tech, stock_cohorts, outflow_cohorts
-
-# calculate inflow & outflow
-# first define a Function in which the stock-driven DSM is applied to return (the moving average of the) inflow & outflow for all regions
-def inflow_outflow(stock, lifetime, material_intensity, key):
-
-    YEAR_START = 1971  # start year of the simulation period
-    YEAR_END = 2060    # end year of the calculations
-    YEAR_OUT = 2060    # year of output generation = last year of reporting
-
-    initial_year = stock.first_valid_index()
-    outflow_mat  = pd.DataFrame(index=pd.MultiIndex.from_product([range(startyear,YEAR_OUT+1), material_intensity.columns]), columns=stock.columns)
-    inflow_mat   = pd.DataFrame(index=pd.MultiIndex.from_product([range(startyear,YEAR_OUT+1), material_intensity.columns]), columns=stock.columns)   
-    stock_mat    = pd.DataFrame(index=pd.MultiIndex.from_product([range(startyear,YEAR_OUT+1), material_intensity.columns]), columns=stock.columns)
-    out_oc_mat   = pd.DataFrame(index=pd.MultiIndex.from_product([range(first_year_grid,YEAR_OUT+1), material_intensity.columns]), columns=stock.columns)
-    out_sc_mat   = pd.DataFrame(index=pd.MultiIndex.from_product([range(first_year_grid,YEAR_OUT+1), material_intensity.columns]), columns=stock.columns)
-    out_in_mat   = pd.DataFrame(index=pd.MultiIndex.from_product([range(first_year_grid,YEAR_OUT+1), material_intensity.columns]), columns=stock.columns)
-
-    # define mean & standard deviation
-    mean_list = list(lifetime)
-    stdev_list = [mean_list[i] * stdev_mult for i in range(0,len(stock))]  
-
-    for region in list(stock.columns):
-        # define and run the DSM                                                                                            # list with the fixed (=mean) lifetime of grid elements, given for every timestep (1926-2100), needed for the DSM as it allows to change lifetime for different cohort (even though we keep it constant)
-        DSMforward = DSM(t = np.arange(0,len(stock[region]),1), s=np.array(stock[region]), lt = {'Type': 'FoldedNormal', 'Mean': np.array(mean_list), 'StdDev': np.array(stdev_list)})  # definition of the DSM based on a folded normal distribution
-        out_sc, out_oc, out_i = DSMforward.compute_stock_driven_model(NegativeInflowCorrect = True)                                                                 # run the DSM, to give 3 outputs: stock_by_cohort, outflow_by_cohort & inflow_per_year
-
-        #convert to pandas df before multiplication with material intensity
-        index=list(range(first_year_grid, YEAR_OUT+1))
-        out_sc_pd = pd.DataFrame(out_sc, index=index,  columns=index)
-        out_oc_pd = pd.DataFrame(out_oc, index=index,  columns=index)
-        out_in_pd = pd.DataFrame(out_i,  index=index)
-
-        # sum the outflow & stock by cohort (using cohort specific material intensities)
-        for material in list(material_intensity.columns):    
-           out_oc_mat.loc[idx[:,material],region] = out_oc_pd.mul(material_intensity.loc[:,material], axis=1).sum(axis=1).to_numpy()
-           out_sc_mat.loc[idx[:,material],region] = out_sc_pd.mul(material_intensity.loc[:,material], axis=1).sum(axis=1).to_numpy() 
-           out_in_mat.loc[idx[:,material],region] = out_in_pd.mul(material_intensity.loc[:,material], axis=0).to_numpy()                
-    
-           # apply moving average to inflow & outflow & return only 1971-2050 values
-           outflow_mat.loc[idx[:,material],region] = pd.Series(out_oc_mat.loc[idx[2:,material],region].astype('float64').values, index=list(range(initial_year, YEAR_OUT + 1))).rolling(window=5).mean().loc[list(range(1971,YEAR_OUT + 1))].to_numpy()    # Apply moving average                                                                                                      # sum the outflow by cohort to get the total outflow per year
-           inflow_mat.loc[idx[:,material],region]  = pd.Series(out_in_mat.loc[idx[2:,material],region].astype('float64').values, index=list(range(initial_year, YEAR_OUT + 1))).rolling(window=5).mean().loc[list(range(1971,YEAR_OUT + 1))].to_numpy()
-           stock_mat.loc[idx[:,material],region]   = out_sc_mat.loc[idx[:,material],region].loc[list(range(1971,YEAR_OUT + 1))].to_numpy()                                                                                                        # sum the stock by cohort to get the total stock per year
-        
-    return pd.concat([inflow_mat.stack().unstack(level=1)], keys=[key], axis=1), pd.concat([outflow_mat.stack().unstack(level=1)], keys=[key], axis=1), pd.concat([stock_mat.stack().unstack(level=1)], keys=[key], axis=1)
-
-# -----------------------------------------------------------------------------------------------------
 
