@@ -229,7 +229,7 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
     # add units
     prep_data["stocks"] = prism.Q_(prep_data["stocks"], "MW")
     prep_data["material_intensities"] = prism.Q_(prep_data["material_intensities"], "g/MW")
-    prep_data["set_unit_flexible"] = prism.U_(prep_data["stocks"]) # prism.U_ gives the unit back
+    prep_data["set_unit_flexible"] = str(prism.U_(prep_data["stocks"])) # prism.U_ gives the unit back
     # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
 
     return prep_data
