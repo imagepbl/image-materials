@@ -236,7 +236,7 @@ def create_prep_data(results_dict, conversion_table, unit_mapping):
 
     for df_name in list(prep_data.keys()):
         if "lifetime" in df_name:
-            prep_data["lifetimes"] = convert_lifetime(prep_data[df_name])
+            prep_data["lifetimes"] = convert_lifetime(prep_data.pop(df_name))
         elif "stock" in df_name:
             prep_data["stocks"] = prep_data.pop(df_name)
         elif "material" in df_name:

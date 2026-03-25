@@ -354,54 +354,12 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
     ###########################################################################################################
     # CE measures #
 
-    
-
-
     # Depending on circular economy scenario, apply different measures
     if circular_economy_config is not None:
 
         materials_additions_interp, grid_lifetime_interp = apply_ce_measures_to_elc_grid(materials_additions_interp,
                                                                                           grid_lifetime_interp,
                                                                                           circular_economy_config)
-        # if "narrow_product" in circular_economy_config.keys():
-        #     ce_scen = "narrow_product"
-
-        #     target_year         = circular_economy_config[ce_scen]['electricity']['target_year']
-        #     base_year           = circular_economy_config[ce_scen]['electricity']['base_year']
-        #     implementation_rate = circular_economy_config[ce_scen]['electricity']['implementation_rate']
-
-        #     gen_weight_change_pc = circular_economy_config[ce_scen]['electricity']['grid_add']['weight_change_pc']
-
-        #     materials_additions_interp = apply_ce_measures_to_elc(
-        #         materials_additions_interp,
-        #         base_year=base_year,
-        #         target_year=target_year,
-        #         change=gen_weight_change_pc,
-        #         implementation_rate=implementation_rate,
-        #         data_sector = "electricity grid"
-        #     )
-        #     print("narrow|lightweighting applied to ", materials_additions_interp.name)
-
-
-        # if "slow" in circular_economy_config.keys():
-        #     ce_scen = "slow"
-        #     target_year          = circular_economy_config[ce_scen]['electricity']['target_year']
-        #     base_year            = circular_economy_config[ce_scen]['electricity']['base_year']
-        #     implementation_rate  = circular_economy_config[ce_scen]['electricity']['implementation_rate']
-        #     gen_lifetime_change_pc = circular_economy_config[ce_scen]['electricity']['grid_add']['lifetime_increase_percent']
-
-        #     x = apply_ce_measures_to_elc(
-        #         grid_lifetime_interp,
-        #         base_year           = base_year,
-        #         target_year         = target_year,
-        #         change              = gen_lifetime_change_pc,
-        #         implementation_rate = implementation_rate,
-        #         data_sector         = "electricity grid",
-        #         data_type           = "lifetime"
-        #     )
-        #     print("slow|lifetime increase applied to ", grid_lifetime_interp.name)           
-
-        # print(life_before.equals(grid_lifetime_interp))
 
     ###########################################################################################################
     # Prep_data File #
@@ -415,13 +373,13 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
     prep_data_lines["stocks"]               = grid_lines_interp
     prep_data_lines["material_intensities"] = materials_lines_interp
     prep_data_lines["knowledge_graph"]      = create_electricity_graph()
-    prep_data_lines["set_unit_flexible"]    = prism.U_(prep_data_lines["stocks"]) # add unit (prism.U_ gives the unit back)
+    prep_data_lines["set_unit_flexible"]    = str(prism.U_(prep_data_lines["stocks"])) # add unit (prism.U_ gives the unit back)
     # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
     prep_data_additions = {}
     prep_data_additions["lifetimes"]            = grid_lifetime_interp_conv
     prep_data_additions["stocks"]               = grid_additions_interp
     prep_data_additions["material_intensities"] = materials_additions_interp
     prep_data_additions["knowledge_graph"]      = create_electricity_graph()
-    prep_data_additions["set_unit_flexible"]    = prism.U_(prep_data_additions["stocks"]) # add unit (prism.U_ gives the unit back)
+    prep_data_additions["set_unit_flexible"]    = str(prism.U_(prep_data_additions["stocks"])) # add unit (prism.U_ gives the unit back)
 
     return prep_data_lines, prep_data_additions

@@ -838,7 +838,7 @@ class EvBatteryLinkModule(prism.Model):
         one coordinate "Other storage".
     stock_battery_kWh_v2g : xr.DataArray
         EV battery stock in kWh by time, battery type, vehicle type, and region.
-    knowledge_graph_elc : KnowledgeGraph
+    knowledge_graph : KnowledgeGraph
         Knowledge graph with electricity sector relationships.
     set_unit_flexible : prism.VarUnit[UnitFlexibleStock]
         Unit object defining the flexible unit of electricity storage.
@@ -862,7 +862,6 @@ class EvBatteryLinkModule(prism.Model):
     # Input data
     stocks_non_phs:         xr.DataArray
     stock_battery_kWh_v2g:  xr.DataArray
-    knowledge_graph_elc:    KnowledgeGraph
     set_unit_flexible:      prism.VarUnit[UnitFlexibleStock]
     
 
@@ -873,7 +872,7 @@ class EvBatteryLinkModule(prism.Model):
     Time:       prism.Coords[TIME]
 
     # Data dependencies
-    input_data: tuple[str] = ("stock_battery_kWh_v2g", "stocks_non_phs", "knowledge_graph_elc", "set_unit_flexible") # stock_battery_kWh_v2g is input from battery module, stocks_non_phs from sector storage_other itself
+    input_data: tuple[str] = ("stock_battery_kWh_v2g", "stocks_non_phs", "set_unit_flexible") # stock_battery_kWh_v2g is input from battery module, stocks_non_phs from sector storage_other itself
     output_data: tuple[str] = ("stocks",) # a 1-element tuple requires a trailing comma
 
     # Output
@@ -932,7 +931,6 @@ class ElectricVehicleBatteries(prism.Model):
     energy_density:      xr.DataArray
     vhc_fraction_v2g:    xr.DataArray
     capacity_fraction_v2g: xr.DataArray
-    knowledge_graph_vhc: KnowledgeGraph
     
 
     # Dimensions
@@ -944,7 +942,7 @@ class ElectricVehicleBatteries(prism.Model):
     Time:         prism.Coords[TIME]
 
     # Data dependencies
-    input_data: tuple[str] = ("shares", "weights", "material_fractions", "energy_density", "knowledge_graph_vhc", "vhc_fraction_v2g", "capacity_fraction_v2g", # input from battery preprocessing
+    input_data: tuple[str] = ("shares", "weights", "material_fractions", "energy_density", "vhc_fraction_v2g", "capacity_fraction_v2g", # input from battery preprocessing
                               "stock_by_cohort", "inflow", "outflow_by_cohort") # input from vehicle stock module
     output_data: tuple[str] = ("stock_battery_kWh_v2g", #"outflow_battery_kWh_v2g",#"inflow_battery_kWh_v2g",
                                "inflow_battery_kWh","stock_battery_kWh","outflow_battery_kWh",
