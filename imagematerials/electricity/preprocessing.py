@@ -560,7 +560,7 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
             implementation_rate  = circular_economy_config[ce_scen]['electricity']['implementation_rate']
             gen_lifetime_change_pc = circular_economy_config[ce_scen]['electricity']['grid_add']['lifetime_increase_percent']
 
-            x = apply_ce_measures_to_elc(
+            grid_lifetime_interp = apply_ce_measures_to_elc(
                 grid_lifetime_interp,
                 base_year           = base_year,
                 target_year         = target_year,
