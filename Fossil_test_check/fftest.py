@@ -113,11 +113,12 @@ year_out = 2100
     # lifetimes of extraction tech in years
 extraction_lifetime_data = pd.read_csv(
     'Extraction/FF Intensity & LT - Extraction lifetimes.csv',
-    index_col=["Year", "Tech Type"]
+    index_col=["Year", "TechType"]
 ) 
-print(extraction_lifetime_data.head())
-print(extraction_lifetime_data.columns)
-print(extraction_lifetime_data.index)
+#print(extraction_lifetime_data.head())
+#print(extraction_lifetime_data.columns)
+#print(extraction_lifetime_data.index)
+
     # material compositions of coal infrastructure (processing, extraction, transport) in kg/kg/year
 extraction_materials_data = pd.read_csv('Extraction/FF Intensity & LT - Extraction materials.csv')
 
@@ -170,25 +171,42 @@ df_extraction_all = df_extraction_all.drop(columns=['stage', 'unit', 'type', 'fu
     
 
     # Lifetimes -------
-values = extraction_lifetime_data["Lifetime"].unstack().to_numpy(dtype=float)
-#Create coordinates
+types = ["Coal Underground","Coal open cast","Oil off shore","Oil on shore","Gas off shore","Gas on shore"]
+values = extraction_lifetime_data["Lifetime"].unstack().reindex(columns=types).to_numpy(dtype=float)
 times = extraction_lifetime_data.index.get_level_values("Year").unique().to_numpy()
-types = extraction_lifetime_data.index.get_level_values("Tech Type").unique().to_numpy()
 scipy_params = ["mean", "stdev"]
-    # Build full array: shape (ScipyParam, Time, Type)
-data_array = np.stack([values, np.full_like(values, np.nan)], axis=0)
-    # Create DataArray
+
+# Build array with stdev = 0.3
+data_array = np.stack([values, np.full_like(values, 0.3)], axis=0)
+
 extraction_lifetime_xr = xr.DataArray(
-        data_array,
-        dims=["DistributionParams", "Cohort", "Type"],
-        coords={
-            "DistributionParams": scipy_params,
-            "Cohort": times,
-            "Type": [str(r) for r in types]
-        },
-        name="ExtractionLifetime"
-    )
+    data_array,
+    dims=["DistributionParams", "Cohort", "Type"],
+    coords={
+        "DistributionParams": scipy_params,
+        "Cohort": times,
+        "Type": types
+    },
+    name="ExtractionLifetime"
+)
+
+# Expand 2020 across 2020-2100
+year_range = np.arange(2020, 2101)
+value_2020 = extraction_lifetime_xr.sel(Cohort=2020)
+extraction_lifetime_xr = value_2020.expand_dims(Cohort=year_range).transpose("DistributionParams", "Cohort", "Type")
+
 extraction_lifetime_xr = prism.Q_(extraction_lifetime_xr, "year")
+
+#print(extraction_lifetime_xr)
+#print(extraction_lifetime_xr.head())
+#print(extraction_lifetime_xr.sel(Cohort=2020).values)
+#print(extraction_lifetime_xr.sel(Cohort=2050).values)
+#print(types)
+#print(len(types))
+#print("First year:", extraction_lifetime_xr.Cohort.values[0])
+#print("Last year:", extraction_lifetime_xr.Cohort.values[-1])
+#print("Number of years:", len(extraction_lifetime_xr.Cohort))
+#print("Shape of DataArray:", extraction_lifetime_xr.shape)
 
 #TODO: try to interpolate the extraction lifetime even it is just for the same value the whole time 
 
@@ -212,7 +230,26 @@ extraction_materials_xr = (
 # Name the DataArray
 extraction_materials_xr.name = "ExtractionMaterialIntensities"
 
+#Expand 2020 values across 2020-2100
+value_2020 = extraction_materials_xr.sel(Cohort=2020)
+year_range = np.arange(2020, 2101)
+extraction_materials_xr = value_2020.expand_dims(Cohort=year_range).transpose("Material", "Cohort", "Type")
+
+#Add units
 extraction_materials_xr = prism.Q_(extraction_materials_xr, "kg/kg/year")
+
+#Check if things worked 
+#print(extraction_materials_xr)
+#print(extraction_materials_xr.head())
+#print(extraction_materials_xr.sel(Cohort=2020).values)
+#print(extraction_materials_xr.sel(Cohort=2050).values)
+#print(types)
+#print(len(types))
+#print("First year:", extraction_materials_xr.Cohort.values[0])
+#print("Last year:", extraction_materials_xr.Cohort.values[-1])
+#print("Number of years:", len(extraction_materials_xr.Cohort))
+#print("Shape of DataArray:", extraction_materials_xr.shape)
+
 #print(extraction_materials_xr)
 #extraction_materials_xr = knowledge_graph_coal.rebroadcast_xarray(extraction_materials_xr, output_coords=EPG_TECHNOLOGIES, dim="Type")
 #extraction_materials_xr = extraction_materials_xr.assign_coords(Type=np.array(extraction_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
@@ -257,12 +294,12 @@ extractioncap_xr = extractioncap_xr.assign_coords(Type=np.array(extractioncap_xr
 
     # interpolate_xr: The lifetimes & material intensities are only given for specific years (2020 and 2050), so we linearly interpolate to get values for the years 2020-2050.
     # The values before 2020 are kept constant at the 2020 level, and the values after 2050 are kept constant at the 2050 level.
-extraction_lifetime_xr_interp = interpolate_xr(extraction_lifetime_xr, YEAR_FIRST_GRID, year_out)
-extraction_lifetime_xr_interp.loc[dict(DistributionParams="stdev")] = extraction_lifetime_xr_interp.loc[dict(DistributionParams="mean")] * STD_LIFETIMES_ELECTR
-extraction_materials_xr_interp = interpolate_xr(extraction_materials_xr, YEAR_FIRST_GRID, year_out)
+#extraction_lifetime_xr_interp = interpolate_xr(extraction_lifetime_xr, YEAR_FIRST_GRID, year_out)
+#extraction_lifetime_xr_interp.loc[dict(DistributionParams="stdev")] = extraction_lifetime_xr_interp.loc[dict(DistributionParams="mean")] * STD_LIFETIMES_ELECTR
+#extraction_materials_xr_interp = interpolate_xr(extraction_materials_xr, YEAR_FIRST_GRID, year_out)
 
     # TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
-extractioncap_xr_interp = add_historic_stock(extractioncap_xr, YEAR_FIRST_GRID)
+#extractioncap_xr_interp = add_historic_stock(extractioncap_xr, YEAR_FIRST_GRID)
 
 #print(extraction_lifetime_xr_interp.head())
 #print(extraction_materials_xr_interp.head())
@@ -327,10 +364,10 @@ df_processing_all['Tech Type'] = df_processing_all['fuel'].str.strip() + ' ' + d
 
 df_processing_all = df_processing_all.drop(columns=['stage', 'unit', 'type', 'fuel'])  # drop columns that are not needed for the analysis
 
-print(df_processing_all.shape)
-print(df_processing_all.columns.tolist())
-print("COLUMNS:", df_processing_all.columns)
-print(df_processing_all.head())
+#print(df_processing_all.shape)
+#print(df_processing_all.columns.tolist())
+#print("COLUMNS:", df_processing_all.columns)
+#print(df_processing_all.head())
 
 
    # test if path_external_data_scenario exists and if not set to standard scenario
@@ -364,9 +401,22 @@ processing_lifetime_xr = xr.DataArray(
         },
         name="ProcessingLifetime"
     )
+# Expand 2020 across 2020-2100
+year_range = np.arange(2020, 2101)
+value_2020 = processing_lifetime_xr.sel(Cohort=2020)
+processing_lifetime_xr = value_2020.expand_dims(Cohort=year_range).transpose("DistributionParams", "Cohort", "Type")
 processing_lifetime_xr = prism.Q_(processing_lifetime_xr, "year")
-    #coal_lifetime_xr = knowledge_graph_electr.rebroadcast_xarray(coal_lifetime_xr, output_coords=EPG_TECHNOLOGIES, dim="Type") # convert technology names to the standard names from TIMER
-    #coal_lifetime_xr = coal_lifetime_xr.assign_coords(Type=np.array(coal_lifetime_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
+
+#print(processing_lifetime_xr)
+#print(processing_lifetime_xr.head())
+#print(processing_lifetime_xr.sel(Cohort=2020).values)
+#print(processing_lifetime_xr.sel(Cohort=2050).values)
+#print(types)
+#print(len(types))
+#print("First year:", processing_lifetime_xr.Cohort.values[0])
+#print("Last year:", processing_lifetime_xr.Cohort.values[-1])
+#print("Number of years:", len(processing_lifetime_xr.Cohort))
+#print("Shape of DataArray:", processing_lifetime_xr.shape)
 
  # Material Intensities -------
 
@@ -385,7 +435,23 @@ processing_materials_xr = (
 # Name the DataArray
 processing_materials_xr.name = "ProcessingMaterialIntensities"
 
+#Expand 2020 values across 2020-2100
+value_2020 = processing_materials_xr.sel(Cohort=2020)
+year_range = np.arange(2020, 2101)
+processing_materials_xr = value_2020.expand_dims(Cohort=year_range).transpose("Material", "Cohort", "Type")
+
 processing_materials_xr = prism.Q_(processing_materials_xr, "kg/kg/year")
+
+#Check if it worked
+print(processing_materials_xr.head())
+print(processing_materials_xr.sel(Cohort=2020).values)
+print(processing_materials_xr.sel(Cohort=2050).values)
+print(types)
+print(len(types))
+print("First year:", processing_materials_xr.Cohort.values[0])
+print("Last year:", processing_materials_xr.Cohort.values[-1])
+print("Number of years:", len(processing_materials_xr.Cohort))
+print("Shape of DataArray:", processing_materials_xr.shape)
 #print(processing_materials_xr)
 #processing_materials_xr = knowledge_graph_coal.rebroadcast_xarray(processing_materials_xr, output_coords=EPG_TECHNOLOGIES, dim="Type")
 #processing_materials_xr = processing_materials_xr.assign_coords(Type=np.array(processing_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
@@ -422,12 +488,12 @@ processingcap_xr = processingcap_xr.assign_coords(Type=np.array(processingcap_xr
 
     # interpolate_xr: The lifetimes & material intensities are only given for specific years (2020 and 2050), so we linearly interpolate to get values for the years 2020-2050.
     # The values before 2020 are kept constant at the 2020 level, and the values after 2050 are kept constant at the 2050 level.
-processing_lifetime_xr_interp = interpolate_xr(processing_lifetime_xr, YEAR_FIRST_GRID, year_out)
-processing_lifetime_xr_interp.loc[dict(DistributionParams="stdev")] = processing_lifetime_xr_interp.loc[dict(DistributionParams="mean")] * STD_LIFETIMES_ELECTR
-processing_materials_xr_interp = interpolate_xr(processing_materials_xr, YEAR_FIRST_GRID, year_out)
+#processing_lifetime_xr_interp = interpolate_xr(processing_lifetime_xr, YEAR_FIRST_GRID, year_out)
+#processing_lifetime_xr_interp.loc[dict(DistributionParams="stdev")] = processing_lifetime_xr_interp.loc[dict(DistributionParams="mean")] * STD_LIFETIMES_ELECTR
+#processing_materials_xr_interp = interpolate_xr(processing_materials_xr, YEAR_FIRST_GRID, year_out)
 
     # TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
-processingcap_xr_interp = add_historic_stock(processingcap_xr, YEAR_FIRST_GRID)
+#processingcap_xr_interp = add_historic_stock(processingcap_xr, YEAR_FIRST_GRID)
 
 #%% Transport/Vehicles stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 
@@ -577,12 +643,12 @@ transportcap_xr = transportcap_xr.assign_coords(Type=np.array(transportcap_xr.Ty
 
     # interpolate_xr: The lifetimes & material intensities are only given for specific years (2020 and 2050), so we linearly interpolate to get values for the years 2020-2050.
     # The values before 2020 are kept constant at the 2020 level, and the values after 2050 are kept constant at the 2050 level.
-transport_lifetime_xr_interp = interpolate_xr(transport_lifetime_xr, YEAR_FIRST_GRID, year_out)
-transport_lifetime_xr_interp.loc[dict(DistributionParams="stdev")] = transport_lifetime_xr_interp.loc[dict(DistributionParams="mean")] * STD_LIFETIMES_ELECTR
-transport_materials_xr_interp = interpolate_xr(transport_materials_xr, YEAR_FIRST_GRID, year_out)
+#transport_lifetime_xr_interp = interpolate_xr(transport_lifetime_xr, YEAR_FIRST_GRID, year_out)
+#transport_lifetime_xr_interp.loc[dict(DistributionParams="stdev")] = transport_lifetime_xr_interp.loc[dict(DistributionParams="mean")] * STD_LIFETIMES_ELECTR
+#transport_materials_xr_interp = interpolate_xr(transport_materials_xr, YEAR_FIRST_GRID, year_out)
 
     # TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
-transportcap_xr_interp = add_historic_stock(transportcap_xr, YEAR_FIRST_GRID)
+#transportcap_xr_interp = add_historic_stock(transportcap_xr, YEAR_FIRST_GRID)
 
 #%% Pipelines stage (oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 
@@ -727,10 +793,10 @@ pipelinecap_xr = pipelinecap_xr.assign_coords(Type=np.array(pipelinecap_xr.Type.
 
     # interpolate_xr: The lifetimes & material intensities are only given for specific years (2020 and 2050), so we linearly interpolate to get values for the years 2020-2050.
     # The values before 2020 are kept constant at the 2020 level, and the values after 2050 are kept constant at the 2050 level.
-pipelines_lifetime_xr_interp = interpolate_xr(pipelines_lifetime_xr, YEAR_FIRST_GRID, year_out)
-pipelines_lifetime_xr_interp.loc[dict(DistributionParams="stdev")] = pipelines_lifetime_xr_interp.loc[dict(DistributionParams="mean")] * STD_LIFETIMES_ELECTR
-pipelines_materials_xr_interp = interpolate_xr(pipelines_materials_xr, YEAR_FIRST_GRID, year_out)
+#pipelines_lifetime_xr_interp = interpolate_xr(pipelines_lifetime_xr, YEAR_FIRST_GRID, year_out)
+#pipelines_lifetime_xr_interp.loc[dict(DistributionParams="stdev")] = pipelines_lifetime_xr_interp.loc[dict(DistributionParams="mean")] * STD_LIFETIMES_ELECTR
+#pipelines_materials_xr_interp = interpolate_xr(pipelines_materials_xr, YEAR_FIRST_GRID, year_out)
 
     # TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
 
-pipelinecap_xr_interp = add_historic_stock(pipelinecap_xr, YEAR_FIRST_GRID)
+#pipelinecap_xr_interp = add_historic_stock(pipelinecap_xr, YEAR_FIRST_GRID)
