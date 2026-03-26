@@ -90,8 +90,11 @@ def get_lifetimes(data_path: str, circular_economy_config: dict):
     -----
     TODO: immediately read into xarray, bypass pandas
     """
-    lifetimes_vehicles: pd.DataFrame = pd.read_csv(
-        data_path.joinpath("lifetimes_years.csv"), index_col=[0, 1])
+    if "p_25" in circular_economy_config.keys():
+            lifetimes_vehicles: pd.DataFrame = pd.read_csv(data_path.joinpath("lifetimes_years_adapt.csv"), index_col=[0, 1])
+            print("adapted lifetimes used")
+    else:
+        lifetimes_vehicles: pd.DataFrame = pd.read_csv(data_path.joinpath("lifetimes_years.csv"), index_col=[0, 1])
 
     # interpolate & complete series
     lifetimes_vehicles = lifetimes_vehicles.rename_axis('mode', axis=1).stack()
