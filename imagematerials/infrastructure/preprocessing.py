@@ -17,6 +17,7 @@ import sys
 # Assuming read_mym.py is in imagematerials/
 from imagematerials.read_mym import read_mym_df
 from imagematerials.concepts import KnowledgeGraph, Node
+import prism
 
 # v5 line 2192: first constructed highway — start of modern transportation era
 FIRST_YEAR_GRID = 1911
@@ -525,7 +526,7 @@ def get_preprocessing_data_infrastructure(path_base: Path, scen_folder: str, sta
     combined_da_list = da_list + obsolete_da_list
 
     da_roads = xr.concat(combined_da_list, pd.Index(combined_types, name="Type"))
-    da_roads = da_roads.assign_attrs({"units": "km**2"})
+    da_roads = da_roads.assign_attrs({"units": "km**2"})  # attrs for intermediate; final stocks uses prism.Q_()
 
     preprocessing_results["stocks"] = da_roads
     preprocessing_results["active_types"] = all_types
@@ -904,7 +905,7 @@ def get_preprocessing_data_infrastructure(path_base: Path, scen_folder: str, sta
                      rail_element_das + rail_obs_das)
 
     da_all = xr.concat(final_all_das, pd.Index(final_all_types, name="Type"))
-    da_all = da_all.assign_attrs({"units": "km**2"})  # Mixed units, but math works
+    da_all = prism.Q_(da_all, "km**2")
 
     preprocessing_results["stocks"] = da_all
 
@@ -938,7 +939,7 @@ def get_preprocessing_data_infrastructure(path_base: Path, scen_folder: str, sta
         infra_graph.add(Node(t, inherits_from="Infrastructure"))
     preprocessing_results["knowledge_graph"] = infra_graph
 
-    preprocessing_results["set_unit_flexible"] = "km**2"
+    preprocessing_results["set_unit_flexible"] = prism.U_(da_all)
 
     # --- 10. Process Material Intensities and Lifetimes ---
     mat_int = pd.read_excel(tripi_dir / 'material-intensity-roads.xlsx', index_col=0)
@@ -1256,7 +1257,7 @@ def get_preprocessing_data_infrastructure(path_base: Path, scen_folder: str, sta
         dims=['Type', 'material', 'Region']
     )
     da_mi = da_mi.expand_dims({"Cohort": years})
-    da_mi = da_mi.assign_attrs({"units": "kg / km**2"})
+    da_mi = prism.Q_(da_mi, "kg / km**2")
     preprocessing_results["material_intensities"] = da_mi
 
     # Permanent aggregate MI DataArray for active types (used in infrastructure.py)

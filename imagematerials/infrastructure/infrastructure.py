@@ -65,13 +65,8 @@ def main():
     output_dir = path_current.parent / "output"
     output_dir.mkdir(parents=True, exist_ok=True)
     
-    # 1. Export Raw NetCDF
-    nc_output_path = output_dir / "road_materials_detailed.nc"
-    export_model_netcdf(infra_model, nc_output_path)
-    print(f"Saved raw generic output to {nc_output_path}")
-    
-    # 2. Export Detailed Reports requested by user
-    print("\nExtracting metrics for Expansion, Maintenance, and Cohorts...")
+    # 1. Compute aggregated outputs (sum over cohorts)
+    print("\nExtracting metrics...")
     
     time_slice = slice(YEAR_START, YEAR_END)
     mat_model = main_model_factory.submodels[1]
@@ -185,47 +180,61 @@ def main():
         da_outflow_mat = da_outflow_mat_plain
         da_expansion_mat = da_inflow_mat - da_outflow_mat
 
-    dfs = []
-    # Note: 'value' column will contain output values, but first we drop 0s to save memory and space
-    for da, metric, unit in [
-        (da_inflow_km, "Total Inflow (Construction)", "km"),
-        (da_outflow_km, "Total Outflow (Maintenance)", "km"),
-        (da_expansion_km, "Net Expansion (New Stock)", "km"),
-        (da_stock_km, "Active Stock", "km"),
-        (da_inflow_mat, "Material Inflow", "kg"),
-        (da_outflow_mat, "Material Outflow (Replaced)", "kg"),
-        (da_expansion_mat, "Material Expansion", "kg"),
-        (da_stock_mat, "Material Stock", "kg")
+    # --- 2. Export aggregated NetCDF (no cohort dimension → compact) ---
+    # Aggregate material stock/outflow over Cohort before saving
+    da_stock_mat_agg = da_stock_mat.sum(dim='Cohort') if 'Cohort' in da_stock_mat.dims else da_stock_mat
+    da_outflow_mat_agg = da_outflow_mat.sum(dim='Cohort') if 'Cohort' in da_outflow_mat.dims else da_outflow_mat
+
+    nc_data = {}
+    for da, name in [
+        (da_inflow_mat, "material_inflow"),
+        (da_outflow_mat_agg, "material_outflow"),
+        (da_stock_mat_agg, "material_stock"),
+        (da_expansion_mat, "material_expansion"),
+        (da_inflow_km, "physical_inflow"),
+        (da_outflow_km, "physical_outflow"),
+        (da_stock_km, "physical_stock"),
+        (da_expansion_km, "physical_expansion"),
     ]:
-        df = process_da_to_df(da, metric, unit)
+        # Strip pint units for clean NetCDF export
+        try:
+            vals = da.values
+            if hasattr(vals, 'magnitude'):
+                vals = vals.magnitude
+            clean = xr.DataArray(np.array(vals, dtype=float), coords=da.coords, dims=da.dims)
+        except Exception:
+            clean = da
+        nc_data[name] = clean
+
+    nc_output_path = output_dir / "road_materials_detailed.nc"
+    xr.Dataset(nc_data).to_netcdf(nc_output_path, engine="netcdf4")
+    print(f"Saved aggregated output to {nc_output_path}")
+
+    # --- 3. Export CSV report (material flows only, matching v5 format) ---
+    dfs = []
+    for da, metric in [
+        (da_inflow_mat, "inflow"),
+        (da_outflow_mat_agg, "outflow"),
+        (da_stock_mat_agg, "stock"),
+    ]:
+        df = process_da_to_df(da, metric, "kt")
         if not df.empty:
             df = df[df['value'] != 0].copy()
             dfs.append(df)
-            
+
     final_report = pd.concat(dfs, ignore_index=True)
-    
-    # Normalize Material dimension name if it differs ('Material' vs 'material')
     if 'Material' in final_report.columns:
         final_report.rename(columns={'Material': 'material'}, inplace=True)
-    
-    # Standardize column casing
     final_report.rename(columns={'Time': 'year', 'Region': 'region'}, inplace=True)
-    print("\nMaterials Found List:")
-    if 'material' in final_report.columns:
-        print(", ".join(final_report['material'].dropna().unique().astype(str)))
-        
+
+    # Convert kg to kt for readability
+    final_report['value'] = final_report['value'] / 1e6
+
+    print("\nMaterials:", ", ".join(final_report['material'].dropna().unique().astype(str)))
+
     report_path = output_dir / "road_materials_detailed_report.csv"
     final_report.to_csv(report_path, index=False)
-    print(f"Saved highly detailed physical and material tracking to {report_path}")
-
-    # 3. Export Cohorts Separation
-    cohort_stock = infra_model.stock_by_cohort.sel(Time=time_slice).to_dataframe(name='stock_km').reset_index()
-    cohort_stock = cohort_stock[cohort_stock['stock_km'] > 0]
-    cohort_stock.rename(columns={'Time': 'year', 'Region': 'region'}, inplace=True)
-    
-    cohort_path = output_dir / "road_stock_by_age_cohort.csv"
-    cohort_stock.to_csv(cohort_path, index=False)
-    print(f"Saved cohort age distributions to {cohort_path}")
+    print(f"Saved report to {report_path}")
 
 if __name__ == "__main__":
     main()
