@@ -150,11 +150,32 @@ FF_TECHNOLOGIES = [
 
 # Define mapping: technology -> category
 DICT_GENTECH_TO_CATEGORY = {
-    "Conv. Coal": 'Fossil',
-    "Conv. Oil": 'Fossil',
-    "Unconv. oil: Fossil"
-    "Conv. Natural Gas": 'Fossil'
-}
+    "coal open cast: coal",
+    "coal underground: coal",
+    "oil onshore extraction: oil",
+    "oil offshore extraction: oil",
+    "gas onshore extraction: gas",
+    "gas offshore extraction: gas",
+    "coal preparation: coal",
+    "oil storage: oil",
+    "oil refinery: oil",
+    "gas processing: gas",
+    "coal truck: coal",
+    "coal train: coal",
+    "coal ocean ship: coal",
+    "coal inland ship: coal",
+    "oil truck: oil",
+    "oil train: oil",
+    "oil ocean ship: oil",
+    "oil inland ship: oil",
+    "gas truck: gas",
+    "gas train: gas",
+    "gas ocean ship: gas",
+    "gas inland ship: gas"
+    "oil crude composition pipeline: oil",
+    "oil product pipeline: oil",
+    "gas distribution pipeline: gas",
+    "gas transmission pipeline: gas"}
 
 # Constant direct from FUMA
 #primary_fuel_types_ff = ["coal", "conv oil", "unconv oil", "gas"]  # 1st 4
@@ -236,12 +257,32 @@ DICT_GENTECH_TO_CATEGORY = {
 
 # Generation technologies
 technologies = [
-    'Solar PV', 'Solar PV residential', 'CSP', 'Wind onshore', 'Wind offshore', 'Wave', 'Hydro', 
-    'Other Renewables', 'Geothermal', 'Hydrogen power', 'Nuclear', '<EMPTY>', 'Conv. Coal', 
-    'Conv. Oil', 'Conv. Natural Gas', 'Waste', 'IGCC', 'OGCC', 'NG CC', 'Biomass CC', 
-    'Coal + CCS', 'Oil/Coal + CCS', 'Natural Gas + CCS', 'Biomass + CCS', 'CHP Coal', 
-    'CHP Oil', 'CHP Natural Gas', 'CHP Biomass', 'CHP Coal + CCS', 'CHP Oil + CCS', 
-    'CHP Natural Gas + CCS', 'CHP Biomass + CCS', 'CHP Geothermal', 'CHP Hydrogen'
+    "coal open cast",
+    "coal underground",
+    "oil onshore extraction",
+    "oil offshore extraction",
+    "gas onshore extraction",
+    "gas offshore extraction",
+    "coal preparation",
+    "oil storage",
+    "oil refinery",
+    "gas processing",
+    "coal truck",
+    "coal train",
+    "coal ocean ship",
+    "coal inland ship",
+    "oil truck",
+    "oil train",
+    "oil ocean ship",
+    "oil inland ship",
+    "gas truck",
+    "gas train",
+    "gas ocean ship",
+    "gas inland ship"
+    "oil crude composition pipeline",
+    "oil product pipeline",
+    "gas distribution pipeline",
+    "gas transmission pipeline"
 ]
 # Define color and linestyle pools
 colors = plt.get_cmap('tab20').colors  # 20 distinct colors
@@ -252,14 +293,9 @@ style_combinations = list(itertools.product(colors, linestyles))
 DICT_GENTECH_STYLES = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
 
 DICT_GEN_CATEGORY_COLORS = {
-    'Solar':             "#FBBF09",
-    'Wind':              "#4BABFF",
-    'Biomass':           "#42DD88",
-    'Other Renewables':  "#B6F795",
-    'Hydrogen':          '#B9FAF8',
-    'Nuclear':           "#B06106",
-    'Fossil':            "#575354",
-    'Fossil + CCS':      "#BBB8B9"
+    'Coal':             "#F9564F",
+    'Oil':              "#5D536B",
+    'Gas':              "#5C9EAD"
 }
 
 
@@ -303,59 +339,59 @@ DICT_MATERIALS_COLORS = {
     'Other':     '#FFD97D'
 }
 
-DICT_GRID_COLORS = {
-    #'Lines Overhead': '#FF9B85',
-    #'Lines Underground': '#FFD97D',
-    'Lines':        '#8cb369', #'#007f5f',
-    'Transformers': '#f4a259', #'#aacc00',
-    'Substations':  '#bc4b51' #'#55a630'
-}
+# DICT_GRID_COLORS = {
+#     #'Lines Overhead': '#FF9B85',
+#     #'Lines Underground': '#FFD97D',
+#     'Lines':        '#8cb369', #'#007f5f',
+#     'Transformers': '#f4a259', #'#aacc00',
+#     'Substations':  '#bc4b51' #'#55a630'
+# }
 
-DICT_GRID_STYLES_1 = {
-    'HV':                           ('#ef767a', '-'),
-    'HV - Lines - Overhead':        ('#ef767a', '-'),
-    'HV - Lines - Underground':     ('#ef767a', '--'),
-    'HV - Transformers':            ('#ef767a', '-'),
-    'HV - Substations':             ('#ef767a', '--'),
+# DICT_GRID_STYLES_1 = {
+#     'HV':                           ('#ef767a', '-'),
+#     'HV - Lines - Overhead':        ('#ef767a', '-'),
+#     'HV - Lines - Underground':     ('#ef767a', '--'),
+#     'HV - Transformers':            ('#ef767a', '-'),
+#     'HV - Substations':             ('#ef767a', '--'),
 
-    'MV':                           ('#456990', '-'),
-    'MV - Lines - Overhead':        ('#456990', '-'),
-    'MV - Lines - Underground':     ('#456990', '--'),
-    'MV - Transformers':            ('#456990', '-'),
-    'MV - Substations':             ('#456990', '--'),
+#     'MV':                           ('#456990', '-'),
+#     'MV - Lines - Overhead':        ('#456990', '-'),
+#     'MV - Lines - Underground':     ('#456990', '--'),
+#     'MV - Transformers':            ('#456990', '-'),
+#     'MV - Substations':             ('#456990', '--'),
 
-    'LV':                           ('#49beaa', '-'),
-    'LV - Lines - Overhead':        ('#49beaa', '-'),
-    'LV - Lines - Underground':     ('#49beaa', '--'),
-    'LV - Transformers':            ('#49beaa', '-'),
-    'LV - Substations':             ('#49beaa', '--')
-}
+#     'LV':                           ('#49beaa', '-'),
+#     'LV - Lines - Overhead':        ('#49beaa', '-'),
+#     'LV - Lines - Underground':     ('#49beaa', '--'),
+#     'LV - Transformers':            ('#49beaa', '-'),
+#     'LV - Substations':             ('#49beaa', '--')
+# }
 
-DICT_GRID_STYLES_2 = {
-    'HV':                           ('#ef767a', '-'),
-    'HV - Lines - Overhead':        ('#f4845f', '-'),
-    'HV - Lines - Underground':     ('#f4845f', '--'),
-    'HV - Transformers':            ('#f7b267', '-'),
-    'HV - Substations':             ('#f25c54', '--'),
+# DICT_GRID_STYLES_2 = {
+#     'HV':                           ('#ef767a', '-'),
+#     'HV - Lines - Overhead':        ('#f4845f', '-'),
+#     'HV - Lines - Underground':     ('#f4845f', '--'),
+#     'HV - Transformers':            ('#f7b267', '-'),
+#     'HV - Substations':             ('#f25c54', '--'),
 
-    'MV':                           ('#456990', '-'),
-    'MV - Lines - Overhead':        ('#0077b6', '-'),
-    'MV - Lines - Underground':     ('#0077b6', '--'),
-    'MV - Transformers':            ('#c0fdff', '-'),
-    'MV - Substations':             ('#023e8a', '--'),
+#     'MV':                           ('#456990', '-'),
+#     'MV - Lines - Overhead':        ('#0077b6', '-'),
+#     'MV - Lines - Underground':     ('#0077b6', '--'),
+#     'MV - Transformers':            ('#c0fdff', '-'),
+#     'MV - Substations':             ('#023e8a', '--'),
 
-    'LV':                           ('#38b000', '-'), ##49beaa
-    'LV - Lines - Overhead':        ('#70e000', '-'),
-    'LV - Lines - Underground':     ('#70e000', '--'),
-    'LV - Transformers':            ('#ccff33', '-'),
-    'LV - Substations':             ('#007200', '--')
-}
+#     'LV':                           ('#38b000', '-'), ##49beaa
+#     'LV - Lines - Overhead':        ('#70e000', '-'),
+#     'LV - Lines - Underground':     ('#70e000', '--'),
+#     'LV - Transformers':            ('#ccff33', '-'),
+#     'LV - Substations':             ('#007200', '--')
+# }
 
-DICT_ELECTR_COLORS = {
-    'Generation':   '#277da1',
-    'Storage':      '#f9844a',
-    'Transmission': '#90be6d'
-}
+# DICT_ELECTR_COLORS = {
+#     'Generation':   '#277da1',
+#     'Storage':      '#f9844a',
+#     'Transmission': '#90be6d'
+# }
 
 
 """Module containing global constants

@@ -71,10 +71,10 @@ from imagematerials.electricity.utils import (
    apply_ce_measures_to_elc
 )
 
-import warnings
-warnings.filterwarnings("ignore", message="The unit of the quantity is stripped")
 
 #from prism.prism.examples.fuel import scenario
+
+
 # SET SCENARIO HERE (Select from SSP1_ML, SSP1_VLLO, SSP2, SSP2_2D, SSP2_ML, SSP2_VLLO, SSP2_VLLO_Lifetech, SSP3_H)
 scenario = "SSP3_H"
 
@@ -89,6 +89,7 @@ climate_policy_scenario_dir = Path(path_base, "data", "raw", "image", scen_folde
 STANDARD_SCEN_EXTERNAL_DATA = "SSP3_H"
 SCENARIO_DEFAULT = "SSP3_H"
 
+#Not 100% on what these do yet 
 year_start = 2020
 year_end = 2100
 year_out = 2100
@@ -243,7 +244,9 @@ extraction_materials_xr = prism.Q_(extraction_materials_xr, "kg/kg/year")
 #extraction_materials_xr = extraction_materials_xr.assign_coords(Type=np.array(extraction_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
 # Starting stock (capacity) ------
-
+df_extraction_all = df_extraction_all.loc[~df_extraction_all['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
+df_extraction_all = df_extraction_all.loc[df_extraction_all['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', 'value', 'Tech Type']]  # only keep relevant years and technology columns
+   
 #Extract coordinate labels for years, regions, technologies
 years = sorted(df_extraction_all['time'].unique())
 regions = sorted(df_extraction_all['DIM_1'].unique())
@@ -411,9 +414,13 @@ processing_materials_xr = prism.Q_(processing_materials_xr, "kg/kg/year")
 # print(df_processing_refinery_oil[df_processing_refinery_oil['time'].isna()].head())
 # print(df_processing_gas[df_processing_gas['time'].isna()].head())
 
+
+
 # combine the processing data for coal, oil, gas into one df and then put it into this 
-#df_processing_all = df_processing_all.loc[~df_processing_all['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
-years = sorted(df_processing_all['time'].unique())
+df_processing_all = df_processing_all.loc[~df_processing_all['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
+df_processsing_all = df_processing_all.loc[df_processing_all['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', 'value', 'Tech Type']]  # only keep relevant years and technology columns
+   
+# Extract coordinate labels for years, regions, technologies
 regions = sorted(df_processing_all['DIM_1'].unique())
 techtypes = sorted(df_processing_all['Tech Type'].unique())
 
@@ -747,101 +754,101 @@ pipelinecap_xr = pipelinecap_xr.assign_coords(Type=np.array(pipelinecap_xr.Type.
 #%% Bring everything together in a prep_data file ---------------------------------------------------------------------------------------------------------------------------------
 ###########################################################################################################
 
-    # Prep_data File # for each stage (extraction, processing, transport, pipelines) 
-# Extraction stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
-# The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
-extraction_lifetime_xr = convert_lifetime(extraction_lifetime_xr)
+#     # Prep_data File # for each stage (extraction, processing, transport, pipelines) 
+# # Extraction stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
+# # The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
+# extraction_lifetime_xr = convert_lifetime(extraction_lifetime_xr)
     
- # bring preprocessing data into a generic format for the model
-prep_data = {}
-prep_data["lifetimes"] = extraction_lifetime_xr
-prep_data["stocks"] = extractioncap_xr
-prep_data["material_intensities"] = extraction_materials_xr
-#prep_data["knowledge_graph"] = create_electricity_graph() #TODO:make knowledge graph for FF
-# add units
-prep_data["stocks"] = prism.Q_(prep_data["stocks"], "")
-prep_data["material_intensities"] = prism.Q_(prep_data["material_intensities"], "")
-prep_data["set_unit_flexible"] = prism.U_(prep_data["stocks"]) # prism.U_ gives the unit back
-    # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
+#  # bring preprocessing data into a generic format for the model
+# prep_data = {}
+# prep_data["lifetimes"] = extraction_lifetime_xr
+# prep_data["stocks"] = extractioncap_xr
+# prep_data["material_intensities"] = extraction_materials_xr
+# #prep_data["knowledge_graph"] = create_electricity_graph() #TODO:make knowledge graph for FF
+# # add units
+# prep_data["stocks"] = prism.Q_(prep_data["stocks"], "")
+# prep_data["material_intensities"] = prism.Q_(prep_data["material_intensities"], "")
+# prep_data["set_unit_flexible"] = prism.U_(prep_data["stocks"]) # prism.U_ gives the unit back
+#     # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
 
 #return prep_data
 
 ###########################################################################################################
-# Processing stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
-# The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
-processing_lifetime_xr = convert_lifetime(processing_lifetime_xr)
+# # Processing stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
+# # The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
+# processing_lifetime_xr = convert_lifetime(processing_lifetime_xr)
     
- # bring preprocessing data into a generic format for the model
-prep_data = {}
-prep_data["lifetimes"] = processing_lifetime_xr
-prep_data["stocks"] = processingcap_xr
-prep_data["material_intensities"] = processing_materials_xr
-#prep_data["knowledge_graph"] = create_electricity_graph() #TODO:make knowledge graph for FF
-# add units
-prep_data["stocks"] = prism.Q_(prep_data["stocks"], "")
-prep_data["material_intensities"] = prism.Q_(prep_data["material_intensities"], "")
-prep_data["set_unit_flexible"] = prism.U_(prep_data["stocks"]) # prism.U_ gives the unit back
-    # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
+#  # bring preprocessing data into a generic format for the model
+# prep_data = {}
+# prep_data["lifetimes"] = processing_lifetime_xr
+# prep_data["stocks"] = processingcap_xr
+# prep_data["material_intensities"] = processing_materials_xr
+# #prep_data["knowledge_graph"] = create_electricity_graph() #TODO:make knowledge graph for FF
+# # add units
+# prep_data["stocks"] = prism.Q_(prep_data["stocks"], "")
+# prep_data["material_intensities"] = prism.Q_(prep_data["material_intensities"], "")
+# prep_data["set_unit_flexible"] = prism.U_(prep_data["stocks"]) # prism.U_ gives the unit back
+#     # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
 
-#return prep_data
+# #return prep_data
 
-###########################################################################################################
-# Transportation stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
-# The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
-transport_lifetime_xr = convert_lifetime(transport_lifetime_xr)
+# ###########################################################################################################
+# # Transportation stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
+# # The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
+# transport_lifetime_xr = convert_lifetime(transport_lifetime_xr)
     
- # bring preprocessing data into a generic format for the model
-prep_data = {}
-prep_data["lifetimes"] = transport_lifetime_xr
-prep_data["stocks"] = transportcap_xr
-prep_data["material_intensities"] = transport_materials_xr
-#prep_data["knowledge_graph"] = create_electricity_graph() #TODO:make knowledge graph for FF
-# add units
-prep_data["stocks"] = prism.Q_(prep_data["stocks"], "")
-prep_data["material_intensities"] = prism.Q_(prep_data["material_intensities"], "")
-prep_data["set_unit_flexible"] = prism.U_(prep_data["stocks"]) # prism.U_ gives the unit back
-    # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
+#  # bring preprocessing data into a generic format for the model
+# prep_data = {}
+# prep_data["lifetimes"] = transport_lifetime_xr
+# prep_data["stocks"] = transportcap_xr
+# prep_data["material_intensities"] = transport_materials_xr
+# #prep_data["knowledge_graph"] = create_electricity_graph() #TODO:make knowledge graph for FF
+# # add units
+# prep_data["stocks"] = prism.Q_(prep_data["stocks"], "")
+# prep_data["material_intensities"] = prism.Q_(prep_data["material_intensities"], "")
+# prep_data["set_unit_flexible"] = prism.U_(prep_data["stocks"]) # prism.U_ gives the unit back
+#     # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
 
-#return prep_data
+# #return prep_data
 
 
-###########################################################################################################
-# Processing stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
-# The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
-processing_lifetime_xr = convert_lifetime(processing_lifetime_xr)
+# ###########################################################################################################
+# # Processing stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
+# # The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
+# processing_lifetime_xr = convert_lifetime(processing_lifetime_xr)
     
- # bring preprocessing data into a generic format for the model
-prep_data = {}
-prep_data["lifetimes"] = processing_lifetime_xr
-prep_data["stocks"] = processingcap_xr
-prep_data["material_intensities"] = processing_materials_xr
-#prep_data["knowledge_graph"] = create_electricity_graph() #TODO:make knowledge graph for FF
-# add units
-prep_data["stocks"] = prism.Q_(prep_data["stocks"], "")
-prep_data["material_intensities"] = prism.Q_(prep_data["material_intensities"], "")
-prep_data["set_unit_flexible"] = prism.U_(prep_data["stocks"]) # prism.U_ gives the unit back
-    # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
+#  # bring preprocessing data into a generic format for the model
+# prep_data = {}
+# prep_data["lifetimes"] = processing_lifetime_xr
+# prep_data["stocks"] = processingcap_xr
+# prep_data["material_intensities"] = processing_materials_xr
+# #prep_data["knowledge_graph"] = create_electricity_graph() #TODO:make knowledge graph for FF
+# # add units
+# prep_data["stocks"] = prism.Q_(prep_data["stocks"], "")
+# prep_data["material_intensities"] = prism.Q_(prep_data["material_intensities"], "")
+# prep_data["set_unit_flexible"] = prism.U_(prep_data["stocks"]) # prism.U_ gives the unit back
+#     # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
 
-#return prep_data
+# #return prep_data
 
-###########################################################################################################
-# Pipelines stage (oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
-# The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
-pipelines_lifetime_xr = convert_lifetime(pipelines_lifetime_xr)
+# ###########################################################################################################
+# # Pipelines stage (oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
+# # The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
+# pipelines_lifetime_xr = convert_lifetime(pipelines_lifetime_xr)
     
- # bring preprocessing data into a generic format for the model
-prep_data = {}
-prep_data["lifetimes"] = pipelines_lifetime_xr
-prep_data["stocks"] = pipelinecap_xr
-prep_data["material_intensities"] = pipelines_materials_xr
-#prep_data["knowledge_graph"] = create_electricity_graph() #TODO:make knowledge graph for FF
-# add units
-prep_data["stocks"] = prism.Q_(prep_data["stocks"], "")
-prep_data["material_intensities"] = prism.Q_(prep_data["material_intensities"], "")
-prep_data["set_unit_flexible"] = prism.U_(prep_data["stocks"]) # prism.U_ gives the unit back
-    # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
+#  # bring preprocessing data into a generic format for the model
+# prep_data = {}
+# prep_data["lifetimes"] = pipelines_lifetime_xr
+# prep_data["stocks"] = pipelinecap_xr
+# prep_data["material_intensities"] = pipelines_materials_xr
+# #prep_data["knowledge_graph"] = create_electricity_graph() #TODO:make knowledge graph for FF
+# # add units
+# prep_data["stocks"] = prism.Q_(prep_data["stocks"], "")
+# prep_data["material_intensities"] = prism.Q_(prep_data["material_intensities"], "")
+# prep_data["set_unit_flexible"] = prism.U_(prep_data["stocks"]) # prism.U_ gives the unit back
+#     # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
 
-#return prep_data
+# #return prep_data
 
 
 print("Model finished successfully!")
