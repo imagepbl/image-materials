@@ -4,8 +4,9 @@
 # #1: Import module and constants
 # a General imports/packages
 # b Image material imports
-# c Make variable for pre-processing data 
-# d Make variable for path to external data for the scenario, and test if it exists, if not set to standard scenario
+# c Set scenario 
+# d Make variable for pre-processing data 
+# e Make variable for path to external data for the scenario, and test if it exists, if not set to standard scenario
 
 #2: Read in files for the extraction stage for each fuel (coal, oil, gas)
 # a lifetimes 
@@ -74,19 +75,20 @@ import warnings
 warnings.filterwarnings("ignore", message="The unit of the quantity is stripped")
 
 #from prism.prism.examples.fuel import scenario
-scenario = "SSP1_ML"
-
-scen_folder = "SSP1_ML"
+# SET SCENARIO HERE (Select from SSP1_ML, SSP1_VLLO, SSP2, SSP2_2D, SSP2_ML, SSP2_VLLO, SSP2_VLLO_Lifetech, SSP3_H)
+scenario = "SSP3_H"
 
 path_current = Path().resolve()
 path_base = path_current.parent # base path of the project -> image-materials
 print("current:", path_current)
 print("base:", path_base)
+
+#NOt sure what to do with these 
+scen_folder = "SSP3_H"
 climate_policy_scenario_dir = Path(path_base, "data", "raw", "image", scen_folder)
+STANDARD_SCEN_EXTERNAL_DATA = "SSP3_H"
+SCENARIO_DEFAULT = "SSP3_H"
 
-
-STANDARD_SCEN_EXTERNAL_DATA = "SSP1_ML"
-SCENARIO_DEFAULT = "SSP1_ML"
 year_start = 2020
 year_end = 2100
 year_out = 2100
@@ -398,6 +400,16 @@ processing_materials_xr = prism.Q_(processing_materials_xr, "kg/kg/year")
 #processing_materials_xr = processing_materials_xr.assign_coords(Type=np.array(processing_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
 # Gcap ------
+# idx = pd.MultiIndex.from_frame(df_processing_all[['time', 'DIM_1', 'Tech Type']])
+# print(idx.duplicated())
+# duplicates = df_processing_all[df_processing_all.duplicated(subset=['time', 'DIM_1', 'Tech Type'], keep=False)]
+# print(duplicates)
+# dup_counts = df_processing_all.groupby(['time', 'DIM_1', 'Tech Type']).size()
+# print(dup_counts[dup_counts > 1])
+# print(df_processing_coal[df_processing_coal['time'].isna()].head())
+# print(df_processing_oil[df_processing_oil['time'].isna()].head())
+# print(df_processing_refinery_oil[df_processing_refinery_oil['time'].isna()].head())
+# print(df_processing_gas[df_processing_gas['time'].isna()].head())
 
 # combine the processing data for coal, oil, gas into one df and then put it into this 
 #df_processing_all = df_processing_all.loc[~df_processing_all['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies

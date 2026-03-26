@@ -38,7 +38,7 @@ print(f" Working directory set to: {script_dir}")
 
 # Set scenario
 scenario = (
-    "SSP1_ML"  # Choose scenario. Available: "SSP2" & "SSP2_2D & SSP1"
+    "SSP3_H"  # Choose scenario. Available: "SSP2" & "SSP2_2D & SSP1"
 )
 ref_frac = 0.8  #  refineryRefining capacity used
 
