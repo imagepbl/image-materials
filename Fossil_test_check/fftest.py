@@ -11,27 +11,31 @@
 # a lifetimes 
 # b material intensities (steel, alumnium, copper?, I could add other ones?)
 # C Import capacity files that are made from the stock calculation (FUMA) output (for each fuel: coal, oil, gas) which is labelled as fuma.py and are found under stock_calculation/output/SSP1_ML (or the relevant scenario)
-# d Transform to xarray and add units using the knowledge graph 
+# # d Transform each to xarray
+# e add units using the knowledge graph
+# f expand materials and lifteimes to all years (2020-2100)
 
 #3: Read in files for the processing stage for each fuel
 # a lifetimes 
 # b material intensities
 # C Import capacity files that are made from the stock calculation (FUMA) output (for each fuel: coal, oil, gas) which is labelled as fuma.py and are found under stock_calculation/output/SSP1_ML (or the relevant scenario)
-# d Transform to xarray and add units using the knowledge graph 
+# d Transform each to xarray and add units using the knowledge graph and expand materials and lifteimes to all years (2020-2100)
 
 #4: Read in files for the transport stage for each fuel
 # a lifetimes 
 # b material intensities
 # C Import capacity files that are made from the stock calculation (FUMA) output (for each fuel: coal, oil, gas) which is labelled as fuma.py and are found under stock_calculation/output/SSP1_ML (or the relevant scenario)
-# d Transform to xarray and add units using the knowledge graph 
+# d Transform each to xarray
+# e add units using the knowledge graph
+# f expand materials and lifteimes to all years (2020-2100)
 
 #5: Read in files for the pipelines stage for each fuel
 # a lifetimes 
 # b material intensities
 # C Import capacity files that are made from the stock calculation (FUMA) output (for each fuel: coal, oil, gas) which is labelled as fuma.py and are found under stock_calculation/output/SSP1_ML (or the relevant scenario)
-# d Transform to xarray and add units using the knowledge graph 
-
-#6 interpolate data/make material lifetimes and intensities constant for all years 
+# d Transform each to xarray
+# e add units using the knowledge graph
+# f expand materials and lifteimes to all years (2020-2100)
 
 #7 Make prep_data dictionary with all the pre-processed data, and return it
 
@@ -91,8 +95,6 @@ year_out = 2100
 #%% Extraction stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 
 ###########################################################################################################
-###########################################################################################################
-# Extraction stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 #def get_preprocessing_data_extraction(path_base: str, climate_policy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
    # path_external_data_scenario = Path(path_base, "fossil", scenario)
@@ -115,29 +117,25 @@ extraction_lifetime_data = pd.read_csv(
     'Extraction/FF Intensity & LT - Extraction lifetimes.csv',
     index_col=["Year", "TechType"]
 ) 
-#print(extraction_lifetime_data.head())
-#print(extraction_lifetime_data.columns)
-#print(extraction_lifetime_data.index)
-
     # material compositions of coal infrastructure (processing, extraction, transport) in kg/kg/year
 extraction_materials_data = pd.read_csv('Extraction/FF Intensity & LT - Extraction materials.csv')
 
-#print(extraction_materials_data.columns)
-#print(extraction_materials_data.head())
-
-    # 2. IMAGE/TIMER files -----------------------------------------
+    # 2.FUMA files -----------------------------------------
 #Stock of each type of extraction infrastructure (stock demand per generation technology) per region per year
-
+#files are sourced from the output of the stock calculation (FUMA) for the relevant scenario, which is found under stock_calculation/output/SSP1_ML (or the relevant scenario)
 extraction_coal = Path(path_base, "Fossil_test_check", "stock_calculation", "output", scenario, "coal_extraction_stock_kg.csv")
 df_extraction_coal = pd.read_csv(extraction_coal)
 extraction_oil = Path(path_base, "Fossil_test_check", "stock_calculation", "output", scenario, "oil_extraction_stock_kg.csv")
 df_extraction_oil = pd.read_csv(extraction_oil)
 extraction_gas = Path(path_base, "Fossil_test_check", "stock_calculation", "output", scenario, "gas_extraction_stock_kg.csv")
 df_extraction_gas = pd.read_csv(extraction_gas)
+
+#Add fuel column to each df so that we can combine them and then split them again into the different technologies (coal, oil, gas) after melting the df to long format
 df_extraction_coal["fuel"] = "coal"
 df_extraction_oil["fuel"] = "oil"
 df_extraction_gas["fuel"] = "gas"
 
+# Combine the dataframes for coal, oil, and gas into one dataframe and then melt it to long format so that we have one row per combination of time, region, fuel, technology, and value (stock)
 df_extraction_all = pd.concat(
     [df_extraction_coal, df_extraction_oil, df_extraction_gas],
     ignore_index=True
@@ -149,35 +147,28 @@ df_extraction_all = df_extraction_all.melt(
     value_name='value'
 )
 
+#Combine fuel and type columns to one column "Tech Type"
 df_extraction_all['Tech Type'] = df_extraction_all['fuel'].str.strip() + ' ' + df_extraction_all['type'].str.strip()
 
-df_extraction_all = df_extraction_all.drop(columns=['stage', 'unit', 'type', 'fuel'])  # drop columns that are not needed for the analysis
-
-#print(df_extraction_all.shape)
-#print(df_extraction_all.columns.tolist())
-#print("COLUMNS:", df_extraction_all.columns)
-#print(df_extraction_all.head())
-
-   # test if path_external_data_scenario exists and if not set to standard scenario
-#if not path_external_data_scenario.exists():
-            #path_external_data_scenario = Path(path_base, "fossil", STANDARD_SCEN_EXTERNAL_DATA)
-
-#assert path_external_data_scenario.is_dir()
+#Drop columns that are not needed for the analysis (stage, unit, type, fuel) since we have already combined the relevant information into the "Tech Type" column and we know that all rows are for the extraction stage and in kg units
+df_extraction_all = df_extraction_all.drop(columns=['stage', 'unit', 'type', 'fuel'])  
 
     ###########################################################################################################
     # Transform to xarray #
+
+#still need to make knowledge graphs  
 #knowledge_graph_region = create_region_graph()
 #knowledge_graph_coal = create_ff_graph()
     
 
-    # Lifetimes -------
+# Lifetimes -------
 types = ["Coal Underground","Coal open cast","Oil off shore","Oil on shore","Gas off shore","Gas on shore"]
 values = extraction_lifetime_data["Lifetime"].unstack().reindex(columns=types).to_numpy(dtype=float)
 times = extraction_lifetime_data.index.get_level_values("Year").unique().to_numpy()
 scipy_params = ["mean", "stdev"]
 
-# Build array with stdev = 0.3
-data_array = np.stack([values, np.full_like(values, 0.3)], axis=0)
+# Build xarray with shape (ScipyParam, Time, Type)
+data_array = np.stack([values, np.full_like(values, np.nan)], axis=0)
 
 extraction_lifetime_xr = xr.DataArray(
     data_array,
@@ -195,31 +186,28 @@ year_range = np.arange(2020, 2101)
 value_2020 = extraction_lifetime_xr.sel(Cohort=2020)
 extraction_lifetime_xr = value_2020.expand_dims(Cohort=year_range).transpose("DistributionParams", "Cohort", "Type")
 
+#Add units 
 extraction_lifetime_xr = prism.Q_(extraction_lifetime_xr, "year")
 
-#print(extraction_lifetime_xr)
+#Uncomment to check if the xarray looks correct
 #print(extraction_lifetime_xr.head())
-#print(extraction_lifetime_xr.sel(Cohort=2020).values)
-#print(extraction_lifetime_xr.sel(Cohort=2050).values)
 #print(types)
-#print(len(types))
 #print("First year:", extraction_lifetime_xr.Cohort.values[0])
 #print("Last year:", extraction_lifetime_xr.Cohort.values[-1])
 #print("Number of years:", len(extraction_lifetime_xr.Cohort))
 #print("Shape of DataArray:", extraction_lifetime_xr.shape)
 
-#TODO: try to interpolate the extraction lifetime even it is just for the same value the whole time 
+#TODO: check about rebroadcasting to knowledge graphs (we also dont have the knowledge graphs yet)
 
-    #coal_lifetime_xr = knowledge_graph_electr.rebroadcast_xarray(coal_lifetime_xr, output_coords=EPG_TECHNOLOGIES, dim="Type") # convert technology names to the standard names from TIMER
-    #coal_lifetime_xr = coal_lifetime_xr.assign_coords(Type=np.array(coal_lifetime_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
+#extraction_lifetime_xr = knowledge_graph_electr.rebroadcast_xarray(extraction_lifetime_xr, output_coords=FF_TECHNOLOGIES, dim="Type") # convert technology names to the standard names from TIMER
+#extraction_lifetime_xr = extraction_lifetime_xr.assign_coords(Type=np.array(extraction_lifetime_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
  # Material Intensities -------
 
-    # Material Intensities -------
-   # Set index
+# Set index
 extraction_materials_data = extraction_materials_data.set_index(['Year', 'Tech Type'])
 
-   # Convert to 3D array: (Material, Year, Tech)
+# Convert to 3D array: (Material, Year, Tech)
 extraction_materials_xr = (
     extraction_materials_data
         .to_xarray()            
@@ -227,7 +215,6 @@ extraction_materials_xr = (
         .rename({"Year": "Cohort", "Tech Type": "Type"})
 )
 
-# Name the DataArray
 extraction_materials_xr.name = "ExtractionMaterialIntensities"
 
 #Expand 2020 values across 2020-2100
@@ -238,78 +225,44 @@ extraction_materials_xr = value_2020.expand_dims(Cohort=year_range).transpose("M
 #Add units
 extraction_materials_xr = prism.Q_(extraction_materials_xr, "kg/kg/year")
 
-#Check if things worked 
-#print(extraction_materials_xr)
+#Uncomment to check if it worked
 #print(extraction_materials_xr.head())
-#print(extraction_materials_xr.sel(Cohort=2020).values)
-#print(extraction_materials_xr.sel(Cohort=2050).values)
 #print(types)
-#print(len(types))
 #print("First year:", extraction_materials_xr.Cohort.values[0])
 #print("Last year:", extraction_materials_xr.Cohort.values[-1])
 #print("Number of years:", len(extraction_materials_xr.Cohort))
 #print("Shape of DataArray:", extraction_materials_xr.shape)
 
-#print(extraction_materials_xr)
+#TODO: check about rebroadcasting to knowledge graphs (we also dont have the knowledge graphs yet)
 #extraction_materials_xr = knowledge_graph_coal.rebroadcast_xarray(extraction_materials_xr, output_coords=EPG_TECHNOLOGIES, dim="Type")
 #extraction_materials_xr = extraction_materials_xr.assign_coords(Type=np.array(extraction_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
 # Starting stock (capacity) ------
-#df_extraction_all = df_extraction_all.loc[~df_extraction_all['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
-#df_extraction_all = df_extraction_all.loc[df_extraction_all['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', *FF_TECHNOLOGIES]]  # only keep relevant years and technology columns
-    # Extract coordinate labels
+
+#Extract coordinate labels for years, regions, technologies
 years = sorted(df_extraction_all['time'].unique())
 regions = sorted(df_extraction_all['DIM_1'].unique())
 techtypes = sorted(df_extraction_all['Tech Type'].unique())
 
-#print(df_extraction_all['type'].unique())
-#df_sorted = df_extraction_all.sort_values(['time', 'DIM_1', 'fuel', 'type'])
-    # Convert to 3D array: (Year, Region, Fuel, Type)
-#data_array = df_sorted['value'].to_numpy().reshape(len(years), len(regions), len(fuels), len(types))
+ # Convert to 3D array: (Year, Region, Fuel, Type)
 extractioncap_xr = (
     df_extraction_all
     .set_index(['time', 'DIM_1', 'Tech Type'])
     .to_xarray()['value']
     .rename({'time': 'Time', 'DIM_1': 'Region', 'Tech Type': 'Type'})
 )
-    # Build xarray DataArray
-#extractioncap_xr = xr.DataArray(
-        #data_array,
-        #dims=('Time', 'Region', 'Fuel', 'Type'),
-        #coords={
-            #'Time': years,
-            #'Region': [str(r) for r in regions],
-            #'Fuel': [str(r) for r in fuels],
-            #'Type': [str(r) for r in types]
-       # },
-        #name='ExtractionCapacity'
-   # )
+
 #extractioncap_xr = prism.Q_(extractioncap_xr, "MW")
 #extractioncap_xr = knowledge_graph_region.rebroadcast_xarray(extractioncap_xr, output_coords=IMAGE_REGIONS, dim="Region") 
 #extractioncap_xr = knowledge_graph_coal.rebroadcast_xarray(extractioncap_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
 extractioncap_xr = extractioncap_xr.assign_coords(Type=np.array(extractioncap_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
-    ###########################################################################################################
-    # Interpolate #
-
-    # interpolate_xr: The lifetimes & material intensities are only given for specific years (2020 and 2050), so we linearly interpolate to get values for the years 2020-2050.
-    # The values before 2020 are kept constant at the 2020 level, and the values after 2050 are kept constant at the 2050 level.
-#extraction_lifetime_xr_interp = interpolate_xr(extraction_lifetime_xr, YEAR_FIRST_GRID, year_out)
-#extraction_lifetime_xr_interp.loc[dict(DistributionParams="stdev")] = extraction_lifetime_xr_interp.loc[dict(DistributionParams="mean")] * STD_LIFETIMES_ELECTR
-#extraction_materials_xr_interp = interpolate_xr(extraction_materials_xr, YEAR_FIRST_GRID, year_out)
-
-    # TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
+ # This is from original model and i am not sure if something like this is needed in the new model?
+# TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 
 #extractioncap_xr_interp = add_historic_stock(extractioncap_xr, YEAR_FIRST_GRID)
-
-#print(extraction_lifetime_xr_interp.head())
-#print(extraction_materials_xr_interp.head())
-#print(extractioncap_xr_interp.head())
 
 #%% Processing stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 
-###########################################################################################################
-###########################################################################################################
-# Processing stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 #def get_preprocessing_data_processing(path_base: str, climate_policy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
     #path_external_data_scenario = Path(path_base, "fossil", scenario)
@@ -334,11 +287,8 @@ processing_lifetime_data = pd.read_csv(
     # material compositions of processing infrastructure in kg/kg/year
 processing_materials_data = pd.read_csv('Processing/FF Intensity & LT - Processing materials.csv')
 
-#print(extraction_materials_data.columns)
-#print(extraction_materials_data.head())
 
-    # 2. IMAGE/TIMER files -----------------------------------------
-#Processing capacity (stock demand per generation technology) in MW peak capacity
+    # 2. FUMA files -----------------------------------------
 #Stock of each type of extraction infrastructure (stock demand per generation technology) per region per year
 
 processing_coal = Path(path_base, "Fossil_test_check", "stock_calculation", "output", scenario, "coal_preparation_stock_kg.csv")
@@ -349,6 +299,8 @@ processing_refinery_oil = Path(path_base, "Fossil_test_check", "stock_calculatio
 df_processing_refinery_oil = pd.read_csv(processing_refinery_oil)
 processing_gas = Path(path_base, "Fossil_test_check", "stock_calculation", "output", scenario, "gas_processing_stock_kg.csv")
 df_processing_gas = pd.read_csv(processing_gas)
+
+#Combine the dataframes for coal, oil, and gas into one dataframe and then melt it to long format so that we have one row per combination of time, region, fuel, technology, and value (stock)
 df_processing_all = pd.concat(
     [df_processing_coal, df_processing_oil, df_processing_refinery_oil, df_processing_gas],
     ignore_index=True
@@ -360,28 +312,19 @@ df_processing_all = df_processing_all.melt(
     value_name='value'
 )
 
+#Combine fuel and type columns to one column "Tech Type"
 df_processing_all['Tech Type'] = df_processing_all['fuel'].str.strip() + ' ' + df_processing_all['type'].str.strip()
 
-df_processing_all = df_processing_all.drop(columns=['stage', 'unit', 'type', 'fuel'])  # drop columns that are not needed for the analysis
+# Drop columns that are not needed for the analysis
+df_processing_all = df_processing_all.drop(columns=['stage', 'unit', 'type', 'fuel'])  
 
-#print(df_processing_all.shape)
-#print(df_processing_all.columns.tolist())
-#print("COLUMNS:", df_processing_all.columns)
-#print(df_processing_all.head())
-
-
-   # test if path_external_data_scenario exists and if not set to standard scenario
-#if not path_external_data_scenario.exists():
- #        path_external_data_scenario = Path(path_base, "fossil", STANDARD_SCEN_EXTERNAL_DATA)
- 
-#assert path_external_data_scenario.is_dir()
 
     ###########################################################################################################
     # Transform to xarray #
+#TODO: need to work on knowledge graphs for the processing stage    
 #knowledge_graph_region = create_region_graph()
 #knowledge_graph_coal = create_ff_graph()
     
-
     # Lifetimes -------
 values = processing_lifetime_data["Lifetime"].unstack().to_numpy(dtype=float)
 #Create coordinates
@@ -407,12 +350,9 @@ value_2020 = processing_lifetime_xr.sel(Cohort=2020)
 processing_lifetime_xr = value_2020.expand_dims(Cohort=year_range).transpose("DistributionParams", "Cohort", "Type")
 processing_lifetime_xr = prism.Q_(processing_lifetime_xr, "year")
 
-#print(processing_lifetime_xr)
+#Uncomment to check if the xarray looks correct
 #print(processing_lifetime_xr.head())
-#print(processing_lifetime_xr.sel(Cohort=2020).values)
-#print(processing_lifetime_xr.sel(Cohort=2050).values)
 #print(types)
-#print(len(types))
 #print("First year:", processing_lifetime_xr.Cohort.values[0])
 #print("Last year:", processing_lifetime_xr.Cohort.values[-1])
 #print("Number of years:", len(processing_lifetime_xr.Cohort))
@@ -440,66 +380,49 @@ value_2020 = processing_materials_xr.sel(Cohort=2020)
 year_range = np.arange(2020, 2101)
 processing_materials_xr = value_2020.expand_dims(Cohort=year_range).transpose("Material", "Cohort", "Type")
 
+#Add units
 processing_materials_xr = prism.Q_(processing_materials_xr, "kg/kg/year")
 
-#Check if it worked
-print(processing_materials_xr.head())
-print(processing_materials_xr.sel(Cohort=2020).values)
-print(processing_materials_xr.sel(Cohort=2050).values)
-print(types)
-print(len(types))
-print("First year:", processing_materials_xr.Cohort.values[0])
-print("Last year:", processing_materials_xr.Cohort.values[-1])
-print("Number of years:", len(processing_materials_xr.Cohort))
-print("Shape of DataArray:", processing_materials_xr.shape)
-#print(processing_materials_xr)
+#Uncomment to check if it worked
+#print(processing_materials_xr.head())
+# print(types)
+# print("First year:", processing_materials_xr.Cohort.values[0])
+# print("Last year:", processing_materials_xr.Cohort.values[-1])
+# print("Number of years:", len(processing_materials_xr.Cohort))
+# print("Shape of DataArray:", processing_materials_xr.shape)
+
+#TODO: check about rebroadcasting to knowledge graphs (we also dont have the knowledge graphs yet)
 #processing_materials_xr = knowledge_graph_coal.rebroadcast_xarray(processing_materials_xr, output_coords=EPG_TECHNOLOGIES, dim="Type")
 #processing_materials_xr = processing_materials_xr.assign_coords(Type=np.array(processing_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
 # Gcap ------
 
 # combine the processing data for coal, oil, gas into one df and then put it into this 
-df_processing_all = df_processing_all.loc[~df_processing_all['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
-df_processing_all  = df_processing_all .loc[df_processing_all ['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', 'value', 'Tech Type']]  # only keep relevant years and technology columns
-    # Extract coordinate labels
-
+#df_processing_all = df_processing_all.loc[~df_processing_all['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
 years = sorted(df_processing_all['time'].unique())
 regions = sorted(df_processing_all['DIM_1'].unique())
 techtypes = sorted(df_processing_all['Tech Type'].unique())
 
-#print(df_processing_all['type'].unique())
-#df_sorted = df_processing_all.sort_values(['time', 'DIM_1', 'fuel', 'type'])
-    # Convert to 3D array: (Year, Region, Fuel, Type)
-#data_array = df_sorted['value'].to_numpy().reshape(len(years), len(regions), len(fuels), len(types))
+ # Convert to 3D array: (Year, Region, Fuel, Type)
 processingcap_xr = (
     df_processing_all
     .set_index(['time', 'DIM_1', 'Tech Type'])
     .to_xarray()['value']
     .rename({'time': 'Time', 'DIM_1': 'Region', 'Tech Type': 'Type'})
 )
-
-processingcap_xr = prism.Q_(processingcap_xr, "MW")
+#Add units
+processingcap_xr = prism.Q_(processingcap_xr, "kg?")
 #processing_capacities_xr = knowledge_graph_region.rebroadcast_xarray(processing_capacities_xr, output_coords=IMAGE_REGIONS, dim="Region") 
 #processing_capacities_xr = knowledge_graph_coal.rebroadcast_xarray(processing_capacities_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
 processingcap_xr = processingcap_xr.assign_coords(Type=np.array(processingcap_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
-    ###########################################################################################################
-    # Interpolate #
-
-    # interpolate_xr: The lifetimes & material intensities are only given for specific years (2020 and 2050), so we linearly interpolate to get values for the years 2020-2050.
-    # The values before 2020 are kept constant at the 2020 level, and the values after 2050 are kept constant at the 2050 level.
-#processing_lifetime_xr_interp = interpolate_xr(processing_lifetime_xr, YEAR_FIRST_GRID, year_out)
-#processing_lifetime_xr_interp.loc[dict(DistributionParams="stdev")] = processing_lifetime_xr_interp.loc[dict(DistributionParams="mean")] * STD_LIFETIMES_ELECTR
-#processing_materials_xr_interp = interpolate_xr(processing_materials_xr, YEAR_FIRST_GRID, year_out)
-
-    # TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
+#Not sure if this is needed 
+# TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
 #processingcap_xr_interp = add_historic_stock(processingcap_xr, YEAR_FIRST_GRID)
 
 #%% Transport/Vehicles stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 
 ###########################################################################################################
-###########################################################################################################
-# Transport/Vehicles stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 #def get_preprocessing_data_processing(path_base: str, climate_policy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
     #path_external_data_scenario = Path(path_base, "fossil", scenario)
@@ -516,13 +439,10 @@ processingcap_xr = processingcap_xr.assign_coords(Type=np.array(processingcap_xr
 
 # lifetimes of transport tech in years
 transport_lifetime_data = pd.read_csv('Transport/FF Intensity & LT - Transport lifetimes.csv',index_col=["Year", "Tech Type"]) 
-#print(transport_lifetime_data.columns.tolist())
 
 # material compositions of transport infrastructure in kg/kg/year
 transport_materials_data = pd.read_csv('Transport/FF Intensity & LT - Transport materials.csv')
 
-#print(extraction_materials_data.columns)
-#print(extraction_materials_data.head())
 
     # 2. IMAGE/TIMER files -----------------------------------------
 #Transport capacity (stock demand per generation technology) in MW peak capacity
@@ -532,10 +452,12 @@ transport_oil = Path(path_base, "Fossil_test_check", "stock_calculation", "outpu
 df_transport_oil = pd.read_csv(transport_oil)
 transport_gas = Path(path_base, "Fossil_test_check", "stock_calculation", "output", scenario, "gas_transport_stock_kg.csv")
 df_transport_gas = pd.read_csv(transport_gas)
+
 df_transport_coal["fuel"] = "coal"
 df_transport_oil["fuel"] = "oil"
 df_transport_gas["fuel"] = "gas"
 
+#Combine the dataframes for coal, oil, and gas into one dataframe and then melt it to long format so that we have one row per combination of time, region, fuel, technology, and value (stock)
 df_transport_all = pd.concat(
     [df_transport_coal, df_transport_oil, df_transport_gas],
     ignore_index=True
@@ -547,35 +469,27 @@ df_transport_all = df_transport_all.melt(
     value_name='value'
 )
 
+#Combine fuel and type columns to one column "Tech Type"
 df_transport_all['Tech Type'] = df_transport_all['fuel'].str.strip() + ' ' + df_transport_all['type'].str.strip()
 
-df_transport_all = df_transport_all.drop(columns=['stage', 'unit', 'type', 'fuel'])  # drop columns that are not needed for the analysis
-
-#print(df_transport_all.shape)
-#print(df_transport_all.columns.tolist())
-#print("COLUMNS:", df_transport_all.columns)
-#print(df_transport_all.head())
-   # test if path_external_data_scenario exists and if not set to standard scenario
-# if not path_external_data_scenario.exists():
-  #       path_external_data_scenario = Path(path_base, "fossil", STANDARD_SCEN_EXTERNAL_DATA)
-# 
-# assert path_external_data_scenario.is_dir()
+#Drop columns that are not needed for the analysis 
+df_transport_all = df_transport_all.drop(columns=['stage', 'unit', 'type', 'fuel']) 
 
     ###########################################################################################################
     # Transform to xarray #
+#TODO: need to work on knowledge graphs for the transport stage
 #knowledge_graph_region = create_region_graph()
 #knowledge_graph_coal = create_ff_graph()
     
-
     # Lifetimes -------
 values = transport_lifetime_data["Lifetimes"].unstack().to_numpy(dtype=float)
 #Create coordinates
 times = transport_lifetime_data.index.levels[0].to_numpy()
 types = transport_lifetime_data.index.levels[1].to_numpy()
 scipy_params = ["mean", "stdev"]
-    # Build full array: shape (ScipyParam, Time, Type)
+# Build full array: shape (ScipyParam, Time, Type)
 data_array = np.stack([values, np.full_like(values, np.nan)], axis=0)
-    # Create DataArray
+# Create DataArray
 transport_lifetime_xr = xr.DataArray(
         data_array,
         dims=["DistributionParams", "Cohort", "Type"],
@@ -586,29 +500,53 @@ transport_lifetime_xr = xr.DataArray(
         },
         name="TransportLifetime"
     )
+
+# Expand 2020 across 2020-2100
+year_range = np.arange(2020, 2101)
+value_2020 = transport_lifetime_xr.sel(Cohort=2020)
+transport_lifetime_xr = value_2020.expand_dims(Cohort=year_range).transpose("DistributionParams", "Cohort", "Type")
 transport_lifetime_xr = prism.Q_(transport_lifetime_xr, "year")
-    #coal_lifetime_xr = knowledge_graph_electr.rebroadcast_xarray(coal_lifetime_xr, output_coords=EPG_TECHNOLOGIES, dim="Type") # convert technology names to the standard names from TIMER
-    #coal_lifetime_xr = coal_lifetime_xr.assign_coords(Type=np.array(coal_lifetime_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
+
+#Uncomment to check if the xarray looks correct
+# print(transport_lifetime_xr.head())
+# print(types)
+# print("First year:", transport_lifetime_xr.Cohort.values[0])
+# print("Last year:", transport_lifetime_xr.Cohort.values[-1])
+# print("Number of years:", len(transport_lifetime_xr.Cohort))
+# print("Shape of DataArray:", transport_lifetime_xr.shape)
+
+#transport_lifetime_xr = knowledge_graph_electr.rebroadcast_xarray(coal_transport_xr, output_coords=EPG_TECHNOLOGIES, dim="Type") # convert technology names to the standard names from TIMER
+#transport_lifetime_xr = coal_lifetime_xr.assign_coords(Type=np.array(transport_lifetime_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
  # Material Intensities -------
 
-    # Material Intensities -------
    # Set index
 transport_materials_data = transport_materials_data.set_index(['Year', 'Tech Type'])
 
-   # Convert to 3D array: (Material, Year, Tech)
+# Convert to 3D array: (Material, Year, Tech)
 transport_materials_xr = (
     transport_materials_data
-        .to_xarray()           # keeps Year & Tech Type as coords
-        .to_array("Material")  # converts columns into a 'Material' dimension
+        .to_xarray()           
+        .to_array("Material")  
         .rename({"Year": "Cohort", "Tech Type": "Type"})
 )
-
-# Name the DataArray
 transport_materials_xr.name = "TransportMaterialIntensities"
 
+#Expand 2020 values across 2020-2100
+value_2020 = transport_materials_xr.sel(Cohort=2020)
+year_range = np.arange(2020, 2101)
+transport_materials_xr = value_2020.expand_dims(Cohort=year_range).transpose("Material", "Cohort", "Type")
 transport_materials_xr = prism.Q_(transport_materials_xr, "kg/kg/year")
-#print(transport_materials_xr)
+
+# Uncomment to check if it worked
+# print(transport_materials_xr.head())
+# print(types)
+# print("First year:", transport_materials_xr.Cohort.values[0])
+# print("Last year:", transport_materials_xr.Cohort.values[-1])
+# print("Number of years:", len(transport_materials_xr.Cohort))
+# print("Shape of DataArray:", transport_materials_xr.shape)
+
+#TODO: check about rebroadcasting to knowledge graphs (we also dont have the knowledge graphs yet)
 #transport_materials_xr = knowledge_graph_coal.rebroadcast_xarray(transport_materials_xr, output_coords=EPG_TECHNOLOGIES, dim="Type")
 #transport_materials_xr = transport_materials_xr.assign_coords(Type=np.array(transport_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
@@ -622,10 +560,6 @@ years = sorted(df_transport_all['time'].unique())
 regions = sorted(df_transport_all['DIM_1'].unique())
 techtypes = sorted(df_transport_all['Tech Type'].unique())
 
-#print(df_transport_all['type'].unique())
-#df_sorted = df_transport_all.sort_values(['time', 'Region', 'fuel', 'type'])
-    # Convert to 3D array: (Year, Region, Fuel, Type)
-#data_array = df_sorted['value'].to_numpy().reshape(len(years), len(regions), len(fuels), len(types))
 transportcap_xr = (
     df_transport_all
     .set_index(['time', 'DIM_1', 'Tech Type'])
@@ -638,23 +572,13 @@ transportcap_xr = prism.Q_(transportcap_xr, "MW")
 #transportcap_xr = knowledge_graph_coal.rebroadcast_xarray(transportcap_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
 transportcap_xr = transportcap_xr.assign_coords(Type=np.array(transportcap_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
-    ###########################################################################################################
-    # Interpolate #
-
-    # interpolate_xr: The lifetimes & material intensities are only given for specific years (2020 and 2050), so we linearly interpolate to get values for the years 2020-2050.
-    # The values before 2020 are kept constant at the 2020 level, and the values after 2050 are kept constant at the 2050 level.
-#transport_lifetime_xr_interp = interpolate_xr(transport_lifetime_xr, YEAR_FIRST_GRID, year_out)
-#transport_lifetime_xr_interp.loc[dict(DistributionParams="stdev")] = transport_lifetime_xr_interp.loc[dict(DistributionParams="mean")] * STD_LIFETIMES_ELECTR
-#transport_materials_xr_interp = interpolate_xr(transport_materials_xr, YEAR_FIRST_GRID, year_out)
-
-    # TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
+#Not sure if this is needed
+# TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
 #transportcap_xr_interp = add_historic_stock(transportcap_xr, YEAR_FIRST_GRID)
 
 #%% Pipelines stage (oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
+###########################################################################################################
 
-###########################################################################################################
-###########################################################################################################
-# Pipelines stage (oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 # def get_preprocessing_data_processing(path_base: str, climate_policy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
     # path_external_data_scenario = Path(path_base, "fossil", scenario)
@@ -675,8 +599,6 @@ pipelines_lifetime_data = pd.read_csv(
 ) 
     # material compositions of transport infrastructure in kg/kg/year
 pipelines_materials_data = pd.read_csv('Pipelines/FF Intensity & LT - Pipelines materials.csv')
-#print(extraction_materials_data.columns)
-#print(extraction_materials_data.head())
 
     # 2. IMAGE/TIMER files -----------------------------------------
 #Transport capacity (stock demand per generation technology) in MW peak capacity
@@ -688,6 +610,7 @@ df_pipelines_gas = pd.read_csv(pipelines_gas)
 df_pipelines_oil["fuel"] = "oil"
 df_pipelines_gas["fuel"] = "gas"
 
+#Combine the dataframes for oil and gas into one dataframe and then melt it to long format so that we have one row per combination of time, region, fuel, technology, and value (stock)
 df_pipelines_all = pd.concat(
     [df_pipelines_oil, df_pipelines_gas],
     ignore_index=True
@@ -699,25 +622,17 @@ df_pipelines_all = df_pipelines_all.melt(
     value_name='value'
 )
 
+#Combine fuel and type columns to one column "Tech Type"
 df_pipelines_all['Tech Type'] = df_pipelines_all['fuel'].str.strip() + ' ' + df_pipelines_all['type'].str.strip()
 
+#Drop columns that are not needed for the analysis
 df_pipelines_all = df_pipelines_all.drop(columns=['stage', 'unit', 'type', 'fuel'])  # drop columns that are not needed for the analysis
-
-#print(df_pipelines_all.shape)
-#print(df_pipelines_all.columns.tolist())
-#print("COLUMNS:", df_pipelines_all.columns)
-#print(df_pipelines_all.head())
-   # test if path_external_data_scenario exists and if not set to standard scenario
-# if not path_external_data_scenario.exists():
-  #       path_external_data_scenario = Path(path_base, "fossil", STANDARD_SCEN_EXTERNAL_DATA)
-# 
-# assert path_external_data_scenario.is_dir()
 
     ###########################################################################################################
     # Transform to xarray #
+#TODO: need to work on knowledge graphs 
 #knowledge_graph_region = create_region_graph()
 #knowledge_graph_coal = create_ff_graph()
-    
 
     # Lifetimes -------
 values = pipelines_lifetime_data["Lifetimes"].unstack().to_numpy(dtype=float)
@@ -725,9 +640,9 @@ values = pipelines_lifetime_data["Lifetimes"].unstack().to_numpy(dtype=float)
 times = pipelines_lifetime_data.index.levels[0].to_numpy()
 types = pipelines_lifetime_data.index.levels[1].to_numpy()
 scipy_params = ["mean", "stdev"]
-    # Build full array: shape (ScipyParam, Time, Type)
+# Build full array: shape (ScipyParam, Time, Type)
 data_array = np.stack([values, np.full_like(values, np.nan)], axis=0)
-    # Create DataArray
+# Create DataArray
 pipelines_lifetime_xr = xr.DataArray(
         data_array,
         dims=["DistributionParams", "Cohort", "Type"],
@@ -739,44 +654,67 @@ pipelines_lifetime_xr = xr.DataArray(
         name="PipelinesLifetime"
     )
 pipelines_lifetime_xr = prism.Q_(pipelines_lifetime_xr, "year")
-    #coal_lifetime_xr = knowledge_graph_electr.rebroadcast_xarray(coal_lifetime_xr, output_coords=EPG_TECHNOLOGIES, dim="Type") # convert technology names to the standard names from TIMER
-    #coal_lifetime_xr = coal_lifetime_xr.assign_coords(Type=np.array(coal_lifetime_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
+
+# Expand 2020 across 2020-2100
+year_range = np.arange(2020, 2101)
+value_2020 = pipelines_lifetime_xr.sel(Cohort=2020)
+pipelines_lifetime_xr = value_2020.expand_dims(Cohort=year_range).transpose("DistributionParams", "Cohort", "Type")
+
+#Uncomment to check if the xarray looks correct
+# print(pipelines_lifetime_xr.head())
+# print(types)
+# print("First year:", pipelines_lifetime_xr.Cohort.values[0])
+# print("Last year:", pipelines_lifetime_xr.Cohort.values[-1])
+# print("Number of years:", len(pipelines_lifetime_xr.Cohort))
+# print("Shape of DataArray:", pipelines_lifetime_xr.shape)
+
+#TODO: check about rebroadcasting to knowledge graphs (we also dont have the knowledge graphs yet)
+#pipelines_lifetime_xr = knowledge_graph_electr.rebroadcast_xarray(pipelines_lifetime_xr, output_coords=EPG_TECHNOLOGIES, dim="Type") # convert technology names to the standard names from TIMER
+#pipelines_lifetime_xr = pipelines_lifetime_xr.assign_coords(Type=np.array(pipelines_lifetime_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
  # Material Intensities -------
-
-    # Material Intensities -------
    # Set index
 pipelines_materials_data = pipelines_materials_data.set_index(['Year', 'Tech Type'])
 
    # Convert to 3D array: (Material, Year, Tech)
 pipelines_materials_xr = (
     pipelines_materials_data
-        .to_xarray()           # keeps Year & Tech Type as coords
-        .to_array("Material")  # converts columns into a 'Material' dimension
+        .to_xarray()           
+        .to_array("Material")  
         .rename({"Year": "Cohort", "Tech Type": "Type"})
 )
-
-# Name the DataArray
 pipelines_materials_xr.name = "PipelinesMaterialIntensities"
 
+#Expand 2020 values across 2020-2100
+value_2020 = pipelines_materials_xr.sel(Cohort=2020)
+year_range = np.arange(2020, 2101)
+pipelines_materials_xr = value_2020.expand_dims(Cohort=year_range).transpose("Material", "Cohort", "Type")
 pipelines_materials_xr = prism.Q_(pipelines_materials_xr, "kg/kg/year")
-#print(pipelines_materials_xr)
+
+# Uncomment to check if it worked
+# print(pipelines_materials_xr.head())
+# print(types)
+# print("First year:", pipelines_materials_xr.Cohort.values[0])
+# print("Last year:", pipelines_materials_xr.Cohort.values[-1])
+# print("Number of years:", len(pipelines_materials_xr.Cohort))
+# print("Shape of DataArray:", pipelines_materials_xr.shape)
+
+pipelines_materials_xr = prism.Q_(pipelines_materials_xr, "kg/kg/year")
+
+#TODO: check about rebroadcasting to knowledge graphs (we also dont have the knowledge graphs yet)
 #pipelines_materials_xr = knowledge_graph_coal.rebroadcast_xarray(pipelines_materials_xr, output_coords=EPG_TECHNOLOGIES, dim="Type")
 #pipelines_materials_xr = pipelines_materials_xr.assign_coords(Type=np.array(pipelines_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
 # Pipeline capacity ------
 df_pipelines_all = df_pipelines_all.loc[~df_pipelines_all['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
 df_pipelines_all = df_pipelines_all.loc[df_pipelines_all['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', 'value', 'Tech Type']]  # only keep relevant years and technology columns
+    
     # Extract coordinate labels
-
 years = sorted(df_pipelines_all['time'].unique())
 regions = sorted(df_pipelines_all['DIM_1'].unique())
 techtypes = sorted(df_pipelines_all['Tech Type'].unique())
 
-#print(df_pipelines_all['type'].unique())
-#df_sorted = df_pipelines_all.sort_values(['time', 'Region', 'fuel', 'type'])
-    # Convert to 3D array: (Year, Region, Fuel, Type)
-#data_array = df_sorted['value'].to_numpy().reshape(len(years), len(regions), len(fuels), len(types))
+# Convert to 3D array: (Year, Region, Fuel, Type)
 pipelinecap_xr = (
     df_pipelines_all
     .set_index(['time', 'DIM_1', 'Tech Type'])
@@ -788,15 +726,6 @@ pipelinecap_xr = prism.Q_(pipelinecap_xr, "MW")
 #pipelinecap_xr = knowledge_graph_coal.rebroadcast_xarray(pipelinecap_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
 pipelinecap_xr = pipelinecap_xr.assign_coords(Type=np.array(pipelinecap_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
-    ###########################################################################################################
-    # Interpolate #
-
-    # interpolate_xr: The lifetimes & material intensities are only given for specific years (2020 and 2050), so we linearly interpolate to get values for the years 2020-2050.
-    # The values before 2020 are kept constant at the 2020 level, and the values after 2050 are kept constant at the 2050 level.
-#pipelines_lifetime_xr_interp = interpolate_xr(pipelines_lifetime_xr, YEAR_FIRST_GRID, year_out)
-#pipelines_lifetime_xr_interp.loc[dict(DistributionParams="stdev")] = pipelines_lifetime_xr_interp.loc[dict(DistributionParams="mean")] * STD_LIFETIMES_ELECTR
-#pipelines_materials_xr_interp = interpolate_xr(pipelines_materials_xr, YEAR_FIRST_GRID, year_out)
-
-    # TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
-
+# Not sure if this is needed
+#TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
 #pipelinecap_xr_interp = add_historic_stock(pipelinecap_xr, YEAR_FIRST_GRID)

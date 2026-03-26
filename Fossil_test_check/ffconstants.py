@@ -115,8 +115,8 @@ REGIONS_TIMER = [ # TODO: check if this is true
 
 TECH_GEN = 27   # number of fossil  technologies -> 26 technologies + 1 empty row
 
-# names of generation technologies as in the input files (e.g. composition_generation.csv) from Sebastiaan - should be renamed in files to match TIMER names in the future
-GEN_TYPES_FOSSIL = ["Coal", "Oil", "Gas"]
+# # names of generation technologies as in the input files (e.g. composition_generation.csv) from Sebastiaan - should be renamed in files to match TIMER names in the future
+# GEN_TYPES_FOSSIL = ["Coal", "Oil", "Gas"]
 
 # names of fossil fuel types (check with TIMER model)
 FF_TECHNOLOGIES = [
@@ -208,18 +208,18 @@ DICT_GENTECH_TO_CATEGORY = {
    # "bunkers",
 #]  # 1st 7, last one is total
 
-# Vehicle related constants ---------------------------------------------
+# # Vehicle related constants ---------------------------------------------
 
-TECH_VEHICLES = 25    # number of vehicle types 
+# TECH_VEHICLES = 25    # number of vehicle types 
 
-# reference loadfactor of cars in TIMER (the trp_trvl_Load.out file is
-# relative to this BASE loadfcator (persons/car))
-LOAD_FACTOR = 1.6
+# # reference loadfactor of cars in TIMER (the trp_trvl_Load.out file is
+# # relative to this BASE loadfcator (persons/car))
+# LOAD_FACTOR = 1.6
 
-LIGHT_COMMERCIAL_VEHICLE_SHARE = 0.04 # TODO: is this even used somewhere?
-# 0.04 is the fraction of the tkms driven by light commercial vehicles according to the IEA
-BEV_CAPACITY_CURRENT  = 59.6    #kWh current battery capacity of full electric vehicles, see current_specs.xlsx
-PHEV_CAPACITY_CURRENT = 11.2    #kWh current battery capacity of plugin electric vehicles, see current_specs.xlsx
+# LIGHT_COMMERCIAL_VEHICLE_SHARE = 0.04 # TODO: is this even used somewhere?
+# # 0.04 is the fraction of the tkms driven by light commercial vehicles according to the IEA
+# BEV_CAPACITY_CURRENT  = 59.6    #kWh current battery capacity of full electric vehicles, see current_specs.xlsx
+# PHEV_CAPACITY_CURRENT = 11.2    #kWh current battery capacity of plugin electric vehicles, see current_specs.xlsx
 
 
 
@@ -227,7 +227,7 @@ PHEV_CAPACITY_CURRENT = 11.2    #kWh current battery capacity of plugin electric
 
 # TECH_STORAGE = ?
 
-PHS_KG_PERKWH = 26.8   # kg per kWh storage capacity (as weight addition to existing hydro plants to make them pumped) 
+#PHS_KG_PERKWH = 26.8   # kg per kWh storage capacity (as weight addition to existing hydro plants to make them pumped) 
 
 
 
