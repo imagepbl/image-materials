@@ -117,9 +117,12 @@ extraction_lifetime_data = pd.read_csv(
     'Extraction/FF Intensity & LT - Extraction lifetimes.csv',
     index_col=["Year", "TechType"]
 ) 
+
     # material compositions of coal infrastructure (processing, extraction, transport) in kg/kg/year
 extraction_materials_data = pd.read_csv('Extraction/FF Intensity & LT - Extraction materials.csv')
-
+#print(extraction_materials_data.index.is_unique)
+#print(extraction_materials_data.columns)
+#print(extraction_materials_data.head())
     # 2.FUMA files -----------------------------------------
 #Stock of each type of extraction infrastructure (stock demand per generation technology) per region per year
 #files are sourced from the output of the stock calculation (FUMA) for the relevant scenario, which is found under stock_calculation/output/SSP1_ML (or the relevant scenario)
@@ -317,7 +320,6 @@ df_processing_all['Tech Type'] = df_processing_all['fuel'].str.strip() + ' ' + d
 
 # Drop columns that are not needed for the analysis
 df_processing_all = df_processing_all.drop(columns=['stage', 'unit', 'type', 'fuel'])  
-
 
     ###########################################################################################################
     # Transform to xarray #
@@ -729,3 +731,5 @@ pipelinecap_xr = pipelinecap_xr.assign_coords(Type=np.array(pipelinecap_xr.Type.
 # Not sure if this is needed
 #TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
 #pipelinecap_xr_interp = add_historic_stock(pipelinecap_xr, YEAR_FIRST_GRID)
+
+print("Model finished successfully!")
