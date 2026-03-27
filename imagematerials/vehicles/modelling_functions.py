@@ -112,6 +112,33 @@ def tkms_to_nr_of_vehicles_fixed(tera_tkms, mileage, load, loadfactor):
     nr_of_vehicles = vkms.div(mileage, axis=0)
     return nr_of_vehicles
 
+def tkms_conversion_factor(mileage, load, loadfactor):
+    """
+    Returns a conversion factor that translates ton kilometers to nr of vehicles using fixed indicators 
+    on mileage, load capacity and load factor.
+    
+    The returned factor can be multiplied with tera_tkms to get nr_of_vehicles:
+    nr_of_vehicles = tera_tkms * conversion_factor
+    
+    Parameters:
+    -----------
+    mileage : pd.DataFrame or pd.Series
+        Vehicle mileage (km/year)
+    load : pd.DataFrame or pd.Series
+        Load capacity (tonnes)
+    loadfactor : pd.DataFrame or pd.Series
+        Load factor (utilization rate)
+    
+    Returns:
+    --------
+    conversion_factor : pd.DataFrame or pd.Series
+        Factor to convert tera_tkms to nr_of_vehicles
+    """
+    # Conversion factor: 10^12 (tera) / (load * loadfactor * mileage)
+    conversion_factor = 1000000000000 / (load * loadfactor)
+    conversion_factor = conversion_factor.div(mileage, axis=0)
+    return conversion_factor
+
 def scenario_change(df, base_year, target_year, change, implementation_rate, data_type = None, steepness=0.5):
     """
     Applies a time-based change to values in a DataFrame between a base and target year using a specified implementation method.
