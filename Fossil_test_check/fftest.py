@@ -122,7 +122,7 @@ extraction_lifetime_data = pd.read_csv(
 ) 
 
     # material compositions of coal infrastructure (processing, extraction, transport) in kg/kg/year
-extraction_materials_data = pd.read_csv('Extraction_materials.csv')
+extraction_materials_data = pd.read_csv('Extraction/Extraction_materials.csv')
 #print(extraction_materials_data.index.is_unique)
 #print(extraction_materials_data.columns)
 #print(extraction_materials_data.head())
@@ -446,7 +446,7 @@ processingcap_xr = processingcap_xr.assign_coords(Type=np.array(processingcap_xr
 # 1. External Data --------------------------------------------- 
 
 # lifetimes of transport tech in years
-transport_lifetime_data = pd.read_csv('Transport_lifetimes.csv',index_col=["Year", "Tech Type"]) 
+transport_lifetime_data = pd.read_csv('Transport/Transport_lifetimes.csv',index_col=["Year", "Tech Type"]) 
 
 # material compositions of transport infrastructure in kg/kg/year
 transport_materials_data = pd.read_csv('Transport/Transport_materials.csv')
