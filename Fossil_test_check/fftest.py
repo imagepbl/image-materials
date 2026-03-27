@@ -246,7 +246,8 @@ extraction_materials_xr = prism.Q_(extraction_materials_xr, "kg/kg/year")
 # Starting stock (capacity) ------
 df_extraction_all = df_extraction_all.loc[~df_extraction_all['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
 df_extraction_all = df_extraction_all.loc[df_extraction_all['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', 'value', 'Tech Type']]  # only keep relevant years and technology columns
-   
+df_extraction_all['DIM_1'] = df_extraction_all['DIM_1'].astype(int)   
+
 #Extract coordinate labels for years, regions, technologies
 years = sorted(df_extraction_all['time'].unique())
 regions = sorted(df_extraction_all['DIM_1'].unique())
@@ -268,6 +269,34 @@ extractioncap_xr = extractioncap_xr.assign_coords(Type=np.array(extractioncap_xr
  # This is from original model and i am not sure if something like this is needed in the new model?
 # TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 
 #extractioncap_xr_interp = add_historic_stock(extractioncap_xr, YEAR_FIRST_GRID)
+
+# print("=== extractioncap_xr ===")
+# print(extractioncap_xr)
+# print("\nDims:", extractioncap_xr.dims)
+# print("Sizes:", extractioncap_xr.sizes)
+# print("\nTime labels:", extractioncap_xr['Time'].values)
+# print("Region labels:", extractioncap_xr['Region'].values)
+# print("Type labels:", extractioncap_xr['Type'].values)
+# extractioncap_xr.isnull().sum()
+
+# print("=== extractionlifetimes_xr ===")
+# print(extraction_lifetime_xr)
+# print("Dims:", extraction_lifetime_xr.dims)
+# print("Sizes:", extraction_lifetime_xr.sizes)
+# print("Cohort:", extraction_lifetime_xr['Cohort'].values)
+# print("Type:", extraction_lifetime_xr['Type'].values)
+# print("Params:", extraction_lifetime_xr['DistributionParams'].values)
+# extraction_lifetime_xr.isnull().sum()
+
+# print("=== extraction_materials_xr ===")
+# print(extraction_materials_xr)
+# print("Dims:", extraction_materials_xr.dims)
+# print("Sizes:", extraction_materials_xr.sizes)
+# print("Materials:", extraction_materials_xr['Material'].values)
+# print("Cohort:", extraction_materials_xr['Cohort'].values)
+# print("Type:", extraction_materials_xr['Type'].values)
+# extraction_materials_xr.isnull().sum()
+
 
 #%% Processing stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 
@@ -428,6 +457,34 @@ processingcap_xr = processingcap_xr.assign_coords(Type=np.array(processingcap_xr
 # TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
 #processingcap_xr_interp = add_historic_stock(processingcap_xr, YEAR_FIRST_GRID)
 
+# print("=== processingcap_xr ===")
+# print(processingcap_xr)
+# print("\nDims:", processingcap_xr.dims)
+# print("Sizes:", processingcap_xr.sizes)
+# print("\nTime labels:", processingcap_xr['Time'].values)
+# print("Region labels:", processingcap_xr['Region'].values)
+# print("Type labels:", processingcap_xr['Type'].values)
+# processingcap_xr.isnull().sum()
+
+# print("=== processinglifetimes_xr ===")
+# print(processing_lifetime_xr)
+# print("Dims:", processing_lifetime_xr.dims)
+# print("Sizes:", processing_lifetime_xr.sizes)
+# print("Cohort:", processing_lifetime_xr['Cohort'].values)
+# print("Type:", processing_lifetime_xr['Type'].values)
+# print("Params:", processing_lifetime_xr['DistributionParams'].values)
+# processing_lifetime_xr.isnull().sum()
+
+# print("=== processing_materials_xr ===")
+# print(processing_materials_xr)
+# print("Dims:", processing_materials_xr.dims)
+# print("Sizes:", processing_materials_xr.sizes)
+# print("Materials:", processing_materials_xr['Material'].values)
+# print("Cohort:", processing_materials_xr['Cohort'].values)
+# print("Type:", processing_materials_xr['Type'].values)
+# processing_materials_xr.isnull().sum()
+
+
 #%% Transport/Vehicles stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 
 ###########################################################################################################
@@ -584,6 +641,33 @@ transportcap_xr = transportcap_xr.assign_coords(Type=np.array(transportcap_xr.Ty
 # TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
 #transportcap_xr_interp = add_historic_stock(transportcap_xr, YEAR_FIRST_GRID)
 
+# print("=== transportcap_xr ===")
+# print(transportcap_xr)
+# print("\nDims:", transportcap_xr.dims)
+# print("Sizes:", transportcap_xr.sizes)
+# print("\nTime labels:", transportcap_xr['Time'].values)
+# print("Region labels:", transportcap_xr['Region'].values)
+# print("Type labels:", transportcap_xr['Type'].values)
+# transportcap_xr.isnull().sum()
+
+# print("=== transportlifetimes_xr ===")
+# print(transport_lifetime_xr)
+# print("Dims:", transport_lifetime_xr.dims)
+# print("Sizes:", transport_lifetime_xr.sizes)
+# print("Cohort:", transport_lifetime_xr['Cohort'].values)
+# print("Type:", transport_lifetime_xr['Type'].values)
+# print("Params:", transport_lifetime_xr['DistributionParams'].values)
+# transport_lifetime_xr.isnull().sum()
+
+# print("=== transport_materials_xr ===")
+# print(transport_materials_xr)
+# print("Dims:", transport_materials_xr.dims)
+# print("Sizes:", transport_materials_xr.sizes)
+# print("Materials:", transport_materials_xr['Material'].values)
+# print("Cohort:", transport_materials_xr['Cohort'].values)
+# print("Type:", transport_materials_xr['Type'].values)
+# transport_materials_xr.isnull().sum()
+
 #%% Pipelines stage (oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 ###########################################################################################################
 
@@ -736,6 +820,33 @@ pipelinecap_xr = pipelinecap_xr.assign_coords(Type=np.array(pipelinecap_xr.Type.
 # Not sure if this is needed
 #TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
 #pipelinecap_xr_interp = add_historic_stock(pipelinecap_xr, YEAR_FIRST_GRID)
+
+print("=== pipelinecap_xr ===")
+print(pipelinecap_xr)
+print("\nDims:", pipelinecap_xr.dims)
+print("Sizes:", pipelinecap_xr.sizes)
+print("\nTime labels:", pipelinecap_xr['Time'].values)
+print("Region labels:", pipelinecap_xr['Region'].values)
+print("Type labels:", pipelinecap_xr['Type'].values)
+pipelinecap_xr.isnull().sum()
+
+print("=== pipelines_lifetime_xr ===")
+print(pipelines_lifetime_xr)
+print("Dims:", pipelines_lifetime_xr.dims)
+print("Sizes:", pipelines_lifetime_xr.sizes)
+print("Cohort:", pipelines_lifetime_xr['Cohort'].values)
+print("Type:", pipelines_lifetime_xr['Type'].values)
+print("Params:", pipelines_lifetime_xr['DistributionParams'].values)
+pipelines_lifetime_xr.isnull().sum()
+
+print("=== pipelines_materials_xr ===")
+print(pipelines_materials_xr)
+print("Dims:", pipelines_materials_xr.dims)
+print("Sizes:", pipelines_materials_xr.sizes)
+print("Materials:", pipelines_materials_xr['Material'].values)
+print("Cohort:", pipelines_materials_xr['Cohort'].values)
+print("Type:", pipelines_materials_xr['Type'].values)
+pipelines_materials_xr.isnull().sum()
 
 #%% Bring everything together in a prep_data file ---------------------------------------------------------------------------------------------------------------------------------
 ###########################################################################################################
