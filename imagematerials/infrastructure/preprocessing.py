@@ -31,7 +31,7 @@ def get_preprocessing_data_infrastructure(path_base: Path, scen_folder: str, sta
     
     # Define paths
     data_raw_dir = path_base / "data" / "raw"
-    image_dir = data_raw_dir / "IMAGE_CircoMod" / scen_folder
+    image_dir = data_raw_dir / "image" / scen_folder
     infra_dir = path_base / "imagematerials" / "infrastructure" / "dependant_files"
     tripi_dir = infra_dir / "TRIPI-fut"
     grid_dir = infra_dir / "grid_data"
@@ -906,6 +906,9 @@ def get_preprocessing_data_infrastructure(path_base: Path, scen_folder: str, sta
 
     da_all = xr.concat(final_all_das, pd.Index(final_all_types, name="Type"))
     da_all = prism.Q_(da_all, "km**2")
+
+    # reorder da_roads to have the order: TIME, REGION, TYPE
+    da_all = da_all.transpose("Time", "Region", "Type")
 
     preprocessing_results["stocks"] = da_all
 
