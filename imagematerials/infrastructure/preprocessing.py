@@ -480,7 +480,7 @@ def get_preprocessing_data_infrastructure(path_base: Path, scen_folder: str, sta
             # 4. Apply per-type paving rate
             for pave_status, rate_mult in [('paved', pave_rate), ('unpaved', 1 - pave_rate)]:
                 # Active
-                type_name = f"{prefix_active}{loc}_{pave_status}_{label}"
+                type_name = f"{prefix_active}{loc}_{label}_{pave_status}"
                 active_types.append(type_name)
                 final_area = type_total * rate_mult
                 # Stock_tail
@@ -492,7 +492,7 @@ def get_preprocessing_data_infrastructure(path_base: Path, scen_folder: str, sta
                     coords=[ext_time_coords, region_cols], dims=['Time', 'Region']))
 
                 # Obsolete
-                obs_name = f"{prefix_obs}{loc}_{pave_status}_{label}"
+                obs_name = f"{prefix_obs}{loc}_{label}_{pave_status}"
                 obs_types.append(obs_name)
                 obs_final = type_obs * rate_mult
                 obs_final.index = pd.Index(pd.to_numeric(obs_final.index, errors='coerce').astype('Int64'))
@@ -640,16 +640,16 @@ def get_preprocessing_data_infrastructure(path_base: Path, scen_folder: str, sta
     # Parking stocks (already computed: rural/urban paved/unpaved parking areas)
     # v5: parking uses same MI as local roads, lifetime rc3 (urban) / rc2 (rural)
     parking_active_settings = [
-        ('urban_paved_parking', urban_paved_parking_area),
-        ('urban_unpaved_parking', urban_unpaved_parking_area),
-        ('rural_paved_parking', rural_paved_parking_area),
-        ('rural_unpaved_parking', rural_unpaved_parking_area),
+        ('urban_parking_paved', urban_paved_parking_area),
+        ('urban_parking_unpaved', urban_unpaved_parking_area),
+        ('rural_parking_paved', rural_paved_parking_area),
+        ('rural_parking_unpaved', rural_unpaved_parking_area),
     ]
     parking_obsolete_settings = [
-        ('obsolete_urban_paved_parking', urban_paved_obsolete_parking),
-        ('obsolete_urban_unpaved_parking', urban_unpaved_obsolete_parking),
-        ('obsolete_rural_paved_parking', rural_paved_obsolete_parking),
-        ('obsolete_rural_unpaved_parking', rural_unpaved_obsolete_parking),
+        ('obsolete_urban_parking_paved', urban_paved_obsolete_parking),
+        ('obsolete_urban_parking_unpaved', urban_unpaved_obsolete_parking),
+        ('obsolete_rural_parking_paved', rural_paved_obsolete_parking),
+        ('obsolete_rural_parking_unpaved', rural_unpaved_obsolete_parking),
     ]
     parking_types = []
     parking_das = []
@@ -880,16 +880,16 @@ def get_preprocessing_data_infrastructure(path_base: Path, scen_folder: str, sta
     rail_obs_das = []
 
     # Active rail elements
-    for name, df in [('standard_rail', adjusted_rail_length),
-                     ('highspeed_rail', adjusted_HST_length),
-                     ('urban_rail', urban_rail_length),
+    for name, df in [('total_rail', adjusted_rail_length),
+                     ('total_HST', adjusted_HST_length),
+                     ('total_urban_rail', urban_rail_length),
                      ('rail_bridge', bridge_rail),
                      ('rail_tunnel', tunnel_rail)]:
         rail_element_types.append(name)
         rail_element_das.append(_stock_tail_da(df, extended_time_coords, region_coords))
 
     # Obsolete rail elements
-    for name, df in [('obsolete_standard_rail', obsolete_rail_length),
+    for name, df in [('obsolete_total_rail', obsolete_rail_length),
                      ('obsolete_rail_bridge', bridge_rail_obsolete),
                      ('obsolete_rail_tunnel', tunnel_rail_obsolete)]:
         rail_obs_types.append(name)
@@ -928,7 +928,7 @@ def get_preprocessing_data_infrastructure(path_base: Path, scen_folder: str, sta
         obs_to_active_map[o] = a
     for a, o in zip(parking_types, parking_obs_types):
         obs_to_active_map[o] = a
-    obs_to_active_map['obsolete_standard_rail'] = 'standard_rail'
+    obs_to_active_map['obsolete_total_rail'] = 'total_rail'
     obs_to_active_map['obsolete_rail_bridge'] = 'rail_bridge'
     obs_to_active_map['obsolete_rail_tunnel'] = 'rail_tunnel'
     preprocessing_results["obsolete_to_active_map"] = obs_to_active_map
@@ -987,8 +987,8 @@ def get_preprocessing_data_infrastructure(path_base: Path, scen_folder: str, sta
     for t in all_types:
         parts = t.split('_')
         loc_type = parts[0]     # 'urban' or 'rural'
-        pave_type = parts[1]    # 'paved' or 'unpaved'
-        road_type = parts[2]    # 'motorway', 'primary', etc.
+        road_type = parts[1]    # 'motorway', 'primary', etc.
+        pave_type = parts[2]    # 'paved' or 'unpaved'
         grip_rc = mi_road_class_map.get(road_type, 5)
 
         # Map to Materials-paving key format
@@ -1130,10 +1130,10 @@ def get_preprocessing_data_infrastructure(path_base: Path, scen_folder: str, sta
     # Parking uses same MI as local roads (v5: parking_mi = local_road_mi)
     parking_mi_map = {}
     parking_local_road_map = {
-        'urban_paved_parking': 'urban_paved_local',
-        'urban_unpaved_parking': 'urban_unpaved_local',
-        'rural_paved_parking': 'rural_paved_local',
-        'rural_unpaved_parking': 'rural_unpaved_local',
+        'urban_parking_paved': 'urban_local_paved',
+        'urban_parking_unpaved': 'urban_local_unpaved',
+        'rural_parking_paved': 'rural_local_paved',
+        'rural_parking_unpaved': 'rural_local_unpaved',
     }
     for ptype in parking_types:
         local_road_type = parking_local_road_map[ptype]
@@ -1156,9 +1156,9 @@ def get_preprocessing_data_infrastructure(path_base: Path, scen_folder: str, sta
     # --- Build MI for rail types (from Materials_infra.xlsx) ---
     # Rail MI is NOT region-specific in the data file (same for all regions)
     rail_mi_category = {
-        'standard_rail': 'standard_rail',
-        'highspeed_rail': 'highspeed_rail',
-        'urban_rail': 'urban_rail',
+        'total_rail': 'standard_rail',
+        'total_HST': 'highspeed_rail',
+        'total_urban_rail': 'urban_rail',
         'rail_bridge': 'rail_bridges',
         'rail_tunnel': 'rail_tunnels',
     }
@@ -1374,8 +1374,8 @@ def get_preprocessing_data_infrastructure(path_base: Path, scen_folder: str, sta
         active_t = t.replace("obsolete_", "", 1) if t.startswith("obsolete_") else t
         # Map to operational_lt index
         lt_key_map = {
-            'standard_rail': 'rail', 'highspeed_rail': 'rail',
-            'urban_rail': 'urban_rail',
+            'total_rail': 'rail', 'total_HST': 'rail',
+            'total_urban_rail': 'urban_rail',
             'rail_bridge': 'rail_bridge', 'rail_tunnel': 'rail_tunnel',
         }
         lt_key = lt_key_map.get(active_t, 'rail')

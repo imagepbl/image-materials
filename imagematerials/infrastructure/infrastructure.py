@@ -210,31 +210,59 @@ def main():
     xr.Dataset(nc_data).to_netcdf(nc_output_path, engine="netcdf4")
     print(f"Saved aggregated output to {nc_output_path}")
 
-    # --- 3. Export CSV report (material flows only, matching v5 format) ---
+    # --- 3. Export wide-format Excel matching v5 layout ---
+    # v5 columns: regions, flow, sector, category, elements, materials, <year cols>
     dfs = []
-    for da, metric in [
+    for da, flow_name in [
         (da_inflow_mat, "inflow"),
         (da_outflow_mat_agg, "outflow"),
         (da_stock_mat_agg, "stock"),
     ]:
-        df = process_da_to_df(da, metric, "kt")
-        if not df.empty:
-            df = df[df['value'] != 0].copy()
-            dfs.append(df)
+        df = da.to_dataframe(name='value').reset_index()
+        if 'Material' in df.columns:
+            df.rename(columns={'Material': 'material'}, inplace=True)
+        df['flow'] = flow_name
+        dfs.append(df)
 
-    final_report = pd.concat(dfs, ignore_index=True)
-    if 'Material' in final_report.columns:
-        final_report.rename(columns={'Material': 'material'}, inplace=True)
-    final_report.rename(columns={'Time': 'year', 'Region': 'region'}, inplace=True)
+    long_df = pd.concat(dfs, ignore_index=True)
+    long_df.rename(columns={'Time': 'year', 'Region': 'regions',
+                            'material': 'materials', 'Type': 'elements'}, inplace=True)
+    # Convert kg → kt
+    long_df['value'] = long_df['value'] / 1e6
+    long_df['sector'] = 'transport_infra'
+    long_df['category'] = 'network'
+    # Rename 'brick' → 'bricks' to match v5
+    long_df['materials'] = long_df['materials'].replace({'brick': 'bricks'})
 
-    # Convert kg to kt for readability
-    final_report['value'] = final_report['value'] / 1e6
+    # Add total_tram as zero-valued placeholder (declared in v5 but never computed)
+    materials_list = long_df['materials'].dropna().unique()
+    regions_list = long_df['regions'].unique()
+    years_list = sorted(long_df['year'].unique())
+    tram_rows = []
+    for flow_name in ['inflow', 'outflow', 'stock']:
+        for mat in materials_list:
+            for reg in regions_list:
+                tram_rows.append({
+                    'regions': reg, 'flow': flow_name, 'sector': 'transport_infra',
+                    'category': 'network', 'elements': 'total_tram',
+                    'materials': mat, 'year': years_list[0], 'value': 0.0
+                })
+    long_df = pd.concat([long_df, pd.DataFrame(tram_rows)], ignore_index=True)
 
-    print("\nMaterials:", ", ".join(final_report['material'].dropna().unique().astype(str)))
+    # Pivot to wide format: years as columns
+    wide_df = long_df.pivot_table(
+        index=['regions', 'flow', 'sector', 'category', 'elements', 'materials'],
+        columns='year', values='value', aggfunc='sum', fill_value=0.0
+    ).reset_index()
+    wide_df.columns.name = None  # remove pivot column name
 
-    report_path = output_dir / "road_materials_detailed_report.csv"
-    final_report.to_csv(report_path, index=False)
-    print(f"Saved report to {report_path}")
+    print(f"\nOutput: {wide_df.shape[0]} rows × {wide_df.shape[1]} cols")
+    print("Materials:", ", ".join(sorted(wide_df['materials'].unique())))
+    print("Elements:", len(wide_df['elements'].unique()))
+
+    report_path = output_dir / "road_materials_output_kt_detail.xlsx"
+    wide_df.to_excel(report_path, index=False, sheet_name='network')
+    print(f"Saved v5-format output to {report_path}")
 
 if __name__ == "__main__":
     main()
