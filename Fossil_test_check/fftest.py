@@ -117,12 +117,12 @@ year_out = 2100
 
     # lifetimes of extraction tech in years
 extraction_lifetime_data = pd.read_csv(
-    'Extraction/FF Intensity & LT - Extraction lifetimes.csv',
+    'Extraction/Extraction_lifetimes.csv',
     index_col=["Year", "TechType"]
 ) 
 
     # material compositions of coal infrastructure (processing, extraction, transport) in kg/kg/year
-extraction_materials_data = pd.read_csv('Extraction/FF Intensity & LT - Extraction materials.csv')
+extraction_materials_data = pd.read_csv('Extraction_materials.csv')
 #print(extraction_materials_data.index.is_unique)
 #print(extraction_materials_data.columns)
 #print(extraction_materials_data.head())
@@ -289,11 +289,11 @@ extractioncap_xr = extractioncap_xr.assign_coords(Type=np.array(extractioncap_xr
 
     # lifetimes of processing tech in years
 processing_lifetime_data = pd.read_csv(
-    'Processing/FF Intensity & LT - Processing lifetimes.csv',
+    'Processing/Processing_lifetimes.csv',
     index_col=["Year", "Tech Type"]
 ) 
     # material compositions of processing infrastructure in kg/kg/year
-processing_materials_data = pd.read_csv('Processing/FF Intensity & LT - Processing materials.csv')
+processing_materials_data = pd.read_csv('Processing/Processing_materials.csv')
 
 
     # 2. FUMA files -----------------------------------------
@@ -403,19 +403,6 @@ processing_materials_xr = prism.Q_(processing_materials_xr, "kg/kg/year")
 #processing_materials_xr = processing_materials_xr.assign_coords(Type=np.array(processing_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
 # Gcap ------
-# idx = pd.MultiIndex.from_frame(df_processing_all[['time', 'DIM_1', 'Tech Type']])
-# print(idx.duplicated())
-# duplicates = df_processing_all[df_processing_all.duplicated(subset=['time', 'DIM_1', 'Tech Type'], keep=False)]
-# print(duplicates)
-# dup_counts = df_processing_all.groupby(['time', 'DIM_1', 'Tech Type']).size()
-# print(dup_counts[dup_counts > 1])
-# print(df_processing_coal[df_processing_coal['time'].isna()].head())
-# print(df_processing_oil[df_processing_oil['time'].isna()].head())
-# print(df_processing_refinery_oil[df_processing_refinery_oil['time'].isna()].head())
-# print(df_processing_gas[df_processing_gas['time'].isna()].head())
-
-
-
 # combine the processing data for coal, oil, gas into one df and then put it into this 
 df_processing_all = df_processing_all.loc[~df_processing_all['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
 df_processsing_all = df_processing_all.loc[df_processing_all['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', 'value', 'Tech Type']]  # only keep relevant years and technology columns
@@ -459,10 +446,10 @@ processingcap_xr = processingcap_xr.assign_coords(Type=np.array(processingcap_xr
 # 1. External Data --------------------------------------------- 
 
 # lifetimes of transport tech in years
-transport_lifetime_data = pd.read_csv('Transport/FF Intensity & LT - Transport lifetimes.csv',index_col=["Year", "Tech Type"]) 
+transport_lifetime_data = pd.read_csv('Transport_lifetimes.csv',index_col=["Year", "Tech Type"]) 
 
 # material compositions of transport infrastructure in kg/kg/year
-transport_materials_data = pd.read_csv('Transport/FF Intensity & LT - Transport materials.csv')
+transport_materials_data = pd.read_csv('Transport/Transport_materials.csv')
 
 
     # 2. IMAGE/TIMER files -----------------------------------------
@@ -615,12 +602,11 @@ transportcap_xr = transportcap_xr.assign_coords(Type=np.array(transportcap_xr.Ty
 
     # lifetimes of transport tech in years
 pipelines_lifetime_data = pd.read_csv(
-    'Pipelines/FF Intensity & LT - Pipelines lifetimes.csv',
+    'Pipelines/Pipelines_lifetimes.csv',
     index_col=["Year", "Tech Type"]
 ) 
     # material compositions of transport infrastructure in kg/kg/year
-pipelines_materials_data = pd.read_csv('Pipelines/FF Intensity & LT - Pipelines materials.csv')
-
+pipelines_materials_data = pd.read_csv('Pipelines/Pipelines_materials.csv')
     # 2. IMAGE/TIMER files -----------------------------------------
 #Transport capacity (stock demand per generation technology) in MW peak capacity
 pipelines_oil = Path(path_base, "Fossil_test_check", "stock_calculation", "output", scenario, "oil_pipelines_length_km.csv")
