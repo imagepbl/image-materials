@@ -28,7 +28,8 @@ from imagematerials.constants import IMAGE_REGIONS
 
 def buildings_preprocessing(base_directory: Path, climate_policy_config: dict,
                             circular_economy_config: dict,
-                            image_scenario: str = SCENARIO_SELECT) -> xr.DataArray:
+                            image_scenario: str = SCENARIO_SELECT,
+                            commercial_ce_mode: str = None) -> xr.DataArray:
     """Preprocess the buildings data from start to finish.
 
     Parameters
@@ -76,7 +77,7 @@ def buildings_preprocessing(base_directory: Path, climate_policy_config: dict,
     if "base" or "narrow_activity" or "narrow" in circular_economy_config.keys():
         # Implement circular economy for commercial floorspace
         # This is only done for the base and narrow_activity scenarios, as the other scenarios do not have a circular economy component
-        floorspace_commercial = apply_circular_economy_commercial_floorspace(floorspace_commercial, circular_economy_config)
+        floorspace_commercial = apply_circular_economy_commercial_floorspace(floorspace_commercial, circular_economy_config, commercial_ce_mode=commercial_ce_mode)
         
     # Calculate population ("Total", "Rural", "Urban")
     population = compute_population(image_directory, base_directory)

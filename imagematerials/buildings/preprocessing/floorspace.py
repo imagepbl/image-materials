@@ -267,7 +267,7 @@ def compute_commercial_floor_m2_cap_sum(gompertz: dict,
 
     # commercial floorspace is scaled here (in case lowComm is not 1)
     scale_comm = pd.Series([1.0, 0.0], index=[2020, 2060], name='time').reindex(YEARS).interpolate(
-        method='linear', limit=300, limit_direction='both')
+        method='linear', limit_direction='both')
     commercial_m2_cap = (commercial_m2_cap.mul(scale_comm, axis=0)
                          + commercial_m2_cap_low.mul((1-scale_comm), axis=0))
     return commercial_m2_cap

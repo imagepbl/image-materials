@@ -54,6 +54,14 @@ elif flag_Mean ==3:
 else:
     FILE_ADDITION = '_median'
 
+# Switch for commercial floorspace CE strategy in narrow / narrow_activity scenarios:
+#   "config"       – use m2_change_pc from the scenario TOML (original behaviour)
+#   "convergence"  – linearly converge every region to CONVERGENCE_TARGET by 2100
+COMMERCIAL_CE_MODE = "convergence"
+CONVERGENCE_TARGET = 8.0   # m^2/person target in 2100
+CONVERGENCE_START  = 2025
+CONVERGENCE_END    = 2100
+
 GOMPERTZ_EXPDEC = (25.601, 28.431, 0.0415)
 
 # Initialize minimum values
