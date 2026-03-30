@@ -14,7 +14,7 @@ class ChangeAction(ABC):
     """
 
     @abstractmethod
-    def apply(self, value: Any, inplace: bool = False):
+    def apply(self, value: Any):
         """Applies the change defined by this ChangeAction object to the
         `value` passed.
 
@@ -22,11 +22,6 @@ class ChangeAction(ABC):
         ----------
         value
             The element the change should be applied to.
-        inplace
-            Flag indicating if the value is changed inplace, if possible.
-            The method will always return a result, in case of an inplace
-            modification, this will be the same object as passed in the
-            `value`, if a mutable type was passed.
         """
         pass
 
@@ -36,29 +31,14 @@ class ChangeReplace(ChangeAction):
     """
     new_value: Any
 
-    def apply(self, value: Any, inplace: bool = False):
+    def apply(self, value: Any):
         """Replaces `value` with `self.new_value`.
 
         Parameters
         ----------
         value
             The element the change should be applied to.
-        inplace
-            Flag indicating if the value is changed inplace, if possible.
-            The method will always return a result, in case of an inplace
-            modification, this will be the same object as passed in the
-            `value`, if a mutable type was passed.
-
-        Notes
-        -----
-        A replace action can never truly happen inplace.
         """
-        if inplace:
-            warnings.warn(
-                "A replace action can never truly happen inplace."
-                f" Replacing {value} with {self.new_value}.",
-                RuntimeWarning
-            )
         if type(value) != type(self.new_value):
             warnings.warn(
                 f"Replacing a value of type {type(value)} with one of type {type(self.new_value)}."
