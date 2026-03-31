@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from attributes import constants
+from ..attributes import constants
 
 
 def cohorts_to_materials_typical_np(

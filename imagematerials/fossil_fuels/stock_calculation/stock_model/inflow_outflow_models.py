@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import scipy
 
-from stock_model.dynamic_stock_model import DynamicStockModel as DSM
+from .dynamic_stock_model import DynamicStockModel as DSM
 
 idx = pd.IndexSlice
 

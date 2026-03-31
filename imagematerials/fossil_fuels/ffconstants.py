@@ -34,10 +34,7 @@ TONNES_TO_KGS = 1000
 
 # General constants ---------------------------------------------
 
-STD_LIFETIMES_ELECTR = 0.3  # standard deviation as a fraction of the mean lifetime applicable to energy equipment (edited this from FUMA supplementary paper)
-#(Asset Management for Infrastructure Systems: Energy and Water, Balzer & Schorn 2015)
-# TODO: different std for lines, transformers, generation, storage, etc.? scenario dependent?
-# I think i keep this the same for my model becase i belive the std for FUMA was 0.27?
+Standard_deviation_lifetime = 0.3 
 
 # Define the units for each dimension
 unit_mapping = {
