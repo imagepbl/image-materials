@@ -5,7 +5,7 @@ implementation_rate = 'linear'
 convergence_year_start = 2025
 convergence_year_end = 2100
 convergence_target = 8.0   # m^2/person target in 2100
-commercial_ce_mode = "convergence"
+commercial_ce_mode = "relative"
 
 [buildings.residential.m2_change_pc]
 "Asian-Stan" = -15.0
