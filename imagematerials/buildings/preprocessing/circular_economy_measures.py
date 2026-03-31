@@ -140,33 +140,55 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
         ce_scen = "narrow_activity"
     # narrow_activity scenario
     if ce_scen in circular_economy_config.keys():
-        base_year = circular_economy_config[ce_scen]["buildings"]["base_year"]
-        target_year = circular_economy_config[ce_scen]["buildings"]["target_year"]
+        commercial_ce_mode = circular_economy_config[ce_scen]["buildings"]["commercial_ce_mode"]
+        if commercial_ce_mode == "relative":
+            base_year = circular_economy_config[ce_scen]["buildings"]["base_year"]
+            target_year = circular_economy_config[ce_scen]["buildings"]["target_year"]
 
-        commercial_scenario_settings = circular_economy_config[ce_scen]["buildings"]['commercial']['m2_change_pc']
-        implementation_rate = circular_economy_config[ce_scen]['buildings']['implementation_rate']
+            commercial_scenario_settings = circular_economy_config[ce_scen]["buildings"]['commercial']['m2_change_pc']
+            implementation_rate = circular_economy_config[ce_scen]['buildings']['implementation_rate']
 
-        commercial_scenario_settings_xr = xr.DataArray(
-            list(commercial_scenario_settings.values()),
-            coords={"Region": list(commercial_scenario_settings.keys())},
-            dims=["Region"],
-            name="commercial_scenario_settings"
-        )
+            commercial_scenario_settings_xr = xr.DataArray(
+                list(commercial_scenario_settings.values()),
+                coords={"Region": list(commercial_scenario_settings.keys())},
+                dims=["Region"],
+                name="commercial_scenario_settings"
+            )
 
-        regions_mapped = list(region_knowledge_graph.find_relations_inverse(
-            regions, commercial_scenario_settings.keys()))
-        commercial_scenario_settings_xr_mapped = region_knowledge_graph.rebroadcast_xarray(
-            commercial_scenario_settings_xr, output_coords=regions_mapped, dim="Region")
+            regions_mapped = list(region_knowledge_graph.find_relations_inverse(
+                regions, commercial_scenario_settings.keys()))
+            commercial_scenario_settings_xr_mapped = region_knowledge_graph.rebroadcast_xarray(
+                commercial_scenario_settings_xr, output_coords=regions_mapped, dim="Region")
 
-        region_coords = np.sort(commercial_scenario_settings_xr_mapped.coords["Region"]
-                                .values.astype(int)).astype(str)
-        commercial_scenario_settings_xr_mapped = region_knowledge_graph.rebroadcast_xarray(
-            commercial_scenario_settings_xr_mapped, region_coords, dim ="Region")
-        floorspace_commercial = apply_change_per_region(floorspace_commercial, base_year,
-                                                        target_year,
-                                                        commercial_scenario_settings_xr_mapped,
-                                                        implementation_rate)
-        logging.debug(f"implemented '{ce_scen}' for Commercial Buildings")
+            region_coords = np.sort(commercial_scenario_settings_xr_mapped.coords["Region"]
+                                    .values.astype(int)).astype(str)
+            commercial_scenario_settings_xr_mapped = region_knowledge_graph.rebroadcast_xarray(
+                commercial_scenario_settings_xr_mapped, region_coords, dim ="Region")
+            floorspace_commercial = apply_change_per_region(floorspace_commercial, base_year,
+                                                            target_year,
+                                                            commercial_scenario_settings_xr_mapped,
+                                                            implementation_rate)
+        elif commercial_ce_mode == "convergence":
+            # Converge every region to CONVERGENCE_TARGET m2/capita by CONVERGENCE_END
+            convergence_year_start = circular_economy_config[ce_scen]["buildings"]["convergence_year_start"]
+            convergence_year_end = circular_economy_config[ce_scen]["buildings"]["convergence_year_end"]
+            convergence_target = circular_economy_config[ce_scen]["buildings"]["convergence_target"]        
+
+            total_at_start = floorspace_commercial.sel(Time=convergence_year_start).sum(dim="Type")
+            convergence_target = prism.Q_(convergence_target, prism.U_(total_at_start)) \
+                if prism.U_(total_at_start) is not None else convergence_target
+            pct_change = ((convergence_target - total_at_start) / total_at_start) * 100
+            # Guard against division by zero (regions with no floorspace at start year)
+            pct_change = xr.where(np.isfinite(pct_change), pct_change, 0)
+
+            floorspace_commercial = apply_change_per_region(
+                floorspace_commercial, convergence_year_start, convergence_year_end,
+                pct_change, implementation_rate)
+        else:
+            raise ValueError(f"Invalid commercial_ce_mode: {commercial_ce_mode}")
+        
+        
+        logging.debug(f"implemented '{ce_scen}' for Commercial Buildings with '{commercial_ce_mode}' target")
         # fix unit like this for now :TODO to improve
         floorspace_commercial = prism.Q_(floorspace_commercial, "m^2/person")
 
