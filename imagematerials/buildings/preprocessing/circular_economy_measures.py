@@ -126,9 +126,9 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
         floor_pc_2020_mapped = region_knowledge_graph.rebroadcast_xarray(
             floor_pc_2020_xr, output_coords=regions_mapped, dim="Region")
         target_vals = floor_pc_2020_mapped
-        current_vals = floorspace_commercial.sel(Time=2020).sum(dim="Type")
+        current_vals = floorspace_commercial.sel(Time=2020, Region=regions_mapped).sum(dim="Type")
 
-        scaling_factors = target_vals / current_vals
+        scaling_factors = xr.where(current_vals > 0, target_vals / current_vals, 1.0)
 
         floorspace_commercial.loc[{"Region": regions_mapped}] *= scaling_factors
         logging.debug("implemented 'base' for Commercial Buildings")
@@ -141,12 +141,12 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
     # narrow_activity scenario
     if ce_scen in circular_economy_config.keys():
         commercial_ce_mode = circular_economy_config[ce_scen]["buildings"]["commercial_ce_mode"]
+        implementation_rate = circular_economy_config[ce_scen]['buildings']['implementation_rate']
         if commercial_ce_mode == "relative":
             base_year = circular_economy_config[ce_scen]["buildings"]["base_year"]
             target_year = circular_economy_config[ce_scen]["buildings"]["target_year"]
 
             commercial_scenario_settings = circular_economy_config[ce_scen]["buildings"]['commercial']['m2_change_pc']
-            implementation_rate = circular_economy_config[ce_scen]['buildings']['implementation_rate']
 
             commercial_scenario_settings_xr = xr.DataArray(
                 list(commercial_scenario_settings.values()),
