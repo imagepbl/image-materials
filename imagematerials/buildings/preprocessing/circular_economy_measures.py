@@ -174,11 +174,13 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
             convergence_year_end = circular_economy_config[ce_scen]["buildings"]["convergence_year_end"]
             convergence_target = circular_economy_config[ce_scen]["buildings"]["convergence_target"]        
 
-            total_at_start = floorspace_commercial.sel(Time=convergence_year_start).sum(dim="Type")
-            convergence_target = prism.Q_(convergence_target, prism.U_(total_at_start)) \
-                if prism.U_(total_at_start) is not None else convergence_target
-            pct_change = ((convergence_target - total_at_start) / total_at_start) * 100
-            # Guard against division by zero (regions with no floorspace at start year)
+            # Compute pct_change from the *target-year* baseline so that
+            # arr[target_year] * (1 + pct/100) == convergence_target for every region.
+            total_at_end = floorspace_commercial.sel(Time=convergence_year_end).sum(dim="Type")
+            convergence_target = prism.Q_(convergence_target, prism.U_(total_at_end)) \
+                if prism.U_(total_at_end) is not None else convergence_target
+            pct_change = ((convergence_target - total_at_end) / total_at_end) * 100
+            # Guard against division by zero (regions with no floorspace at target year)
             pct_change = xr.where(np.isfinite(pct_change), pct_change, 0)
 
             floorspace_commercial = apply_change_per_region(

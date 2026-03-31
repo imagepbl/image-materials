@@ -516,6 +516,7 @@ def scenario_change(arr: xr.DataArray, base_year: int, target_year: int, change:
     steepness
         Steepness parameter for the 's-curve' implementation; default is 0.5.
 
+
     Returns
     -------
         A new Xarray with updated values for each year between base_year and target_year, and interpolated values where necessary.
@@ -547,15 +548,17 @@ def scenario_change(arr: xr.DataArray, base_year: int, target_year: int, change:
                 result.loc[{"Time": slice(target_year + 1, None), "Region": region}] = (
                     arr.loc[{"Time": slice(target_year + 1, None), "Region": region}] * (1 + increase / 100.0)
                 )
-                # keep explicit anchor years
-                if 'INTERMEDIATE_YEAR' in globals():
-                    result.loc[{"Time": INTERMEDIATE_YEAR, "Region": region}] = (
-                        arr.loc[{"Time": INTERMEDIATE_YEAR, "Region": region}] * (1 + increase / 100.0)
-                    )
-                if 'END_YEAR' in globals():
-                    result.loc[{"Time": END_YEAR, "Region": region}] = (
-                        arr.loc[{"Time": END_YEAR, "Region": region}] * (1 + increase / 100.0)
-                    )
+                # keep explicit anchor years (only when data_type is set,
+                # e.g. vehicles with sparse time steps)
+                if data_type is not None:
+                    if 'INTERMEDIATE_YEAR' in globals():
+                        result.loc[{"Time": INTERMEDIATE_YEAR, "Region": region}] = (
+                            arr.loc[{"Time": INTERMEDIATE_YEAR, "Region": region}] * (1 + increase / 100.0)
+                        )
+                    if 'END_YEAR' in globals():
+                        result.loc[{"Time": END_YEAR, "Region": region}] = (
+                            arr.loc[{"Time": END_YEAR, "Region": region}] * (1 + increase / 100.0)
+                        )
 
             elif implementation_rate == 'immediate':
                 # unchanged up to base_year; full step from base_year+1 onward, relative to same-year baseline
@@ -618,7 +621,7 @@ def apply_change_per_region(arr: xr.DataArray, base_year: int, target_year: int,
             change={region: float(increase.loc[{"Region": region}].item())}, 
             implementation_rate=implementation_rate, 
             data_type=data_type, 
-            steepness=steepness
+            steepness=steepness,
         )
         results.append(result)
     # Concatenate results along columns (axis=1), aligning on index
