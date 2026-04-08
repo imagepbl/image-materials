@@ -238,6 +238,17 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
             if prism.U_(floorspace_commercial) is not None:
                 floorspace_commercial = floorspace_commercial.pint.dequantify()
 
+            # apply_change_per_region uses groupby+concat which may reorder the Region
+            # coordinate (xarray sorts lexicographically). Realign baseline so that all
+            # subsequent .sel() calls work without AlignmentError.
+            baseline = baseline.reindex_like(floorspace_commercial)
+
+            # Prevent the narrow_activity scenario from exceeding the baseline
+            # (use np.minimum on raw arrays to avoid xarray exact-alignment issues).
+            floorspace_commercial.values = np.minimum(
+                floorspace_commercial.values, baseline.values
+            )
+
             # Phase 2: convergence after target_year (all comparisons on plain floats)
             total_pc_at_target = floorspace_commercial.sel(Time=target_year).sum(dim="Type")
 
@@ -253,11 +264,6 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
                 if str(r) not in low_region_strs
                 and str(r) not in set(str(r) for r in above_cap_at_target)
             ]
-            
-            # prevent narrow from exceeding baseline
-            floorspace_commercial = floorspace_commercial.where(
-                floorspace_commercial <= baseline, baseline
-            )
 
             logging.info("CE phase 2 — above cap at %s (linear decline to cap by %s): %s",
                           target_year, convergence_year_end,
@@ -329,6 +335,13 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
                     r = float(ramp.sel(Time=t))
                     floorspace_commercial.loc[{"Time": t, "Region": reg}] = \
                         fs_at_target * (1 - r) + end_vals * r
+
+            # Final clamp: ensure convergence interpolation never exceeds baseline
+            # at any year (the linear ramp can overshoot baseline at intermediate years
+            # when the baseline is non-monotonic).
+            floorspace_commercial.values = np.minimum(
+                floorspace_commercial.values, baseline.values
+            )
 
             logging.debug(
                 f"implemented '{ce_scen}' for Commercial Buildings (relative + convergence)")
