@@ -2,6 +2,11 @@
 base_year = 2025
 target_year = 2060
 implementation_rate = 'linear'
+convergence_year_start = 2025
+convergence_year_end = 2100
+convergence_cap = 12.0   # m^2/person cap for commercial floorspace
+low_threshold = 5.0      # m^2/person — regions below this in 2020 skip relative reductions
+commercial_ce_mode = "relative"
 
 [buildings.residential.m2_change_pc]
 "Asian-Stan" = -15.0
