@@ -102,6 +102,9 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
         Updated floorspace for commercial targets with circular economy configuration.
 
     """
+    
+    print("FUNCTION CALLED")
+    print(f"ce keys: {list(circular_economy_config.keys())}")
     region_knowledge_graph = create_region_graph()
     regions = floorspace_commercial.coords["Region"].values
     # floorspace_commercial in m^2/cap
@@ -135,6 +138,10 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
         logging.debug("implemented 'base' for Commercial Buildings")
 
     ce_scen = None  # INITIALIZE ce_scen
+
+    # Right after ce_scen is set
+    print(f"ce_scen = {ce_scen}")
+
     if "narrow" in circular_economy_config.keys():
         ce_scen = "narrow"
     if "narrow_activity" in circular_economy_config.keys():
@@ -150,6 +157,8 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
         # --- Build the region-mapped relative-change array (shared by both modes) ---
         commercial_scenario_settings = circular_economy_config[ce_scen]["buildings"]\
             ['commercial']['m2_change_pc']
+
+        print(f"mode = {commercial_ce_mode}")
 
         commercial_scenario_settings_xr = xr.DataArray(
             list(commercial_scenario_settings.values()),
@@ -177,9 +186,10 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
             logging.debug(f"implemented '{ce_scen}' for Commercial Buildings (relative only)")
 
         elif commercial_ce_mode == "convergence":
+            print(f"Called with ce keys: {list(circular_economy_config.keys())}")
             # ── Relative reductions + three-category convergence toward cap ──
             convergence_cap = float(circular_economy_config[ce_scen]["buildings"].get(
-                "convergence_cap", 12.0))
+                "convergence_cap", 14.0))
             convergence_year_end = int(circular_economy_config[ce_scen]["buildings"].get(
                 "convergence_year_end", 2100))
             low_threshold = float(circular_economy_config[ce_scen]["buildings"].get(
@@ -243,6 +253,11 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
                 if str(r) not in low_region_strs
                 and str(r) not in set(str(r) for r in above_cap_at_target)
             ]
+            
+            # prevent narrow from exceeding baseline
+            floorspace_commercial = floorspace_commercial.where(
+                floorspace_commercial <= baseline, baseline
+            )
 
             logging.info("CE phase 2 — above cap at %s (linear decline to cap by %s): %s",
                           target_year, convergence_year_end,
