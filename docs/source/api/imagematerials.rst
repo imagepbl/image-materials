@@ -21,14 +21,6 @@ imagematerials.distribution module
    :undoc-members:
    :show-inheritance:
 
-.. imagematerials.read\_mym module
-.. -------------------------------
-
-.. .. automodule:: imagematerials.read_mym
-..    :members:
-..    :undoc-members:
-..    :show-inheritance:
-
 
 imagematerials.survival module
 ------------------------------
@@ -42,6 +34,14 @@ imagematerials.util module
 ------------------------------
 
 .. automodule:: imagematerials.util
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+imagematerials.concepts module
+------------------------------
+
+.. automodule:: imagematerials.concepts
    :members:
    :undoc-members:
    :show-inheritance:
