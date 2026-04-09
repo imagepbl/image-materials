@@ -594,6 +594,418 @@ def create_class_region_graph():
 
     return class_region_knowledge_graph
 
+def create_image_region_graph():
+    #TODO move to seperate file
+    
+    image_region_knowledge_graph = KnowledgeGraph()
+
+    # --- 1. Define IMAGE regions  ---
+    numeric_region_map = {
+        "region_1": ["CAN", "Canada region"],
+        "region_2": ["USA", "US region"],
+        "region_3": ["MEX", "Mexico region"],
+        "region_4": ["RCAM", "Rest of Central America","Rest C.Am."],
+        "region_5": ["BRA", "Brazil region"],
+        "region_6": ["RSAM", "Rest of South America", "Rest S.Am."],
+        "region_7": ["NAF", "Northern Africa", "N.Africa"],
+        "region_8": ["WAF", "Western Africa", "W.Africa"],
+        "region_9": ["EAF", "Eastern Africa", "E.Africa"],
+        "region_10": ["SAF", "South Africa"],
+        "region_11": ["WEU", "Western Europe", "W.Europe"],
+        "region_12": ["CEU", "Central Europe", "C.Europe"],
+        "region_13": ["TUR", "Turkey"],
+        "region_14": ["UKR", "Ukraine", "Ukraine +", "Ukraine region"],
+        "region_15": ["STAN", "Asian-Stan", "Central Asia"],
+        "region_16": ["RUS", "Russia +", "Russia", "Russia region"],
+        "region_17": ["ME", "Middle East", "M.East"],
+        "region_18": ["INDIA", "India +", "India", "India region"],
+        "region_19": ["KOR", "Korea", "Korea region"],
+        "region_20": ["CHN", "China +", "China", "China region"],
+        "region_21": ["SEAS", "Southeastern Asia", "SE.Asia"],
+        "region_22": ["INDO", "Indonesia +", "Indonesia"],
+        "region_23": ["JAP", "Japan"],
+        "region_24": ["OCE", "Oceania"],
+        "region_25": ["RSAS", "Rest of South Asia", "Rest S.Asia"],
+        "region_26": ["RSAF", "Rest of Southern Africa", "Rest S.Africa"]
+    }
+
+    # Add region nodes
+    for region_number, synonyms in numeric_region_map.items():
+        image_region_knowledge_graph.add(Node(region_number, synonyms=synonyms, inherits_from=None))
+
+    # --- 2. Countries: ISO → synonyms  ---
+    iso_region_map = {
+        # Canada (1)
+        "124": ["Canada"],
+
+        # USA (2)
+        "666": ["St. Pierre and Miquelon"],
+        "840": ["USA", "United States", "US"],
+
+        # Mexico (3)
+        "484": ["Mexico"],
+
+        # Central America (4)
+        "44": ["Bahamas, The", "Bahamas", "The Bahamas"],
+        "52": ["Barbados"],
+        "60": ["Bermuda"],
+        "84": ["Belize"],
+        "92": ["Virgin Islands (British)", "Virgin Isl. (Br.)"],
+        "136": ["Cayman Islands"],
+        "188": ["Costa Rica"],
+        "212": ["Dominica"],
+        "214": ["Dominican Republic"],
+        "222": ["El Salvador"],
+        "308": ["Grenada"],
+        "312": ["Guadeloupe"],
+        "320": ["Guatemala"],
+        "332": ["Haiti"],
+        "340": ["Honduras"],
+        "388": ["Jamaica"],
+        "474": ["Martinique"],
+        "500": ["Montserrat"],
+        "533": ["Aruba"],
+        "530": ["Netherlands Antilles"],
+        "558": ["Nicaragua"],
+        "591": ["Panama"],
+        "630": ["Puerto Rico"],
+        "659": ["St. Kitts and Nevis"],
+        "660": ["Anguilla"],
+        "662": ["St. Lucia"],
+        "670": ["St. Vincent and the Grenadines"],
+        "780": ["Trinidad and Tobago"],
+        "796": ["Turks and Caicos Islands", "Turks and Caicos Isl."],
+        "850": ["Virgin Islands (U.S.)"],
+
+        # Brazil (5)
+        "76": ["Brazil"],
+
+        # Rest of South America (6)
+        "32": ["Argentina"],
+        "68": ["Bolivia"],
+        "152": ["Chile"],
+        "170": ["Colombia"],
+        "218": ["Ecuador"],
+        "238": ["Falkland Islands", "Falklands Isl."],
+        "254": ["French Guiana", "French Guyana"],
+        "328": ["Guyana"],
+        "600": ["Paraguay"],
+        "604": ["Peru"],
+        "740": ["Suriname"],
+        "858": ["Uruguay"],
+        "862": ["Venezuela", "Bolivarian Republic of Venezuela", "Venezuela, RB"],
+
+        # Northern Africa (7)
+        "12": ["Algeria"],
+        "434": ["Libya"],
+        "504": ["Morocco"],
+        "732": ["Western Sahara"],
+        "788": ["Tunisia"],
+        "818": ["Egypt", "Egypt, Arab Rep.", "Arab Republic of Egypt"],
+
+        # Western Africa (8)
+        "120": ["Cameroon"],
+        "132": ["Cape Verde"],
+        "140": ["Central African Republic"],
+        "148": ["Chad"],
+        "178": ["Congo", "Congo, Rep.", "Republic of the Congo", "Congo Republic"],
+        "180": ["Congo (Democratic Republic)", "Congo, Dem. Rep.", "Democratic Republic of Congo", "DRC", "D.R.C."],
+        "204": ["Benin"],
+        "226": ["Equatorial Guinea"],
+        "266": ["Gabon"],
+        "270": ["Gambia, The", "Gambia"],
+        "288": ["Ghana"],
+        "324": ["Guinea"],
+        "384": ["Cote d'Ivoire", "Ivory Coast"],
+        "430": ["Liberia"],
+        "466": ["Mali"],
+        "478": ["Mauritania"],
+        "562": ["Niger"],
+        "566": ["Nigeria"],
+        "624": ["Guinea-Bissau"],
+        "654": ["St. Helena"],
+        "678": ["Sao Tome and Principe"],
+        "686": ["Senegal"],
+        "694": ["Sierra Leone"],
+        "768": ["Togo"],
+        "854": ["Burkina Faso"],
+
+        # Eastern Africa (9)
+        "108": ["Burundi"],
+        "174": ["Comoros"],
+        "231": ["Ethiopia"],
+        "232": ["Eritrea"],
+        "262": ["Djibouti"],
+        "404": ["Kenya"],
+        "450": ["Madagascar"],
+        "480": ["Mauritius"],
+        "638": ["Reunion"],
+        "646": ["Rwanda"],
+        "690": ["Seychelles"],
+        "706": ["Somalia"],
+        "736": ["Sudan"],
+        "800": ["Uganda"],
+
+        # South Africa (10)
+        "710": ["South Africa"],
+
+        # Western Europe (11)
+        "20": ["Andorra"],
+        "40": ["Austria"],
+        "56": ["Belgium"],
+        "208": ["Denmark"],
+        "234": ["Faroe Islands"],
+        "246": ["Finland"],
+        "250": ["France"],
+        "276": ["Germany"],
+        "292": ["Gibraltar"],
+        "300": ["Greece"],
+        "336": ["Vatican City", "Vatican City State"],
+        "352": ["Iceland"],
+        "372": ["Ireland"],
+        "380": ["Italy"],
+        "438": ["Liechtenstein"],
+        "442": ["Luxembourg"],
+        "470": ["Malta"],
+        "492": ["Monaco"],
+        "528": ["Netherlands", "The Netherlands"],
+        "578": ["Norway"],
+        "620": ["Portugal"],
+        "674": ["San Marino"],
+        "724": ["Spain"],
+        "752": ["Sweden"],
+        "756": ["Switzerland"],
+        "826": ["United Kingdom", "UK"],
+
+        # Central Europe (12)
+        "8": ["Albania"],
+        "70": ["Bosnia and Herzegovina"],
+        "100": ["Bulgaria"],
+        "191": ["Croatia"],
+        "196": ["Cyprus"],
+        "203": ["Czech Republic"],
+        "233": ["Estonia"],
+        "348": ["Hungary"],
+        "428": ["Latvia"],
+        "440": ["Lithuania"],
+        "616": ["Poland"],
+        "642": ["Romania"],
+        "703": ["Slovakia", "Slovak Republic"],
+        "705": ["Slovenia"],
+        "807": ["North Macedonia"],
+        "891": ["Serbia and Montenegro"],
+
+        # Turkey (13)
+        "792": ["Turkey", "Türkiye", "Republic of Türkiye"],
+
+        # Ukraine region (14)
+        "112": ["Belarus"],
+        "498": ["Moldova"],
+        "804": ["Ukraine"],
+
+        # Central Asia (15)
+        "398": ["Kazakhstan"],
+        "417": ["Kyrgyz Republic"],
+        "762": ["Tajikistan"],
+        "795": ["Turkmenistan"],
+        "860": ["Uzbekistan"],
+
+        # Russia region (16)
+        "31": ["Azerbaijan"],
+        "51": ["Armenia"],
+        "268": ["Georgia"],
+        "643": ["Russia", "Russian Federation"],
+
+        # Middle East (17)
+        "48": ["Bahrain"],
+        "364": ["Iran", "Iran, Islamic Rep.", "Islamic Republic of Iran"],
+        "368": ["Iraq"],
+        "376": ["Israel"],
+        "400": ["Jordan"],
+        "414": ["Kuwait"],
+        "422": ["Lebanon"],
+        "512": ["Oman"],
+        "634": ["Qatar"],
+        "682": ["Saudi Arabia"],
+        "760": ["Syria", "Syrian Arab Republic"],
+        "784": ["United Arab Emirates", "UAE"],
+        "887": ["Yemen", "Yemen, Rep.", "Republic of Yemen"],
+
+        # India (18)
+        "356": ["India"],
+
+        # Korea region (19)
+        "408": ["North Korea", "Korea, Dem. Rep.", "Democratic People's Republic of Korea", "DPRK"],
+        "410": ["South Korea", "Republic of Korea", "Korea, Rep."],
+
+        # China region (20)
+        "156": ["China"],
+        "158": ["Taiwan"],
+        "344": ["Hong Kong"],
+        "446": ["Macao"],
+        "496": ["Mongolia"],
+
+        # Southeastern Asia (21)
+        "96": ["Brunei"],
+        "104": ["Myanmar"],
+        "116": ["Cambodia"],
+        "418": ["Laos", "Lao PDR", "Lao People's Democratic Republic"],
+        "458": ["Malaysia"],
+        "608": ["Philippines"],
+        "702": ["Singapore"],
+        "704": ["Vietnam", "Viet Nam"],
+        "764": ["Thailand"],
+
+        # Indonesia region (22)
+        "360": ["Indonesia"],
+        "598": ["Papua New Guinea"],
+        "626": ["Timor-Leste", "East Timor", "Democratic Republic of Timor-Leste"],
+
+        # Japan (23)
+        "392": ["Japan"],
+
+        # Oceania (24)
+        "16": ["American Samoa"],
+        "36": ["Australia"],
+        "90": ["Solomon Islands"],
+        "184": ["Cook Islands", "Cook Isl."],
+        "242": ["Fiji"],
+        "258": ["French Polynesia"],
+        "296": ["Kiribati"],
+        "520": ["Nauru"],
+        "540": ["New Caledonia"],
+        "548": ["Vanuatu"],
+        "554": ["New Zealand"],
+        "570": ["Niue"],
+        "580": ["Northern Mariana Islands"],
+        "583": ["Micronesia", "Micronesia, Fed. Sts.", "Federated States of Micronesia"],
+        "584": ["Marshall Islands"],
+        "585": ["Palau"],
+        "612": ["Pitcairn"],
+        "772": ["Tokelau"],
+        "776": ["Tonga"],
+        "798": ["Tuvalu"],
+        "876": ["Wallis and Futuna", "Territory of the Wallis and Futuna Islands"],
+        "882": ["Samoa"],
+
+        # Rest of South Asia (25)
+        "4": ["Afghanistan"],
+        "50": ["Bangladesh"],
+        "64": ["Bhutan"],
+        "144": ["Sri Lanka"],
+        "462": ["Maldives"],
+        "524": ["Nepal"],
+        "586": ["Pakistan"],
+
+        # Rest of Southern Africa (26)
+        "24": ["Angola"],
+        "72": ["Botswana"],
+        "426": ["Lesotho"],
+        "454": ["Malawi"],
+        "508": ["Mozambique"],
+        "516": ["Namibia"],
+        "716": ["Zimbabwe"],
+        "748": ["Eswatini", "Swaziland"],
+        "834": ["Tanzania"],
+        "894": ["Zambia"],
+    }
+
+    # --- 3. ISO → region mapping ---
+    iso_to_class = {
+        # Canada
+        "124": "region_1",
+        # USA
+        "840": "region_2", "666": "region_2",
+        # Mexico
+        "484": "region_3",
+        # Central America
+        "44": "region_4", "52": "region_4", "60": "region_4", "84": "region_4", "92": "region_4", 
+        "136": "region_4", "188": "region_4", "212": "region_4", "214": "region_4", "222": "region_4",
+        "308": "region_4", "312": "region_4", "320": "region_4", "332": "region_4", "340": "region_4",
+        "388": "region_4", "474": "region_4", "500": "region_4", "533": "region_4", "530": "region_4", 
+        "558": "region_4", "591": "region_4", "630": "region_4", "659": "region_4", "660": "region_4",
+        "662": "region_4", "670": "region_4", "780": "region_4", "796": "region_4", "850": "region_4",
+        # Brazil
+        "76": "region_5",
+        # Rest South America
+        "32": "region_6", "68": "region_6", "152": "region_6", "170": "region_6", "218": "region_6",
+        "238": "region_6", "254": "region_6", "328": "region_6", "600": "region_6", "604": "region_6",
+        "740": "region_6", "858": "region_6", "862": "region_6",
+        # Northern Africa
+        "12": "region_7", "434": "region_7", "504": "region_7", "732": "region_7", "788": "region_7", 
+        "818": "region_7",
+        # Western Africa
+        "120": "region_8", "132": "region_8", "140": "region_8", "148": "region_8", "178": "region_8",
+        "180": "region_8", "204": "region_8", "226": "region_8", "266": "region_8", "270": "region_8",
+        "288": "region_8", "324": "region_8", "384": "region_8", "430": "region_8", "466": "region_8", 
+        "478": "region_8", "562": "region_8", "566": "region_8", "624": "region_8", "654": "region_8",
+        "678": "region_8", "686": "region_8", "694": "region_8", "768": "region_8", "854": "region_8",
+        # Eastern Africa
+        "108": "region_9", "174": "region_9", "231": "region_9", "232": "region_9", "262": "region_9",
+        "404": "region_9", "450": "region_9", "480": "region_9", "638": "region_9", "646": "region_9", 
+        "690": "region_9", "706": "region_9", "736": "region_9", "800": "region_9",
+        # South Africa
+        "710": "region_10",
+        # Western Europe
+        "20": "region_11", "40": "region_11", "56": "region_11", "208": "region_11", "234": "region_11",
+        "246": "region_11", "250": "region_11", "276": "region_11", "292": "region_11", "300": "region_11",
+        "336": "region_11", "352": "region_11", "372": "region_11", "380": "region_11", "438": "region_11", 
+        "442": "region_11", "470": "region_11", "492": "region_11", "528": "region_11", "578": "region_11", 
+        "620": "region_11", "674": "region_11", "724": "region_11", "752": "region_11", "756": "region_11",
+        "826": "region_11",
+        # Central Europe
+        "8": "region_12", "70": "region_12", "100": "region_12", "191": "region_12", "196": "region_12",
+        "203": "region_12", "233": "region_12", "348": "region_12", "428": "region_12", "440": "region_12",
+        "616": "region_12", "642": "region_12", "703": "region_12", "705": "region_12", "807": "region_12", 
+        "891": "region_12",
+        # Turkey
+        "792": "region_13",
+        # Ukraine region
+        "804": "region_14", "112": "region_14", "498": "region_14",
+        # Central Asia
+        "398": "region_15", "417": "region_15", "762": "region_15", "795": "region_15", "860": "region_15",
+        # Russia region
+        "31": "region_16", "51": "region_16", "268": "region_16", "643": "region_16",
+        # Middle East
+        "48": "region_17", "364": "region_17", "368": "region_17", "376": "region_17", "400": "region_17",
+        "414": "region_17", "422": "region_17", "512": "region_17", "634": "region_17", "682": "region_17",
+        "760": "region_17", "784": "region_17", "887": "region_17",
+        # India
+        "356": "region_18",
+        # Korea
+        "410": "region_19", "408": "region_19",
+        # China region
+        "156": "region_20", "158": "region_20", "344": "region_20", "446": "region_20", "496": "region_20",
+        # Southeastern Asia
+        "96": "region_21", "104": "region_21", "116": "region_21", "418": "region_21", "458": "region_21",
+        "608": "region_21", "702": "region_21", "704": "region_21", "764": "region_21",
+        # Indonesia region
+        "360": "region_22", "598": "region_22", "626": "region_22",
+        # Japan
+        "392": "region_23",
+        # Oceania
+        "16": "region_24", "36": "region_24", "90": "region_24", "184": "region_24", "242": "region_24", 
+        "258": "region_24", "296": "region_24", "520": "region_24", "540": "region_24", "548": "region_24",
+        "554": "region_24", "570": "region_24", "580": "region_24", "583": "region_24", "584": "region_24", 
+        "585": "region_24", "612": "region_24", "772": "region_24", "776": "region_24", "798": "region_24", 
+        "876": "region_24", "882": "region_24",
+
+        # Rest of South Asia
+        "4": "region_25", "50": "region_25", "64": "region_25", "144": "region_25", "462": "region_25", 
+        "524": "region_25", "586": "region_25", 
+
+        # Rest of Southern Africa
+        "24": "region_26", "72": "region_26", "426": "region_26", "454": "region_26", "508": "region_26", 
+        "516": "region_26", "716": "region_26", "748": "region_26", "834": "region_26", "894": "region_26",
+    }
+
+    # --- 4. Add country nodes ---
+    for iso, synonyms in iso_region_map.items():
+        parent = iso_to_class.get(iso)
+        image_region_knowledge_graph.add(Node(iso, synonyms=synonyms, inherits_from=parent))
+
+    return image_region_knowledge_graph
+
 
 def create_region_graph():
     #TODO move to seperate file
