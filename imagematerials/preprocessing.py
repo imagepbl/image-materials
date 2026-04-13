@@ -12,6 +12,10 @@ from imagematerials.electricity.preprocessing import get_preprocessing_data_gen 
 from imagematerials.electricity.preprocessing import get_preprocessing_data_grid as prep_elc_grid
 from imagematerials.electricity.preprocessing import get_preprocessing_data_stor as prep_elc_stor
 
+from imagematerials.fossil_fuels.fftest import get_preprocessing_data_extraction as prep_ff_extr
+from imagematerials.fossil_fuels.fftest import get_preprocessing_data_processing as prep_ff_proc
+from imagematerials.fossil_fuels.fftest import get_preprocessing_data_pipelines as prep_ff_pipe
+from imagematerials.fossil_fuels.fftest import get_preprocessing_data_transport as prep_ff_trp
 
 from imagematerials.factory import Sector
 from imagematerials.util import (
@@ -34,6 +38,26 @@ def _get_vehicles_prep_data(base_dir, climate_policy_scenario_dir, circular_econ
 
     return prep_data
 
+def _get_fossilfuels_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_scenario_dirs, scenario, year_start, year_end, year_out):
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
+        circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
+        prep_data_extraction = prep_ff_extr(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
+        prep_data_processing = prep_ff_proc(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
+        prep_data_pipelines = prep_ff_pipe(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
+        prep_data_transport = prep_ff_trp(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
+            
+        prep_data = {
+            "prep_data_extraction": prep_data_extraction,
+            "prep_data_processing": prep_data_processing,
+            "prep_data_pipelines": prep_data_pipelines,
+            "prep_data_transport": prep_data_transport,
+
+        }
+    return prep_data
+
 def _get_electricity_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_scenario_dirs, scenario, year_start, year_end, year_out):
 
     with warnings.catch_warnings():
@@ -44,6 +68,7 @@ def _get_electricity_prep_data(base_dir, climate_policy_scenario_dir, circular_e
         prep_data_grid_lines, prep_data_grid_add = prep_elc_grid(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
         prep_data_stor_phs, prep_data_stor_other = prep_elc_stor(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
         
+
         prep_data = {
             "prep_data_gen": prep_data_gen,
             "prep_data_grid_lines": prep_data_grid_lines,
@@ -65,6 +90,9 @@ def _get_rest_prep_data(base_dir, climate_policy_scenario_dir, scenario_name):
     sector_rest = Sector("rest_of", prep_data)
     return sector_rest
 
+def _get_end_of_life_prep_data(base_dir, circular_economy_scenario_dirs):
+    prep_data = prep_eol(base_dir, circular_economy_scenario_dirs)
+    return prep_data
 
 def _get_vehicles_sector(prep_data):
     output_coords_type = list(prep_data["stocks"].Type.values)
@@ -79,6 +107,17 @@ def _get_vehicles_sector(prep_data):
     sec_vhc = Sector("vehicles", new_prep_data)
     return sec_vhc
 
+def _get_fossilfuels_sector(prep_data):
+
+    sec_ff_extr = Sector("ff_extr", prep_data["prep_data_extraction"])
+    sec_ff_proc = Sector("ff_proc", prep_data["prep_data_processing"])
+    sec_ff_pipe = Sector("ff_pipe", prep_data["prep_data_pipelines"])
+    sec_ff_trp = Sector("ff_trp", prep_data["prep_data_transport"])
+
+
+    sec_ff = [sec_ff_extr, sec_ff_proc, sec_ff_pipe, sec_ff_trp]
+
+    return sec_ff
 
 def _get_electricity_sector(prep_data):
 
@@ -92,14 +131,8 @@ def _get_electricity_sector(prep_data):
 
     return sec_elc
 
-
 def _get_buildings_sector(prep_data):
     return Sector("buildings", prep_data)
-
-
-def _get_end_of_life_prep_data(base_dir, circular_economy_scenario_dirs):
-    prep_data = prep_eol(base_dir, circular_economy_scenario_dirs)
-    return prep_data
 
 def _get_end_of_life_sector(prep_data):
     return Sector("eol", prep_data)
@@ -184,6 +217,13 @@ def get_preprocessing_data(
                                                    year_start,
                                                    year_end,
                                                    year_out)
+        elif sector == "fossil_fuels":
+            prep_data = _get_fossilfuels_prep_data(base_dir, climate_policy_scenario_dir,
+                                                   circular_economy_scenario_dirs,
+                                                   standard_scenario,
+                                                   year_start,
+                                                   year_end,
+                                                   year_out)
         elif sector == "rest_of":
             prep_data = _get_rest_prep_data(base_dir, climate_policy_scenario_dir,
                                             scenario_name)
@@ -204,6 +244,8 @@ def get_preprocessing_data(
         return _get_buildings_sector(prep_data)
     elif sector == "electricity":
         return _get_electricity_sector(prep_data)
+    elif sector == "fossil_fuels":
+        return _get_fossilfuels_sector(prep_data)
     elif sector == "rest_of":
         return _get_rest_prep_data(base_dir, climate_policy_scenario_dir, scenario_name)
     elif sector == "eol":
