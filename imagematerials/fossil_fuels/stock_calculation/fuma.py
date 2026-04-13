@@ -202,6 +202,7 @@ production_intensity_weight_coal = production_intensity_coal.sum(axis=1)
 preparation_intensity_weight_coal = preparation_intensity_coal.sum(axis=1)
 production_intensity_weight_gas = production_intensity_gas.sum(axis=1)
 production_intensity_weight_oil = production_intensity_oil.sum(axis=1)
+production_intensity_weight_oil.head()
 processing_intensity_weight_gas = processing_intensity_gas.sum(axis=1)
 refinery_intensity_weight_oil = refinery_intensity_oil.sum(axis=1)
 
