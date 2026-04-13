@@ -675,8 +675,9 @@ def create_image_region_graph():
         - The region and ISO mappings are hardcoded and may be moved to a
           separate configuration file in the future.
         - CAUTION: nodes must be unique, so the IMAGE region "USA" can't be added as a country with 
-          the same name, but only as a synonym (US or United States). If it occurs in a dataset as a 
-          country, it needs to be renamed to "United States" or "US" before using the knowledge graph.
+          the same name, but only as a synonym (US or United States). In the case of the USA, if it 
+          occurs in a dataset as a country this is not a problem as it will be matched to the region 
+          node directly (and region = country in that case).
     """
     #TODO move to seperate file
     

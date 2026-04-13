@@ -209,6 +209,14 @@ dict_storage_tech_to_groups  = {
 
 # Visualization related ---------------------------------------------
 
+# IMAGE regions
+# Generate 26 distinct colors by combining named color sets
+tab20 = plt.cm.tab20.colors          # 20 colors
+tab20b = plt.cm.tab20b.colors        # 20 more, pick 6
+extra = tab20b[::3][:6]              # pick every 3rd to maximize difference
+COLORS_IMAGE_REGIONS = list(tab20) + list(extra)   # 26 colors total
+
+
 # Generation technologies
 technologies = [
     'Solar PV', 'Solar PV residential', 'CSP', 'Wind onshore', 'Wind offshore', 'Wave', 'Hydro', 

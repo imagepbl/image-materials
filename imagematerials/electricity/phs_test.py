@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 
 from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.concepts import create_image_region_graph
+from imagematerials.electricity.constants import COLORS_IMAGE_REGIONS
 
 path_current = Path().resolve()
 path_base = path_current.parent.parent # base path of the project -> image-materials
@@ -34,7 +35,7 @@ ds_sum = ds_sum.rename({'Country': 'Region', 'Commisioning Year': 'Commissioning
 knowledge_graph_region = create_image_region_graph()
 ds_sum_region = ds_sum.copy()
 
-ds_sum_region = knowledge_graph_region.aggregate_sum(ds_sum_region, output_coords=IMAGE_REGIONS, dim="Region", require_relation=False) #rebroadcast_xarray
+ds_sum_region = knowledge_graph_region.aggregate_sum(ds_sum_region, output_coords=IMAGE_REGIONS, dim="Region", require_relation=False)
 
 ####################################################################################################
 #%% Aggregate years to decades and calculate shares
@@ -122,7 +123,7 @@ x = np.arange(len(bin_labels))
 fig, ax = plt.subplots(figsize=(14, 6))
 
 for i, region in enumerate(regions):
-    ax.plot(x, data[:, i], marker="o", linewidth=1.5, label=region)
+    ax.plot(x, data[:, i], marker="o", linewidth=1.5, color=COLORS_IMAGE_REGIONS[i], label=region)
 
 ax.set_xticks(x)
 ax.set_xticklabels(bin_labels, rotation=45, ha="right")
