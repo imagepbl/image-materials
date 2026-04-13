@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Sequence, Union
+from typing import Sequence, Union, Optional
 
 import prism
 import xarray as xr
@@ -186,7 +186,7 @@ class KnowledgeGraph():
                 return item
         raise KeyError(f"Key {node_name} does not exist")
 
-    def find_relations(self, input_coords: Sequence[str], output_coords) -> dict[str, str]:
+    def find_relations(self, input_coords: Sequence[str], output_coords, require_relation: bool = True) -> dict[str, str]:
         """Find the connections from the input coordinates to output coordinates.
 
         Parameters
@@ -195,6 +195,11 @@ class KnowledgeGraph():
             Coordinates in the xarray DataArray that you might want to transform.
         output_coords:
             Coordinates in the output xarray DataArray that you want to transform to.
+        require_relation:
+            Whether to raise an error if no relation is found. By default True. If False, an empty
+            list is returned when no relation is found, which can be useful when you want to find
+            relations for multiple output coordinates and do not want to raise an error when no
+            relation is found for one of the output coordinates.
 
         Examples
         --------
@@ -214,10 +219,13 @@ class KnowledgeGraph():
         """
         relations = {}
         for cur_out_coord in output_coords:
-            relations[cur_out_coord] = self.find_one_relation(input_coords, cur_out_coord)
+            relations[cur_out_coord] = self.find_one_relation(input_coords, cur_out_coord, require_relation)
         return relations
 
-    def find_one_relation(self, input_coords: list[str], output_name: str) -> list[str]:
+    def find_one_relation(self, 
+                          input_coords: list[str], 
+                          output_name: str,
+                          require_relation: bool = True) -> list[str]:
         """Find a related object from a list of inputs.
 
         Differs from :meth:`KnowledgeGraph.find_relations` through finding the related inputs
@@ -230,6 +238,11 @@ class KnowledgeGraph():
             found for the output name.
         output_name
             Output name for which related terms are to be found.
+        require_relation
+            Whether to raise an error if no relation is found. By default True. If False, an empty 
+            list is returned when no relation is found, which can be useful when you want to find 
+            relations for multiple output coordinates and do not want to raise an error when no 
+            relation is found for one of the output coordinates.
 
         Returns
         -------
@@ -274,7 +287,7 @@ class KnowledgeGraph():
         if len(ancestors) > 0 and len(descendants) > 0:
             raise ValueError(f"Cannot find relations, because {output_node} has both ancestors "
                              f"({ancestors}) and descendants ({descendants})")
-        if len(ancestors) + len(descendants) == 0:
+        if require_relation and len(ancestors) + len(descendants) == 0:
             raise ValueError(f"Cannot find relations of {output_node} in input coordinates.")
 
         return list(set(ancestors + descendants))
@@ -341,8 +354,12 @@ class KnowledgeGraph():
                 all_descendants.extend(self._find_descendants(input_coords, item))
         return all_descendants
 
-    def rebroadcast_xarray(self, input_array, output_coords, dim="Type", shares=None,
-                           dim_shares=None):
+    def rebroadcast_xarray(self, 
+                           input_array: xr.DataArray, 
+                           output_coords: Sequence[str], 
+                           dim: str = "Type", 
+                           shares: Optional[xr.DataArray] = None,
+                           dim_shares: Optional[str] = None):
         """Disaggregate supertypes into subtypes.
 
         If shares for the subtypes are provided,
@@ -370,6 +387,21 @@ class KnowledgeGraph():
             Disaggregated xr.DataArray.
 
         """
+        # Dataset case ----------
+        if isinstance(input_array, xr.Dataset):
+            # Apply to each variable independently
+            return xr.Dataset({
+                var: self.rebroadcast_xarray(
+                    input_array[var],
+                    output_coords,
+                    dim=dim,
+                    shares=shares,
+                    dim_shares=dim_shares
+                )
+                for var in input_array.data_vars
+            }, attrs=input_array.attrs)
+    
+        # DataArray case ----------
         if shares is not None and dim_shares is None:
             dim_shares = dim
 
@@ -411,7 +443,11 @@ class KnowledgeGraph():
 
         return new_array
 
-    def aggregate_sum(self, input_array, output_coords, dim="Type"):
+    def aggregate_sum(self, 
+                      input_array: xr.DataArray, 
+                      output_coords: Sequence[str], 
+                      dim: str = "Type",
+                      require_relation: bool = True) -> xr.DataArray:
         """Aggregate the data over subtypes and sums them.
 
         Parameters
@@ -422,13 +458,34 @@ class KnowledgeGraph():
             The output coordinates over which to aggregate/sum.
         dim, optional
             Dimension to aggregate/sum over, by default "Type"
+        require_relation, optional
+            Whether to raise an error if one of the output coordinates has no relation in the input
+            array. By default True. If False, output coordinates without a relation in the input 
+            array are filled with zeros, which can be useful when you want to find relations for 
+            multiple output coordinates and do not want to raise an error when no relation is found 
+            for one of the output coordinates.
 
         Returns
         -------
             Aggregated xr.DataArray.
 
         """
-        output_to_input = self.find_relations(input_array.coords[dim].values, output_coords)
+
+        # Dataset case ----------
+        if isinstance(input_array, xr.Dataset):
+            # Apply to each variable independently
+            return xr.Dataset({
+                var: self.aggregate_sum(
+                    input_array[var],
+                    output_coords,
+                    dim=dim,
+                    require_relation=require_relation
+                )
+                for var in input_array.data_vars
+            }, attrs=input_array.attrs)
+    
+        # DataArray case ----------
+        output_to_input = self.find_relations(input_array.coords[dim].values, output_coords, require_relation)
         output_arrays = []
         for output, input_list in output_to_input.items():
             output_arrays.append(input_array.sel(**{dim: input_list}).sum(dim))
@@ -595,6 +652,32 @@ def create_class_region_graph():
     return class_region_knowledge_graph
 
 def create_image_region_graph():
+    """Construct and return a knowledge graph representing IMAGE regions and their
+    associated countries.
+
+    The graph consists of two hierarchical layers:
+    1. Region nodes (e.g., "region_1", "region_2"), each with a set of synonyms representing the 
+       IMAGE regions.
+    2. Country nodes identified by ISO numeric codes, each linked to a parent
+       region via the `inherits_from` attribute.
+
+    Returns:
+    -------
+        KnowledgeGraph: A populated knowledge graph containing:
+            - Region nodes without parents.
+            - Country nodes linked to their respective regions.
+
+    Notes:
+    ------
+        - Synonyms include abbreviations and alternative spellings to support
+          flexible matching.
+        - ISO codes are stored as strings.
+        - The region and ISO mappings are hardcoded and may be moved to a
+          separate configuration file in the future.
+        - CAUTION: nodes must be unique, so the IMAGE region "USA" can't be added as a country with 
+          the same name, but only as a synonym (US or United States). If it occurs in a dataset as a 
+          country, it needs to be renamed to "United States" or "US" before using the knowledge graph.
+    """
     #TODO move to seperate file
     
     image_region_knowledge_graph = KnowledgeGraph()
@@ -610,28 +693,24 @@ def create_image_region_graph():
         "region_7": ["NAF", "Northern Africa", "N.Africa"],
         "region_8": ["WAF", "Western Africa", "W.Africa"],
         "region_9": ["EAF", "Eastern Africa", "E.Africa"],
-        "region_10": ["SAF", "South Africa"],
+        "region_10": ["SAF", "South Africa region"],
         "region_11": ["WEU", "Western Europe", "W.Europe"],
         "region_12": ["CEU", "Central Europe", "C.Europe"],
-        "region_13": ["TUR", "Turkey"],
-        "region_14": ["UKR", "Ukraine", "Ukraine +", "Ukraine region"],
+        "region_13": ["TUR", "Turkey region"],
+        "region_14": ["UKR", "Ukraine region", "Ukraine +", "Ukraine region"],
         "region_15": ["STAN", "Asian-Stan", "Central Asia"],
-        "region_16": ["RUS", "Russia +", "Russia", "Russia region"],
+        "region_16": ["RUS", "Russia +", "Russia region"],
         "region_17": ["ME", "Middle East", "M.East"],
-        "region_18": ["INDIA", "India +", "India", "India region"],
-        "region_19": ["KOR", "Korea", "Korea region"],
-        "region_20": ["CHN", "China +", "China", "China region"],
+        "region_18": ["INDIA", "India +", "India region"],
+        "region_19": ["KOR", "Korea region"],
+        "region_20": ["CHN", "China +", "China region"],
         "region_21": ["SEAS", "Southeastern Asia", "SE.Asia"],
-        "region_22": ["INDO", "Indonesia +", "Indonesia"],
-        "region_23": ["JAP", "Japan"],
+        "region_22": ["INDO", "Indonesia +", "Indonesia region"],
+        "region_23": ["JAP", "Japan region"],
         "region_24": ["OCE", "Oceania"],
         "region_25": ["RSAS", "Rest of South Asia", "Rest S.Asia"],
         "region_26": ["RSAF", "Rest of Southern Africa", "Rest S.Africa"]
     }
-
-    # Add region nodes
-    for region_number, synonyms in numeric_region_map.items():
-        image_region_knowledge_graph.add(Node(region_number, synonyms=synonyms, inherits_from=None))
 
     # --- 2. Countries: ISO → synonyms  ---
     iso_region_map = {
@@ -640,7 +719,7 @@ def create_image_region_graph():
 
         # USA (2)
         "666": ["St. Pierre and Miquelon"],
-        "840": ["USA", "United States", "US"],
+        "840": ["United States", "US"], #"USA" is already used as a synonym for the region, so we can't use it here as a country name
 
         # Mexico (3)
         "484": ["Mexico"],
@@ -747,7 +826,7 @@ def create_image_region_graph():
         "800": ["Uganda"],
 
         # South Africa (10)
-        "710": ["South Africa"],
+        "710": ["South Africa", "Republic of South Africa"],
 
         # Western Europe (11)
         "20": ["Andorra"],
@@ -999,7 +1078,12 @@ def create_image_region_graph():
         "516": "region_26", "716": "region_26", "748": "region_26", "834": "region_26", "894": "region_26",
     }
 
-    # --- 4. Add country nodes ---
+    # --- 4. Add nodes ---
+
+    # Add region nodes
+    for region_number, synonyms in numeric_region_map.items():
+        image_region_knowledge_graph.add(Node(region_number, synonyms=synonyms, inherits_from=None))
+    # Add country nodes 
     for iso, synonyms in iso_region_map.items():
         parent = iso_to_class.get(iso)
         image_region_knowledge_graph.add(Node(iso, synonyms=synonyms, inherits_from=parent))
