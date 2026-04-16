@@ -86,14 +86,14 @@ ref_frac = 0.8  #  refineryRefining capacity used
 import os
 
 primpersec = read_mym_df(
-    os.path.join("data", "raw", "image", scenario, "EnergyFlows", "PrimPerSec.out")  
+    os.path.join("..","data", "raw", "image", scenario, "EnergyFlows", "PrimPerSec.out")  
 )
   # primary enery consumption per sector in GJ
 
 
 final_energy = read_mym_df(
     os.path.join(
-        "data", "raw", "image", scenario, "EnergyFlows", "final_energy_rt.out"
+        "..","data", "raw", "image", scenario, "EnergyFlows", "final_energy_rt.out"
     )
 )  
 
