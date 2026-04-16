@@ -76,16 +76,16 @@ print(f"Base directory: {BASE_DIR}")
 print(f"Data directory: {DATA_DIR}")
 print(f"Output directory: {OUTPUT_DIR}")
 
-from stock_calculation.attributes import constants
-from stock_calculation.calculations.materials import cohorts_to_materials_typical_np
-from stock_calculation.calculations.pipelines import pipelines_indexed_stock_growth
-from stock_calculation.calculations.transport import transport
-from stock_calculation.calculations.extraction import extraction_stocks
-from stock_calculation.calculations.storage import storage_indexed_stocks_growth
-from stock_calculation.calculations.refinery import refinery_stocks
-from stock_calculation.prepare_output_files import merge_material, merge_total
-from stock_calculation.mym.read_mym import read_mym_df
-from stock_calculation.stock_model.inflow_outflow_models import (
+from imagematerials.fossil_fuels.preprocessing.stock_calculation.attributes import constants
+from imagematerials.fossil_fuels.preprocessing.stock_calculation.calculations.materials import cohorts_to_materials_typical_np
+from imagematerials.fossil_fuels.preprocessing.stock_calculation.calculations.pipelines import pipelines_indexed_stock_growth
+from imagematerials.fossil_fuels.preprocessing.stock_calculation.calculations.transport import transport
+from imagematerials.fossil_fuels.preprocessing.stock_calculation.calculations.extraction import extraction_stocks
+from imagematerials.fossil_fuels.preprocessing.stock_calculation.calculations.storage import storage_indexed_stocks_growth
+from imagematerials.fossil_fuels.preprocessing.stock_calculation.calculations.refinery import refinery_stocks
+from imagematerials.fossil_fuels.preprocessing.stock_calculation.prepare_output_files import merge_material, merge_total
+from imagematerials.fossil_fuels.preprocessing.stock_calculation.mym.read_mym import read_mym_df
+from imagematerials.fossil_fuels.preprocessing.stock_calculation.stock_model.inflow_outflow_models import (
     inflow_outflow_typical_np,
     inflow_outflow_dynamic_np,
     inflow_outflow_surplus,
@@ -661,7 +661,7 @@ import pint
 import xarray as xr
 import prism
 
-from ffconstants import FF_TECHNOLOGIES, IMAGE_REGIONS, STANDARD_SCEN_EXTERNAL_DATA, YEAR_FIRST_GRID, Standard_deviation_lifetime
+from imagematerials.fossil_fuels.preprocessing.ffconstants import FF_TECHNOLOGIES, IMAGE_REGIONS, STANDARD_SCEN_EXTERNAL_DATA, YEAR_FIRST_GRID, Standard_deviation_lifetime
 
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime

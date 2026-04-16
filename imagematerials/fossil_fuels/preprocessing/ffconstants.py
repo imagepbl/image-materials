@@ -34,7 +34,7 @@ TONNES_TO_KGS = 1000
 
 # General constants ---------------------------------------------
 
-Standard_deviation_lifetime = 0.3 
+SD_LIFETIME = 0.3 
 
 # Define the units for each dimension
 unit_mapping = {

@@ -9,16 +9,16 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 OUTPUT_DIR = BASE_DIR / "output"
 
-from attributes import constants
-from calculations.materials import cohorts_to_materials_typical_np
-from calculations.pipelines import pipelines_indexed_stock_growth
-from calculations.transport import transport
-from calculations.extraction import extraction_stocks
-from calculations.storage import storage_indexed_stocks_growth
-from calculations.refinery import refinery_stocks
-from prepare_output_files import merge_material, merge_total
-from mym.read_mym import read_mym_df
-from stock_model.inflow_outflow_models import (
+from imagematerials.fossil_fuels.preprocessing.stock_calculation.attributes import constants
+from imagematerials.fossil_fuels.preprocessing.stock_calculation.calculations.materials import cohorts_to_materials_typical_np
+from imagematerials.fossil_fuels.preprocessing.stock_calculation.calculations.pipelines import pipelines_indexed_stock_growth
+from imagematerials.fossil_fuels.preprocessing.stock_calculation.calculations.transport import transport
+from imagematerials.fossil_fuels.preprocessing.stock_calculation.calculations.extraction import extraction_stocks
+from imagematerials.fossil_fuels.preprocessing.stock_calculation.calculations.storage import storage_indexed_stocks_growth
+from imagematerials.fossil_fuels.preprocessing.stock_calculation.calculations.refinery import refinery_stocks
+from imagematerials.fossil_fuels.preprocessing.stock_calculation.prepare_output_files import merge_material, merge_total
+from imagematerials.fossil_fuels.preprocessing.stock_calculation.mym.read_mym import read_mym_df
+from imagematerials.fossil_fuels.preprocessing.stock_calculation.stock_model.inflow_outflow_models import (
     inflow_outflow_typical_np,
     inflow_outflow_dynamic_np,
     inflow_outflow_surplus,

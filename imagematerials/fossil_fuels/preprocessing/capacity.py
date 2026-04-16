@@ -1,6 +1,6 @@
 #
 # Outline:
-# 1) Imprort general modules and constants
+# 1) Import general modules and constants
 # 2) Define functions to get preprocessing data for stocks of each supply chain stage (extraction, processing, transport, pipelines)
 # 3) Within each step, first read in necessary file and then convert to xarray and then do necessary processing to get it into the right format for the model (e.g. rebroadcasting to standard region and technology names, adding units, etc.)
 
@@ -9,13 +9,22 @@
 import pint
 import xarray as xr
 import prism
+import pandas as pd
+import numpy as np
+import os
+from pathlib import Path
 
-from ffconstants import FF_TECHNOLOGIES, IMAGE_REGIONS, STANDARD_SCEN_EXTERNAL_DATA, YEAR_FIRST_GRID, Standard_deviation_lifetime
 
-from imagematerials.fossil_fuels.fftest import create_fossil_fuel_graph
+from imagematerials.fossil_fuels.preprocessing.ffconstants import FF_TECHNOLOGIES, IMAGE_REGIONS, STANDARD_SCEN_EXTERNAL_DATA, YEAR_FIRST_GRID, SD_LIFETIME 
+from imagematerials.fossil_fuels.preprocessing.drivers import coal_infra, oil_infra, gas_infra
+
+extraction_stock_oil, transport_total_oil, oil_pipelines, oil_storage, refinery_stock_oil = oil_infra()
+extraction_stock_coal, preparation_stock_coal, transport_total_coal = coal_infra()
+extraction_stock_gas, transport_total_gas, gas_pipelines, processing_stock_gas = gas_infra()
+
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
-from imagematerials.concepts import KnowledgeGraph, Node, create_electricity_graph, create_region_graph
+from imagematerials.concepts import KnowledgeGraph, Node, create_fossil_fuel_graph, create_region_graph
 from imagematerials.electricity.utils import (
    MNLogit, 
    stock_tail, 
@@ -35,17 +44,21 @@ print("current:", path_current)
 print("base:", path_base)
 
 #still not sure what to do with these 
-scen_folder = "SSP3_no_policy"
+scen_folder = "SSP2_baseline"
 climate_policy_scenario_dir = Path(path_base, "data", "raw", "image", scen_folder)
-STANDARD_SCEN_EXTERNAL_DATA = "SSP3_no_policy" 
+STANDARD_SCEN_EXTERNAL_DATA = "SSP2_baseline" 
+DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "raw" / "fossil_fuels" / "Drivers"
 
 
 year_start = 1880
 year_end = 2100
 year_out = 2100
 
+knowledge_graph_region = create_region_graph()
+fossil_fuel_knowledge_graph = create_fossil_fuel_graph()
+
 #%%Extraction stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
-def get_preprocessing_data_extraction(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+def compute_extraction_capacity(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
     path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
     # test if path_external_data_scenario exists and if not set to standard scenario
@@ -56,12 +69,9 @@ def get_preprocessing_data_extraction(path_base: str, climate_policy_config: dic
     #Stock of each type of extraction infrastructure (stock demand per generation technology) per region per year
     #files are sourced from the output of the stock calculation (FUMA) for the relevant scenario, which is found under stock_calculation/output/SSP1_ML (or the relevant scenario)
 #change these so they read in the result of "drivers.py" instead of reading in the csv files directly, since the drivers.py file already reads in the csv files and does some processing on them, so we can just use the processed data from there instead of reading in the csv files again and doing the same processing again (which can lead to inconsistencies if we forget to do the same processing steps in both places)
-    extraction_coal = Path(path_base, "data", "raw", "fossil_fuels", "Scenario_data",scenario, "coal_extraction_stock_kg.csv")
-    df_extraction_coal = pd.read_csv(extraction_coal)
-    extraction_oil = Path(path_base, "data", "raw", "fossil_fuels", "Scenario_data",scenario, "oil_extraction_stock_kg.csv")
-    df_extraction_oil = pd.read_csv(extraction_oil)
-    extraction_gas = Path(path_base, "data", "raw", "fossil_fuels", "Scenario_data",scenario, "gas_extraction_stock_kg.csv")
-    df_extraction_gas = pd.read_csv(extraction_gas)
+    df_extraction_coal = coal_infra(extraction_stock_coal)
+    df_extraction_oil = oil_infra(extraction_stock_oil)
+    df_extraction_gas = gas_infra(extraction_stock_gas)
 
     #Add fuel column to each df so that we can combine them and then split them again into the different technologies (coal, oil, gas) after melting the df to long format
     df_extraction_coal["fuel"] = "coal"
@@ -135,21 +145,11 @@ def get_preprocessing_data_extraction(path_base: str, climate_policy_config: dic
 
     #Reorder technology coordinate in all three datasets (capacity, lifetime, material intensities) to match the same order of technologies (coal opencast, coal underground, gas offshore, gas onshore, oil offshore, oil onshore), so that we can easily combine the data in the model (since they all have to be in the same order of technologies)
     extractioncap_xr = extractioncap_xr.reindex(Type=extraction_order)
-    extraction_lifetime_xr = extraction_lifetime_xr.reindex(Type=extraction_order)
-    extraction_materials_xr = extraction_materials_xr.reindex(Type=extraction_order)
-
-    prep_data_extraction = {}
-    prep_data_extraction["stocks"] = extractioncap_xr
-    prep_data_extraction["knowledge_graph"] = create_fossil_fuel_graph() 
-    # add units
-    prep_data_extraction["stocks"] = prism.Q_(prep_data_extraction["stocks"], "kg")
-    prep_data_extraction["set_unit_flexible"] = prism.U_(prep_data_extraction["stocks"]) # prism.U_ gives the unit back
-        # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
-
-    return prep_data_extraction
+  
+    return extractioncap_xr
 
 #%% Processing stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
-def get_preprocessing_data_processing(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+def compute_processing_capacity(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
     path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
     # test if path_external_data_scenario exists and if not set to standard scenario
@@ -164,14 +164,10 @@ def get_preprocessing_data_processing(path_base: str, climate_policy_config: dic
 
     #Stock of each type of extraction infrastructure (stock demand per generation technology) per region per year
 
-    processing_coal = Path(path_base, "data", "raw", "fossil_fuels", "Scenario_data", scenario, "coal_preparation_stock_kg.csv")
-    df_processing_coal = pd.read_csv(processing_coal)
-    processing_storage_oil = Path(path_base, "data", "raw", "fossil_fuels", "Scenario_data", scenario, "oil_storage_volume_m3.csv")
-    df_processing_oil = pd.read_csv(processing_storage_oil)
-    processing_refinery_oil = Path(path_base, "data", "raw", "fossil_fuels", "Scenario_data", scenario, "oil_refinery_stock_kg.csv")
-    df_processing_refinery_oil = pd.read_csv(processing_refinery_oil)
-    processing_gas = Path(path_base, "data", "raw", "fossil_fuels", "Scenario_data", scenario, "gas_processing_stock_kg.csv")
-    df_processing_gas = pd.read_csv(processing_gas)
+    df_processing_coal = coal_infra(preparation_stock_coal)
+    df_processing_oil = oil_infra(oil_storage)
+    df_processing_refinery_oil = oil_infra(refinery_stock_oil)
+    df_processing_gas = gas_infra(processing_stock_gas)
 
     #Combine the dataframes for coal, oil, and gas into one dataframe and then melt it to long format so that we have one row per combination of time, region, fuel, technology, and value (stock)
     df_processing_all = pd.concat(
@@ -234,21 +230,12 @@ def get_preprocessing_data_processing(path_base: str, climate_policy_config: dic
     processingcap_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(processingcap_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
     processingcap_xr = processingcap_xr.assign_coords(Type=np.array(processingcap_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
-   # bring preprocessing data into a generic format for the model
-    prep_data_processing = {}
-    prep_data_processing["stocks"] = processingcap_xr
-    #prep_data_processing["knowledge_graph"] = create_fossil_fuel_graph() 
-    # add units
-    prep_data_processing["stocks"] = prism.Q_(prep_data_processing["stocks"], "kg")
-    prep_data_processing["set_unit_flexible"] = prism.U_(prep_data_processing["stocks"]) # prism.U_ gives the unit back
-    #     # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
-
-    return prep_data_processing
+    return processingcap_xr
 
 #%% Transport/Vehicles stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 
 ###########################################################################################################
-def get_preprocessing_data_transport(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+def compute_transport_capacity(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
     path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
     # test if path_external_data_scenario exists and if not set to standard scenario
@@ -259,12 +246,9 @@ def get_preprocessing_data_transport(path_base: str, climate_policy_config: dict
 
      # 2. FUMA output -----------------------------------------
     #Transport capacity (stock demand per generation technology) in MW peak capacity
-    transport_coal = Path(path_base, "data", "raw", "fossil_fuels", "Scenario_data", scenario, "coal_transport_stock_kg.csv")
-    df_transport_coal = pd.read_csv(transport_coal)
-    transport_oil = Path(path_base, "data", "raw", "fossil_fuels", "Scenario_data", scenario, "oil_transport_stock_kg.csv")
-    df_transport_oil = pd.read_csv(transport_oil)
-    transport_gas = Path(path_base, "data", "raw", "fossil_fuels", "Scenario_data", scenario, "gas_transport_stock_kg.csv")
-    df_transport_gas = pd.read_csv(transport_gas)
+    df_transport_coal = coal_infra(transport_total_coal)
+    df_transport_oil = oil_infra(transport_total_oil)
+    df_transport_gas = gas_infra(transport_total_gas)
 
     df_transport_coal["fuel"] = "coal"
     df_transport_oil["fuel"] = "oil"
@@ -332,21 +316,16 @@ def get_preprocessing_data_transport(path_base: str, climate_policy_config: dict
     transportcap_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(transportcap_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
     transportcap_xr = transportcap_xr.assign_coords(Type=np.array(transportcap_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
-    #  # bring preprocessing data into a generic format for the model
-    prep_data_transport = {}
-    prep_data_transport["stocks"] = transportcap_xr
-    prep_data_transport["material_intensities"] = transport_materials_xr
-    # add units
-    prep_data_transport["stocks"] = prism.Q_(prep_data_transport["stocks"], "kg")
-    prep_data_transport["set_unit_flexible"] = prism.U_(prep_data_transport["stocks"]) # prism.U_ gives the unit back
-        # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
-
-    return prep_data_transport
+    return transportcap_xr
 
 #%% Pipelines stage (oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 ###########################################################################################################
+on_offshore_oil_pipeline = pd.read_csv(
+    DATA_DIR /"onshore_offshore_oil_pipeline.csv", index_col=[0]
 
-def get_preprocessing_data_pipelines(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+)  # Share of 2 different pipeline types (onshore & offshore) global (%)
+
+def compute_pipelines_capacity(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
     path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
     # test if path_external_data_scenario exists and if not set to standard scenario
@@ -358,10 +337,8 @@ def get_preprocessing_data_pipelines(path_base: str, climate_policy_config: dict
     # 2. FUMA output -----------------------------------------
 
     #Transport capacity (stock demand per generation technology) in MW peak capacity
-    pipelines_oil = Path(path_base, "data", "raw", "fossil_fuels", "Scenario_data", scenario, "oil_pipelines_length_km.csv")
-    df_pipelines_oil = pd.read_csv(pipelines_oil)
-    pipelines_gas = Path(path_base, "data", "raw", "fossil_fuels", "Scenario_data", scenario, "gas_pipelines_length_km.csv")
-    df_pipelines_gas = pd.read_csv(pipelines_gas)
+    df_pipelines_oil = oil_infra(oil_pipelines)
+    df_pipelines_gas = gas_infra(gas_pipelines)
 
     df_pipelines_oil["fuel"] = "oil"
     df_pipelines_gas["fuel"] = "gas"
@@ -424,6 +401,7 @@ def get_preprocessing_data_pipelines(path_base: str, climate_policy_config: dict
     # First we identify the types of oil pipelines in the capacity data (oil crude and oil products) 
     oil_types = ['Oil Crude', 'Oil Product']  
 
+
     # Then we create new entries for onshore and offshore oil pipelines based on the fractions in the global pipeline network
     expanded_oil_arrays = []
     for oil_type in oil_types:
@@ -448,15 +426,4 @@ def get_preprocessing_data_pipelines(path_base: str, climate_policy_config: dict
     pipelinecap_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(pipelinecap_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
     pipelinecap_xr = pipelinecap_xr.assign_coords(Type=np.array(pipelinecap_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
-    # # Pipelines stage (oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
-        
-    #  # bring preprocessing data into a generic format for the model
-    prep_data_pipelines = {}
-    prep_data_pipelines["stocks"] = pipelinecap_xr
-    prep_data_pipelines["knowledge_graph"] = create_fossil_fuel_graph() 
-    # add units
-    prep_data_pipelines["stocks"] = prism.Q_(prep_data_pipelines["stocks"], "km")
-    prep_data_pipelines["set_unit_flexible"] = prism.U_(prep_data_pipelines["stocks"]) # prism.U_ gives the unit back
-    #     # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
-
-    return prep_data_pipelines
+    return pipelinecap_xr

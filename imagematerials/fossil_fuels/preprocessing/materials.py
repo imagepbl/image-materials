@@ -8,12 +8,16 @@
 import pint
 import xarray as xr
 import prism
+import pandas as pd
+import numpy as np
+import os
+from pathlib import Path
 
-from ffconstants import FF_TECHNOLOGIES, IMAGE_REGIONS, STANDARD_SCEN_EXTERNAL_DATA, YEAR_FIRST_GRID, Standard_deviation_lifetime
+from imagematerials.fossil_fuels.preprocessing.ffconstants import FF_TECHNOLOGIES, IMAGE_REGIONS, STANDARD_SCEN_EXTERNAL_DATA, YEAR_FIRST_GRID, SD_LIFETIME
 
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
-from imagematerials.concepts import KnowledgeGraph, Node, create_electricity_graph, create_region_graph
+from imagematerials.concepts import KnowledgeGraph, Node, create_fossil_fuel_graph, create_region_graph
 from imagematerials.electricity.utils import (
    MNLogit, 
    stock_tail, 
@@ -42,10 +46,13 @@ year_start = 1880
 year_end = 2100
 year_out = 2100
 
+knowledge_graph_region = create_region_graph()
+fossil_fuel_knowledge_graph = create_fossil_fuel_graph()
+
 #%% Extraction stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 
 ###########################################################################################################
-def get_preprocessing_data_extraction(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+def compute_extraction_materials(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
     path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
     # test if path_external_data_scenario exists and if not set to standard scenario
@@ -88,20 +95,11 @@ def get_preprocessing_data_extraction(path_base: str, climate_policy_config: dic
     extraction_materials_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(extraction_materials_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
     extraction_materials_xr = extraction_materials_xr.assign_coords(Type=np.array(extraction_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
-  # bring preprocessing data into a generic format for the model
-    prep_data_extraction = {}
-    prep_data_extraction["material_intensities"] = extraction_materials_xr
-    prep_data_extraction["knowledge_graph"] = create_fossil_fuel_graph() 
-    # add units
-    prep_data_extraction["material_intensities"] = prism.Q_(prep_data_extraction["material_intensities"], "kg/kg/year")
-        # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
-
-    return prep_data_extraction
+    return extraction_materials_xr
 
 #%% Processing stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 
-def get_preprocessing_data_processing(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
-
+def compute_processing_materials(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
     path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
     # test if path_external_data_scenario exists and if not set to standard scenario
     if not path_external_data_scenario.exists():
@@ -145,20 +143,12 @@ def get_preprocessing_data_processing(path_base: str, climate_policy_config: dic
     processing_materials_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(processing_materials_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
     processing_materials_xr = processing_materials_xr.assign_coords(Type=np.array(processing_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
-   # bring preprocessing data into a generic format for the model
-    prep_data_processing = {}
-    prep_data_processing["material_intensities"] = processing_materials_xr
-    #prep_data_processing["knowledge_graph"] = create_fossil_fuel_graph() 
-    # add units
- 
-    prep_data_processing["material_intensities"] = prism.Q_(prep_data_processing["material_intensities"], "kg/kg/year")
- 
-    return prep_data_processing
+    return processing_materials_xr
 
 #%% Transport/Vehicles stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 
 ###########################################################################################################
-def get_preprocessing_data_transport(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+def compute_transport_materials(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
     path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
     # test if path_external_data_scenario exists and if not set to standard scenario
@@ -196,19 +186,12 @@ def get_preprocessing_data_transport(path_base: str, climate_policy_config: dict
     transport_materials_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(transport_materials_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
     transport_materials_xr = transport_materials_xr.assign_coords(Type=np.array(transport_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
-    #  # bring preprocessing data into a generic format for the model
-    prep_data_transport = {}
-    prep_data_transport["material_intensities"] = transport_materials_xr
-    prep_data_transport["knowledge_graph"] = create_electricity_graph() 
-    # add units
-    prep_data_transport["material_intensities"] = prism.Q_(prep_data_transport["material_intensities"], "kg/kg/year")
-
-    return prep_data_transport
+    return transport_materials_xr
 
 #%% Pipelines stage (oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 ###########################################################################################################
 
-def get_preprocessing_data_pipelines(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+def compute_pipelines_materials(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
     path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
     # test if path_external_data_scenario exists and if not set to standard scenario
@@ -245,11 +228,4 @@ def get_preprocessing_data_pipelines(path_base: str, climate_policy_config: dict
     pipelines_materials_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(pipelines_materials_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
     pipelines_materials_xr = pipelines_materials_xr.assign_coords(Type=np.array(pipelines_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
    
-    #  # bring preprocessing data into a generic format for the model
-    prep_data_pipelines = {}
-    prep_data_pipelines["material_intensities"] = pipelines_materials_xr
-    prep_data_pipelines["knowledge_graph"] = create_fossil_fuel_graph() 
-    # add units
-    prep_data_pipelines["material_intensities"] = prism.Q_(prep_data_pipelines["material_intensities"], "kg/km/year")
-
-    return prep_data_pipelines
+    return pipelines_materials_xr
