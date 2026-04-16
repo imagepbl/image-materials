@@ -1,0 +1,146 @@
+Time,source,scenario,type_data,unit,Region,category,technology,sub_technology,value
+2014,IRENA,historic,stock,GW,World,grid_scale_storage,PHS,,142
+2021,IEA,historic,stock,GW,World,grid_scale_storage,PHS,,160
+2023,IEA,historic,stock,GW,World,grid_scale_storage,PHS,,181
+2025,IHA,historic,stock,GW,World,grid_scale_storage,PHS,,200
+
+2017,IRENA,historic,stock,GWh,World,grid_scale_storage,PHS,,4508
+
+2024,IHA,historic,stock,MW,Canada,grid_scale_storage,PHS,,177
+2024,IHA,historic,stock,MW,United States,grid_scale_storage,PHS,,22266
+2024,IHA,historic,stock,MW,Argentina,grid_scale_storage,PHS,,974
+2024,IHA,historic,stock,MW,Brazil,grid_scale_storage,PHS,,20
+2024,IHA,historic,stock,MW,Austria,grid_scale_storage,PHS,,3512
+2024,IHA,historic,stock,MW,Belgium,grid_scale_storage,PHS,,1308
+2024,IHA,historic,stock,MW,Bosnia and Herzegovina,grid_scale_storage,PHS,,420
+2024,IHA,historic,stock,MW,Bulgaria,grid_scale_storage,PHS,,1404
+2024,IHA,historic,stock,MW,Croatia,grid_scale_storage,PHS,,281
+2024,IHA,historic,stock,MW,Czechia,grid_scale_storage,PHS,,1172
+2024,IHA,historic,stock,MW,France,grid_scale_storage,PHS,,5065
+2024,IHA,historic,stock,MW,Germany,grid_scale_storage,PHS,,9449
+2024,IHA,historic,stock,MW,Greece,grid_scale_storage,PHS,,699
+2024,IHA,historic,stock,MW,Ireland,grid_scale_storage,PHS,,292
+2024,IHA,historic,stock,MW,Italy,grid_scale_storage,PHS,,7256
+2024,IHA,historic,stock,MW,Liechtenstein,grid_scale_storage,PHS,,10
+2024,IHA,historic,stock,MW,Lithuania,grid_scale_storage,PHS,,900
+2024,IHA,historic,stock,MW,Luxembourg,grid_scale_storage,PHS,,1296
+2024,IHA,historic,stock,MW,Norway,grid_scale_storage,PHS,,1401
+2024,IHA,historic,stock,MW,Poland,grid_scale_storage,PHS,,1761
+2024,IHA,historic,stock,MW,Portugal,grid_scale_storage,PHS,,3867
+2024,IHA,historic,stock,MW,Romania,grid_scale_storage,PHS,,92
+2024,IHA,historic,stock,MW,Serbia,grid_scale_storage,PHS,,614
+2024,IHA,historic,stock,MW,Slovakia,grid_scale_storage,PHS,,993
+2024,IHA,historic,stock,MW,Slovenia,grid_scale_storage,PHS,,180
+2024,IHA,historic,stock,MW,Spain,grid_scale_storage,PHS,,5650
+2024,IHA,historic,stock,MW,Sweden,grid_scale_storage,PHS,,99
+2024,IHA,historic,stock,MW,Switzerland,grid_scale_storage,PHS,,4055
+2024,IHA,historic,stock,MW,Ukraine,grid_scale_storage,PHS,,1470
+2024,IHA,historic,stock,MW,United Kingdom,grid_scale_storage,PHS,,2833
+2024,IHA,historic,stock,MW,Morocco,grid_scale_storage,PHS,,814
+2024,IHA,historic,stock,MW,South Africa,grid_scale_storage,PHS,,2912
+2024,IHA,historic,stock,MW,India,grid_scale_storage,PHS,,4746
+2024,IHA,historic,stock,MW,Iran,grid_scale_storage,PHS,,1040
+2024,IHA,historic,stock,MW,Iraq,grid_scale_storage,PHS,,240
+2024,IHA,historic,stock,MW,Israel,grid_scale_storage,PHS,,300
+2024,IHA,historic,stock,MW,Russia,grid_scale_storage,PHS,,1385
+2024,IHA,historic,stock,MW,Australia,grid_scale_storage,PHS,,2712
+2024,IHA,historic,stock,MW,China,grid_scale_storage,PHS,,58690
+2024,IHA,historic,stock,MW,Japan,grid_scale_storage,PHS,,27470
+2024,IHA,historic,stock,MW,Philippines,grid_scale_storage,PHS,,729
+2024,IHA,historic,stock,MW,South Korea,grid_scale_storage,PHS,,4700
+2024,IHA,historic,stock,MW,Taiwan,grid_scale_storage,PHS,,2602
+2024,IHA,historic,stock,MW,Thailand,grid_scale_storage,PHS,,1531
+
+2019,IHA,historic,stock,MW,Canada,grid_scale_storage,PHS,,177
+2019,IHA,historic,stock,MW,United States,grid_scale_storage,PHS,,22855
+2019,IHA,historic,stock,MW,Argentina,grid_scale_storage,PHS,,974
+2019,IHA,historic,stock,MW,Brazil,grid_scale_storage,PHS,,30
+2019,IHA,historic,stock,MW,Austria,grid_scale_storage,PHS,,5596 
+2019,IHA,historic,stock,MW,Belgium,grid_scale_storage,PHS,,1307
+2019,IHA,historic,stock,MW,Bosnia and Herzegovina,grid_scale_storage,PHS,,420
+2019,IHA,historic,stock,MW,Bulgaria,grid_scale_storage,PHS,,1404
+2019,IHA,historic,stock,MW,Croatia,grid_scale_storage,PHS,,293
+2019,IHA,historic,stock,MW,Czechia,grid_scale_storage,PHS,,1171
+2019,IHA,historic,stock,MW,France,grid_scale_storage,PHS,,5837 
+2019,IHA,historic,stock,MW,Germany,grid_scale_storage,PHS,,6364 
+2019,IHA,historic,stock,MW,Greece,grid_scale_storage,PHS,,703
+2019,IHA,historic,stock,MW,Ireland,grid_scale_storage,PHS,,292
+2019,IHA,historic,stock,MW,Italy,grid_scale_storage,PHS,,7685
+2019,IHA,historic,stock,MW,Liechtenstein,grid_scale_storage,PHS,,0
+2019,IHA,historic,stock,MW,Lithuania,grid_scale_storage,PHS,,900
+2019,IHA,historic,stock,MW,Luxembourg,grid_scale_storage,PHS,,1296
+2019,IHA,historic,stock,MW,Norway,grid_scale_storage,PHS,,1439
+2019,IHA,historic,stock,MW,Poland,grid_scale_storage,PHS,,1780
+2019,IHA,historic,stock,MW,Portugal,grid_scale_storage,PHS,,2820
+2019,IHA,historic,stock,MW,Romania,grid_scale_storage,PHS,,92
+2019,IHA,historic,stock,MW,Serbia,grid_scale_storage,PHS,,639
+2019,IHA,historic,stock,MW,Slovakia,grid_scale_storage,PHS,,1017
+2019,IHA,historic,stock,MW,Slovenia,grid_scale_storage,PHS,,180
+2019,IHA,historic,stock,MW,Spain,grid_scale_storage,PHS,,6117
+2019,IHA,historic,stock,MW,Sweden,grid_scale_storage,PHS,,99
+2019,IHA,historic,stock,MW,Switzerland,grid_scale_storage,PHS,,3029
+2019,IHA,historic,stock,MW,Ukraine,grid_scale_storage,PHS,,1563
+2019,IHA,historic,stock,MW,United Kingdom,grid_scale_storage,PHS,,2833
+2019,IHA,historic,stock,MW,Morocco,grid_scale_storage,PHS,,465
+2019,IHA,historic,stock,MW,South Africa,grid_scale_storage,PHS,,2912
+2019,IHA,historic,stock,MW,India,grid_scale_storage,PHS,,4786
+2019,IHA,historic,stock,MW,Iran,grid_scale_storage,PHS,,1040
+2019,IHA,historic,stock,MW,Iraq,grid_scale_storage,PHS,,240
+2019,IHA,historic,stock,MW,Israel,grid_scale_storage,PHS,,0
+2019,IHA,historic,stock,MW,Russia,grid_scale_storage,PHS,,1385
+2019,IHA,historic,stock,MW,Australia,grid_scale_storage,PHS,,1340
+2019,IHA,historic,stock,MW,China,grid_scale_storage,PHS,,30290
+2019,IHA,historic,stock,MW,Japan,grid_scale_storage,PHS,,27637
+2019,IHA,historic,stock,MW,Philippines,grid_scale_storage,PHS,,685
+2019,IHA,historic,stock,MW,South Korea,grid_scale_storage,PHS,,4700
+2019,IHA,historic,stock,MW,Taiwan,grid_scale_storage,PHS,,2602
+2019,IHA,historic,stock,MW,Thailand,grid_scale_storage,PHS,,1000
+
+2014,IHA,historic,stock,MW,Canada,grid_scale_storage,PHS,,177
+2014,IHA,historic,stock,MW,United States,grid_scale_storage,PHS,,22368
+2014,IHA,historic,stock,MW,Argentina,grid_scale_storage,PHS,,974
+2014,IHA,historic,stock,MW,Brazil,grid_scale_storage,PHS,,0
+2014,IHA,historic,stock,MW,Austria,grid_scale_storage,PHS,,5108 
+2014,IHA,historic,stock,MW,Belgium,grid_scale_storage,PHS,,1307
+2014,IHA,historic,stock,MW,Bosnia and Herzegovina,grid_scale_storage,PHS,,458
+2014,IHA,historic,stock,MW,Bulgaria,grid_scale_storage,PHS,,8604
+2014,IHA,historic,stock,MW,Croatia,grid_scale_storage,PHS,,293
+2014,IHA,historic,stock,MW,Czechia,grid_scale_storage,PHS,,1147
+2014,IHA,historic,stock,MW,France,grid_scale_storage,PHS,,6985 
+2014,IHA,historic,stock,MW,Germany,grid_scale_storage,PHS,,6806
+2014,IHA,historic,stock,MW,Greece,grid_scale_storage,PHS,,699
+2014,IHA,historic,stock,MW,Ireland,grid_scale_storage,PHS,,292
+2014,IHA,historic,stock,MW,Italy,grid_scale_storage,PHS,,7555
+2014,IHA,historic,stock,MW,Liechtenstein,grid_scale_storage,PHS,,0
+2014,IHA,historic,stock,MW,Lithuania,grid_scale_storage,PHS,,760
+2014,IHA,historic,stock,MW,Luxembourg,grid_scale_storage,PHS,,1100
+2014,IHA,historic,stock,MW,Norway,grid_scale_storage,PHS,,1351
+2014,IHA,historic,stock,MW,Poland,grid_scale_storage,PHS,,1782
+2014,IHA,historic,stock,MW,Portugal,grid_scale_storage,PHS,,1343
+2014,IHA,historic,stock,MW,Romania,grid_scale_storage,PHS,,92
+2014,IHA,historic,stock,MW,Serbia,grid_scale_storage,PHS,,614
+2014,IHA,historic,stock,MW,Slovakia,grid_scale_storage,PHS,,916
+2014,IHA,historic,stock,MW,Slovenia,grid_scale_storage,PHS,,180
+2014,IHA,historic,stock,MW,Spain,grid_scale_storage,PHS,,5268
+2014,IHA,historic,stock,MW,Sweden,grid_scale_storage,PHS,,99
+2014,IHA,historic,stock,MW,Switzerland,grid_scale_storage,PHS,,1817
+2014,IHA,historic,stock,MW,Ukraine,grid_scale_storage,PHS,,1315
+2014,IHA,historic,stock,MW,United Kingdom,grid_scale_storage,PHS,,2744
+2014,IHA,historic,stock,MW,Morocco,grid_scale_storage,PHS,,464
+2014,IHA,historic,stock,MW,South Africa,grid_scale_storage,PHS,,1580
+2014,IHA,historic,stock,MW,India,grid_scale_storage,PHS,,4786
+2014,IHA,historic,stock,MW,Iran,grid_scale_storage,PHS,,0
+2014,IHA,historic,stock,MW,Iraq,grid_scale_storage,PHS,,240
+2014,IHA,historic,stock,MW,Israel,grid_scale_storage,PHS,,0
+2014,IHA,historic,stock,MW,Russia,grid_scale_storage,PHS,,1360
+2014,IHA,historic,stock,MW,Australia,grid_scale_storage,PHS,,740
+2014,IHA,historic,stock,MW,China,grid_scale_storage,PHS,,21800
+2014,IHA,historic,stock,MW,Japan,grid_scale_storage,PHS,,27434
+2014,IHA,historic,stock,MW,Philippines,grid_scale_storage,PHS,,685
+2014,IHA,historic,stock,MW,South Korea,grid_scale_storage,PHS,,4700
+2014,IHA,historic,stock,MW,Taiwan,grid_scale_storage,PHS,,2602
+2014,IHA,historic,stock,MW,Thailand,grid_scale_storage,PHS,,1000
+
+
+
+

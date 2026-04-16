@@ -14,33 +14,47 @@ path_current = Path().resolve()
 path_base = path_current.parent.parent # base path of the project -> image-materials
 path_data = Path(path_base, "data", "raw")
 
-df_phs =  pd.read_csv(Path(path_data,"electricity","IHA_PSH_Capacity_data.csv"), 
+####################################################################################################
+#%% Load data
+
+# Dataset 1: IHA data set of individual PHS sites, with commissioning year, capacity, energy stored, operating status, and hydro type
+df_data1 =  pd.read_csv(Path(path_data,"electricity","IHA_PSH_Capacity_data.csv"), 
                       usecols=["Operational Status", "Country", "Commisioning Year", "Hydro Type", 
                                "Generating Capacity", "Energy stored (GWh)"])
-# a = df_phs['Hydro Type'].unique()
-df_phs["Commisioning Year"] = pd.to_numeric(df_phs["Commisioning Year"], errors="coerce").astype("Int64")
+# a = df_data1['Hydro Type'].unique()
+df_data1 = df_data1.rename(columns={'Country': 'Region', 'Commisioning Year': 'Cohort'})
+df_data1["Cohort"] = pd.to_numeric(df_data1["Cohort"], errors="coerce").astype("Int64")
 
-df_sum = df_phs.groupby(["Country", "Commisioning Year"])[
+df_data1_country = df_data1.groupby(["Region", "Cohort"])[
     ["Generating Capacity", "Energy stored (GWh)"]
 ].sum()
 
-ds_sum = df_sum.to_xarray()
-ds_sum = ds_sum.rename({'Country': 'Region', 'Commisioning Year': 'Commissioning Year'})
+ds_data1_country = df_data1_country.to_xarray()
 
 
+# Dataset 2: IHA data set of aggregated PHS capacity by country for 3 years (2014, 2019, 2024) + IEA
+#            global estimates
+
+df_data2 =  pd.read_csv(Path(path_data,"electricity","pumped_hydropower_storage_historic_stocks.csv"),
+                        usecols=["Time", "Region", "value"])
+df_data2 = df_data2[df_data2["Region"] != "World"]
+ds_data2_country = df_data2.to_xarray()
 
 ####################################################################################################
 #%% Aggregate to IMAGE regions
 
 knowledge_graph_region = create_image_region_graph()
-ds_sum_region = ds_sum.copy()
 
-ds_sum_region = knowledge_graph_region.aggregate_sum(ds_sum_region, output_coords=IMAGE_REGIONS, dim="Region", require_relation=False)
+ds_data1_image_region = ds_data1_country.copy()
+ds_data1_image_region = knowledge_graph_region.aggregate_sum(ds_data1_image_region, output_coords=IMAGE_REGIONS, dim="Region", require_relation=False)
+
+ds_data2_image_region = ds_data2_country.copy()
+ds_data2_image_region = knowledge_graph_region.aggregate_sum(ds_data2_image_region, output_coords=IMAGE_REGIONS, dim="Region", require_relation=False)
 
 ####################################################################################################
 #%% Aggregate years to decades and calculate shares
 
-ds = ds_sum_region.copy()
+ds = ds_data1_image_region.copy()
 # Define 10-year bin edges — extend as needed to cover your full range
 bin_edges = range(1905, 2045, 10)  # 1905, 1915, 1925, ...
 labels = [f"{y}-{y+9}" for y in range(1905, 2035, 10)]
