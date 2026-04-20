@@ -86,7 +86,7 @@ def copper_projection(scenario: str, path_input_data, path_input_data_image):
 
     copper.remove_regions_with_no_good_fit_from_region_model_match(exclude)
 
-    return copper
+    return copper, copper_regions
 
 
 # Steel projections
@@ -173,7 +173,7 @@ def steel_projection(scenario: str, path_input_data, path_input_data_image):
     
     steel.remove_regions_with_no_good_fit_from_region_model_match(exclude)
     
-    return steel
+    return steel, steel_grouping
 
 
 # Aluminium
@@ -275,6 +275,6 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
 
     aluminium.remove_regions_with_no_good_fit_from_region_model_match(exclude)
 
-    return aluminium
+    return aluminium, aluminium_regions
 
 

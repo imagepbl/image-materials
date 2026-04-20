@@ -136,7 +136,7 @@ def read_image_gdp_cap_data(base_directory, image_scenario_directory):
 
 
 def fit_all_materials_save_corrseponding_input_data(path_input_data, path_input_data_image):
-    results = fit_models_all_materials(
+    results, regions_grouping = fit_models_all_materials(
         path_input_data=path_input_data,
         path_input_data_image=path_input_data_image
         )

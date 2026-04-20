@@ -26,29 +26,30 @@ def fit_models_all_materials(scenarios_list: list = ["SSP2_baseline"], path_inpu
         path_input_data_image = Path("../data/raw/image/")
 
     results = {}
+    regions_grouping = {}
 
     for scenario in scenarios_list:
         print(scenario)
         # Run all projections for this scenario
-        copper = copper_projection(scenario=scenario, 
+        copper, copper_regions = copper_projection(scenario=scenario, 
                                    path_input_data=path_input_data,
                                    path_input_data_image=path_input_data_image)
-        steel = steel_projection(scenario=scenario, 
+        steel, steel_regions = steel_projection(scenario=scenario, 
                                  path_input_data=path_input_data,
                                  path_input_data_image=path_input_data_image)
-        aluminium = aluminium_projection(scenario=scenario, 
+        aluminium, aluminium_regions = aluminium_projection(scenario=scenario, 
                                          path_input_data=path_input_data,
                                          path_input_data_image=path_input_data_image)
-        cement = cement_projection(scenario=scenario, 
+        cement, cement_regions = cement_projection(scenario=scenario, 
                                    path_input_data=path_input_data,
                                    path_input_data_image=path_input_data_image)
-        sand = sand_projections(scenario=scenario, 
+        sand, sand_regions = sand_projections(scenario=scenario, 
                                 path_input_data=path_input_data,
                                 path_input_data_image=path_input_data_image)
-        limestone = limestone_projection(scenario=scenario, 
+        limestone, limestone_regions = limestone_projection(scenario=scenario, 
                                          path_input_data=path_input_data,
                                          path_input_data_image=path_input_data_image)
-        clay = clay_projections(scenario=scenario, 
+        clay, clay_regions = clay_projections(scenario=scenario, 
                                 path_input_data=path_input_data,
                                 path_input_data_image=path_input_data_image)
         
@@ -62,8 +63,17 @@ def fit_models_all_materials(scenarios_list: list = ["SSP2_baseline"], path_inpu
             'limestone': limestone,
             'clay': clay,
     }
-        
-    return results
+        regions_grouping[scenario] = {
+            'copper': copper_regions,
+            'steel': steel_regions,
+            'aluminium': aluminium_regions,
+            'cement': cement_regions,
+            'sand': sand_regions,
+            'limestone': limestone_regions,
+            'clay': clay_regions
+        }
+
+    return results, regions_grouping
 
 
 

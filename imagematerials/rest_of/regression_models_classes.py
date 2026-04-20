@@ -5,12 +5,14 @@ Created on Wed Jan 31 18:57:36 2024
 @author: Arp00003
 """
 from abc import abstractmethod
+import inspect
 
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
 from scipy.optimize import curve_fit, minimize
+from scipy import stats
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -81,6 +83,80 @@ class OLS_Model:
         self._rmse = mean_squared_error(y, y_pred) # squared=False
         # Store coefficients
         self._coefs = [self._lin_reg.intercept_[0], *self._lin_reg.coef_[0]]
+        self._build_statistics()
+
+    def _build_statistics(self):
+        """Build parameter-level and model-level statistics for OLS."""
+        n_obs = self._X.shape[0]
+        n_features = self._X.shape[1]
+        n_params = n_features + 1
+        dof = n_obs - n_params
+
+        if dof <= 0:
+            self._std_errors = [np.nan] * n_params
+            self._p_values = [np.nan] * n_params
+            self._confidence_intervals = [(np.nan, np.nan)] * n_params
+            self._p_value = np.nan
+            param_names = ["intercept", *[f"x{i + 1}" for i in range(n_features)]]
+            self._stats_summary = pd.DataFrame(
+                {
+                    "coef": self._coefs,
+                    "std_error": self._std_errors,
+                    "p_value": self._p_values,
+                    "ci_95_lower": [ci[0] for ci in self._confidence_intervals],
+                    "ci_95_upper": [ci[1] for ci in self._confidence_intervals],
+                },
+                index=param_names,
+            )
+            return
+
+        y_pred = self.predict_transformed(self._X)
+        residuals = self._y - y_pred
+        ss_res = float(np.sum(np.square(residuals)))
+        ss_tot = float(np.sum(np.square(self._y - np.mean(self._y))))
+
+        x_design = np.concatenate([np.ones((n_obs, 1)), self._X], axis=1)
+        xtx_inv = np.linalg.pinv(x_design.T @ x_design)
+        sigma2 = ss_res / dof
+        cov = sigma2 * xtx_inv
+        std_errors = np.sqrt(np.diag(cov))
+
+        params = np.asarray(self._coefs, dtype=float)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            t_stats = np.divide(
+                params,
+                std_errors,
+                out=np.full_like(params, np.nan, dtype=float),
+                where=std_errors > 0,
+            )
+
+        p_values = 2 * (1 - stats.t.cdf(np.abs(t_stats), df=dof))
+        t_crit = stats.t.ppf(0.975, df=dof)
+        ci_lower = params - t_crit * std_errors
+        ci_upper = params + t_crit * std_errors
+
+        if n_features > 0 and ss_tot > 0 and ss_res >= 0:
+            ms_model = (ss_tot - ss_res) / n_features
+            ms_error = ss_res / dof
+            f_stat = np.nan if ms_error <= 0 else ms_model / ms_error
+            self._p_value = 1 - stats.f.cdf(f_stat, n_features, dof) if np.isfinite(f_stat) else np.nan
+        else:
+            self._p_value = np.nan
+
+        self._std_errors = std_errors.tolist()
+        self._p_values = p_values.tolist()
+        self._confidence_intervals = list(zip(ci_lower.tolist(), ci_upper.tolist()))
+        param_names = ["intercept", *[f"x{i + 1}" for i in range(n_features)]]
+        self._stats_summary = pd.DataFrame(
+            {
+                "coef": self._coefs,
+                "std_error": self._std_errors,
+                "p_value": self._p_values,
+                "ci_95_lower": ci_lower,
+                "ci_95_upper": ci_upper,
+            },
+            index=param_names,
+        )
         
     @abstractmethod
     def _transform_X(self, X: np.array):
@@ -105,6 +181,26 @@ class OLS_Model:
     @property
     def rmse(self):
         return self._rmse
+
+    @property
+    def p_value(self):
+        return self._p_value
+
+    @property
+    def p_values(self):
+        return self._p_values
+
+    @property
+    def std_errors(self):
+        return self._std_errors
+
+    @property
+    def confidence_intervals(self):
+        return self._confidence_intervals
+
+    @property
+    def stats_summary(self):
+        return self._stats_summary.copy()
     
     def predict(self, X: np.array):
         """
@@ -143,15 +239,78 @@ class NLS_Model:
         self._y = self._y.reshape(-1)
         self._X = self._X.reshape(-1)  # TODO: Implement for multiple regressors
 
-        self._coefs, _ = curve_fit(self._model_func, 
-                                   self._X, 
-                                   self._y, maxfev=10_000, 
-                                   bounds=bounds) 
+        self._coefs, self._pcov = curve_fit(
+            self._model_func,
+            self._X,
+            self._y,
+            maxfev=10_000,
+            bounds=bounds,
+        )
         self._r2 = np.nan
         # Estimate RMSE
         y_pred = self.predict_transformed(self._X)  # y in transformed form
         y_pred = self._inverse_transform_y(y_pred)  # transform to original unit
         self._rmse = mean_squared_error(y, y_pred) #squared=False
+        self._build_statistics()
+
+    def _build_statistics(self):
+        """Build parameter-level and model-level statistics for NLS."""
+        n_obs = self._X.shape[0]
+        n_params = len(self._coefs)
+        dof = n_obs - n_params
+
+        sig = inspect.signature(self._model_func)
+        parameter_names = list(sig.parameters.keys())[1:]
+        if len(parameter_names) != n_params:
+            parameter_names = [f"param_{i + 1}" for i in range(n_params)]
+
+        y_pred = self.predict_transformed(self._X)
+        residuals = self._y - y_pred
+        ss_res = float(np.sum(np.square(residuals)))
+        ss_tot = float(np.sum(np.square(self._y - np.mean(self._y))))
+
+        if dof <= 0 or self._pcov is None:
+            std_errors = np.full(n_params, np.nan, dtype=float)
+            p_values = np.full(n_params, np.nan, dtype=float)
+            ci_lower = np.full(n_params, np.nan, dtype=float)
+            ci_upper = np.full(n_params, np.nan, dtype=float)
+            self._p_value = np.nan
+        else:
+            std_errors = np.sqrt(np.diag(self._pcov))
+            params = np.asarray(self._coefs, dtype=float)
+            with np.errstate(divide="ignore", invalid="ignore"):
+                t_stats = np.divide(
+                    params,
+                    std_errors,
+                    out=np.full_like(params, np.nan, dtype=float),
+                    where=std_errors > 0,
+                )
+            p_values = 2 * (1 - stats.t.cdf(np.abs(t_stats), df=dof))
+            t_crit = stats.t.ppf(0.975, df=dof)
+            ci_lower = params - t_crit * std_errors
+            ci_upper = params + t_crit * std_errors
+
+            if n_params > 0 and ss_tot > 0 and ss_res >= 0:
+                ms_model = (ss_tot - ss_res) / n_params
+                ms_error = ss_res / dof
+                f_stat = np.nan if ms_error <= 0 else ms_model / ms_error
+                self._p_value = 1 - stats.f.cdf(f_stat, n_params, dof) if np.isfinite(f_stat) else np.nan
+            else:
+                self._p_value = np.nan
+
+        self._std_errors = std_errors.tolist()
+        self._p_values = p_values.tolist()
+        self._confidence_intervals = list(zip(ci_lower.tolist(), ci_upper.tolist()))
+        self._stats_summary = pd.DataFrame(
+            {
+                "coef": self._coefs,
+                "std_error": self._std_errors,
+                "p_value": self._p_values,
+                "ci_95_lower": ci_lower,
+                "ci_95_upper": ci_upper,
+            },
+            index=parameter_names,
+        )
         
     @abstractmethod
     def _transform_X(self, X: np.array):
@@ -180,6 +339,26 @@ class NLS_Model:
     @property
     def rmse(self):
         return self._rmse
+
+    @property
+    def p_value(self):
+        return self._p_value
+
+    @property
+    def p_values(self):
+        return self._p_values
+
+    @property
+    def std_errors(self):
+        return self._std_errors
+
+    @property
+    def confidence_intervals(self):
+        return self._confidence_intervals
+
+    @property
+    def stats_summary(self):
+        return self._stats_summary.copy()
     
     def predict(self, X: np.array):
         """

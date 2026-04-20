@@ -103,7 +103,7 @@ def cement_projection(scenario: str, path_input_data, path_input_data_image):
 
     cement.remove_regions_with_no_good_fit_from_region_model_match(exclude)
 
-    return cement
+    return cement, cement_grouping
 
 
 def limestone_projection(scenario: str, path_input_data, path_input_data_image):
@@ -185,7 +185,7 @@ def limestone_projection(scenario: str, path_input_data, path_input_data_image):
                             model_nr=1)
     limestone.remove_regions_with_no_good_fit_from_region_model_match(exclude)
 
-    return limestone
+    return limestone, limestone_grouping
 
 
 def sand_projections(scenario: str, path_input_data, path_input_data_image):
@@ -283,7 +283,7 @@ def sand_projections(scenario: str, path_input_data, path_input_data_image):
     
     sand.remove_regions_with_no_good_fit_from_region_model_match(exclude)
 
-    return sand
+    return sand, SAND_GROUPING_REGIONS
 
 def clay_projections(scenario: str, path_input_data, path_input_data_image):
     # clay
@@ -356,4 +356,4 @@ def clay_projections(scenario: str, path_input_data, path_input_data_image):
     # will take historic average instead
     clay.remove_regions_with_no_good_fit_from_region_model_match(exclude) # exclude+low_gdp 
 
-    return clay
+    return clay, clay_grouping
