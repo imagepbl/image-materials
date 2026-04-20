@@ -184,7 +184,7 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
             'Region': [str(r) for r in regions],
             'Type': [str(r) for r in techs]
         },
-        name='GCap'
+        name='GenerationCapacity'
     )
     gcap_xr = prism.Q_(gcap_xr, "MW")
     gcap_xr = knowledge_graph_region.rebroadcast_xarray(gcap_xr, output_coords=IMAGE_REGIONS, dim="Region") 

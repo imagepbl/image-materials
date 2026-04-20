@@ -725,7 +725,7 @@ def create_image_region_graph():
         # Mexico (3)
         "484": ["Mexico"],
 
-        # Central America (4)
+        # Rest of Central America (4)
         "44": ["Bahamas, The", "Bahamas", "The Bahamas"],
         "52": ["Barbados"],
         "60": ["Bermuda"],
@@ -783,7 +783,7 @@ def create_image_region_graph():
         "788": ["Tunisia"],
         "818": ["Egypt", "Egypt, Arab Rep.", "Arab Republic of Egypt"],
 
-        # Western Africa (8)
+        # WAF: Western Africa (8)
         "120": ["Cameroon"],
         "132": ["Cape Verde"],
         "140": ["Central African Republic"],
@@ -810,7 +810,7 @@ def create_image_region_graph():
         "768": ["Togo"],
         "854": ["Burkina Faso"],
 
-        # Eastern Africa (9)
+        # EAF: Eastern Africa (9)
         "108": ["Burundi"],
         "174": ["Comoros"],
         "231": ["Ethiopia"],
@@ -819,7 +819,7 @@ def create_image_region_graph():
         "404": ["Kenya"],
         "450": ["Madagascar"],
         "480": ["Mauritius"],
-        "638": ["Reunion"],
+        "638": ["Reunion", "Réunion"],
         "646": ["Rwanda"],
         "690": ["Seychelles"],
         "706": ["Somalia"],
@@ -883,9 +883,9 @@ def create_image_region_graph():
         "498": ["Moldova"],
         "804": ["Ukraine"],
 
-        # Central Asia (15)
+        # STAN: Central Asia (15)
         "398": ["Kazakhstan"],
-        "417": ["Kyrgyz Republic"],
+        "417": ["Kyrgyz Republic", "Kyrgyzstan"],
         "762": ["Tajikistan"],
         "795": ["Turkmenistan"],
         "860": ["Uzbekistan"],
@@ -936,7 +936,7 @@ def create_image_region_graph():
         "704": ["Vietnam", "Viet Nam"],
         "764": ["Thailand"],
 
-        # Indonesia region (22)
+        # INDO: Indonesia region (22)
         "360": ["Indonesia"],
         "598": ["Papua New Guinea"],
         "626": ["Timor-Leste", "East Timor", "Democratic Republic of Timor-Leste"],
@@ -968,7 +968,7 @@ def create_image_region_graph():
         "876": ["Wallis and Futuna", "Territory of the Wallis and Futuna Islands"],
         "882": ["Samoa"],
 
-        # Rest of South Asia (25)
+        # RSAS: Rest of South Asia (25)
         "4": ["Afghanistan"],
         "50": ["Bangladesh"],
         "64": ["Bhutan"],
@@ -977,7 +977,7 @@ def create_image_region_graph():
         "524": ["Nepal"],
         "586": ["Pakistan"],
 
-        # Rest of Southern Africa (26)
+        # RSAF: Rest of Southern Africa (26)
         "24": ["Angola"],
         "72": ["Botswana"],
         "426": ["Lesotho"],
