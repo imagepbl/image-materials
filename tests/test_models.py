@@ -129,9 +129,9 @@ def test_shares_inflow_stocks(coordinates, timelines, test_knowledge_graph):
 
     model.simulate(complete_timeline)
 
-    for var_name in model.output_data:
+    for var_name in ["outflow_by_cohort", "inflow", "stock_by_cohort"]:
         assert hasattr(model, var_name)
-
+    
     for t in coordinates["Time"]:
         stock_by_type = model.stock_by_cohort.loc[t].sum("Cohort")
         stock_by_supertype = test_knowledge_graph.aggregate_sum(
