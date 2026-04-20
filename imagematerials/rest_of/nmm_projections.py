@@ -110,7 +110,9 @@ def limestone_projection(scenario: str, path_input_data, path_input_data_image):
 
     # limestone
     limestone = ResourceModel(resource_group = 'nmm', resource = 'limestone', 
-                        image_mat_available = False, start_year = 1970, scenario=scenario,
+                        image_mat_available = False, 
+                        start_year = 1970, end_year = 2024, 
+                        scenario=scenario,
                         path_input_data=path_input_data,
                         path_input_data_image=path_input_data_image)
 
@@ -191,7 +193,9 @@ def limestone_projection(scenario: str, path_input_data, path_input_data_image):
 def sand_projections(scenario: str, path_input_data, path_input_data_image):
     # sand
     sand = ResourceModel(resource_group = 'nmm', resource = 'sand_gravel_crushed_rock', 
-                        image_mat_available = True, start_year = 1970, scenario=scenario,
+                        image_mat_available = True, 
+                        start_year = 1971, end_year=2024,
+                        scenario=scenario,
                         path_input_data=path_input_data,
                         path_input_data_image=path_input_data_image)
 
@@ -286,7 +290,8 @@ def sand_projections(scenario: str, path_input_data, path_input_data_image):
 def clay_projections(scenario: str, path_input_data, path_input_data_image):
     # clay
     clay = ResourceModel(resource_group = 'nmm', resource = 'clay', 
-                        image_mat_available = False, start_year = 1970, 
+                        image_mat_available = False, 
+                        start_year = 1970, end_year=2024,
                         scenario=scenario,
                         path_input_data=path_input_data,
                         path_input_data_image=path_input_data_image)

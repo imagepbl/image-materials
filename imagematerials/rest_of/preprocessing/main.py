@@ -11,7 +11,7 @@ from imagematerials.concepts import create_region_graph
 from imagematerials.read_mym import read_mym_df
 from imagematerials.buildings.preprocessing.population import compute_population
 
-from imagematerials.rest_of.preprocessing.regressions_all_materials import (fit_models_all_materials,
+from imagematerials.rest_of.preprocessing.regressions_all_materials import (fit_models_all_materials, get_X_max_scaling_factor,
                                                                             make_gompertz_coefs_da, 
                                                                             mean_historic_other_fraction_consumption_to_xr, 
                                                                             historic_other_fraction_consumption_to_xr)
@@ -143,6 +143,7 @@ def fit_all_materials_save_corrseponding_input_data(path_input_data, path_input_
     gompertz = make_gompertz_coefs_da(results)
     mean_historic_other_fraction_consumption_to_xr(results)
     all_historic_data_xr = historic_other_fraction_consumption_to_xr(results)
+    max_x = get_X_max_scaling_factor(results)
 
 
 def rest_of_preprocessing(base_directory, image_scenario_directory, scenario: str, 

@@ -34,12 +34,26 @@ def prepare_regression_data(y: pd.DataFrame = None, *X: tuple[pd.DataFrame]):
     """
     Flattens data, removes NaNs, and concatenates regressors
     """
+    if X and all(hasattr(frame, 'index') and hasattr(frame, 'columns') for frame in (y, *X)):
+        common_index = y.index
+        common_columns = y.columns
+
+        for regressor in X:
+            common_index = common_index.intersection(regressor.index)
+            common_columns = common_columns.intersection(regressor.columns)
+
+        if len(common_index) == 0 or len(common_columns) == 0:
+            raise ValueError('Regression inputs do not share a common index/column set.')
+
+        y = y.loc[common_index, common_columns]
+        X = [regressor.loc[common_index, common_columns] for regressor in X]
+
     # Flatten data
     y = y.to_numpy().flatten().reshape((-1, 1))
     # find max, and make sure it's float, so skip all strings
     # print('max X', X_max)
     X = [regressor.to_numpy().flatten().reshape((-1, 1)) for regressor in X]
-    X_max = max(max(X))
+    X_max = max(float(np.nanmax(regressor)) for regressor in X)
     # Remove NaNs
     y, *X = remove_nan(y, *X)
     # Concatenate regressors to matrix

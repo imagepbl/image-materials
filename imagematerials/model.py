@@ -825,7 +825,6 @@ class RestOf(prism.Model):
             pass # No inflow before 1970
 
 
-
 @prism.interface
 class EvBatteryLinkModule(prism.Model):
     """ Module to calculate remaining electricity storage in the grid after 

@@ -51,9 +51,6 @@ def fit_models_all_materials(scenarios_list: list = ["SSP2_baseline"], path_inpu
         clay = clay_projections(scenario=scenario, 
                                 path_input_data=path_input_data,
                                 path_input_data_image=path_input_data_image)
-        # biomass = biomass_data(scenario=scenario)
-        # fossil_fuel = fossil_fuel_data(scenario=scenario)
-        # water = water_consumption(scenario=scenario)
         
         # Store model objects or just their outputs
         results[scenario] = {
@@ -64,9 +61,6 @@ def fit_models_all_materials(scenarios_list: list = ["SSP2_baseline"], path_inpu
             'sand': sand,
             'limestone': limestone,
             'clay': clay,
-            # 'biomass': biomass,
-            # 'fossil_fuel': fossil_fuel,
-            # 'water': water
     }
         
     return results
@@ -264,9 +258,10 @@ def historic_other_fraction_consumption_to_xr(results_models):
     return diff_cons_all
 
 
-def get_X_max_scaling_factor(results, create_class_region_graph, IAI_TO_IMAGE_CLASSES):
+def get_X_max_scaling_factor(results):
     arrays=[]
-
+    from imagematerials.concepts import create_class_region_graph
+    from imagematerials.rest_of.const import IAI_TO_IMAGE_CLASSES
     knowledge_graph_region = create_class_region_graph()
     for material in ['steel', 'aluminium', 'copper','cement', 'sand', 'limestone', 'clay']:
         if material == 'aluminium':
@@ -298,6 +293,7 @@ def get_X_max_scaling_factor(results, create_class_region_graph, IAI_TO_IMAGE_CL
     max_x_da = xr.concat(arrays, dim='material')
     max_x_da = max_x_da.sortby('material')
     max_x_da.to_netcdf('../data/raw/rest-of/gompertz_values/max_x_regressor.nc')
+    print("saved")
 
     # convert to x_array with IMAGE regions
     return max_x_da

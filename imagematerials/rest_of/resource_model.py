@@ -150,12 +150,19 @@ class ResourceModel():
         historic_consumption: either total or other fraction (diff) depending what is available
         """
         
-        #calculate gdp per capita
+        # calculate regressors on the shared year window available for both drivers
         self.gdp_pc = self.gdp_pc_100.loc[self.start_year:self.end_year]
-        
+        population = self.pop_100.loc[self.start_year:self.end_year]
+
+        common_index = historic_consumption.index.intersection(population.index).intersection(self.gdp_pc.index)
+        common_columns = historic_consumption.columns.intersection(population.columns).intersection(self.gdp_pc.columns)
+
+        historic_consumption = historic_consumption.loc[common_index, common_columns]
+        population = population.loc[common_index, common_columns]
+        self.gdp_pc = self.gdp_pc.loc[common_index, common_columns]
+
         # from total consumption per region and population derive consumption per cap
-        self.cons_capita = historic_consumption/self.pop
-        self.cons_capita = self.cons_capita.loc[self.start_year:self.end_year]
+        self.cons_capita = historic_consumption / population
 
         # make cons_data to same length as diff_data
         # self.historic_consumption_data_adapted_years = self.historic_consumption_data.loc[self.start_year:self.end_year]
