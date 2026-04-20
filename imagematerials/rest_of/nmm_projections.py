@@ -122,11 +122,9 @@ def limestone_projection(scenario: str, path_input_data, path_input_data_image):
 
     group_1 = ['class_ 1']
     group_2 = ['class_ 2']
-    group_3 = [ 'class_ 7', 'class_ 17', 
-            'class_ 24', 'class_ 26', 
-            'class_ 3', 'class_ 5', 'class_ 14', 'class_ 15']
-    group_4 = ['class_ 11', 'class_ 12', 'class_ 21'] 
-    group_5 = ['class_ 19', 'class_ 23']
+    group_3 = ['class_ 3', 'class_ 5', 'class_ 14', 'class_ 15', 'class_ 17', 'class_ 24', 'class_ 26']
+    group_4 = ['class_ 11', 'class_ 12'] 
+    group_5 = ['class_ 7', 'class_ 19', 'class_ 21', 'class_ 23']
     group_6 = ['class_ 4', 'class_ 6', 'class_ 22']
     group_7 = ['class_ 20']
     group_8 = ['class_ 18']

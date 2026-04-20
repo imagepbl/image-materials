@@ -774,6 +774,9 @@ class RestOf(prism.Model):
                               "historic_diff_consumption_mean", "historic_diff_consumption_total")
     output_data: tuple[str] = ("inflow_materials",)
 
+    # Number of years used to blend from last historic observation to modeled values.
+    transition_years: ClassVar[int] = 10
+
     # Output data inflow_materials_rest
     # inflow_materials: prism.TimeVariable[REGION, MATERIAL_TYPE] = prism.export()
 
@@ -812,6 +815,40 @@ class RestOf(prism.Model):
                 historic_diff_consumption_mean.transpose(*self.inflow_materials.loc[t].dims),
                 self.inflow_materials.loc[t]
             )
+
+            # Smoothly transition from the last available historic value to modeled values.
+            # This avoids an abrupt jump in the first years after historic observations end.
+            historic_until_t = historic_diff_consumption_total.sel(Time=slice(None, t))
+            valid_historic_mask = ~np.isnan(historic_until_t)
+            time_coord = xr.DataArray(
+                historic_until_t["Time"].values,
+                dims=("Time",),
+                coords={"Time": historic_until_t["Time"]},
+            )
+            last_historic_year = xr.where(
+                valid_historic_mask,
+                time_coord,
+                np.nan,
+            ).max("Time", skipna=True)
+            last_year_mask = valid_historic_mask & (time_coord == last_historic_year)
+            last_historic_value = historic_until_t.where(last_year_mask).max("Time", skipna=True)
+            years_since_last = t - last_historic_year
+            blend_weight = (years_since_last / self.transition_years).clip(min=0.0, max=1.0)
+            smoothed_inflow = (
+                (1.0 - blend_weight) * last_historic_value
+                + blend_weight * self.inflow_materials.loc[t]
+            )
+            transition_mask = (
+                (years_since_last > 0)
+                & (years_since_last <= self.transition_years)
+                & ~np.isnan(last_historic_value)
+            )
+            self.inflow_materials.loc[t] = xr.where(
+                transition_mask,
+                smoothed_inflow,
+                self.inflow_materials.loc[t],
+            )
+
             if t > 1970 and t < 2025:
                 # check if real historic data is available (not nan)
                 real_historic_data_mask = ~np.isnan(historic_diff_consumption_total.sel(Time=t))
@@ -820,7 +857,7 @@ class RestOf(prism.Model):
                     historic_diff_consumption_total.sel(Time=t),
                     self.inflow_materials.loc[t]
                 )
-
+            
         else:
             pass # No inflow before 1970
 
