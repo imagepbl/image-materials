@@ -95,7 +95,7 @@ def steel_projection(scenario: str, path_input_data, path_input_data_image):
     steel = ResourceModel(resource_group = 'metals', resource = 'steel', 
                         image_mat_available = True, start_year = 1971,
                         scenario=scenario,
-                        convert_image=True, end_year = 2012, convert_to_tons = 1/1000_000, 
+                        convert_image=True, end_year = 2024, convert_to_tons = 1/1000_000, 
                         trade_data=True, 
                         path_input_data=path_input_data,
                         path_input_data_image=path_input_data_image)

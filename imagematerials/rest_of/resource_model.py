@@ -22,7 +22,7 @@ class ResourceModel():
     '''
     def __init__(self, resource_group: str, resource: str, start_year: int, scenario: str, 
                  image_mat_available: bool, 
-                 end_year = 2017, convert_image = False, convert_to_tons = None, trade_data = False, 
+                 end_year = 2024, convert_image = False, convert_to_tons = None, trade_data = False, 
                  path_input_data = path_input_data_cons, adapt_mat_factor = None,
                  path_input_data_image = path_input_data):
         
@@ -44,6 +44,18 @@ class ResourceModel():
                                                         index_col=0)
             self.net_trade = pd.read_csv(f'{path_input_data}/{resource_group}/{self.resource}_net_trade.csv', 
                                                         index_col=0)
+
+            # first check if all years are available (1971 - 2100), if not add these on 
+            # then interpolate over missing values in net trade data
+            # take the first year from trade data and the last year from trade data to create a list of all years
+            first_year = self.net_trade.index.min()
+            last_year = self.net_trade.index.max()
+            all_years = list(range(first_year, last_year + 1))
+            # check if index of net trade data is equal to all years, if not reindex and interpolate
+            if not self.net_trade.index.equals(pd.Index(all_years)):
+                self.net_trade = self.net_trade.reindex(all_years)
+                self.net_trade = self.net_trade.interpolate(method='linear', limit_direction='both')
+
             self.historic_consumption_data = self.production - self.net_trade
             # make a copy of historic_consumption_data
             self.historic_consumption_data_complete = self.historic_consumption_data.copy()
@@ -330,34 +342,6 @@ class ResourceModel():
         
         self.projection_per_region_IMAGE.index = np.arange(2017, 2101)
      
-        
-    def smooth_out_interpolation_all(self, nr_years_interpolate: int, start_year = 2012):
-
-        if self.image_mat_available == False:
-            for region in self.projection_per_region_total.columns:
-                start_interpolate = self.historic_consumption_data[region].loc[start_year:start_year]
-                end_interpolate = self.projection_per_region_total[region].loc[start_year+nr_years_interpolate:start_year+nr_years_interpolate]
-
-                # interpolate between the two points
-                interpolated = pd.Series(np.linspace(start_interpolate.values[0], end_interpolate.values[0], nr_years_interpolate+1), 
-                                        index = self.projection_per_region_total[region].loc[start_year:start_year+nr_years_interpolate].index)
-
-                # replace the values in the projection with the interpolated values
-                self.projection_per_region_total[region].loc[start_year:start_year+nr_years_interpolate] = interpolated
-        else:
-            for region in self.projection_per_region_total.columns:
-
-                start_interpolate = self.historic_other_fraction_consumption[region].loc[start_year:start_year]
-                end_interpolate = self.projection_per_region_total[region].loc[start_year+nr_years_interpolate:start_year+nr_years_interpolate]
-
-                # interpolate between the two points
-                interpolated = pd.Series(np.linspace(start_interpolate.values[0], end_interpolate.values[0], nr_years_interpolate+1), 
-                                        index = self.projection_per_region_total[region].loc[start_year:start_year+nr_years_interpolate].index)
-
-                # replace the values in the projection with the interpolated values
-                self.projection_per_region_total[region].loc[start_year:start_year+nr_years_interpolate] = interpolated
-
-
 
     # calculate y for gompertz function
     def gompertz_function(self, x, a, b, c):

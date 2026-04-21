@@ -775,7 +775,7 @@ class RestOf(prism.Model):
     output_data: tuple[str] = ("inflow_materials",)
 
     # Number of years used to blend from last historic observation to modeled values.
-    transition_years: ClassVar[int] = 10
+    transition_years: ClassVar[int] = 20
 
     # Output data inflow_materials_rest
     # inflow_materials: prism.TimeVariable[REGION, MATERIAL_TYPE] = prism.export()
