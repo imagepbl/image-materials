@@ -303,7 +303,6 @@ def get_X_max_scaling_factor(results):
     max_x_da = xr.concat(arrays, dim='material')
     max_x_da = max_x_da.sortby('material')
     max_x_da.to_netcdf('../data/raw/rest-of/gompertz_values/max_x_regressor.nc')
-    print("saved")
 
     # convert to x_array with IMAGE regions
     return max_x_da
