@@ -143,8 +143,8 @@ def compute_extraction_materials(path_base: str, climate_policy_config: dict, ci
     extraction_materials_xr = prism.Q_(extraction_materials_xr, "kg/kg/year")
 
     #Rebroadcast to standard technology names from TIMER, and convert coordinate type back to python strings (since rebroadcast changes it to numpy strings)
-    extraction_materials_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(extraction_materials_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
-    extraction_materials_xr = extraction_materials_xr.assign_coords(Type=np.array(extraction_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
+    # extraction_materials_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(extraction_materials_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
+    # extraction_materials_xr = extraction_materials_xr.assign_coords(Type=np.array(extraction_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
     return extraction_materials_xr
 
@@ -190,9 +190,9 @@ def compute_processing_materials(path_base: str, climate_policy_config: dict, ci
     #Add units
     processing_materials_xr = prism.Q_(processing_materials_xr, "kg/kg/year")
 
-    #Rebroadcast to standard technology names from TIMER, and convert coordinate type back to python strings (since rebroadcast changes it to numpy strings)
-    processing_materials_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(processing_materials_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
-    processing_materials_xr = processing_materials_xr.assign_coords(Type=np.array(processing_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
+    # #Rebroadcast to standard technology names from TIMER, and convert coordinate type back to python strings (since rebroadcast changes it to numpy strings)
+    # processing_materials_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(processing_materials_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
+    # processing_materials_xr = processing_materials_xr.assign_coords(Type=np.array(processing_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
     return processing_materials_xr
 
@@ -234,8 +234,8 @@ def compute_transport_materials(path_base: str, climate_policy_config: dict, cir
     transport_materials_xr = prism.Q_(transport_materials_xr, "kg/kg/year")
 
     #Rebroadcast to standard technology names from TIMER, and convert coordinate type back to python strings (since rebroadcast changes it to numpy strings)
-    transport_materials_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(transport_materials_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
-    transport_materials_xr = transport_materials_xr.assign_coords(Type=np.array(transport_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
+    # transport_materials_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(transport_materials_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
+    # transport_materials_xr = transport_materials_xr.assign_coords(Type=np.array(transport_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
     return transport_materials_xr
 
@@ -276,8 +276,8 @@ def compute_pipelines_materials(path_base: str, climate_policy_config: dict, cir
     pipelines_materials_xr = prism.Q_(pipelines_materials_xr, "kg/kg/year")
 
     #Rebroadcast to standard technology names from TIMER, and convert coordinate type back to python strings (since rebroadcast changes it to numpy strings)
-    pipelines_materials_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(pipelines_materials_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
-    pipelines_materials_xr = pipelines_materials_xr.assign_coords(Type=np.array(pipelines_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
+    # pipelines_materials_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(pipelines_materials_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
+    # pipelines_materials_xr = pipelines_materials_xr.assign_coords(Type=np.array(pipelines_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
    
     return pipelines_materials_xr
 

@@ -540,11 +540,11 @@ def coal_infra():
         transport_demand_total,
         transport_vehicle_weight_per_tkm,
     )  # in kg
-    return (
-        extraction_stock_coal,
-        preparation_stock_coal,
-        transport_total_coal,
-    )
+    return {
+        "extraction": extraction_stock_coal,
+        "processing": preparation_stock_coal,
+        "transport": transport_total_coal,
+    }
 
 #Comment back in if running for a new scenario, otherwise it will overwrite the existing files with the same name (since the input data is the same)
 # coalresults = coal_infra()
@@ -585,12 +585,13 @@ def gas_infra():
         (gas_use_total * constants.GJ_TO_M3_GAS),
         processing_intensity_weight_gas,
     )
-    return (
-        extraction_stock_gas,
-        transport_total_gas,
-        gas_pipelines,
-        processing_stock_gas,
-    )
+    return {
+        "extraction": extraction_stock_gas,
+        "transport": transport_total_gas,
+        "pipelines": gas_pipelines,
+        "processing": processing_stock_gas,
+    }
+
 #Comment back in if running for a new scenario, otherwise it will overwrite the existing files with the same name (since the input data is the same)
 # gasresults = gas_infra()
 # gasresults[0].to_csv(OUTPUT_DIR / scenario / "gas_extraction_stock_kg.csv")
@@ -636,13 +637,13 @@ def oil_infra():
         (oil_use_total * constants.GJ_TO_KG_OIL / ref_frac),
         refinery_intensity_weight_oil,
     )  # IN KG
-    return (
-        extraction_stock_oil,
-        transport_total_oil,
-        oil_pipelines,
-        oil_storage,
-        refinery_stock_oil,
-    )
+    return {
+        "extraction": extraction_stock_oil,
+        "transport": transport_total_oil,
+        "pipelines": oil_pipelines,
+        "storage": oil_storage,
+        "refinery": refinery_stock_oil,
+    }
 
 #Comment back in if running for a new scenario, otherwise it will overwrite the existing files with the same name (since the input data is the same)
 # oilresults = oil_infra()
