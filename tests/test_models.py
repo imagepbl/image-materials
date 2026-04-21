@@ -139,4 +139,7 @@ def test_shares_inflow_stocks(coordinates, timelines, test_knowledge_graph):
             stocks.coords["SuperType"].values,
             dim="Type"
         ).rename({"Type": "SuperType"})
+        
+        # With constant stock targets (all 1.0) and fast decay (Weibull c=1, scale=1),
+        # inflow is always positive, so stock equals demand exactly.
         assert (stock_by_supertype == stocks.loc[t]).all()
