@@ -8,20 +8,11 @@ from importlib.resources import files
 
 import prism
 from imagematerials.read_mym import read_mym_df
-from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
+from imagematerials.util import convert_lifetime
 from imagematerials.concepts import create_electricity_graph, create_region_graph
 from imagematerials.electricity.utils import (
-    MNLogit, 
-    stock_tail, 
-    create_prep_data, 
-    logistic, 
-    quadratic,
     interpolate_xr, 
-    add_historic_stock, 
-    calculate_grid_growth, 
-    calculate_fraction_underground,  
-    normalize_selected_techs,
-    calculate_storage_market_shares
+    add_historic_stock,
 )
 from imagematerials.electricity.preprocessing.circular_economy_measures import (
     apply_ce_measures_to_elc_generation
@@ -32,11 +23,8 @@ from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.electricity.constants import (
     STANDARD_SCEN_EXTERNAL_DATA,
     YEAR_FIRST_GRID,
-    SENS_ANALYSIS,
     EPG_TECHNOLOGIES,
     STD_LIFETIMES_ELECTR,
-    EV_BATTERIES,
-    unit_mapping
 )
 
 # for ttesting, remove later:

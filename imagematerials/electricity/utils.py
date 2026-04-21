@@ -81,7 +81,9 @@ def add_historic_stock(da_stock, year_start=1920, interp_method="linear"):
     n_hist = len(t_hist)
 
     # Interpolate from 0 to first existing value - use this approach as it is faster than using xr.interp()
-    first_values = da_stock.sel(Time=t_first).values.astype(float)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UnitStrippedWarning)
+        first_values = da_stock.sel(Time=t_first).values.astype(float)
     if interp_method == "linear":
         stock_hist = np.linspace(0, 1, n_hist)[:, None, None] * first_values[None, :, :]
     elif interp_method == "quadratic":
