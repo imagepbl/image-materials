@@ -94,16 +94,12 @@ def estimate_models(cons_capita: pd.DataFrame, gdp_pc: pd.DataFrame, bounds:tupl
         print('log-gauss-saturate model', e)
         log_gauss_saturate_model = None
 
-
-
     return (non_linerar_inv_model, gompertz_model, 
             logistic_growth_model, bw_model, log_gauss_saturate_model, log_log_model, 
             semi_log_model, log_inverse_model, log_log_inverse_model, log_log_square_model)
 
     
-
-#%% Make statistical analysis
-
+# Make statistical analysis
 def rmse_r2_models(models_output: tuple) -> pd.DataFrame:
     """
     Take list of regression models for selection of IMAGE grouped regions (output of estimate_models()).
@@ -151,8 +147,7 @@ def rmse_r2_models(models_output: tuple) -> pd.DataFrame:
     return rmse_r2
 
 
-#%% Estimate models for groups and perform statistical analysos
-
+# Estimate models for groups and perform statistical analysos
 def estimate_models_per_region_group(regions_groups_dict: dict, 
                                      cons_pc_groups: dict,
                                      gdp_pc_groups: dict,
@@ -197,7 +192,6 @@ def estimate_models_per_region_group(regions_groups_dict: dict,
     merged_rmse_r2 = pd.concat(rmse_r2_groups.values(), axis=1, keys=rmse_r2_groups.keys())
     
     return model_groups, rmse_r2_groups, merged_rmse_r2
-
 
 
 def match_regions_to_best_model(rmse_r2_groups: dict, 
