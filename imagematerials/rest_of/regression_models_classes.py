@@ -290,11 +290,12 @@ class NLS_Model:
             ci_lower = params - t_crit * std_errors
             ci_upper = params + t_crit * std_errors
 
-            if n_params > 0 and ss_tot > 0 and ss_res >= 0:
-                ms_model = (ss_tot - ss_res) / n_params
+            model_dof = n_params - 1
+            if model_dof > 0 and ss_tot > 0 and ss_res >= 0:
+                ms_model = (ss_tot - ss_res) / model_dof
                 ms_error = ss_res / dof
                 f_stat = np.nan if ms_error <= 0 else ms_model / ms_error
-                self._p_value = 1 - stats.f.cdf(f_stat, n_params, dof) if np.isfinite(f_stat) else np.nan
+                self._p_value = 1 - stats.f.cdf(f_stat, model_dof, dof) if np.isfinite(f_stat) else np.nan
             else:
                 self._p_value = np.nan
 
