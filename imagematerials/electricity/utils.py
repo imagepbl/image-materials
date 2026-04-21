@@ -148,11 +148,11 @@ def _extrap_to_zero(times, first_value, method='linear'):
         raise ValueError(f"Unknown method '{method}'. Choose 'linear', 'exponential', or 'logistic'.")
 
 def interpolate_xr(data_array: xr.DataArray, 
-                         t_start: int | float | dict, 
-                         t_end: int | float, 
-                         interp_method: str='linear', 
-                         extrap_before: str='constant', 
-                         extrap_before_method: str='linear'):
+                   t_start: int | float | dict,
+                   t_end: int | float,
+                   interp_method: str='linear',
+                   extrap_before: str='constant',
+                   extrap_before_method: str='linear'):
     """ Interpolate an xarray.DataArray over a continuous time range and
     extend its boundary values beyond the available data to span t_start - t_end.
     The function performs (linear) interpolation between all existing time
@@ -217,9 +217,10 @@ def interpolate_xr(data_array: xr.DataArray,
     da_interp.loc[{dim: slice(coord_values.max(), None)}] = da_interp.sel({dim: coord_values.max()})
 
     # --- Handle extrapolation before first data point ---
-    if 'Region' in data_array.dims:
+    if isinstance(t_start, dict) and 'Region' in data_array.dims:
+        # Region-specific start years — must iterate over regions
         regions = data_array.Region.values
-        fallback_year = global_t_start if not isinstance(t_start, dict) else min(t_start.values())
+        fallback_year = global_t_start #if not isinstance(t_start, dict) else min(t_start.values())
 
         for region in regions:
             region_start = t_start.get(region, fallback_year) if isinstance(t_start, dict) else t_start
@@ -240,17 +241,30 @@ def interpolate_xr(data_array: xr.DataArray,
             else:  # 'constant'
                 da_interp.loc[{dim: slice(None, coord_values.min()), 'Region': region}] = first_value
 
+    elif isinstance(t_start, dict):
+        raise ValueError("t_start is a dict but 'Region' is not a dimension in the DataArray.")
+    
     else:
-        # No Region dimension
-        first_value = float(da_interp.sel({dim: coord_values.min()}).values)
-
+        # Uniform t_start — broadcast directly, no need to loop over regions       
+        first_slice = da_interp.sel({dim: coord_values.min()})
+        last_slice = da_interp.sel({dim: coord_values.max()})
+        
         if extrap_before == 'zero':
             ramp_times = np.arange(global_t_start, coord_values.min() + 1)
-            # ramp_values = np.linspace(0, first_value, len(ramp_times))
-            ramp_values = _extrap_to_zero(ramp_times, first_value, method=extrap_before_method)
-            da_interp.loc[{dim: ramp_times}] = ramp_values
+            # Compute ramp for each element, then reassemble into the right shape
+            # first_slice has shape (2, 34) — apply _extrap_to_zero per scalar value
+            ramp_values = xr.apply_ufunc(
+                lambda val: _extrap_to_zero(ramp_times, val, method=extrap_before_method),
+                first_slice,
+                vectorize=True,
+                output_core_dims=[[dim]],
+                dask='parallelized',
+            )
+            ramp_values[dim] = ramp_times
+            da_interp.loc[{dim: ramp_times}] = ramp_values.transpose(*da_interp.dims)
         else:  # 'constant'
-            da_interp.loc[{dim: slice(None, coord_values.min())}] = first_value
+            da_interp.loc[{dim: slice(None, coord_values.min())}] = first_slice
+            da_interp.loc[{dim: slice(coord_values.max(), None)}] = last_slice
 
     # --- Reattach unit ---
     if unit != prism.Unit('dimensionless'):
