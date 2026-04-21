@@ -11,19 +11,57 @@ import numpy as np
 import os
 from pathlib import Path
 
-# SET SCENARIO HERE (Select from SSP1_delayed_action, SSP1_climate_policy, SSP2, SSP2_2D, SSP2_delayed_action, SSP2_climate_policy, SSP2_climate_policy_resource_efficiency SSP3_no_policy)
-scenario = "SSP2_baseline"
+from imagematerials.fossil_fuels.preprocessing.ffconstants import (
+    # config
+    circular_economy_config,
+    climate_policy_config,
+    scenario,
+    scen_folder,
 
-BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "raw" / "fossil_fuels" / "Drivers"
-OUTPUT_DIR = Path(__file__).resolve().parent.parent / "data" / "raw" / "fossil_fuels" / "Scenario_data"
+    # paths
+    path_base,
+    DATA_DIR,
+    IMAGE_DIR,
+    OUTPUT_DIR,
+    CLIMATE_POLICY_SCENARIO_DIR,
+    climate_policy_scenario_dir,
 
-(OUTPUT_DIR / scenario).mkdir(parents=True, exist_ok=True)
-print(f"Output directory ready: {OUTPUT_DIR / scenario}")
+    # model constants
+    FF_TECHNOLOGIES,
+    IMAGE_REGIONS,
+    STANDARD_SCEN_EXTERNAL_DATA,
+    YEAR_FIRST_GRID,
+    SD_LIFETIME,
+)
 
-print(f"Base directory: {BASE_DIR}")
-print(f"Data directory: {DATA_DIR}")
-print(f"Output directory: {OUTPUT_DIR}")
+# # SET SCENARIO HERE (Select from SSP1_delayed_action, SSP1_climate_policy, SSP2, SSP2_2D, SSP2_delayed_action, SSP2_climate_policy, SSP2_climate_policy_resource_efficiency SSP3_no_policy)
+# scenario = "SSP2_baseline"
+# scen_folder = "SSP2_baseline" #SSP2_baseline is the only option right now given the existing files of primpersec and final_energy_rt
+# STANDARD_SCEN_EXTERNAL_DATA = "SSP2_baseline" #SSP2_baseline is the only option right now given the existing files of primpersec and final_energy_rt
+
+# BASE_DIR = Path(__file__).resolve()
+# while BASE_DIR.name != "image-materials":
+#     BASE_DIR = BASE_DIR.parent
+
+# DATA_DIR = BASE_DIR / "data" / "raw" / "fossil_fuels"
+# IMAGE_DIR = BASE_DIR / "data" / "raw" / "image"
+# OUTPUT_DIR = DATA_DIR / "Scenario_data"
+# CLIMATE_POLICY_SCENARIO_DIR = IMAGE_DIR / scen_folder  
+# path_base = BASE_DIR / "imagematerials"
+# climate_policy_scenario_dir = CLIMATE_POLICY_SCENARIO_DIR
+
+# BASE_DIR = Path(__file__).resolve().parent
+# DATA_DIR = Path(__file__).resolve().parents[3] / "data" / "raw" / "fossil_fuels"
+# OUTPUT_DIR = Path(__file__).resolve().parents[3] / "data" / "raw" / "fossil_fuels" / "Scenario_data"
+# IMAGE_DIR = Path(__file__).resolve().parents[3] / "data" / "raw" / "image"
+
+# (OUTPUT_DIR / scenario).mkdir(parents=True, exist_ok=True)
+# print(f"Output directory ready: {OUTPUT_DIR / scenario}")
+
+
+# print("data dir:", DATA_DIR)    
+# print("output dir:", OUTPUT_DIR)
+# print("image dir:", IMAGE_DIR) 
 
 # General constants
 NUM_REGIONS = 26  # 26 IMAGE regions
@@ -86,77 +124,73 @@ ref_frac = 0.8  #  refineryRefining capacity used
 import os
 
 primpersec = read_mym_df(
-    os.path.join("data", "raw", "image", scenario, "EnergyFlows", "PrimPerSec.out")  
+    IMAGE_DIR / scenario / "EnergyFlows" / "PrimPerSec.out"
 )
   # primary enery consumption per sector in GJ
 
 
 final_energy = read_mym_df(
-    os.path.join(
-        "data", "raw", "image", scenario, "EnergyFlows", "final_energy_rt.out"
-    )
+    IMAGE_DIR / scenario / "EnergyFlows" / "final_energy_rt.out"
 )  
 
 # final enery consumption per sector in PJ
 
 
 mining_type_share_coal = pd.read_csv(
-    DATA_DIR / "coal_mine_type_share.csv",
+    DATA_DIR / "DriversFiles" / "coal_mine_type_share.csv",
     index_col=[0],
 )
 # % of open-cast vs. underground mining
 
 
 extraction_type_share_gas = pd.read_csv(
-    DATA_DIR /"gas_extraction_type_share.csv", index_col=[0]
+    DATA_DIR / "DriversFiles" / "gas_extraction_type_share.csv", index_col=[0]
 )  # % of offshore vs. onshore extraction
 
 
 extraction_type_share_oil = pd.read_csv(
-    DATA_DIR /"oil_extraction_type_share.csv", index_col=[0]
+    DATA_DIR / "DriversFiles" / "oil_extraction_type_share.csv", index_col=[0]
 
 
 )  # % of offshore vs. onshore extraction
 
 # Pipeline data
 gas_pipeline_length = pd.read_csv(
-    DATA_DIR /"natural_gas_pipeline_length_km_new.csv", index_col=[0]
+    DATA_DIR / "DriversFiles" / "natural_gas_pipeline_length_km_new.csv", index_col=[0]
 )  # Regional Gas Pipeline length (km) for the year 2019
 
 
 oil_pipeline_length = pd.read_csv(
-    DATA_DIR /"oil_pipeline_length_km_new.csv", index_col=[0]
+    DATA_DIR / "DriversFiles" / "oil_pipeline_length_km_new.csv", index_col=[0]
 )  # Regional Oil Pipeline length (km) for the year 2019
 
 
-
 on_offshore_oil_pipeline = pd.read_csv(
-    DATA_DIR /"onshore_offshore_oil_pipeline.csv", index_col=[0]
+    DATA_DIR / "DriversFiles" / "onshore_offshore_oil_pipeline.csv", index_col=[0]
 )  # Share of 2 different pipeline types (onshore & offshore) global (%)
 
-print(on_offshore_oil_pipeline)
 
 # Storage data
 oil_storage_capacity = pd.read_csv(
-    DATA_DIR /"oil_storage_capacity_million_barrels_new.csv", index_col=[0]
+    DATA_DIR / "DriversFiles" / "oil_storage_capacity_million_barrels_new.csv", index_col=[0]
 )  # Regional Oil storage capacity (million barrels, mb)
 
 
 oil_storage_materials = pd.read_csv(
-    DATA_DIR /"material_intensity/oil_strorage_material_intensity_kg_per_m3.csv",
+    DATA_DIR / "DriversFiles" / "material_intensity" / "oil_storage_material_intensity_kg_per_m3.csv",
     index_col=[0],
 )  # Material intensity of oil regional oil distribution (kg material per m3 of storage capacity)
 
 # transport vehicle data
 transport_demand_domestic = pd.read_csv(
-    DATA_DIR /"Transport_demand_domestic_tkm_per_kg.csv",
+    DATA_DIR / "DriversFiles" / "Transport_demand_domestic_tkm_per_kg.csv",
     index_col=[0],
     sep=";",
 ).drop(
     columns="Pipeline"
 )  # Domestic transport demand per fuel type (tkm/kg, MIND: in the case of gas it is given in tkm/m3)
 transport_demand_internat = pd.read_csv(
-    DATA_DIR /"Transport_demand_international_tkm_per_kg.csv",
+    DATA_DIR / "DriversFiles" / "Transport_demand_international_tkm_per_kg.csv",
     index_col=[0],
     sep=";",
 ).drop(
@@ -167,11 +201,11 @@ transport_demand_total = (
 )
 
 transport_materials_per_vehicle = pd.read_csv(
-    DATA_DIR /"material_intensity/fossil_fuel_freight_vehicle_material_fraction.csv",
+    DATA_DIR / "DriversFiles" / "material_intensity" / "fossil_fuel_freight_vehicle_material_fraction.csv",
     index_col=[0],
 ).T  # % of the total weight by material in fossil fuel freight transport vehicles
 transport_vehicle_weight_per_tkm = pd.read_csv(
-    DATA_DIR /"material_intensity/fossil_fuel_freight_vehicle_weight_intensity_g_per_tkm.csv",
+    DATA_DIR / "DriversFiles" / "material_intensity" / "fossil_fuel_freight_vehicle_weight_intensity_g_per_tkm.csv",
     index_col=[0],
     header=None,
     sep=";",
@@ -179,45 +213,45 @@ transport_vehicle_weight_per_tkm = pd.read_csv(
 
 # Mining data & material intensities (in kg material per unit of annual production capacity)
 production_intensity_coal = pd.read_csv(
-    DATA_DIR /"material_intensity/coal_production_intensity.csv", index_col=[0]
+    DATA_DIR / "DriversFiles" / "material_intensity" / "coal_production_intensity.csv", index_col=[0]
 )  # material use per unit of production capacity (kg/kg yr-1)
 production_intensity_gas = pd.read_csv(
-    DATA_DIR /"material_intensity/Natural_gas_production_intensity.csv",
+    DATA_DIR / "DriversFiles" / "material_intensity" / "Natural_gas_production_intensity.csv",
     index_col=[0],
 )  # material use per unit of production capacity (kg/m3 yr-1)
 production_intensity_oil = pd.read_csv(
-    DATA_DIR /"material_intensity/oil_production_intensity.csv", index_col=[0]
+    DATA_DIR / "DriversFiles" / "material_intensity" / "oil_production_intensity.csv", index_col=[0]
 )
 
 # Processing & refinery material intensities (in kg material per unit of annual production capacity)
 processing_intensity_gas = pd.read_csv(
-    DATA_DIR /"material_intensity/gas_processing_plant_intensity_kg_per_m3.csv",
+    DATA_DIR / "DriversFiles" / "material_intensity" / "gas_processing_plant_intensity_kg_per_m3.csv",
     index_col=[0],
 )
 refinery_intensity_oil = pd.read_csv(
-    DATA_DIR /"material_intensity/oil_refinery_material_intensity_kg_per_kg.csv",
+    DATA_DIR / "DriversFiles" / "material_intensity" / "oil_refinery_material_intensity_kg_per_kg.csv",
     index_col=[0],
 )
 preparation_intensity_coal = pd.read_csv(
-    DATA_DIR /"material_intensity/coal_preparation_material_intensity_kg_per_kg.csv",
+    DATA_DIR / "DriversFiles" / "material_intensity" / "coal_preparation_material_intensity_kg_per_kg.csv",
     index_col=[0],
 )
 # Pipeline material intensity data (kg/km)
 gas_pipeline_composition_trans = pd.read_csv(
-    DATA_DIR /"material_intensity/gas_pipeline_composition_transmission_critical_kg_per_km.csv",
+    DATA_DIR / "DriversFiles" / "material_intensity" / "gas_pipeline_composition_transmission_critical_kg_per_km.csv",
     index_col=[0],
 )  # material use (kg) per km of transmission pipeline (kg/km)
 gas_pipeline_composition_distr = pd.read_csv(
-    DATA_DIR /"material_intensity/gas_pipeline_composition_distribution_kg_per_km.csv",
+    DATA_DIR / "DriversFiles" / "material_intensity" / "gas_pipeline_composition_distribution_kg_per_km.csv",
     index_col=[0],
 )  # material use (kg) per km of distribution pipeline (kg/km)
 oil_pipeline_composition = pd.read_csv(
-    DATA_DIR /"material_intensity/oil_pipeline_composition_kg_per_km.csv",
+    DATA_DIR / "DriversFiles" / "material_intensity" / "oil_pipeline_composition_kg_per_km.csv",
     index_col=[0],
 )
 
 # infrastructure lifetime assumptions (average lifetime in years)
-lifetimes = pd.read_csv(DATA_DIR /"lifetime.csv", index_col=[0])
+lifetimes = pd.read_csv(DATA_DIR / "DriversFiles" / "lifetime.csv", index_col=[0])
 
 # A3) Prepare data files & formatting
 
@@ -618,4 +652,5 @@ def oil_infra():
 # oilresults[3].to_csv(OUTPUT_DIR / scenario / "oil_storage_volume_m3.csv")
 # oilresults[4].to_csv(OUTPUT_DIR / scenario / "oil_refinery_stock_kg.csv")
 
+print("drivers.py ran successfully!")
 

@@ -6,6 +6,43 @@ import matplotlib.pyplot as plt
 
 ureg = pint.UnitRegistry(force_ndarray_like=True)
 
+#Select scenario and policy config
+
+circular_economy_config = None
+climate_policy_config = "SSP2_baseline" #SSP2_baseline is the only option right now given the existing files of primpersec and final_energy_rt
+scenario = "SSP2_baseline" #SSP2_baseline is the only option right now given the existing files of primpersec and final_energy_rt
+
+scen_folder = scenario #SSP2_baseline is the only option right now given the existing files of primpersec and final_energy_rt
+STANDARD_SCEN_EXTERNAL_DATA = scenario #SSP2_baseline is the only option right now given the existing files of primpersec and final_energy_rt
+SCENARIO_DEFAULT = "SSP2_baseline"
+
+# Define paths (change to be consistent with other OS)
+
+# BASE_DIR = Path(__file__).resolve()
+# while BASE_DIR.name != "image-materials":
+#     BASE_DIR = BASE_DIR.parent
+
+# DATA_DIR = BASE_DIR / "data" / "raw" / "fossil_fuels"
+# IMAGE_DIR = BASE_DIR / "data" / "raw" / "image"
+# OUTPUT_DIR = DATA_DIR / "Scenario_data"
+# CLIMATE_POLICY_SCENARIO_DIR = IMAGE_DIR / scen_folder  
+# path_base = BASE_DIR / "imagematerials"
+# climate_policy_scenario_dir = CLIMATE_POLICY_SCENARIO_DIR
+
+# Define paths (change to be consistent with other OS)
+path_base = Path(__file__).resolve()
+while path_base.name != "image-materials":
+    path_base = path_base.parent
+
+# Build paths using Path
+DATA_DIR = Path(path_base, "data", "raw", "fossil_fuels")
+IMAGE_DIR = Path(path_base, "data", "raw", "image")
+OUTPUT_DIR = Path(DATA_DIR, "Scenario_data")
+
+CLIMATE_POLICY_SCENARIO_DIR = Path(IMAGE_DIR, scen_folder)
+climate_policy_scenario_dir = CLIMATE_POLICY_SCENARIO_DIR
+
+
 # --- Settings & constants
 #first_production_year = {"coal": 1880, "oil": 1900, "gas": 1920}
 #stabilisation_year = {"coal": 1920, "oil": 1970, "gas": 1970}
@@ -15,11 +52,6 @@ YEAR_FIRST_GRID =  1970 # change this to align with FUMA (it is the file i belie
 REGIONS = 26
 COHORTS = 50 #check what this is
 
-
-# Scenario settings ---------------------------------------------
-#see about changing these to the correct ones (VLLO, ML, Lifetech, etc.)
-STANDARD_SCEN_EXTERNAL_DATA = "SSP2_M_CP"
-SCENARIO_DEFAULT = "SSP2_M_CP"
 
 # Sensitivity Analysis - default, high_stor, high_grid
 SENS_ANALYSIS = "default" 
@@ -117,62 +149,62 @@ TECH_GEN = 27   # number of fossil  technologies -> 26 technologies + 1 empty ro
 
 # names of fossil fuel types (check with TIMER model)
 FF_TECHNOLOGIES = [
-    "coal open cast",
-    "coal underground",
-    "oil onshore extraction",
-    "oil offshore extraction",
-    "gas onshore extraction",
-    "gas offshore extraction",
-    "coal preparation",
-    "oil storage",
-    "oil refinery",
-    "gas processing",
-    "coal truck",
-    "coal train",
-    "coal ocean ship",
-    "coal inland ship",
-    "oil truck",
-    "oil train",
-    "oil ocean ship",
-    "oil inland ship",
-    "gas truck",
-    "gas train",
-    "gas ocean ship",
-    "gas inland ship"
-    "oil crude composition pipeline",
-    "oil product pipeline",
-    "gas distribution pipeline",
-    "gas transmission pipeline"
+    "Coal Opencast",
+    "Coal Underground",
+    "Oil Onshore",
+    "Oil Offshore",
+    "Gas Onshore",
+    "Gas Offshore",
+    "Coal Preparation",
+    "Oil Storage",
+    "Oil Refinery",
+    "Gas Processing",
+    "Coal Truck",
+    "Coal Train",
+    "Coal Ocean Ship",
+    "Coal Inland Ship",
+    "Oil Truck",
+    "Oil Train",
+    "Oil Ocean Ship",
+    "Oil Inland Ship",
+    "Gas Truck",
+    "Gas Train",
+    "Gas Ocean Ship",
+    "Gas Inland Ship",
+    "Oil Crude Composition Pipeline",
+    "Oil Product Pipeline",
+    "Gas Distribution Pipeline",
+    "Gas Transmission Pipeline"
 ]
 
 # Define mapping: technology -> category
 DICT_GENTECH_TO_CATEGORY = {
-    "coal open cast: coal",
-    "coal underground: coal",
-    "oil onshore extraction: oil",
-    "oil offshore extraction: oil",
-    "gas onshore extraction: gas",
-    "gas offshore extraction: gas",
-    "coal preparation: coal",
-    "oil storage: oil",
-    "oil refinery: oil",
-    "gas processing: gas",
-    "coal truck: coal",
-    "coal train: coal",
-    "coal ocean ship: coal",
-    "coal inland ship: coal",
-    "oil truck: oil",
-    "oil train: oil",
-    "oil ocean ship: oil",
-    "oil inland ship: oil",
-    "gas truck: gas",
-    "gas train: gas",
-    "gas ocean ship: gas",
-    "gas inland ship: gas"
-    "oil crude composition pipeline: oil",
-    "oil product pipeline: oil",
-    "gas distribution pipeline: gas",
-    "gas transmission pipeline: gas"}
+    "Coal Opencast: coal",
+    "Coal Underground: coal",
+    "Oil Onshore Extraction: oil",
+    "Oil Offshore Extraction: oil",
+    "Gas Onshore Extraction: gas",
+    "Gas Offshore Extraction: gas",
+    "Coal Preparation: coal",
+    "Oil Storage: oil",
+    "Oil Refinery: oil",
+    "Gas Processing: gas",
+    "Coal Truck: coal",
+    "Coal Train: coal",
+    "Coal Ocean Ship: coal",
+    "Coal Inland Ship: coal",
+    "Oil Truck: oil",
+    "Oil Train: oil",
+    "Oil Ocean Ship: oil",
+    "Oil Inland Ship: oil",
+    "Gas Truck: gas",
+    "Gas Train: gas",
+    "Gas Ocean Ship: gas",
+    "Gas Inland Ship: gas",
+    "Oil Crude Composition Pipeline: oil",
+    "Oil Product Pipeline: oil",
+    "Gas Distribution Pipeline: gas",
+    "Gas Transmission Pipeline: gas"}
 
 # Constant direct from FUMA
 #primary_fuel_types_ff = ["coal", "conv oil", "unconv oil", "gas"]  # 1st 4
@@ -254,33 +286,34 @@ DICT_GENTECH_TO_CATEGORY = {
 
 # Generation technologies
 technologies = [
-    "coal open cast",
-    "coal underground",
-    "oil onshore extraction",
-    "oil offshore extraction",
-    "gas onshore extraction",
-    "gas offshore extraction",
-    "coal preparation",
-    "oil storage",
-    "oil refinery",
-    "gas processing",
-    "coal truck",
-    "coal train",
-    "coal ocean ship",
-    "coal inland ship",
-    "oil truck",
-    "oil train",
-    "oil ocean ship",
-    "oil inland ship",
-    "gas truck",
-    "gas train",
-    "gas ocean ship",
-    "gas inland ship"
-    "oil crude composition pipeline",
-    "oil product pipeline",
-    "gas distribution pipeline",
-    "gas transmission pipeline"
+    "Coal Opencast",
+    "Coal Underground",
+    "Oil Onshore",
+    "Oil Offshore",
+    "Gas Onshore",
+    "Gas Offshore",
+    "Coal Preparation",
+    "Oil Storage",
+    "Oil Refinery",
+    "Gas Processing",
+    "Coal Truck",
+    "Coal Train",
+    "Coal Ocean Ship",
+    "Coal Inland Ship",
+    "Oil Truck",
+    "Oil Train",
+    "Oil Ocean Ship",
+    "Oil Inland Ship",
+    "Gas Truck",
+    "Gas Train",
+    "Gas Ocean Ship",
+    "Gas Inland Ship",
+    "Oil Crude Composition Pipeline",
+    "Oil Product Pipeline",
+    "Gas Distribution Pipeline",
+    "Gas Transmission Pipeline"
 ]
+
 # Define color and linestyle pools
 colors = plt.get_cmap('tab20').colors  # 20 distinct colors
 linestyles = ['-', '--', ':'] #'-.'

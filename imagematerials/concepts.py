@@ -911,8 +911,8 @@ def create_electricity_graph():
 def create_fossil_fuel_graph():
     """Create the knowledge graph for the fossil fuel sector."""
 
-    ff_fueltypes = ["coal", "oil", "gas"]
-    ff_supertypes = ["extraction", "processing", "transport", "pipelines"]
+    ff_fueltypes = ["Coal", "Oil", "Gas"]
+    ff_supertypes = ["Extraction", "Processing", "Transport", "Pipeline"]
 
     fossil_fuel_knowledge_graph = KnowledgeGraph(Node("fossil fuels"))
 
@@ -926,63 +926,63 @@ def create_fossil_fuel_graph():
 
     # 2nd level: fuel - stage combinations
 
-    fossil_fuel_knowledge_graph.add(Node("coal - extraction", inherits_from=["coal", "extraction"]))
-    fossil_fuel_knowledge_graph.add(Node("oil - extraction", inherits_from=["oil", "extraction"]))
-    fossil_fuel_knowledge_graph.add(Node("gas - extraction", inherits_from=["gas", "extraction"]))
+    fossil_fuel_knowledge_graph.add(Node("Coal - Extraction", inherits_from=["Coal", "Extraction"]))
+    fossil_fuel_knowledge_graph.add(Node("Oil - Extraction", inherits_from=["Oil", "Extraction"]))
+    fossil_fuel_knowledge_graph.add(Node("Gas - Extraction", inherits_from=["Gas", "Extraction"]))
 
-    fossil_fuel_knowledge_graph.add(Node("coal - processing", inherits_from=["coal", "processing"]))
-    fossil_fuel_knowledge_graph.add(Node("oil - processing", inherits_from=["oil", "processing"]))
-    fossil_fuel_knowledge_graph.add(Node("gas - processing", inherits_from=["gas", "processing"]))
+    fossil_fuel_knowledge_graph.add(Node("Coal - Processing", inherits_from=["Coal", "Processing"]))
+    fossil_fuel_knowledge_graph.add(Node("Oil - Processing", inherits_from=["Oil", "Processing"]))
+    fossil_fuel_knowledge_graph.add(Node("Gas - Processing", inherits_from=["Gas", "Processing"]))
 
-    fossil_fuel_knowledge_graph.add(Node("coal - transport", inherits_from=["coal", "transport"]))
-    fossil_fuel_knowledge_graph.add(Node("oil - transport", inherits_from=["oil", "transport"]))
-    fossil_fuel_knowledge_graph.add(Node("gas - transport", inherits_from=["gas", "transport"]))
+    fossil_fuel_knowledge_graph.add(Node("Coal - Transport", inherits_from=["Coal", "Transport"]))
+    fossil_fuel_knowledge_graph.add(Node("Oil - Transport", inherits_from=["Oil", "Transport"]))
+    fossil_fuel_knowledge_graph.add(Node("Gas - Transport", inherits_from=["Gas", "Transport"]))
 
-    fossil_fuel_knowledge_graph.add(Node("oil - pipelines", inherits_from=["oil", "pipelines"]))
-    fossil_fuel_knowledge_graph.add(Node("gas - pipelines", inherits_from=["gas", "pipelines"]))
+    fossil_fuel_knowledge_graph.add(Node("Oil - Pipeline", inherits_from=["Oil", "Pipeline"]))
+    fossil_fuel_knowledge_graph.add(Node("Gas - Pipeline", inherits_from=["Gas", "Pipeline"]))
 
     # 3rd level: subtypes of stages
 
 # Extraction subtypes
 
-    for subtype in ["coal underground mining", "coal open cast mining"]:
-        fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from="coal - extraction"))
+    for subtype in ["Coal Underground", "Coal Opencast"]:
+        fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from="Coal - Extraction"))
 
-    for subtype in ["oil onshore", "oil offshore"]:
-        fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from="oil - extraction"))
+    for subtype in ["Oil Onshore", "Oil Offshore"]:
+        fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from="Oil - Extraction"))
 
-    for subtype in ["gas onshore", "gas offshore"]:
-        fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from="gas - extraction"))
+    for subtype in ["Gas Onshore", "Gas Offshore"]:
+        fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from="Gas - Extraction"))
 
 # Processing subtypes
 
-    for subtype in ["coal preparation"]:
-        fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from="coal - processing")) 
+    for subtype in ["Coal Preparation"]:
+        fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from="Coal - Processing")) 
 
-    for subtype in ["oil refinery", "oil storage"]:
-        fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from="oil - processing"))
+    for subtype in ["Oil Refinery", "Oil Storage"]:
+        fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from="Oil - Processing"))
 
-    for subtype in ["gas processing"]:
-        fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from="gas - processing"))
+    for subtype in ["Gas Processing"]:
+        fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from="Gas - Processing"))
 
 # Transport subtypes
 
-    for subtype in ["coal rail transport", "coal road transport", "coal inland shipping", "coal ocean shipping"]:
-        fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from="coal - transport"))
+    for subtype in ["Coal Rail", "Coal Truck", "Coal Inland Ships", "Coal Ocean Ships"]:
+        fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from="Coal - Transport"))
 
-    for subtype in ["oil rail transport", "oil road transport", "oil inland shipping", "oil ocean shipping"]:
-         fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from="oil - transport"))
+    for subtype in ["Oil Rail", "Oil Truck", "Oil Inland Ships", "Oil Ocean Ships"]:
+         fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from="Oil - Transport"))
 
-    for subtype in ["gas rail transport", "gas road transport", "gas inland shipping", "gas ocean shipping"]:
-         fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from="gas - transport"))
+    for subtype in ["Gas Rail", "Gas Truck", "Gas Inland Ships", "Gas Ocean Ships"]:
+         fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from="Gas - Transport"))
 
 # Pipelines subtypes
 
-    for subtype in ["transmission pipelines", "distribution pipelines"]:   
-         fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from=["gas - pipelines"])) 
+    for subtype in ["Gas Transmission Pipeline", "Gas Distribution Pipeline"]:   
+         fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from=["Gas - Pipeline"])) 
 
-    for subtype in ["crude offshore pipelines", "crude onshore pipelines", "product offshore pipelines", "product onshore pipelines"]:  
-         fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from=["oil - pipelines"]))   
+    for subtype in ["Oil Offshore Crude Pipeline", "Oil Onshore Crude Pipelins", "Oil Offshore Product Pipeline", "Oil Onshore Product Pipeline"]:  
+         fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from=["Oil - Pipeline"]))   
          
 
     return fossil_fuel_knowledge_graph

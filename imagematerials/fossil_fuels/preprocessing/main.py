@@ -8,7 +8,30 @@ import pint
 import xarray as xr
 import prism
 
-from imagematerials.fossil_fuels.preprocessing.ffconstants import FF_TECHNOLOGIES, IMAGE_REGIONS, STANDARD_SCEN_EXTERNAL_DATA, YEAR_FIRST_GRID, SD_LIFETIME
+from imagematerials.fossil_fuels.preprocessing.ffconstants import (
+    # config
+    circular_economy_config,
+    climate_policy_config,
+    scenario,
+    scen_folder,
+
+    # paths
+    path_base,
+    DATA_DIR,
+    IMAGE_DIR,
+    OUTPUT_DIR,
+    CLIMATE_POLICY_SCENARIO_DIR,
+    climate_policy_scenario_dir,
+
+    # model constants
+    FF_TECHNOLOGIES,
+    IMAGE_REGIONS,
+    STANDARD_SCEN_EXTERNAL_DATA,
+    YEAR_FIRST_GRID,
+    SD_LIFETIME
+)
+
+# from imagematerials.fossil_fuels.preprocessing.ffconstants import FF_TECHNOLOGIES, IMAGE_REGIONS, STANDARD_SCEN_EXTERNAL_DATA, YEAR_FIRST_GRID, SD_LIFETIME
 
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
@@ -24,21 +47,47 @@ from imagematerials.electricity.utils import (
    apply_ce_measures_to_elc
 )
 
+# from imagematerials.fossil_fuels.preprocessing.ffconstants import (    
+#     circular_economy_config,
+#     climate_policy_config,
+#     scenario,
+#     scen_folder,
+#     STANDARD_SCEN_EXTERNAL_DATA,
+#     BASE_DIR,
+#     DATA_DIR,
+#     IMAGE_DIR,
+#     OUTPUT_DIR,
+#     CLIMATE_POLICY_SCENARIO_DIR,
+#     path_base,
+#     climate_policy_scenario_dir,
+# )
+
 # from prism.prism.examples.fuel import scenario
+# circular_economy_config = None
+# climate_policy_config = "SSP2_baseline" #SSP2_baseline is the only option right now given the existing files of primpersec and final_energy_rt
+# scenario = "SSP2_baseline" #SSP2_baseline is the only option right now given the existing files of primpersec and final_energy_rt
 
-path_current = Path().resolve()
-path_base = path_current.parents [1]
-print("current:", path_current)
-print("base:", path_base)
+# scen_folder = "SSP2_baseline" #SSP2_baseline is the only option right now given the existing files of primpersec and final_energy_rt
+# STANDARD_SCEN_EXTERNAL_DATA = "SSP2_baseline" #SSP2_baseline is the only option right now given the existing files of primpersec and final_energy_rt
 
-#still not sure what to do with these 
-scen_folder = "SSP3_no_policy"
-climate_policy_scenario_dir = Path(path_base, "data", "raw", "image", scen_folder)
-STANDARD_SCEN_EXTERNAL_DATA = "SSP3_no_policy" 
+# BASE_DIR = Path(__file__).resolve()
+# while BASE_DIR.name != "image-materials":
+#     BASE_DIR = BASE_DIR.parent
+
+# DATA_DIR = BASE_DIR / "data" / "raw" / "fossil_fuels"
+# IMAGE_DIR = BASE_DIR / "data" / "raw" / "image"
+# OUTPUT_DIR = DATA_DIR / "Scenario_data"
+# CLIMATE_POLICY_SCENARIO_DIR = IMAGE_DIR / scen_folder  
+# path_base = BASE_DIR / "imagematerials"
+# climate_policy_scenario_dir = CLIMATE_POLICY_SCENARIO_DIR
 
 year_start = 1880
 year_end = 2100
 year_out = 2100
+
+knowledge_graph_region = create_region_graph()
+fossil_fuel_knowledge_graph = create_fossil_fuel_graph()
+
 
 #Import xarrays from lifetimes, materials and capacity folders 
 from imagematerials.fossil_fuels.preprocessing.lifetimes import compute_extraction_lifetimes, compute_processing_lifetimes, compute_transport_lifetimes, compute_pipelines_lifetimes
@@ -61,6 +110,9 @@ extractioncap_xr = compute_extraction_capacity(*args)
 processingcap_xr = compute_processing_capacity(*args)
 transportcap_xr = compute_transport_capacity(*args)
 pipelinecap_xr = compute_pipelines_capacity(*args)
+
+
+
 
 #%%Extraction stage
 def get_preprocessing_data_extraction(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
@@ -156,3 +208,7 @@ def get_preprocessing_data_pipelines(path_base: str, climate_policy_config: dict
     #     # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
 
     return prep_data_pipelines
+
+print("main.py ran successfully!")
+
+

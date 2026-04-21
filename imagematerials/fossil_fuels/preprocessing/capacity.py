@@ -15,7 +15,31 @@ import os
 from pathlib import Path
 
 
-from imagematerials.fossil_fuels.preprocessing.ffconstants import FF_TECHNOLOGIES, IMAGE_REGIONS, STANDARD_SCEN_EXTERNAL_DATA, YEAR_FIRST_GRID, SD_LIFETIME 
+# from imagematerials.fossil_fuels.preprocessing.ffconstants import FF_TECHNOLOGIES, IMAGE_REGIONS, STANDARD_SCEN_EXTERNAL_DATA, YEAR_FIRST_GRID, SD_LIFETIME 
+
+from imagematerials.fossil_fuels.preprocessing.ffconstants import (
+    # config
+    circular_economy_config,
+    climate_policy_config,
+    scenario,
+    scen_folder,
+
+    # paths
+    path_base,
+    DATA_DIR,
+    IMAGE_DIR,
+    OUTPUT_DIR,
+    CLIMATE_POLICY_SCENARIO_DIR,
+    climate_policy_scenario_dir,
+
+    # model constants
+    FF_TECHNOLOGIES,
+    IMAGE_REGIONS,
+    STANDARD_SCEN_EXTERNAL_DATA,
+    YEAR_FIRST_GRID,
+    SD_LIFETIME,
+)
+
 from imagematerials.fossil_fuels.preprocessing.drivers import coal_infra, oil_infra, gas_infra
 
 extraction_stock_oil, transport_total_oil, oil_pipelines, oil_storage, refinery_stock_oil = oil_infra()
@@ -36,19 +60,56 @@ from imagematerials.electricity.utils import (
    apply_ce_measures_to_elc
 )
 
-#from prism.prism.examples.fuel import scenario
+# from imagematerials.fossil_fuels.preprocessing.ffconstants import (
+#     circular_economy_config,
+#     climate_policy_config,
+#     scenario,
+#     scen_folder,
+#     STANDARD_SCEN_EXTERNAL_DATA,
+#     BASE_DIR,
+#     DATA_DIR,
+#     IMAGE_DIR,
+#     OUTPUT_DIR,
+#     CLIMATE_POLICY_SCENARIO_DIR,
+#     path_base,
+#     climate_policy_scenario_dir,
+# )
 
-path_current = Path().resolve()
-path_base = path_current.parents [1]
-print("current:", path_current)
-print("base:", path_base)
+# #from prism.prism.examples.fuel import scenario
+# scen_folder = "SSP2_baseline"
+# STANDARD_SCEN_EXTERNAL_DATA = "SSP2_baseline" #SSP2_baseline is the only option right now given the existing files of primpersec and final_energy_rt
+
+# BASE_DIR = Path(__file__).resolve()
+# while BASE_DIR.name != "image-materials":
+#     BASE_DIR = BASE_DIR.parent
+
+# DATA_DIR = BASE_DIR / "data" / "raw" / "fossil_fuels"
+# IMAGE_DIR = BASE_DIR / "data" / "raw" / "image"
+# OUTPUT_DIR = DATA_DIR / "Scenario_data"
+# CLIMATE_POLICY_SCENARIO_DIR = IMAGE_DIR / scen_folder  
+# path_base = BASE_DIR / "imagematerials"
+# climate_policy_scenario_dir = CLIMATE_POLICY_SCENARIO_DIR
+
+
+# path_current = Path().resolve()
+# path_base = path_current.parents [1]
+
+# climate_policy_scenario_dir = Path(path_base, "data", "raw", "image", scen_folder)
+# BASE_DIR = Path(__file__).resolve().parent
+# DATA_DIR = Path(__file__).resolve().parents[3] / "data" / "raw" / "fossil_fuels"
+# OUTPUT_DIR = Path(__file__).resolve().parents[3] / "data" / "raw" / "fossil_fuels" / "Scenario_data"
+# IMAGE_DIR = Path(__file__).resolve().parents[3] / "data" / "raw" / "image"
+
+# print("current:", path_current)
+# print("base:", path_base)
+# print("climate policy scenario dir:", climate_policy_scenario_dir)
+# print("data dir:", DATA_DIR)    
+# print("output dir:", OUTPUT_DIR)
+# print("image dir:", IMAGE_DIR)  
+
 
 #still not sure what to do with these 
-scen_folder = "SSP2_baseline"
-climate_policy_scenario_dir = Path(path_base, "data", "raw", "image", scen_folder)
-STANDARD_SCEN_EXTERNAL_DATA = "SSP2_baseline" 
-DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "raw" / "fossil_fuels" / "Drivers"
-
+# STANDARD_SCEN_EXTERNAL_DATA = "SSP2_baseline" 
 
 year_start = 1880
 year_end = 2100
@@ -321,7 +382,7 @@ def compute_transport_capacity(path_base: str, climate_policy_config: dict, circ
 #%% Pipelines stage (oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 ###########################################################################################################
 on_offshore_oil_pipeline = pd.read_csv(
-    DATA_DIR /"onshore_offshore_oil_pipeline.csv", index_col=[0]
+    DATA_DIR / "DriversFiles" / "onshore_offshore_oil_pipeline.csv", index_col=[0]
 
 )  # Share of 2 different pipeline types (onshore & offshore) global (%)
 
@@ -427,3 +488,5 @@ def compute_pipelines_capacity(path_base: str, climate_policy_config: dict, circ
     pipelinecap_xr = pipelinecap_xr.assign_coords(Type=np.array(pipelinecap_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
     return pipelinecap_xr
+
+print("capacity.py ran successfully!")

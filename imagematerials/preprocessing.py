@@ -12,10 +12,10 @@ from imagematerials.electricity.preprocessing import get_preprocessing_data_gen 
 from imagematerials.electricity.preprocessing import get_preprocessing_data_grid as prep_elc_grid
 from imagematerials.electricity.preprocessing import get_preprocessing_data_stor as prep_elc_stor
 
-from imagematerials.fossil_fuels.fftest import get_preprocessing_data_extraction as prep_ff_extr
-from imagematerials.fossil_fuels.fftest import get_preprocessing_data_processing as prep_ff_proc
-from imagematerials.fossil_fuels.fftest import get_preprocessing_data_pipelines as prep_ff_pipe
-from imagematerials.fossil_fuels.fftest import get_preprocessing_data_transport as prep_ff_trp
+from imagematerials.fossil_fuels.preprocessing.main import get_preprocessing_data_extraction as prep_ff_extr
+from imagematerials.fossil_fuels.preprocessing.main import get_preprocessing_data_processing as prep_ff_proc
+from imagematerials.fossil_fuels.preprocessing.main import get_preprocessing_data_pipelines as prep_ff_pipe
+from imagematerials.fossil_fuels.preprocessing.main import get_preprocessing_data_transport as prep_ff_trp
 
 from imagematerials.factory import Sector
 from imagematerials.util import (

@@ -13,7 +13,30 @@ import numpy as np
 import os
 from pathlib import Path
 
-from imagematerials.fossil_fuels.preprocessing.ffconstants import FF_TECHNOLOGIES, IMAGE_REGIONS, STANDARD_SCEN_EXTERNAL_DATA, YEAR_FIRST_GRID, SD_LIFETIME
+# from imagematerials.fossil_fuels.preprocessing.ffconstants import FF_TECHNOLOGIES, IMAGE_REGIONS, STANDARD_SCEN_EXTERNAL_DATA, YEAR_FIRST_GRID, SD_LIFETIME
+
+from imagematerials.fossil_fuels.preprocessing.ffconstants import (
+    # config
+    circular_economy_config,
+    climate_policy_config,
+    scenario,
+    scen_folder,
+
+    # paths
+    path_base,
+    DATA_DIR,
+    IMAGE_DIR,
+    OUTPUT_DIR,
+    CLIMATE_POLICY_SCENARIO_DIR,
+    climate_policy_scenario_dir,
+
+    # model constants
+    FF_TECHNOLOGIES,
+    IMAGE_REGIONS,
+    STANDARD_SCEN_EXTERNAL_DATA,
+    YEAR_FIRST_GRID,
+    SD_LIFETIME,
+)
 
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
@@ -29,19 +52,47 @@ from imagematerials.electricity.utils import (
    apply_ce_measures_to_elc
 )
 
+
+# from imagematerials.fossil_fuels.preprocessing.ffconstants import (
+#     circular_economy_config,
+#     climate_policy_config,
+#     scenario,
+#     scen_folder,
+#     STANDARD_SCEN_EXTERNAL_DATA,
+#     BASE_DIR,
+#     DATA_DIR,
+#     IMAGE_DIR,
+#     OUTPUT_DIR,
+#     CLIMATE_POLICY_SCENARIO_DIR,
+#     path_base,
+#     climate_policy_scenario_dir,
+# )
+
 #from prism.prism.examples.fuel import scenario
 
-path_current = Path().resolve()
-path_base = path_current.parents [1]
-print("current:", path_current)
-print("base:", path_base)
+# path_current = Path().resolve()
+# path_base = path_current.parents [1]
 
-#still not sure what to do with these 
-scen_folder = "SSP3_no_policy"
-climate_policy_scenario_dir = Path(path_base, "data", "raw", "image", scen_folder)
-STANDARD_SCEN_EXTERNAL_DATA = "SSP3_no_policy" 
+# BASE_DIR = Path(__file__).resolve().parent
+# DATA_DIR = Path(__file__).resolve().parents[3] / "data" / "raw" / "fossil_fuels"
+# OUTPUT_DIR = Path(__file__).resolve().parents[3] / "data" / "raw" / "fossil_fuels" / "Scenario_data"
+# IMAGE_DIR = Path(__file__).resolve().parents[3] / "data" / "raw" / "image"
 
+# #still not sure what to do with these 
+# scen_folder = "SSP2_baseline"
+# STANDARD_SCEN_EXTERNAL_DATA = "SSP2_baseline" 
 
+# BASE_DIR = Path(__file__).resolve()
+# while BASE_DIR.name != "image-materials":
+#     BASE_DIR = BASE_DIR.parent
+
+# DATA_DIR = BASE_DIR / "data" / "raw" / "fossil_fuels"
+# IMAGE_DIR = BASE_DIR / "data" / "raw" / "image"
+# OUTPUT_DIR = DATA_DIR / "Scenario_data"
+# CLIMATE_POLICY_SCENARIO_DIR = IMAGE_DIR / scen_folder  
+# path_base = BASE_DIR / "imagematerials"
+# climate_policy_scenario_dir = CLIMATE_POLICY_SCENARIO_DIR
+       
 year_start = 1880
 year_end = 2100
 year_out = 2100
@@ -67,7 +118,7 @@ def compute_extraction_materials(path_base: str, climate_policy_config: dict, ci
     # 1. External Data --------------------------------------------- 
 
         # material compositions of coal infrastructure (processing, extraction, transport) in kg/kg/year
-    extraction_materials_data = pd.read_csv(path_base / "data" / "raw" / "fossil_fuels" / "Extraction" / "Extraction_materials.csv")
+    extraction_materials_data = pd.read_csv(DATA_DIR / "Extraction" / "Extraction_materials.csv")
  # Material Intensities -------
 
     # Set index
@@ -113,7 +164,7 @@ def compute_processing_materials(path_base: str, climate_policy_config: dict, ci
 
     # 1. External Data --------------------------------------------- 
         # material compositions of processing infrastructure in kg/kg/year
-    processing_materials_data = pd.read_csv(path_base / "data" / "raw" / "fossil_fuels" / "Processing" / "Processing_materials.csv")
+    processing_materials_data = pd.read_csv(DATA_DIR / "Processing" / "Processing_materials.csv")
 # Material Intensities -------
 
         # Material Intensities -------
@@ -161,7 +212,7 @@ def compute_transport_materials(path_base: str, climate_policy_config: dict, cir
 
     # 1. External Data --------------------------------------------- 
    # material compositions of transport infrastructure in kg/kg/year
-    transport_materials_data = pd.read_csv(path_base / "data" / "raw" / "fossil_fuels" / "Transport" / "Transport_materials.csv")
+    transport_materials_data = pd.read_csv(DATA_DIR / "Transport" / "Transport_materials.csv")
      # Material Intensities -------
 
     # Set index
@@ -204,7 +255,7 @@ def compute_pipelines_materials(path_base: str, climate_policy_config: dict, cir
 
     # 1. External Data --------------------------------------------- 
         # material compositions of transport infrastructure in kg/kg/year
-    pipelines_materials_data = pd.read_csv(path_base / "data" / "raw" / "fossil_fuels" / "Pipelines" / "Pipelines_materials_edit.csv")
+    pipelines_materials_data = pd.read_csv(DATA_DIR / "Pipelines" / "Pipelines_materials_edit.csv")
         # Material Intensities -------
     # Set index
     pipelines_materials_data = pipelines_materials_data.set_index(['Year', 'Tech Type'])
@@ -229,3 +280,5 @@ def compute_pipelines_materials(path_base: str, climate_policy_config: dict, cir
     pipelines_materials_xr = pipelines_materials_xr.assign_coords(Type=np.array(pipelines_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
    
     return pipelines_materials_xr
+
+print("materials.py ran successfully!")
