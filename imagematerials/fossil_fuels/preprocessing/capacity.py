@@ -146,8 +146,8 @@ def compute_extraction_capacity(path_base: str, climate_policy_config: dict, cir
 
     gas_drivers = gas_infra()
     extraction_stock_gas = gas_drivers["extraction"]
-    
 
+    # --- NOW reset_index safely ---
     df_extraction_coal = extraction_stock_coal.reset_index()
     df_extraction_oil  = extraction_stock_oil.reset_index()
     df_extraction_gas  = extraction_stock_gas.reset_index()
@@ -156,6 +156,7 @@ def compute_extraction_capacity(path_base: str, climate_policy_config: dict, cir
     df_extraction_coal["fuel"] = "coal"
     df_extraction_oil["fuel"] = "oil"
     df_extraction_gas["fuel"] = "gas"
+
 
     # Combine the dataframes for coal, oil, and gas into one dataframe and then melt it to long format so that we have one row per combination of time, region, fuel, technology, and value (stock)
     df_extraction_all = pd.concat(
@@ -224,7 +225,16 @@ def compute_extraction_capacity(path_base: str, climate_policy_config: dict, cir
 
     #Reorder technology coordinate in all three datasets (capacity, lifetime, material intensities) to match the same order of technologies (coal opencast, coal underground, gas offshore, gas onshore, oil offshore, oil onshore), so that we can easily combine the data in the model (since they all have to be in the same order of technologies)
     extractioncap_xr = extractioncap_xr.reindex(Type=extraction_order)
-  
+
+    # print("=== extractioncap_xr ===")
+    # print(extractioncap_xr)
+    # print("\nDims:", extractioncap_xr.dims)
+    # print("Sizes:", extractioncap_xr.sizes)
+    # print("\nTime labels:", extractioncap_xr['Time'].values)
+    # print("Region labels:", extractioncap_xr['Region'].values)
+    # print("Type labels:", extractioncap_xr['Type'].values)
+    # extractioncap_xr.isnull().sum()
+    
     return extractioncap_xr
 
 #%% Processing stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
@@ -252,6 +262,27 @@ def compute_processing_capacity(path_base: str, climate_policy_config: dict, cir
     gas_drivers = gas_infra()
     processing_stock_gas = gas_drivers["processing"]
 
+        # --- FIX INDEX NAMES FIRST (IMPORTANT) ---
+    preparation_stock_coal.index.set_names(
+        ['type', 'time', 'fuel', 'stage', 'unit'],
+        inplace=True
+    )
+
+    refinery_stock_oil.index.set_names(
+        ['type', 'time', 'fuel', 'stage', 'unit'],
+        inplace=True
+    )
+
+    oil_storage.index.set_names(
+        ['type', 'time', 'fuel', 'stage', 'unit'],
+        inplace=True
+    )
+
+    processing_stock_gas.index.set_names(
+        ['type', 'time', 'fuel', 'stage', 'unit'],
+        inplace=True
+    )
+
     df_processing_coal = preparation_stock_coal.reset_index()
     df_processing_oil = oil_storage.reset_index() 
     df_processing_refinery_oil = refinery_stock_oil.reset_index()
@@ -268,21 +299,15 @@ def compute_processing_capacity(path_base: str, climate_policy_config: dict, cir
     print("OIL INDEX NAMES:", oil_storage.index.names)
     print("GAS INDEX NAMES:", processing_stock_gas.index.names)
 
-    print(type(preparation_stock_coal))
-    print(preparation_stock_coal.index)
-    print(preparation_stock_coal.index.names)
-    print(preparation_stock_coal.columns)
-
     #Combine the dataframes for coal, oil, and gas into one dataframe and then melt it to long format so that we have one row per combination of time, region, fuel, technology, and value (stock)
     df_processing_all = pd.concat(
         [df_processing_coal, df_processing_oil, df_processing_refinery_oil, df_processing_gas],
         ignore_index=True
     )
 
-    print(df_processing_all.columns)
-    print(df_processing_all.head())
-    print(df_processing_all['type'].unique())
-
+    # print(df_processing_all.columns)
+    # print(df_processing_all.head())
+    # print(df_processing_all['type'].unique())
 
 
     df_processing_all = df_processing_all.melt(
@@ -341,6 +366,14 @@ def compute_processing_capacity(path_base: str, climate_policy_config: dict, cir
     # processingcap_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(processingcap_xr, output_coords=IMAGE_REGIONS, dim="Region") 
     # processingcap_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(processingcap_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
     # processingcap_xr = processingcap_xr.assign_coords(Type=np.array(processingcap_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
+    # print("=== processingcap_xr ===")
+    # print(processingcap_xr)
+    # print("\nDims:", processingcap_xr.dims)
+    # print("Sizes:", processingcap_xr.sizes)
+    # print("\nTime labels:", processingcap_xr['Time'].values)
+    # print("Region labels:", processingcap_xr['Region'].values)
+    # print("Type labels:", processingcap_xr['Type'].values)
+    # processingcap_xr.isnull().sum()
 
     return processingcap_xr
 
@@ -366,14 +399,24 @@ def compute_transport_capacity(path_base: str, climate_policy_config: dict, circ
 
     gas_drivers = gas_infra()
     transport_total_gas = gas_drivers["transport"]
+    
+    transport_total_coal.index.set_names(
+        ['type', 'time', 'fuel', 'stage', 'unit'],
+        inplace=True
+    )
+    transport_total_oil.index.set_names(
+        ['type', 'time', 'fuel', 'stage', 'unit'],
+        inplace=True
+    )
 
-    transport_total_coal = coal_infra().reset_index()
-    transport_total_oil = oil_infra().reset_index()
-    transport_total_gas = gas_infra().reset_index()
+    transport_total_gas.index.set_names(
+        ['type', 'time', 'fuel', 'stage', 'unit'],
+        inplace=True
+    )
 
-    df_transport_coal = transport_total_coal
-    df_transport_oil = transport_total_oil
-    df_transport_gas = transport_total_gas
+    df_transport_coal = transport_total_coal.reset_index()
+    df_transport_oil = transport_total_oil.reset_index()
+    df_transport_gas = transport_total_gas.reset_index()
 
     df_transport_coal["fuel"] = "coal"
     df_transport_oil["fuel"] = "oil"
@@ -441,6 +484,14 @@ def compute_transport_capacity(path_base: str, climate_policy_config: dict, circ
     # transportcap_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(transportcap_xr, output_coords=IMAGE_REGIONS, dim="Region") 
     # transportcap_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(transportcap_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
     # transportcap_xr = transportcap_xr.assign_coords(Type=np.array(transportcap_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
+    # print("=== transportcap_xr ===")
+    # print(transportcap_xr)
+    # print("\nDims:", transportcap_xr.dims)
+    # print("Sizes:", transportcap_xr.sizes)
+    # print("\nTime labels:", transportcap_xr['Time'].values)
+    # print("Region labels:", transportcap_xr['Region'].values)
+    # print("Type labels:", transportcap_xr['Type'].values)
+    # transportcap_xr.isnull().sum()
 
     return transportcap_xr
 
@@ -469,6 +520,16 @@ def compute_pipelines_capacity(path_base: str, climate_policy_config: dict, circ
 
     gas_drivers = gas_infra()
     gas_pipelines = gas_drivers["pipelines"]
+
+    oil_pipelines.index.set_names(
+        ['type', 'time', 'fuel', 'stage', 'unit'],
+        inplace=True
+    )
+
+    gas_pipelines.index.set_names(
+        ['type', 'time', 'fuel', 'stage', 'unit'],
+        inplace=True
+    )    
 
     df_pipelines_oil = oil_pipelines.reset_index()
     df_pipelines_gas = gas_pipelines.reset_index()
@@ -555,6 +616,15 @@ def compute_pipelines_capacity(path_base: str, climate_policy_config: dict, circ
     # Add units
     pipelinecap_xr = prism.Q_(pipelinecap_xr, "km")
 
+    # print("=== pipelinecap_xr ===")
+    # print(pipelinecap_xr)
+    # print("\nDims:", pipelinecap_xr.dims)
+    # print("Sizes:", pipelinecap_xr.sizes)
+    # print("\nTime labels:", pipelinecap_xr['Time'].values)
+    # print("Region labels:", pipelinecap_xr['Region'].values)
+    # print("Type labels:", pipelinecap_xr['Type'].values)
+    # pipelinecap_xr.isnull().sum()
+
     # # Rebroadcast to standard region and technology names from TIMER, and convert coordinate type back to python strings
     # pipelinecap_xr = knowledge_graph_region.rebroadcast_xarray(pipelinecap_xr, output_coords=IMAGE_REGIONS, dim="Region") 
     # pipelinecap_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(pipelinecap_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
@@ -563,3 +633,19 @@ def compute_pipelines_capacity(path_base: str, climate_policy_config: dict, circ
     return pipelinecap_xr
 
 print("capacity.py ran successfully!")
+
+# print("coal extraction index names:", extraction_stock_coal.index.names)
+# print("coal transport index names:", transport_total_coal.index.names)
+# print("coal processing index names:", preparation_stock_coal.index.names)
+
+# print("oil extraction index names:", extraction_stock_oil.index.names)
+# print("oil transport index names:", transport_total_oil.index.names)
+# print("oil pipelines index names:", oil_pipelines.index.names)
+# print("oil storage index names:", oil_storage.index.names)
+# print("oil refinery index names:", refinery_stock_oil.index.names)
+
+# print("gas extraction index names:", extraction_stock_gas.index.names)
+# print("gas transport index names:", transport_total_gas.index.names)
+# print("gas pipelines index names:", gas_pipelines.index.names)
+# print("gas processing index names:", processing_stock_gas.index.names)
+
