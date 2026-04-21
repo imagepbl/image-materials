@@ -790,73 +790,90 @@ class RestOf(prism.Model):
             }
         )
         self.inflow_materials = prism.Q_(self.inflow_materials, "t")
+        # Track last valid historic point per (Region, material) incrementally.
+        self._historic_transition_last_year = xr.DataArray(
+            np.nan,
+            dims=("Region", "material"),
+            coords={"Region": self.Region, "material": self.material},
+        )
+        # Store the corresponding historic value at the cached year above.
+        self._historic_transition_last_value = xr.DataArray(
+            np.nan,
+            dims=("Region", "material"),
+            coords={"Region": self.Region, "material": self.material},
+        )
         
     def compute_values(self, time: prism.Time, gompertz_coefs, gdp_per_capita, population, 
                        historic_diff_consumption_mean, historic_diff_consumption_total):
         t, dt = time.t, time.dt
 
         if t > 1970:
-            # Select coefficients for all regions/materials
+            # extract coefficients for all regions/materials
             a = gompertz_coefs.sel(coef='a', Time = t)
             b = gompertz_coefs.sel(coef='b', Time = t)
             c = gompertz_coefs.sel(coef='c', Time = t)
+            # calculate per capita inflow for the rest of the world based on gompertz function with gdp per capita as input
             self.inflow_per_capita_rest = (a * np.exp(-b * np.exp(-c * gdp_per_capita.loc[t])))
             self.inflow_per_capita_rest = prism.Q_(self.inflow_per_capita_rest, "t/person")
             self.inflow_materials.loc[t] = self.inflow_per_capita_rest * population.loc[t]
             
-            # Create a mask of where values are nan
+            # Create a mask of where values are nan, thus where the model needs to fill in values based on 
+            # historic_diff_consumption_mean because no gomppert paramters are available, e..g beacuse region could not be fitted due to lacking data
             mask = np.isnan(self.inflow_materials.loc[t])
            
-            # Use the mask to fill nans with historic_diff_consumption
-            # Align historic_diff_consumption to the same dims/order as inflow_materials
-
+            # 1) Use the mask to fill nans with historic_diff_consumption Align historic_diff_consumption to the same dims/order as inflow_materials
             self.inflow_materials.loc[t] = xr.where(
-                mask,
-                historic_diff_consumption_mean.transpose(*self.inflow_materials.loc[t].dims),
-                self.inflow_materials.loc[t]
+                mask, # True or False
+                historic_diff_consumption_mean.transpose(*self.inflow_materials.loc[t].dims), # fall back to mean value (if available)
+                self.inflow_materials.loc[t] # keep calculated value
             )
 
             # Smoothly transition from the last available historic value to modeled values.
             # This avoids an abrupt jump in the first years after historic observations end.
-            historic_until_t = historic_diff_consumption_total.sel(Time=slice(None, t))
-            valid_historic_mask = ~np.isnan(historic_until_t)
-            time_coord = xr.DataArray(
-                historic_until_t["Time"].values,
-                dims=("Time",),
-                coords={"Time": historic_until_t["Time"]},
+            current_historic_value = historic_diff_consumption_total.sel(Time=t)
+            # Identify where this timestep still has real historical observations.
+            current_valid_historic_mask = ~np.isnan(current_historic_value)
+            # Update cache only where historic data exists; otherwise keep previous cache.
+            self._historic_transition_last_year = xr.where(
+                current_valid_historic_mask, # mask for True or False
+                t, # assigns year if True
+                self._historic_transition_last_year, # keeps previuosly assigned year if False
             )
-            last_historic_year = xr.where(
-                valid_historic_mask,
-                time_coord,
-                np.nan,
-            ).max("Time", skipna=True)
-            last_year_mask = valid_historic_mask & (time_coord == last_historic_year)
-            last_historic_value = historic_until_t.where(last_year_mask).max("Time", skipna=True)
+            self._historic_transition_last_value = xr.where(
+                current_valid_historic_mask, # mask for True or False
+                current_historic_value, # assigns current historic value if True
+                self._historic_transition_last_value, # keeps previously assigned value if False
+            )
+            # Cached year/value define the anchor point for linear blending.
+            last_historic_year = self._historic_transition_last_year
+            last_historic_value = self._historic_transition_last_value
             years_since_last = t - last_historic_year
             blend_weight = (years_since_last / self.transition_years).clip(min=0.0, max=1.0)
             smoothed_inflow = (
                 (1.0 - blend_weight) * last_historic_value
                 + blend_weight * self.inflow_materials.loc[t]
             )
+            # 2) Apply smoothing only for points within the transition window.
             transition_mask = (
                 (years_since_last > 0)
                 & (years_since_last <= self.transition_years)
                 & ~np.isnan(last_historic_value)
             )
             self.inflow_materials.loc[t] = xr.where(
-                transition_mask,
-                smoothed_inflow,
-                self.inflow_materials.loc[t],
+                transition_mask, # mask for True or False
+                smoothed_inflow, # assigns smoothed value if True
+                self.inflow_materials.loc[t], # keeps original modeled value if False
             )
 
-            if t > 1970 and t < 2025:
-                # check if real historic data is available (not nan)
-                real_historic_data_mask = ~np.isnan(historic_diff_consumption_total.sel(Time=t))
-                self.inflow_materials.loc[t] = xr.where(
-                    real_historic_data_mask,
-                    historic_diff_consumption_total.sel(Time=t),
-                    self.inflow_materials.loc[t]
-                )
+            # 3) Final precedence rule: whenever real historic data exists at this year,
+            # overwrite modeled values for those points.
+            historic_at_t = historic_diff_consumption_total.sel(Time=t)
+            real_historic_data_mask = ~np.isnan(historic_at_t)
+            self.inflow_materials.loc[t] = xr.where(
+                real_historic_data_mask, # mask for True or False
+                historic_at_t, # assigns historic value if True
+                self.inflow_materials.loc[t] # keeps original modeled value if False
+            )
             
         else:
             pass # No inflow before 1970
