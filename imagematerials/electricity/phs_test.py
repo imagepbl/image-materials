@@ -4,12 +4,15 @@ import numpy as np
 from pathlib import Path
 import pint
 import xarray as xr
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
+import warnings
+from pint.errors import UnitStrippedWarning
 
 import prism
 from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.concepts import create_image_region_graph
 from imagematerials.electricity.constants import COLORS_IMAGE_REGIONS
+from imagematerials.electricity.utils import interpolate_xr
 
 path_current = Path().resolve()
 path_base = path_current.parent.parent # base path of the project -> image-materials
@@ -66,8 +69,8 @@ knowledge_graph_region = create_image_region_graph()
 ds_data1_image_region = ds_data1_country.copy()
 ds_data1_image_region = knowledge_graph_region.aggregate_sum(ds_data1_image_region, output_coords=IMAGE_REGIONS, dim="Region", require_relation=False)
 
-ds_data2_image_region = ds_data2_country.copy()
-ds_data2_image_region = knowledge_graph_region.aggregate_sum(ds_data2_image_region, output_coords=IMAGE_REGIONS, dim="Region", require_relation=False)
+da_data2_image_region = da_data2_country.copy()
+da_data2_image_region = knowledge_graph_region.aggregate_sum(da_data2_image_region, output_coords=IMAGE_REGIONS, dim="Region", require_relation=False)
 
 ####################################################################################################
 #%% Aggregate years to decades and calculate shares
@@ -118,109 +121,285 @@ earliest_cohort = earliest_cohort.where(has_nonzero)
 
 # As a dict
 result = {
-    region.item(): int(val.item()) if not np.isnan(val.item()) else 0 #2030
+    region.item(): int(val.item()) if not np.isnan(val.item()) else 2030
     for region, val in zip(earliest_cohort.Region, earliest_cohort)
 }
 regions_no_cohort = has_nonzero.Region[~has_nonzero].values.tolist()
 
 
 #
-
-zero_regions = ds_data2_image_region["value"].where(ds_data2_image_region["value"] == 0).isnull().all(dim="Time")
-
-zero_regions = (ds_data2_image_region["value"] == 0).all(dim="Time")
+# check which regions are 0 in all time steps
+zero_regions = (da_data2_image_region == 0).all(dim="Time")
 zero_regions.Region[zero_regions].values
 
-zero_regions = (ds_data2_image_region["value"].sel(Time=2014) == 0)
+# check only if 0 in 2014
+zero_regions = (da_data2_image_region.sel(Time=2014) == 0)
 zero_regions.Region[zero_regions].values
+
 
 #%% intra and extrapolate phs data
 
-def interpolate_xr_test(data_array, t_start, t_end, interp_method='linear'):
-    """
-    Interpolate an xarray.DataArray over a continuous time range and
-    extend its boundary values beyond the available data to span t_start - t_end.
-    The function performs (linear) interpolation between all existing time
-    coordinates in the input DataArray and fills values outside the
-    original time range with the first and last available data, respectively.
-    If t_start is a dict, different start years can be specified per Region,
-    with values linearly interpolated to 0 at the region-specific start year,
-    and zero-filled between the global t_start and the region-specific start year.
+# def interpolate_xr_test(data_array: xr.DataArray,
+#                         t_start: int or float or dict,
+#                         t_end: int or float, 
+#                         interp_method: str = 'linear', 
+#                         extrap_before: str = 'constant'):
+#     """
+#     Interpolate an xarray.DataArray over a continuous time range and
+#     extend its boundary values beyond the available data to span t_start - t_end.
+#     The function performs (linear) interpolation between all existing time
+#     coordinates in the input DataArray and fills values outside the
+#     original time range with the first and last available data, respectively.
+#     If t_start is a dict, different start years can be specified per Region,
+#     with values linearly interpolated to 0 at the region-specific start year,
+#     and zero-filled between the global t_start and the region-specific start year.
 
-    Parameters
-    ----------
-    data_array : xarray.DataArray
-        Input DataArray with a 'Time' coordinate containing numeric values (e.g. 2020, 2050).
-    t_start : int, float, or dict
-        Start year for the interpolation range. If a dict, keys are Region names
-        and values are the year at which that region's data reaches 0. Regions not
-        in the dict fall back to the minimum of the dict values.
-    t_end : int or float
-        End year for the interpolation range.
-    interp_method : str, optional
-        Interpolation method to use (default is 'linear'). See xarray documentation
-        for available methods.
+#     Parameters
+#     ----------
+#     data_array : xarray.DataArray
+#         Input DataArray with a 'Time' coordinate containing numeric values (e.g. 2020, 2050).
+#     t_start : int, float, or dict
+#         Start year for the interpolation range. If a dict, keys are Region names
+#         and values are the year at which that region's data reaches 0. Regions not
+#         in the dict fall back to the minimum of the dict values.
+#     t_end : int or float
+#         End year for the interpolation range.
+#     interp_method : str, optional
+#         Interpolation method to use (default is 'linear'). See xarray documentation
+#         for available methods.
+#     extrap_before : str, optional
+#         How to handle values before the first available data point.
+#         - 'constant' : fill with the first available value (default)
+#         - 'zero'     : linearly ramp down to 0 at t_start (or region-specific start if t_start is a dict)
 
-    Returns
-    -------
-    xarray.DataArray
-        DataArray interpolated across the full range from global t_start to t_end.
+#     Returns
+#     -------
+#     xarray.DataArray
+#         DataArray interpolated across the full range from global t_start to t_end.
 
-    Note:
-    Units are temporarily stripped during interpolation but are reattached
-    before returning the result. The corresponding warning is suppressed.
-    """
-    dim = 'Time' if 'Time' in data_array.dims else 'Cohort'
-    unit = prism.U_(data_array)
+#     Note:
+#     Units are temporarily stripped during interpolation but are reattached
+#     before returning the result. The corresponding warning is suppressed.
+#     """
+#     dim = 'Time' if 'Time' in data_array.dims else 'Cohort'
+#     unit = prism.U_(data_array)
+#     coord_values = data_array[dim].values
 
-    coord_values = data_array[dim].values
+#     # --- Determine global t_start ---
+#     if isinstance(t_start, dict):
+#         global_t_start = min(t_start.values())
+#     else:
+#         global_t_start = t_start
 
-    # --- Determine global t_start ---
-    if isinstance(t_start, dict):
-        global_t_start = min(t_start.values())
-    else:
-        global_t_start = t_start
+#     new_range = np.arange(global_t_start, t_end + 1)
 
-    new_range = np.arange(global_t_start, t_end + 1)
+#     # --- Interpolate over full time range ---
+#     with warnings.catch_warnings():
+#         warnings.simplefilter("ignore", UnitStrippedWarning)
+#         da_interp = data_array.interp({dim: new_range}, method=interp_method)
 
-    # --- Interpolate over full time range ---
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", UnitStrippedWarning)
-        da_interp = data_array.interp({dim: new_range}, method=interp_method)
+#     # --- Fill beyond last data point (always constant) ---
+#     da_interp.loc[{dim: slice(coord_values.max(), None)}] = da_interp.sel({dim: coord_values.max()})
 
-    # --- Fill beyond original data range (constant extrapolation) ---
-    da_interp.loc[{dim: slice(None, coord_values.min())}] = da_interp.sel({dim: coord_values.min()})
-    da_interp.loc[{dim: slice(coord_values.max(), None)}] = da_interp.sel({dim: coord_values.max()})
+#     # --- Handle region-specific start years ---
+#     if isinstance(t_start, dict) and 'Region' in data_array.dims:
+#         regions = data_array.Region.values
+#         # fallback year for regions not in dict
+#         fallback_year = min(t_start.values())
 
-    # --- Handle region-specific start years ---
-    if isinstance(t_start, dict) and 'Region' in data_array.dims:
-        regions = data_array.Region.values
-        # fallback year for regions not in dict
-        fallback_year = min(t_start.values())
+#         for region in regions:
+#             region_start = t_start.get(region, fallback_year)
 
-        for region in regions:
-            region_start = t_start.get(region, fallback_year)
+#             # get the first actual data value for this region
+#             first_value = da_interp.sel(Region=region, **{dim: coord_values.min()}).values
 
-            if region_start <= global_t_start:
-                continue  # nothing to do
+#             # linearly interpolate from 0 at region_start to first_value at coord_values.min()
+#             ramp_times = np.arange(region_start, coord_values.min() + 1)
+#             ramp_values = np.linspace(0, float(first_value), len(ramp_times))
+#             da_interp.loc[{dim: ramp_times, 'Region': region}] = ramp_values
 
-            # get the first actual data value for this region
-            first_value = da_interp.sel(Region=region, **{dim: coord_values.min()}).values
+#             # zero-fill from global_t_start up to (but not including) region_start
+#             if region_start > global_t_start:
+#                 zero_times = np.arange(global_t_start, region_start)
+#                 da_interp.loc[{dim: zero_times, 'Region': region}] = 0.0
+#     elif isinstance(t_start, dict):
+#         raise Warning("t_start is a dict but 'Region' is not a dimension in the data array. Region-specific start years cannot be applied.")
 
-            # linearly interpolate from 0 at region_start to first_value at coord_values.min()
-            ramp_times = np.arange(region_start, coord_values.min() + 1)
-            ramp_values = np.linspace(0, float(first_value), len(ramp_times))
-            da_interp.loc[{dim: ramp_times, 'Region': region}] = ramp_values
+#     # --- Reattach unit ---
+#     if unit != prism.Unit('dimensionless'):
+#         da_interp = prism.Q_(da_interp, unit)
 
-            # zero-fill from global_t_start up to (but not including) region_start
-            zero_times = np.arange(global_t_start, region_start)
-            da_interp.loc[{dim: zero_times, 'Region': region}] = 0.0
+#     return da_interp
 
-    # --- Reattach unit ---
-    if unit != prism.Unit('dimensionless'):
-        da_interp = prism.Q_(da_interp, unit)
+# def interpolate_xr(data_array: xr.DataArray, 
+#                          t_start: int | float | dict, 
+#                          t_end: int | float, 
+#                          interp_method: str='linear', 
+#                          extrap_before: str='constant', 
+#                          extrap_before_method: str='linear'):
+#     """ Interpolate an xarray.DataArray over a continuous time range and
+#     extend its boundary values beyond the available data to span t_start - t_end.
+#     The function performs (linear) interpolation between all existing time
+#     coordinates in the input DataArray and fills values outside the
+#     original time range with either the first and last available data, respectively,
+#     or performs an extrapolation to 0 at t_start.
+#     If t_start is a dict, different start years can be specified per Region,
+#     with values linearly interpolated to 0 at the region-specific start year,
+#     and zero-filled between the global t_start and the region-specific start year.
 
-    return da_interp
+#     Parameters
+#     ----------
+#     data_array : xarray.DataArray
+#         Input DataArray with a 'Time' coordinate containing numeric values (e.g. 2020, 2050).
+#     t_start : int, float, or dict
+#         Start year for the interpolation range. If a dict, keys are Region names
+#         and values are the year at which that region's data reaches 0. Regions not
+#         in the dict fall back to the minimum of the dict values.
+#     t_end : int or float
+#         End year for the interpolation range.
+#     interp_method : str, optional
+#         Interpolation method to use (default is 'linear'). See xarray documentation
+#         for available methods.
+#     extrap_before : str, optional
+#         How to handle values before the first available data point.
+#         - 'constant' : fill with the first available value (default)
+#         - 'zero'     : linearly ramp down to 0 at t_start (or region-specific start if t_start is a dict)
+#     extrap_before_method : str, optional
+#         If extrap_before is 'zero', this controls the shape of the ramp:
+#         - 'linear'      : straight line (default)
+#         - 'exponential' : exponential growth, slow start then accelerating
+#         - 'logistic'    : S-curve, slow start, fast middle, slow end
+
+#     Returns
+#     -------
+#     xarray.DataArray
+#         DataArray interpolated across the full range from global t_start to t_end.
+
+#     Note:
+#     Units are temporarily stripped during interpolation but are reattached
+#     before returning the result. The corresponding warning is suppressed.
+#     """
+#     def _extrap_to_zero(times, first_value, method='linear'):
+#         """
+#         Generate values ramping from 0 at times[0] to first_value at times[-1].
+        
+#         Parameters
+#         ----------
+#         times : np.ndarray
+#             Array of time steps for the ramp.
+#         first_value : float
+#             Target value at the end of the ramp.
+#         method : str
+#             'linear'      : straight line
+#             'exponential' : exponential growth, slow start then accelerating
+#             'logistic'    : S-curve, slow start, fast middle, slow end
+#         """
+#         n = len(times)
+#         if n == 0:
+#             return np.array([])
+#         if n == 1:
+#             return np.array([first_value])  # only one point, just return the target value
+    
+#         # normalized x from 0 to 1
+#         x = np.linspace(0, 1, n)
+
+#         if method == 'linear':
+#             return first_value * x
+
+#         elif method == 'exponential':
+#             # exponential: y = first_value * (e^(kx) - 1) / (e^k - 1)
+#             # k controls steepness; higher k = more convex (slower start)
+#             k = 5
+#             return first_value * (np.exp(k * x) - 1) / (np.exp(k) - 1)
+
+#         elif method == 'logistic':
+#             # S-curve centered at midpoint, scaled to pass through (0,0) and (1, first_value)
+#             k = 10  # steepness
+#             x0 = 0.5  # midpoint
+#             s = 1 / (1 + np.exp(-k * (x - x0)))
+#             # rescale so it passes exactly through 0 and first_value
+#             s = (s - s[0]) / (s[-1] - s[0])
+#             return first_value * s
+
+#         else:
+#             raise ValueError(f"Unknown method '{method}'. Choose 'linear', 'exponential', or 'logistic'.")
+    
+#     dim = 'Time' if 'Time' in data_array.dims else 'Cohort'
+#     unit = prism.U_(data_array)
+#     coord_values = data_array[dim].values
+
+#     # --- Determine global t_start ---
+#     if isinstance(t_start, dict):
+#         global_t_start = min(t_start.values())
+#     else:
+#         global_t_start = t_start
+
+#     new_range = np.arange(global_t_start, t_end + 1)
+
+#     # --- Interpolate over full time range ---
+#     with warnings.catch_warnings():
+#         warnings.simplefilter("ignore", UnitStrippedWarning)
+#         da_interp = data_array.interp({dim: new_range}, method=interp_method)
+
+#     # --- Fill beyond last data point (always constant) ---
+#     da_interp.loc[{dim: slice(coord_values.max(), None)}] = da_interp.sel({dim: coord_values.max()})
+
+#     # --- Handle extrapolation before first data point ---
+#     if 'Region' in data_array.dims:
+#         regions = data_array.Region.values
+#         fallback_year = global_t_start if not isinstance(t_start, dict) else min(t_start.values())
+
+#         for region in regions:
+#             region_start = t_start.get(region, fallback_year) if isinstance(t_start, dict) else t_start
+#             first_value = float(da_interp.sel(Region=region, **{dim: coord_values.min()}).values)
+
+#             if extrap_before == 'zero':
+#                 # ramp from 0 at region_start to first_value at coord_values.min()
+#                 ramp_times = np.arange(region_start, coord_values.min() + 1)
+#                 # ramp_values = np.linspace(0, first_value, len(ramp_times))
+#                 ramp_values = _extrap_to_zero(ramp_times, first_value, method=extrap_before_method)
+#                 da_interp.loc[{dim: ramp_times, 'Region': region}] = ramp_values
+
+#                 # zero-fill between global_t_start and region_start if there's a gap
+#                 if region_start > global_t_start:
+#                     zero_times = np.arange(global_t_start, region_start)
+#                     da_interp.loc[{dim: zero_times, 'Region': region}] = 0.0
+
+#             else:  # 'constant'
+#                 da_interp.loc[{dim: slice(None, coord_values.min()), 'Region': region}] = first_value
+
+#     else:
+#         # No Region dimension
+#         first_value = float(da_interp.sel({dim: coord_values.min()}).values)
+
+#         if extrap_before == 'zero':
+#             ramp_times = np.arange(global_t_start, coord_values.min() + 1)
+#             # ramp_values = np.linspace(0, first_value, len(ramp_times))
+#             ramp_values = _extrap_to_zero(ramp_times, first_value, method=extrap_before_method)
+#             da_interp.loc[{dim: ramp_times}] = ramp_values
+#         else:  # 'constant'
+#             da_interp.loc[{dim: slice(None, coord_values.min())}] = first_value
+
+#     # --- Reattach unit ---
+#     if unit != prism.Unit('dimensionless'):
+#         da_interp = prism.Q_(da_interp, unit)
+
+#     return da_interp
+
+
+test = interpolate_xr(da_data2_image_region, result, 2050, interp_method='slinear', extrap_before='zero', extrap_before_method='linear')
+
+fig, ax = plt.subplots(figsize=(14, 6))
+for i, region in enumerate(test.Region.values):
+    ax.plot(test.Time.values, test.sel(Region=region).values, linewidth=1.5, color=COLORS_IMAGE_REGIONS[i], label=region)
+ax.axvline(x=2014, color='gray', linestyle='--', alpha=0.5)
+ax.axvline(x=2019, color='gray', linestyle='--', alpha=0.5)
+ax.axvline(x=2024, color='gray', linestyle='--', alpha=0.5)
+plt.xlabel("Year")
+plt.ylabel("Pumped Hydropower Storage Capacity (MW)")
+plt.title("Interpolated PHS capacity trajectories by IMAGE region")
+plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize=8, ncol=2)
+plt.tight_layout()
 
 ####################################################################################################
 #%% Plots
