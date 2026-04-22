@@ -25,32 +25,32 @@ Data Input
 
 * `vehicles/standard_data <../../../data/raw/vehicles/standard_data/>`_: fixed assumptions (loads, maintenance, first-year operation, load passenger versus freight, ship parameters)
 * `vehicles/<scenario> <../../../data/raw/vehicles/>`_: scenario-dependent inputs (weights, lifetimes, material fractions, kilometrage)
-* climate policy folder: IMAGE transport activity and technologyshare trajectories used to derive regional stocks and subtype splits
-* circular economy config: optional adjustments for lifetime extension,	lightweighting, and increased intensity of use (e.g. kilometrage)
+* `socio-economic scenariofolder <../../../data/image/SSP2_baseline/EnergyServices>`_: IMAGE transport activity and technologyshare trajectories used to derive regional stocks and subtype splits
+* `circular economy config <../../../data/raw/circular_economy_scenarios/>`_: optional adjustments for lifetime extension,	lightweighting, and increased intensity of use (e.g. kilometrage)
 
 Structure
 ----------
 
-The preprocessing pipeline follows the modular structure in
-:mod:`imagematerials.vehicles.preprocessing`:
+The preprocessing follows the modular structure in
+`imagematerials.vehicles.preprocessing <../api/vehicles.html>`_:
 
 The main output 'stocks' is calculated using two files where shares is used by stocks to apply technology split where needed.
 
-* `stocks.py <../../../imagematerials/vehicles/preprocessing/stocks.py>`_ — :func:`imagematerials.vehicles.preprocessing.stocks.get_vehicle_stocks`
+* `stocks.py <../../../imagematerials/vehicles/preprocessing/stocks.py>`_ — `get_vehicle_stocks API <../api/vehicles.html>`_
 
   - Converts passenger-km and tonne-km demand into vehicle counts by type and region
   - Includes specific handling for trucks (LCV split) and shipping
   - Applies circular economy utilization changes (``narrow_product`` mileage)
   - Uses subtype shares to split aggregate stocks and maps to IMAGE regions
 
-* `shares.py <../../../imagematerials/vehicles/preprocessing/shares.py>`_ — :func:`imagematerials.vehicles.preprocessing.shares.get_vehicle_shares`
+* `shares.py <../../../imagematerials/vehicles/preprocessing/shares.py>`_ — `get_vehicle_shares API <../api/vehicles.html>`_
 
   - Constructs drivetrain shares for typical road vehicles (cars, buses, freight classes)
   - Harmonizes shares across regions and years and rebroadcasts them to the vehicle knowledge graph
 
 The output 'weights' is calculated using:
 
-* `weights.py <../../../imagematerials/vehicles/preprocessing/weights.py>`_ — :func:`imagematerials.vehicles.preprocessing.weights.get_weights`
+* `weights.py <../../../imagematerials/vehicles/preprocessing/weights.py>`_ — `get_weights API <../api/vehicles.html>`_
 
   - Processes simple and subtype-specific vehicle weights over cohorts
   - Applies lightweighting trajectories for circular economy scenarios (``narrow``, ``narrow_product``, ``resource_efficient``)
@@ -58,21 +58,22 @@ The output 'weights' is calculated using:
 
 Material and maintenance material fractions are calculated using:
 
-* `materials.py <../../../imagematerials/vehicles/preprocessing/materials.py>`_ — :func:`imagematerials.vehicles.preprocessing.materials.get_material_fractions`, :func:`imagematerials.vehicles.preprocessing.materials.get_maintenance_materials`
+* `materials.py <../../../imagematerials/vehicles/preprocessing/materials.py>`_ — `materials API <../api/vehicles.html>`_
 
   - Builds maintenance material coefficients (kg material per kg vehicle per year) and adds default values
   - Processes simple and subtype-specific material fraction trajectories
 
 Lifetimes and other crosscutting functions are calculated using:
 
-* `util.py <../../../imagematerials/vehicles/preprocessing/util.py>`_ — :func:`imagematerials.vehicles.preprocessing.util.get_lifetimes`, :func:`imagematerials.vehicles.preprocessing.util.get_passengerkms`, :func:`imagematerials.vehicles.preprocessing.util.get_tonkms`
+* `util.py <../../../imagematerials/vehicles/preprocessing/util.py>`_ — `utility preprocessing API <../api/vehicles.html>`_
 
   - Reads and standardizes passenger-km and tonne-km inputs
   - Interpolates time series and converts tabular data to xarray-based model dimensions
   - Applies lifetime changes for circular economy ``slow`` scenarios
 
-Assumptions
------------
+Key Assumptions
+----------------------
+- all standard data is not region-specific, but applied globally 
 
 
 Output
@@ -91,7 +92,7 @@ objects used by the sector models:
 
 Simulation
 ----------
-The vehicle module uses the :class:`GenericStocks <imagematerials.model.GenericStocks>` class for stock modelling and the :class:`GenericMaterials <imagematerials.model.GenericMaterials>` class for calculating material flows in simulation.
+The vehicle module uses the `GenericStocks class <../api/models_detail.html>`_ for stock modelling and the `GenericMaterials class <../api/models_detail.html>`_ for calculating material flows in simulation.
 
 References
 ==================
