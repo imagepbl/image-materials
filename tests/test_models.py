@@ -9,7 +9,9 @@ import xarray as xr
 from pytest import mark
 
 from imagematerials.concepts import knowledge_graph
+from imagematerials.concepts import Node, KnowledgeGraph
 from imagematerials.model import GenericMaterials, GenericStocks, MaterialIntensities, RestOf
+from imagematerials.model import SharesInflowStocks
 from imagematerials.vehicles.battery import Battery
 
 @pytest.fixture(scope="module")
@@ -20,7 +22,8 @@ def coordinates():
         "Type": ["vehicle_a", "vehicle_b"],
         "Cohort": [2000, 2001, 2002],
         "Time": [2000, 2001, 2002],
-        "ScipyParam": ["c", "scale"]
+        "ScipyParam": ["c", "scale"],
+        "SuperType": ["vehicle_super"],
     }
 
 @pytest.fixture(scope="module")
@@ -29,8 +32,8 @@ def timelines():
     return prism.Timeline(2000, 2002, 1), prism.Timeline(2001, 2002, 1)
 
 @mark.parametrize(
-    "model_class", [GenericStocks, GenericMaterials, MaterialIntensities, RestOf,
-                    Battery]
+    "model_class", [GenericStocks, GenericMaterials, MaterialIntensities, RestOf, 
+                    SharesInflowStocks,Battery]
 )
 def test_basic_model(model_class):
     """Test to check any model without specific tests and without running it."""
@@ -85,3 +88,58 @@ def test_generic_stocks(coordinates, timelines):
 
     for t in coordinates["Time"]:
         assert (model.stock_by_cohort.loc[t].sum("Cohort") == stocks.loc[t]).all()
+
+
+@pytest.fixture(scope="module")
+def test_knowledge_graph():
+    """Create a test knowledge graph."""
+    return KnowledgeGraph(
+        Node("vehicle_super"),
+        Node("vehicle_a", inherits_from="vehicle_super"),
+        Node("vehicle_b", inherits_from="vehicle_super"),
+    )
+def test_shares_inflow_stocks(coordinates, timelines, test_knowledge_graph):
+    """Test the SharesInflowStocks model."""
+    stocks = _get_xarray(coordinates, "Time", "Region", "SuperType")
+    stocks = prism.Q_(stocks, "count")
+
+   
+    shares = _get_xarray(coordinates, "Region", "Type", "Cohort")
+    shares = shares / shares.sum("Type") 
+
+    lt = _get_xarray(coordinates, "Time", "Region", "Type", "ScipyParam")
+    lt.attrs["loc"] = 0
+    lifetimes = {"weibull": lt}
+
+    complete_timeline, simulation_timeline = timelines
+
+    model = SharesInflowStocks(
+        complete_timeline,
+        stocks=stocks,
+        shares=shares,
+        lifetimes=lifetimes,
+        knowledge_graph=test_knowledge_graph,
+        set_unit_flexible="count",
+        Region=coordinates["Region"],
+        SuperType=coordinates["SuperType"],
+        Type=coordinates["Type"],
+        Cohort=coordinates["Cohort"],
+        Time=coordinates["Time"]
+    )
+
+    model.simulate(complete_timeline)
+
+    for var_name in ["outflow_by_cohort", "inflow", "stock_by_cohort"]:
+        assert hasattr(model, var_name)
+    
+    for t in coordinates["Time"]:
+        stock_by_type = model.stock_by_cohort.loc[t].sum("Cohort")
+        stock_by_supertype = test_knowledge_graph.aggregate_sum(
+            stock_by_type,
+            stocks.coords["SuperType"].values,
+            dim="Type"
+        ).rename({"Type": "SuperType"})
+        
+        # With constant stock targets (all 1.0) and fast decay (Weibull c=1, scale=1),
+        # inflow is always positive, so stock equals demand exactly.
+        assert (stock_by_supertype == stocks.loc[t]).all()
