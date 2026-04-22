@@ -12,7 +12,7 @@ from imagematerials.concepts import knowledge_graph
 from imagematerials.concepts import Node, KnowledgeGraph
 from imagematerials.model import GenericMaterials, GenericStocks, MaterialIntensities, RestOf
 from imagematerials.model import SharesInflowStocks
-from imagematerials.vehicles.battery import Battery
+from imagematerials.vehicles.preprocessing.battery import Battery
 
 @pytest.fixture(scope="module")
 def coordinates():
