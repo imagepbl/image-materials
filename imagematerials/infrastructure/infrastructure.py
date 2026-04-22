@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import argparse
 import pandas as pd
 import numpy as np
 import xarray as xr
@@ -10,15 +11,12 @@ from imagematerials.infrastructure.preprocessing import get_preprocessing_data_i
 from imagematerials.model import GenericStocks, MaterialIntensities
 from imagematerials.factory import ModelFactory, Sector
 from imagematerials.__main__ import export_model_netcdf, _convert_timevar
+from imagematerials.constants import YEAR_START, YEAR_END, YEAR_OUT
 import prism
 
 SCEN = "SSP2"
 path_current = Path(__file__).resolve()
 path_base = path_current.parent.parent.parent # C:\IMAGE\image-materials
-
-YEAR_START = 1971   # start year of the simulation period
-YEAR_END = 2100     # end year of the calculations
-YEAR_OUT = 2100     # year of output generation = last year of reporting
 
 def process_da_to_df(da, metric_name, unit):
     if len(da.dims) == 0:
@@ -28,19 +26,46 @@ def process_da_to_df(da, metric_name, unit):
     df['unit'] = unit
     return df
 
-def main():
-    prep_data = get_preprocessing_data_infrastructure(path_base, SCEN)
+
+def run_infrastructure_simulation(prep_data=None, scenario=SCEN):
+    """
+    Build and simulate the infrastructure sector model.
+
+    This is the integration-ready entry point: it produces a populated
+    ModelFactory whose submodels expose TimeVariable outputs that can be
+    consumed by downstream models (e.g. SumMaterials in run_integrated.py).
+
+    Parameters
+    ----------
+    prep_data : dict, optional
+        Preprocessing dictionary from get_preprocessing_data_infrastructure.
+        If None, it is loaded from disk using `scenario`.
+    scenario : str
+        Scenario name, used only when prep_data is None.
+
+    Returns
+    -------
+    main_model_factory : prism.ModelFactory
+        The finished factory after simulation. Submodels:
+            [0] GenericStocks       → inflow, outflow_by_cohort, stock_by_cohort
+            [1] MaterialIntensities → inflow_materials, outflow_by_cohort_materials,
+                                      stock_by_cohort_materials
+    prep_data : dict
+        The preprocessing dict used (returned for downstream reporting).
+    """
+    if prep_data is None:
+        prep_data = get_preprocessing_data_infrastructure(path_base, scenario)
 
     print("\n--- Running Infrastructure Sector Model ---")
     time_start = int(prep_data["stocks"].coords["Time"].min().values)
-    
+
     complete_timeline = prism.Timeline(time_start, YEAR_END, 1)
     # Simulate from time_start (1911) so DSM processes stock_tail years
     # and builds proper cohort age distribution (not all stock in one cohort)
     simulation_timeline = prism.Timeline(time_start, YEAR_END, 1)
 
     sec_infrastructure = Sector("infrastructure", prep_data, check_coordinates=False)
-    
+
     # GenericStocks requires a Cohort coordinate definition matching complete_timeline
     if "Cohort" not in sec_infrastructure.coordinates:
         sec_infrastructure.coordinates["Cohort"] = list(range(time_start, YEAR_END + 1))
@@ -56,20 +81,37 @@ def main():
         warnings.filterwarnings("ignore")
         main_model_factory.simulate(simulation_timeline)
     print("Simulation finished.")
-    
-    # Save standard outputs
+
+    # Attach a Time coordinate DataArray for convenience in reporting
     infra_model = main_model_factory.submodels[0]
     times = np.array(infra_model.Cohort)
     infra_model.time_coor = xr.DataArray(times, dims=["Time"], coords={"Time": times})
-    
-    output_dir = path_current.parent / "output"
+
+    return main_model_factory, prep_data
+
+
+def export_infrastructure_report(main_model_factory, prep_data, output_dir=None):
+    """
+    Stand-alone reporting: extract metrics from a simulated infrastructure model,
+    apply mass balance and permanent-aggregate corrections, and export to
+    NetCDF (road_materials_detailed.nc) and wide-format Excel
+    (road_materials_output_kt_detail.xlsx).
+
+    This is NOT needed for integration with the rest of the image-materials
+    model — it is purely for standalone analysis/reporting.
+    """
+    infra_model = main_model_factory.submodels[0]
+    mat_model = main_model_factory.submodels[1]
+
+    if output_dir is None:
+        output_dir = path_current.parent / "output"
+    output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     
     # 1. Compute aggregated outputs (sum over cohorts)
     print("\nExtracting metrics...")
-    
+
     time_slice = slice(YEAR_START, YEAR_END)
-    mat_model = main_model_factory.submodels[1]
     time_coor_da = infra_model.time_coor
     
     # physical Units (km)
@@ -264,5 +306,54 @@ def main():
     wide_df.to_excel(report_path, index=False, sheet_name='network')
     print(f"Saved v5-format output to {report_path}")
 
+
+def main(export_report=True, scenario=SCEN):
+    """
+    Stand-alone entry point for the infrastructure sector.
+
+    Runs the simulation and (optionally) exports the NetCDF + Excel reports.
+    When infrastructure is run as part of the integrated model
+    (see examples/run_integrated.py), only run_infrastructure_simulation()
+    is needed — the reporting step is skipped.
+
+    Parameters
+    ----------
+    export_report : bool
+        If True (default), write road_materials_detailed.nc and
+        road_materials_output_kt_detail.xlsx to imagematerials/infrastructure/output/.
+        If False, just run the simulation and return the factory (useful for
+        testing or for callers that only want the in-memory results).
+    scenario : str
+        Scenario name passed to preprocessing.
+
+    Returns
+    -------
+    main_model_factory : prism.ModelFactory
+    prep_data : dict
+    """
+    main_model_factory, prep_data = run_infrastructure_simulation(scenario=scenario)
+
+    if export_report:
+        export_infrastructure_report(main_model_factory, prep_data)
+    else:
+        print("Skipping standalone report export (simulation results available in returned factory).")
+
+    return main_model_factory, prep_data
+
+
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Run the infrastructure sector model standalone."
+    )
+    parser.add_argument(
+        "--no-report",
+        action="store_true",
+        help="Skip the NetCDF/Excel report export (simulation only).",
+    )
+    parser.add_argument(
+        "--scenario",
+        default=SCEN,
+        help=f"Scenario name (default: {SCEN}).",
+    )
+    args = parser.parse_args()
+    main(export_report=not args.no_report, scenario=args.scenario)
