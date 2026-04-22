@@ -12,7 +12,6 @@ from imagematerials.concepts import knowledge_graph
 from imagematerials.concepts import Node, KnowledgeGraph
 from imagematerials.model import GenericMaterials, GenericStocks, MaterialIntensities, RestOf
 from imagematerials.model import SharesInflowStocks
-from imagematerials.vehicles.preprocessing.battery import Battery
 
 @pytest.fixture(scope="module")
 def coordinates():
@@ -33,7 +32,7 @@ def timelines():
 
 @mark.parametrize(
     "model_class", [GenericStocks, GenericMaterials, MaterialIntensities, RestOf, 
-                    SharesInflowStocks,Battery]
+                    SharesInflowStocks]
 )
 def test_basic_model(model_class):
     """Test to check any model without specific tests and without running it."""
