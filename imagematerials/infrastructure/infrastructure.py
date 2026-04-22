@@ -11,10 +11,16 @@ from imagematerials.infrastructure.preprocessing import get_preprocessing_data_i
 from imagematerials.model import GenericStocks, MaterialIntensities
 from imagematerials.factory import ModelFactory, Sector
 from imagematerials.__main__ import export_model_netcdf, _convert_timevar
-from imagematerials.constants import YEAR_START, YEAR_END, YEAR_OUT
 import prism
 
 SCEN = "SSP2"
+
+# Simulation horizon — declared locally, matching the pattern used in
+# imagematerials.electricity.electricity. Adjust here if you want a different
+# range for a standalone infrastructure run.
+YEAR_START = 1971   # first year of the simulation
+YEAR_END = 2100     # last year of the simulation
+YEAR_OUT = 2100     # last year of reporting
 path_current = Path(__file__).resolve()
 path_base = path_current.parent.parent.parent # C:\IMAGE\image-materials
 
