@@ -37,7 +37,7 @@ from imagematerials.fossil_fuels.preprocessing.ffconstants import (
     IMAGE_REGIONS,
     STANDARD_SCEN_EXTERNAL_DATA,
     YEAR_FIRST_GRID,
-    SD_LIFETIME,
+    SD_LIFETIME
 )
 
 from imagematerials.fossil_fuels.preprocessing.drivers import coal_infra, oil_infra, gas_infra
@@ -293,11 +293,11 @@ def compute_processing_capacity(path_base: str, climate_policy_config: dict, cir
     df_processing_refinery_oil["fuel"] = "oil"  
     df_processing_gas["fuel"] = "gas"
 
-    print("COAL INDEX NAMES:", preparation_stock_coal.index.names)
-    print(preparation_stock_coal.head())
+    # print("COAL INDEX NAMES:", preparation_stock_coal.index.names)
+    # print(preparation_stock_coal.head())
 
-    print("OIL INDEX NAMES:", oil_storage.index.names)
-    print("GAS INDEX NAMES:", processing_stock_gas.index.names)
+    # print("OIL INDEX NAMES:", oil_storage.index.names)
+    # print("GAS INDEX NAMES:", processing_stock_gas.index.names)
 
     #Combine the dataframes for coal, oil, and gas into one dataframe and then melt it to long format so that we have one row per combination of time, region, fuel, technology, and value (stock)
     df_processing_all = pd.concat(
@@ -615,6 +615,19 @@ def compute_pipelines_capacity(path_base: str, climate_policy_config: dict, circ
 
     # Add units
     pipelinecap_xr = prism.Q_(pipelinecap_xr, "km")
+
+    #Correct the order
+    pipeline_order = [
+        'Gas Distribution Pipeline',
+        'Gas Transmission Pipeline',
+        'Oil Offshore Crude Pipeline',
+        'Oil Onshore Crude Pipeline',
+        'Oil Offshore Product Pipeline',
+        'Oil Onshore Product Pipeline'
+    ]
+
+    #Reorder technology coordinate in all three datasets (capacity, lifetime, material intensities) to match the same order of technologies (coal opencast, coal underground, gas offshore, gas onshore, oil offshore, oil onshore), so that we can easily combine the data in the model (since they all have to be in the same order of technologies)
+    pipelinecap_xr = pipelinecap_xr.reindex(Type=pipeline_order)
 
     # print("=== pipelinecap_xr ===")
     # print(pipelinecap_xr)

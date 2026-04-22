@@ -133,9 +133,10 @@ def compute_extraction_lifetimes(path_base: str, climate_policy_config: dict, ci
     ) 
 
        # Lifetimes -------
-    types = ["Coal Underground","Coal Opencast","Oil Offshore","Oil Onshore","Gas Offshore","Gas Onshore"]
+    types = extraction_lifetime_data.index.get_level_values("Tech Type").unique().to_numpy()
     values = extraction_lifetime_data["Lifetime"].unstack().reindex(columns=types).to_numpy(dtype=float)
     times = extraction_lifetime_data.index.get_level_values("Year").unique().to_numpy()
+    
     scipy_params = ["mean", "stdev"]
 
     # Build xarray with shape (ScipyParam, Time, Type)
@@ -221,7 +222,7 @@ def compute_processing_lifetimes(path_base: str, climate_policy_config: dict, ci
     values = processing_lifetime_data["Lifetime"].unstack().to_numpy(dtype=float)
     #Create coordinates
     times = processing_lifetime_data.index.levels[0].to_numpy()
-    types = processing_lifetime_data.index.levels[1].to_numpy()
+    types = processing_lifetime_data.index.get_level_values("Tech Type").unique().to_numpy()
     scipy_params = ["mean", "stdev"]
         # Build full array: shape (ScipyParam, Time, Type)
     data_array = np.stack([values, np.full_like(values, SD_LIFETIME)], axis=0)
@@ -232,7 +233,7 @@ def compute_processing_lifetimes(path_base: str, climate_policy_config: dict, ci
             coords={
                 "DistributionParams": scipy_params,
                 "Cohort": times,
-                "Type": [str(r) for r in types]
+                "Type": types
             },
             name="ProcessingLifetime"
         )
@@ -271,7 +272,7 @@ def compute_transport_lifetimes(path_base: str, climate_policy_config: dict, cir
     values = transport_lifetime_data["Lifetimes"].unstack().to_numpy(dtype=float)
     #Create coordinates
     times = transport_lifetime_data.index.levels[0].to_numpy()
-    types = transport_lifetime_data.index.levels[1].to_numpy()
+    types = transport_lifetime_data.index.get_level_values("Tech Type").unique().to_numpy()
     scipy_params = ["mean", "stdev"]
     # Build full array: shape (ScipyParam, Time, Type)
     data_array = np.stack([values, np.full_like(values, SD_LIFETIME)], axis=0)
@@ -282,7 +283,7 @@ def compute_transport_lifetimes(path_base: str, climate_policy_config: dict, cir
             coords={
                 "DistributionParams": scipy_params,
                 "Cohort": times,
-                "Type": [str(r) for r in types]
+                "Type": types
             },
             name="TransportLifetime"
         )
@@ -323,14 +324,14 @@ def compute_pipelines_lifetimes(path_base: str, climate_policy_config: dict, cir
 
             ###########################################################################################################
         # Transform to xarray #
-    knowledge_graph_region = create_region_graph()
-    fossil_fuel_knowledge_graph = create_fossil_fuel_graph()
+    # knowledge_graph_region = create_region_graph()
+    # fossil_fuel_knowledge_graph = create_fossil_fuel_graph()
 
         # Lifetimes -------
     values = pipelines_lifetime_data["Lifetimes"].unstack().to_numpy(dtype=float)
     #Create coordinates
     times = pipelines_lifetime_data.index.levels[0].to_numpy()
-    types = pipelines_lifetime_data.index.levels[1].to_numpy()
+    types = pipelines_lifetime_data.index.get_level_values("Tech Type").unique().to_numpy()
     scipy_params = ["mean", "stdev"]
     # Build full array: shape (ScipyParam, Time, Type)
     data_array = np.stack([values, np.full_like(values, SD_LIFETIME)], axis=0)
@@ -341,7 +342,7 @@ def compute_pipelines_lifetimes(path_base: str, climate_policy_config: dict, cir
             coords={
                 "DistributionParams": scipy_params,
                 "Cohort": times,
-                "Type": [str(r) for r in types]
+                "Type": types
             },
             name="PipelinesLifetime"
         )
@@ -355,6 +356,18 @@ def compute_pipelines_lifetimes(path_base: str, climate_policy_config: dict, cir
     # # Rebroadcast to standard technology names from TIMER, and convert coordinate type back to python strings (since rebroadcast changes it to numpy strings)
     # pipelines_lifetime_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(pipelines_lifetime_xr, output_coords=FF_TECHNOLOGIES, dim="Type") # convert technology names to the standard names from TIMER
     # pipelines_lifetime_xr = pipelines_lifetime_xr.assign_coords(Type=np.array(pipelines_lifetime_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
+    
+    pipeline_order = [
+        'Gas Distribution Pipeline',
+        'Gas Transmission Pipeline',
+        'Oil Offshore Crude Pipeline',
+        'Oil Onshore Crude Pipeline',
+        'Oil Offshore Product Pipeline',
+        'Oil Onshore Product Pipeline'
+    ]
+
+    #Reorder technology coordinate in all three datasets (capacity, lifetime, material intensities) to match the same order of technologies (coal opencast, coal underground, gas offshore, gas onshore, oil offshore, oil onshore), so that we can easily combine the data in the model (since they all have to be in the same order of technologies)
+    pipelines_lifetime_xr = pipelines_lifetime_xr.reindex(Type=pipeline_order)
 
     return pipelines_lifetime_xr
 

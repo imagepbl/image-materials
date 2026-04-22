@@ -278,7 +278,18 @@ def compute_pipelines_materials(path_base: str, climate_policy_config: dict, cir
     #Rebroadcast to standard technology names from TIMER, and convert coordinate type back to python strings (since rebroadcast changes it to numpy strings)
     # pipelines_materials_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(pipelines_materials_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
     # pipelines_materials_xr = pipelines_materials_xr.assign_coords(Type=np.array(pipelines_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
-   
+    pipeline_order = [
+        'Gas Distribution Pipeline',
+        'Gas Transmission Pipeline',
+        'Oil Offshore Crude Pipeline',
+        'Oil Onshore Crude Pipeline',
+        'Oil Offshore Product Pipeline',
+        'Oil Onshore Product Pipeline'
+    ]
+
+    #Reorder technology coordinate in all three datasets (capacity, lifetime, material intensities) to match the same order of technologies (coal opencast, coal underground, gas offshore, gas onshore, oil offshore, oil onshore), so that we can easily combine the data in the model (since they all have to be in the same order of technologies)
+    pipelines_materials_xr = pipelines_materials_xr.reindex(Type=pipeline_order)
+    
     return pipelines_materials_xr
 
 print("materials.py ran successfully!")
