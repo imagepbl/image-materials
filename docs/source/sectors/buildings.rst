@@ -3,14 +3,25 @@ Buildings sector
 ########
  
 *********
-Chapter
+Preprocessing
 *********
  
-Section
-=======
+Floorspace calculations
+=======================
  
-Subsection
-----------
- 
-Subsubsection
-~~~~~~~~~~~~~
+
+ Lifetime calculations
+======================
+
+
+Materials calculations
+======================
+
+
+Population calculations
+=======================
+
+
+CE measures calculations
+========================
+
