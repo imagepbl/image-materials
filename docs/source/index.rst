@@ -26,7 +26,6 @@ IMAGE Materials Documentation
 =============================
 Welcome to the `IMAGE Materials <https://github.com/imagepbl/image-materials>`_ documentation. 
 
-Some description here.
 
 
 Documentation Outline
@@ -41,6 +40,8 @@ Documentation Outline
    models
    api/modules
    api/models_detail
+   sectors/overview
+   licence
 
 
 
@@ -52,17 +53,23 @@ The :doc:`whatisimagematerials` is ...
 
 :doc:`installation`
 ^^^^^^^^^^^^^^^^^^^
-
 The :doc:`installation` section provides an overview of IMAGE materials's purpose and functionality.
 
 :doc:`quickstart`
 ^^^^^^^^^^^^^^^^^
 The :doc:`quickstart` contains detailed, step-by-step instructions, as well as best practices for using the package. If you're new to IMAGE materials, we recommend you start here!
 
+:doc:`models`
+^^^^^^^^^^^^^
+The :doc:`models` section provides an overview of the models implemented in IMAGE materials. 
+
 :doc:`api/modules`
 ^^^^^^^^^^^^^^^^^^
 The :doc:`api/modules` is a technical reference for IMAGE materials. Here, each function, class, and module is outlined in detail, giving you a comprehensive understanding of how the package works and how to use its various functionalities.  If, for example, you'd like to discover which parameters can be used for which function, you can find that here.
 
+:doc:`sectors/overview`
+^^^^^^^^^^^^^^^^^^^^^^^
+The :doc:`sectors/overview` section provides an overview of the different sectors that IMAGE materials can be applied to.
 
 
 Indices and tables
@@ -70,3 +77,11 @@ Indices and tables
 
 * :ref:`genindex`
 * :ref:`modindex`
+
+IMAGE Materials Team
+====================
+This model was developed by the IMAGE Materials team at Utrecht University: 
+Luja von Köckritz, Frederike Arp, Judith Tettenborn, Marianne Zanon Zotin, Oreane Edelenbosch, Sebastiaan Deetman.
+
+Supported by the Research Data Management Support team at Utrecht University:
+Raoul Schram, Roel Brouwer, Parisa Zahedi, Cristina Staiger

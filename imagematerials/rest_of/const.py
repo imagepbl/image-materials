@@ -278,16 +278,16 @@ def get_key(val, my_dict):
 #%%
 
 models_output_dict = {
-    # 'log-log model' : 0,
-    # 'semi-log model' : 1,
-    # 'log-inverse model' : 2,
-    # 'log-log-inverse model' : 3,
-    # 'log-log-square model' : 4,
     'non-linear inverse model' : 0,
     'gompertz model' : 1,
     'logistic growth model' : 2,
     'limited growth model' : 3,
-    'log gauss saturate model' : 4
+    'log gauss saturate model' : 4,
+    'log-log model' : 5,
+    'semi-log model' : 6,
+    'log-inverse model' : 7,
+    'log-log-inverse model' : 8,
+    'log-log-square model' : 9,
     }
 
 #%% parser function to write query function based on variable names of DIM1 and DIM2
