@@ -8,7 +8,7 @@ It is recommended to use a virtual environment for installing dependencies. See 
 Step 1: Install Python
 ---------------------------
 
-Install Python 3.10. 
+Install Python 3.12. 
 
 
 Step 2: Install PIP
