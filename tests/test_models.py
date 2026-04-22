@@ -12,7 +12,6 @@ from imagematerials.concepts import knowledge_graph
 from imagematerials.concepts import Node, KnowledgeGraph
 from imagematerials.model import GenericMaterials, GenericStocks, MaterialIntensities, RestOf
 from imagematerials.model import SharesInflowStocks
-from imagematerials.vehicles.battery import Battery
 
 @pytest.fixture(scope="module")
 def coordinates():
@@ -33,7 +32,7 @@ def timelines():
 
 @mark.parametrize(
     "model_class", [GenericStocks, GenericMaterials, MaterialIntensities, RestOf, 
-                    SharesInflowStocks,Battery]
+                    SharesInflowStocks]
 )
 def test_basic_model(model_class):
     """Test to check any model without specific tests and without running it."""
@@ -60,7 +59,7 @@ def test_basic_model(model_class):
             continue
         if var_name in model_class.input_data:
             continue
-        assert var_name in ["input_data", "output_data", "time"], (
+        assert var_name in ["input_data", "output_data", "time", "transition_years"], (
             f"Unknown dataclass attribute '{var_name}' for '{model_class}'")
 
 def _get_xarray(coordinates, *dims):

@@ -10,7 +10,7 @@ ureg = pint.UnitRegistry(force_ndarray_like=True)
 # --- Settings & constants
 
 YEAR_FIRST_GRID = 1926  # UK Electricity supply act - https://www.bbc.com/news/uk-politics-11619751   
-YEAR_FIRST = 1807       # first_year_vehicle.values.min()
+YEAR_FIRST_VEHICLES = 1807       # first_year_vehicle.values.min()
 YEAR_SWITCH = 1990      # year after which other batteries than lead-acid are allowed
 REGIONS = 26
 COHORTS = 50
@@ -50,63 +50,34 @@ unit_mapping = {
     'MWh': ureg.megawatthour, #added
 }
 
-REGIONS_TIMER = [ # TODO: check if this is true
-    "Canada",
-    "USA",
-    "Mexico",
-    "Rest of Central America",
-    "Brazil",
-    "Rest of South America",
-    "Northern Africa",
-    "Western Africa",
-    "Eastern Africa",
-    "South Africa",
-    "Western Europe",
-    "Central Europe",
-    "Turkey",
-    "Ukraine +",
-    "Asian-Stan",
-    "Russia +",
-    "Middle East",
-    "India +",
-    "Korea",
-    "China +",
-    "Southeastern Asia",
-    "Indonesia +",
-    "Japan",
-    "Oceania",
-    "Rest of South Asia",
-    "Rest of Southern Africa"
-]
-
 #  #regions in the file kilometrage.csv are like this:
-#  region_list  = [
-#  'Canada',
-#  'US',
-#  'Mexico',
-#  'Rest C.Am.',
-#  'Brazil',
-#  'Rest S.Am.',
-#  'N.Africa',
-#  'W.Africa',
-#  'E.Africa',
-#  'South Africa',
-#  'W.Europe',
-#  'C.Europe',
-#  'Turkey',
-#  'Ukraine',
-#  'Stan',
-#  'Russia',
-#  'M.East',
-#  'India',
-#  'Korea',
-#  'China',
-#  'SE.Asia',
-#  'Indonesia',
-#  'Japan',
-#  'Oceania',
-#  'Rest S.Asia',
-#  'Rest S.Africa']
+region_list_old  = [
+    'Canada',
+    'US',
+    'Mexico',
+    'Rest C.Am.',
+    'Brazil',
+    'Rest S.Am.',
+    'N.Africa',
+    'W.Africa',
+    'E.Africa',
+    'South Africa',
+    'W.Europe',
+    'C.Europe',
+    'Turkey',
+    'Ukraine',
+    'Stan',
+    'Russia',
+    'M.East',
+    'India',
+    'Korea',
+    'China',
+    'SE.Asia',
+    'Indonesia',
+    'Japan',
+    'Oceania',
+    'Rest S.Asia',
+    'Rest S.Africa']
 
 # Electricity Generation related constants ---------------------------------------------
 
@@ -216,7 +187,7 @@ LIGHT_COMMERCIAL_VEHICLE_SHARE = 0.04 # TODO: is this even used somewhere?
 BEV_CAPACITY_CURRENT  = 59.6    #kWh current battery capacity of full electric vehicles, see current_specs.xlsx
 PHEV_CAPACITY_CURRENT = 11.2    #kWh current battery capacity of plugin electric vehicles, see current_specs.xlsx
 
-
+EV_BATTERIES = ['NiMH', 'LMO', 'NMC', 'NCA', 'LFP', 'Lithium Sulfur', 'Lithium Ceramic', 'Lithium-air']
 
 # Storage related constants ---------------------------------------------
 
@@ -224,7 +195,16 @@ PHEV_CAPACITY_CURRENT = 11.2    #kWh current battery capacity of plugin electric
 
 PHS_KG_PERKWH = 26.8   # kg per kWh storage capacity (as weight addition to existing hydro plants to make them pumped) 
 
-
+dict_storage_tech_to_groups  = {
+    "nickel battery":           ["NiMH"],
+    "lead-acid battery":        ["Deep-cycle Lead-Acid"],
+    "lithium ion battery":      ["LMO", "NMC", "NCA", "LFP", "LTO"],
+    "flow battery":             ["Zinc-Bromide", "Vanadium Redox"],
+    "molten-salt battery":      ["Sodium-Sulfur", "ZEBRA"],
+    "lithium-metal battery":    ["Lithium Sulfur", "Lithium Ceramic", "Lithium-air"],
+    "mechanical":               ["PHS", "Flywheel", "Compressed Air"],
+    "fuel-cells":               ["Hydrogen FC"]
+}
 
 
 # Visualization related ---------------------------------------------
