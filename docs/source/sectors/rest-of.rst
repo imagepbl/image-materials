@@ -1,16 +1,30 @@
-########
+##############
 Rest-of sector
-########
+##############
  
-*********
-Chapter
-*********
+**************
+Resource Model
+**************
  
-Section
-=======
+Regression Classes
+==================
  
-Subsection
-----------
+
+Correlation
+===========
+
+
+Preparation projection
+======================
+
+
+
+*************
+Preprocessing
+*************
  
-Subsubsection
-~~~~~~~~~~~~~
+ Metals
+======================
+
+Non-metallic minerals
+======================
