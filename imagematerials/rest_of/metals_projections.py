@@ -86,7 +86,7 @@ def copper_projection(scenario: str, path_input_data, path_input_data_image):
 
     copper.remove_regions_with_no_good_fit_from_region_model_match(exclude)
 
-    return copper
+    return copper, copper_regions
 
 
 # Steel projections
@@ -95,7 +95,7 @@ def steel_projection(scenario: str, path_input_data, path_input_data_image):
     steel = ResourceModel(resource_group = 'metals', resource = 'steel', 
                         image_mat_available = True, start_year = 1971,
                         scenario=scenario,
-                        convert_image=True, end_year = 2012, convert_to_tons = 1/1000_000, 
+                        convert_image=True, end_year = 2024, convert_to_tons = 1/1000_000, 
                         trade_data=True, 
                         path_input_data=path_input_data,
                         path_input_data_image=path_input_data_image)
@@ -173,7 +173,7 @@ def steel_projection(scenario: str, path_input_data, path_input_data_image):
     
     steel.remove_regions_with_no_good_fit_from_region_model_match(exclude)
     
-    return steel
+    return steel, steel_grouping
 
 
 # Aluminium
@@ -275,6 +275,6 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
 
     aluminium.remove_regions_with_no_good_fit_from_region_model_match(exclude)
 
-    return aluminium
+    return aluminium, aluminium_regions
 
 

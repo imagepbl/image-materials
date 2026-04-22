@@ -55,7 +55,7 @@ def test_basic_model(model_class):
             continue
         if var_name in model_class.input_data:
             continue
-        assert var_name in ["input_data", "output_data", "time"], (
+        assert var_name in ["input_data", "output_data", "time", "transition_years"], (
             f"Unknown dataclass attribute '{var_name}' for '{model_class}'")
 
 def _get_xarray(coordinates, *dims):
