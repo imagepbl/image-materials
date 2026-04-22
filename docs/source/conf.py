@@ -25,7 +25,7 @@ author = "Frederike Arp, Luja von Köckritz, Sebastiaan Deetman, Roel Brouwer, 
 
 
 # The full version, including alpha/beta/rc tags
-release = '0.0.1'
+release = '3.5.0.1'
 
 # -- General configuration ---------------------------------------------------
 
@@ -41,6 +41,9 @@ extensions = [
     "sphinx_copybutton",
     "sphinx.ext.autosummary",
 ]
+
+# Mock optional heavy dependencies that are not required to render docs.
+autodoc_mock_imports = ["prism"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
