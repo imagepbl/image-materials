@@ -4,7 +4,7 @@ Vehicles
 
 Vehicle preprocessing transforms transport activity data and technology assumptions into the harmonized inputs required by the dynamic stock and
 materials models. The workflow is orchestrated by `vehicles.preprocessing.main.vehicles_preprocessing <../../../imagematerials/vehicles/preprocessing/main.py>`_ and combines scenario,
-standard, climate-policy, and circular-economy settings. 
+standard, socio economic scenario data from IMAGE, and circular-economy settings. 
 
 Scope
 ----------
@@ -96,3 +96,6 @@ The vehicle module uses the `GenericStocks class <../api/models_detail.html>`_ f
 
 References
 ==================
+Deetman, S. (2021). Stock-driven scenarios on global material demand: The story of a lifetime. https://hdl.handle.net/1887/3245696
+
+Von Köckritz, L., Edelenbosch, O., Deetman, S., Arp, F., Brouwer, R., Schram, R., Zanon-Zotin, M., & Van Vuuren, D. (2026). Old is gold? Vehicle maintenance material demand of lifetime extension: dynamic stock modelling. Resources, Conservation and Recycling, 228, 108752. https://doi.org/10.1016/j.resconrec.2025.108752
