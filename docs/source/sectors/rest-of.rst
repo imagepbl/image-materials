@@ -24,7 +24,7 @@ Regression Classes
 
 The following regression classes are defined in this module:
 
-OLS
+OLS (Ordinary least squares)
 ---
 
 These classes inherit from ``OLS_Model`` and apply linear regression on transformed data:
@@ -35,7 +35,7 @@ These classes inherit from ``OLS_Model`` and apply linear regression on transfor
 - ``Log_Log_Inverse_Model``: :math:`\ln(y) = \ln(X) + 1/X` — log with log and inverse terms
 - ``Log_Log_Square_Model``: :math:`\ln(y) = \ln(X) + \ln(X)^2` — log with quadratic log term
 
-NLS
+NLS (Non-linear least squares)
 ---
 
 These classes inherit from ``NLS_Model`` and fit non-linear functions via ``scipy.optimize.curve_fit``.
