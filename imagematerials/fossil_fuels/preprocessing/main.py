@@ -126,7 +126,7 @@ def get_preprocessing_data_extraction(path_base: str, climate_policy_config: dic
     prep_data_extraction["knowledge_graph"] = create_fossil_fuel_graph() 
     # add units
     prep_data_extraction["stocks"] = prism.Q_(prep_data_extraction["stocks"], "kg")
-    prep_data_extraction["material_intensities"] = prism.Q_(prep_data_extraction["material_intensities"], "kg/kg/year")
+    prep_data_extraction["material_intensities"] = prism.Q_(prep_data_extraction["material_intensities"], "kg/kg")
     prep_data_extraction["set_unit_flexible"] = prism.U_(prep_data_extraction["stocks"]) # prism.U_ gives the unit back
         # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
 
@@ -161,7 +161,7 @@ def get_preprocessing_data_processing(path_base: str, climate_policy_config: dic
     prep_data_processing["knowledge_graph"] = create_fossil_fuel_graph() 
     # add units
     prep_data_processing["stocks"] = prism.Q_(prep_data_processing["stocks"], "kg")
-    prep_data_processing["material_intensities"] = prism.Q_(prep_data_processing["material_intensities"], "kg/kg/year")
+    prep_data_processing["material_intensities"] = prism.Q_(prep_data_processing["material_intensities"], "kg/kg")
     prep_data_processing["set_unit_flexible"] = prism.U_(prep_data_processing["stocks"]) # prism.U_ gives the unit back
     #     # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
 
@@ -190,6 +190,7 @@ def get_preprocessing_data_transport(path_base: str, climate_policy_config: dict
 
     # add units
     prep_data_transport["stocks"] = prism.Q_(prep_data_transport["stocks"], "kg")
+    prep_data_transport["material_intensities"] = prism.Q_(prep_data_transport["material_intensities"], "kg/kg")
     prep_data_transport["set_unit_flexible"] = prism.U_(prep_data_transport["stocks"]) # prism.U_ gives the unit back
         # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
     return prep_data_transport
@@ -203,6 +204,7 @@ def get_preprocessing_data_pipelines(path_base: str, climate_policy_config: dict
         path_external_data_scenario = Path(path_base, "fossil_fuels", STANDARD_SCEN_EXTERNAL_DATA)
 
     pipelines_lifetime_xr = compute_pipelines_lifetimes(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out) 
+    pipelines_lifetime_xr = convert_lifetime(pipelines_lifetime_xr)
     pipelinecap_xr = compute_pipelines_capacity(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
     pipelines_materials_xr = compute_pipelines_materials(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out) 
 
@@ -215,7 +217,7 @@ def get_preprocessing_data_pipelines(path_base: str, climate_policy_config: dict
     prep_data_pipelines["knowledge_graph"] = create_fossil_fuel_graph() 
     # add units
     prep_data_pipelines["stocks"] = prism.Q_(prep_data_pipelines["stocks"], "km")
-    prep_data_pipelines["material_intensities"] = prism.Q_(prep_data_pipelines["material_intensities"], "kg/kg/year")
+    prep_data_pipelines["material_intensities"] = prism.Q_(prep_data_pipelines["material_intensities"], "kg/km")
     prep_data_pipelines["set_unit_flexible"] = prism.U_(prep_data_pipelines["stocks"]) # prism.U_ gives the unit back
     #     # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
 

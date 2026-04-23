@@ -133,10 +133,10 @@ def compute_extraction_lifetimes(path_base: str, climate_policy_config: dict, ci
     ) 
 
        # Lifetimes -------
-    types = extraction_lifetime_data.index.get_level_values("Tech Type").unique().to_numpy()
+    types = extraction_lifetime_data.index.get_level_values("Tech Type").unique().astype(str).tolist()
     values = extraction_lifetime_data["Lifetime"].unstack().reindex(columns=types).to_numpy(dtype=float)
-    times = extraction_lifetime_data.index.get_level_values("Year").unique().to_numpy()
-    
+    times = extraction_lifetime_data.index.get_level_values("Year").unique().astype(int).tolist()
+
     scipy_params = ["mean", "stdev"]
 
     # Build xarray with shape (ScipyParam, Time, Type)
@@ -221,8 +221,8 @@ def compute_processing_lifetimes(path_base: str, climate_policy_config: dict, ci
            # Lifetimes -------
     values = processing_lifetime_data["Lifetime"].unstack().to_numpy(dtype=float)
     #Create coordinates
-    times = processing_lifetime_data.index.levels[0].to_numpy()
-    types = processing_lifetime_data.index.get_level_values("Tech Type").unique().to_numpy()
+    times = processing_lifetime_data.index.get_level_values("Year").unique().astype(int).tolist()
+    types = processing_lifetime_data.index.get_level_values("Tech Type").unique().astype(str).tolist()
     scipy_params = ["mean", "stdev"]
         # Build full array: shape (ScipyParam, Time, Type)
     data_array = np.stack([values, np.full_like(values, SD_LIFETIME)], axis=0)
@@ -269,10 +269,10 @@ def compute_transport_lifetimes(path_base: str, climate_policy_config: dict, cir
     transport_lifetime_data = pd.read_csv(DATA_DIR / "Transport" / "Transport_lifetimes.csv", index_col=["Year", "Tech Type"])
 
         # Lifetimes -------
-    values = transport_lifetime_data["Lifetimes"].unstack().to_numpy(dtype=float)
+    values = transport_lifetime_data["Lifetime"].unstack().to_numpy(dtype=float)
     #Create coordinates
-    times = transport_lifetime_data.index.levels[0].to_numpy()
-    types = transport_lifetime_data.index.get_level_values("Tech Type").unique().to_numpy()
+    times = transport_lifetime_data.index.get_level_values("Year").unique().astype(int).tolist()
+    types = transport_lifetime_data.index.get_level_values("Tech Type").unique().astype(str).tolist()
     scipy_params = ["mean", "stdev"]
     # Build full array: shape (ScipyParam, Time, Type)
     data_array = np.stack([values, np.full_like(values, SD_LIFETIME)], axis=0)
@@ -328,10 +328,11 @@ def compute_pipelines_lifetimes(path_base: str, climate_policy_config: dict, cir
     # fossil_fuel_knowledge_graph = create_fossil_fuel_graph()
 
         # Lifetimes -------
-    values = pipelines_lifetime_data["Lifetimes"].unstack().to_numpy(dtype=float)
-    #Create coordinates
-    times = pipelines_lifetime_data.index.levels[0].to_numpy()
-    types = pipelines_lifetime_data.index.get_level_values("Tech Type").unique().to_numpy()
+
+    types = pipelines_lifetime_data.index.get_level_values("Tech Type").unique().astype(str).tolist()
+    values = pipelines_lifetime_data["Lifetime"].unstack().reindex(columns=types).to_numpy(dtype=float)
+    times = pipelines_lifetime_data.index.get_level_values("Year").unique().astype(int).tolist()
+
     scipy_params = ["mean", "stdev"]
     # Build full array: shape (ScipyParam, Time, Type)
     data_array = np.stack([values, np.full_like(values, SD_LIFETIME)], axis=0)

@@ -128,7 +128,7 @@ def compute_extraction_materials(path_base: str, climate_policy_config: dict, ci
     extraction_materials_xr = (
         extraction_materials_data
             .to_xarray()            
-            .to_array("Material") 
+            .to_array("material") 
             .rename({"Year": "Cohort", "Tech Type": "Type"})
     )
 
@@ -137,10 +137,10 @@ def compute_extraction_materials(path_base: str, climate_policy_config: dict, ci
     #Expand 2020 values across 1880-2100
     value_2020 = extraction_materials_xr.sel(Cohort=2020)
     year_range = np.arange(1880, 2101)
-    extraction_materials_xr = value_2020.expand_dims(Cohort=year_range).transpose("Material", "Cohort", "Type")
+    extraction_materials_xr = value_2020.expand_dims(Cohort=year_range).transpose("material", "Cohort", "Type")
 
     #Add units
-    extraction_materials_xr = prism.Q_(extraction_materials_xr, "kg/kg/year")
+    extraction_materials_xr = prism.Q_(extraction_materials_xr, "kg/kg")
 
     #Rebroadcast to standard technology names from TIMER, and convert coordinate type back to python strings (since rebroadcast changes it to numpy strings)
     # extraction_materials_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(extraction_materials_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
@@ -175,7 +175,7 @@ def compute_processing_materials(path_base: str, climate_policy_config: dict, ci
     processing_materials_xr = (
         processing_materials_data
             .to_xarray()           # keeps Year & Tech Type as coords
-            .to_array("Material")  # converts columns into a 'Material' dimension
+            .to_array("material")  # converts columns into a 'Material' dimension
             .rename({"Year": "Cohort", "Tech Type": "Type"})
     )
 
@@ -185,10 +185,10 @@ def compute_processing_materials(path_base: str, climate_policy_config: dict, ci
     #Expand 2020 values across 1880-2100
     value_2020 = processing_materials_xr.sel(Cohort=2020)
     year_range = np.arange(1880, 2101)
-    processing_materials_xr = value_2020.expand_dims(Cohort=year_range).transpose("Material", "Cohort", "Type")
+    processing_materials_xr = value_2020.expand_dims(Cohort=year_range).transpose("material", "Cohort", "Type")
 
     #Add units
-    processing_materials_xr = prism.Q_(processing_materials_xr, "kg/kg/year")
+    processing_materials_xr = prism.Q_(processing_materials_xr, "kg/kg")
 
     # #Rebroadcast to standard technology names from TIMER, and convert coordinate type back to python strings (since rebroadcast changes it to numpy strings)
     # processing_materials_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(processing_materials_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
@@ -222,7 +222,7 @@ def compute_transport_materials(path_base: str, climate_policy_config: dict, cir
     transport_materials_xr = (
         transport_materials_data
             .to_xarray()           
-            .to_array("Material")  
+            .to_array("material")  
             .rename({"Year": "Cohort", "Tech Type": "Type"})
     )
     transport_materials_xr.name = "TransportMaterialIntensities"
@@ -230,8 +230,8 @@ def compute_transport_materials(path_base: str, climate_policy_config: dict, cir
     #Expand 2020 values across 1880-2100
     value_2020 = transport_materials_xr.sel(Cohort=2020)
     year_range = np.arange(1880, 2101)
-    transport_materials_xr = value_2020.expand_dims(Cohort=year_range).transpose("Material", "Cohort", "Type")
-    transport_materials_xr = prism.Q_(transport_materials_xr, "kg/kg/year")
+    transport_materials_xr = value_2020.expand_dims(Cohort=year_range).transpose("material", "Cohort", "Type")
+    transport_materials_xr = prism.Q_(transport_materials_xr, "kg/kg")
 
     #Rebroadcast to standard technology names from TIMER, and convert coordinate type back to python strings (since rebroadcast changes it to numpy strings)
     # transport_materials_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(transport_materials_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
@@ -264,7 +264,7 @@ def compute_pipelines_materials(path_base: str, climate_policy_config: dict, cir
     pipelines_materials_xr = (
         pipelines_materials_data
             .to_xarray()           
-            .to_array("Material")  
+            .to_array("material")  
             .rename({"Year": "Cohort", "Tech Type": "Type"})
     )
     pipelines_materials_xr.name = "PipelinesMaterialIntensities"
@@ -272,8 +272,8 @@ def compute_pipelines_materials(path_base: str, climate_policy_config: dict, cir
     #Expand 2020 values across 1880-2100
     value_2020 = pipelines_materials_xr.sel(Cohort=2020)
     year_range = np.arange(1880, 2101)
-    pipelines_materials_xr = value_2020.expand_dims(Cohort=year_range).transpose("Material", "Cohort", "Type")
-    pipelines_materials_xr = prism.Q_(pipelines_materials_xr, "kg/kg/year")
+    pipelines_materials_xr = value_2020.expand_dims(Cohort=year_range).transpose("material", "Cohort", "Type")
+    pipelines_materials_xr = prism.Q_(pipelines_materials_xr, "kg/km")
 
     #Rebroadcast to standard technology names from TIMER, and convert coordinate type back to python strings (since rebroadcast changes it to numpy strings)
     # pipelines_materials_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(pipelines_materials_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
