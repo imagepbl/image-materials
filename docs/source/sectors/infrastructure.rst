@@ -169,7 +169,7 @@ aggregation (e.g. :class:`SumMaterials` in ``run_integrated.py``) can combine th
 
 **Dimensions**
 
-- ``Region`` (26): the IMAGE world regions. NEED TO CHANGE FORMAT TO MATCH OTHER SECTORS
+- ``Region`` (26): the IMAGE world regions.
 - ``Type`` (73): the active infrastructure types — all road classes (urban/rural ×
   paved/unpaved × motorway/primary/secondary/tertiary/residential/cycle), bridges
   and tunnels per road class, parking, and the rail types
