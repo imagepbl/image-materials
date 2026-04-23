@@ -20,9 +20,8 @@ sys.path.insert(0, os.path.abspath(".."))
 # -- Project information -----------------------------------------------------
 
 project = "imagematerials"
-copyright = "2024, IMAGE"
-author = "Frederike Arp, Luja von Köckritz, Sebastiaan Deetman, Roel Brouwer, Christine Staiger, Raoul Schram"
-
+copyright = "2026, IMAGE team at Utrecht University and PBL Netherlands Environmental Assessment Agency"
+author = "Frederike Arp, Luja von Köckritz, Judith Tettenborn, Martijn van Engelenburg, Marianne Zanon-Zotin, Oreane Edelenbosch, Sebastiaan Deetman, Roel Brouwer, Christine Staiger, Raoul Schram, Parisa Zahedi"
 
 # The full version, including alpha/beta/rc tags
 release = '3.5.0.1'
