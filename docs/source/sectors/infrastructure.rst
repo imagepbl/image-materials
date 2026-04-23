@@ -78,14 +78,12 @@ IMAGE, and **external intensity - lifetimes - paving - type - indicators** provi
     - Folded-normal parameters for rail, urban rail, HSR and rail bridges/tunnels.
 
 All scenario inputs are read as xarray DataArrays indexed by ``Region`` and ``Time``;
-static parameters are read from Excel files in ``data/raw/infrastructure/``. CHANGE WHEN
-LOCATION CHANGES
+static parameters are read from Excel files in ``data/raw/infrastructure/``. 
 
 
 Preprocessing Structure
 -----------------------
 
-TO BE CHANGED WITH DIFFERENT STRUCTURE
 Preprocessing is implemented in :mod:`imagematerials.infrastructure.preprocessing` and
 exposed through the single function
 :func:`get_preprocessing_data_infrastructure(path_base, scenario)`. It turns raw data
@@ -171,7 +169,7 @@ aggregation (e.g. :class:`SumMaterials` in ``run_integrated.py``) can combine th
 
 **Dimensions**
 
-- ``Region`` (26): the IMAGE world regions. NEED TO CHANGE FORMAT TO MATCH OTHER SECTORS
+- ``Region`` (26): the IMAGE world regions.
 - ``Type`` (73): the active infrastructure types — all road classes (urban/rural ×
   paved/unpaved × motorway/primary/secondary/tertiary/residential/cycle), bridges
   and tunnels per road class, parking, and the rail types
