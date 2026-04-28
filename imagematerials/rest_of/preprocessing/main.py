@@ -143,7 +143,7 @@ def fit_all_materials_save_corrseponding_input_data(path_input_data, path_input_
     gompertz = make_gompertz_coefs_da(results)
     mean_historic_other_fraction_consumption_to_xr(results)
     all_historic_data_xr = historic_other_fraction_consumption_to_xr(results)
-    max_x = get_X_max_scaling_factor(results)
+    max_x = get_X_max_scaling_factor(results, save=True)
 
 
 def rest_of_preprocessing(base_directory, image_scenario_directory, scenario: str, 

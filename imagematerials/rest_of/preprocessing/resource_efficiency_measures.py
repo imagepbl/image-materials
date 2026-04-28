@@ -55,6 +55,7 @@ def calcualte_resource_efficiency_measures():
     total_inflow_eff = sum_inflows_for_all_sectors(resource_eff, 'inflow_materials', list_sum_sectors_all)
 
     for material in gompertz_original.material.values:
+        print(material)
         if material in ['clay', 'limestone']: 
             # for limestone and clay take sand_gravel_crushed_rock as a proxy
             inflow = sand_gravel_crushed_rock_equivalent(total_inflow_base, 
