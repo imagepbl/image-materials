@@ -91,7 +91,7 @@ YEAR_START = 2100
 VARIANT = "M_CP"
 SCEN = "SSP2"
 
-knowledge_graph_region = create_region_graph()
+region_knowledge_graph = create_region_graph()
 fossil_fuel_knowledge_graph = create_fossil_fuel_graph()
 
 #Import xarrays from lifetimes, materials and capacity folders 
@@ -109,11 +109,8 @@ def get_preprocessing_data_extraction(path_base: str, climate_policy_config: dic
     
     # The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
     extraction_lifetime_xr = compute_extraction_lifetimes (path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
-    # print(type(extraction_lifetime_xr))
-    # print(extraction_lifetime_xr)
     extraction_lifetime_xr = convert_lifetime(extraction_lifetime_xr)
-    # print(type(extraction_lifetime_xr))
-    # print(extraction_lifetime_xr)
+
         
     extraction_materials_xr = compute_extraction_materials(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
     extractioncap_xr = compute_extraction_capacity(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
@@ -128,6 +125,10 @@ def get_preprocessing_data_extraction(path_base: str, climate_policy_config: dic
     prep_data_extraction["stocks"] = prism.Q_(prep_data_extraction["stocks"], "kg")
     prep_data_extraction["material_intensities"] = prism.Q_(prep_data_extraction["material_intensities"], "kg/kg")
     prep_data_extraction["set_unit_flexible"] = prism.U_(prep_data_extraction["stocks"]) # prism.U_ gives the unit back
+
+    region_knowledge_graph = create_region_graph()
+    prep_data_extraction["stocks"] = prep_data_extraction["stocks"].assign_coords(Region=prep_data_extraction["stocks"].coords["Region"].astype(str))
+    prep_data_extraction["stocks"] = region_knowledge_graph.rebroadcast_xarray(prep_data_extraction["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
         # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
 
     return prep_data_extraction
@@ -163,6 +164,10 @@ def get_preprocessing_data_processing(path_base: str, climate_policy_config: dic
     prep_data_processing["stocks"] = prism.Q_(prep_data_processing["stocks"], "kg")
     prep_data_processing["material_intensities"] = prism.Q_(prep_data_processing["material_intensities"], "kg/kg")
     prep_data_processing["set_unit_flexible"] = prism.U_(prep_data_processing["stocks"]) # prism.U_ gives the unit back
+
+    region_knowledge_graph = create_region_graph()
+    prep_data_processing["stocks"] = prep_data_processing["stocks"].assign_coords(Region=prep_data_processing["stocks"].coords["Region"].astype(str))
+    prep_data_processing["stocks"] = region_knowledge_graph.rebroadcast_xarray(prep_data_processing["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
     #     # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
 
     return prep_data_processing
@@ -192,6 +197,10 @@ def get_preprocessing_data_transport(path_base: str, climate_policy_config: dict
     prep_data_transport["stocks"] = prism.Q_(prep_data_transport["stocks"], "kg")
     prep_data_transport["material_intensities"] = prism.Q_(prep_data_transport["material_intensities"], "kg/kg")
     prep_data_transport["set_unit_flexible"] = prism.U_(prep_data_transport["stocks"]) # prism.U_ gives the unit back
+
+    region_knowledge_graph = create_region_graph()
+    prep_data_transport["stocks"] = prep_data_transport["stocks"].assign_coords(Region=prep_data_transport["stocks"].coords["Region"].astype(str))
+    prep_data_transport["stocks"] = region_knowledge_graph.rebroadcast_xarray(prep_data_transport["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
         # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
     return prep_data_transport
 
@@ -219,6 +228,11 @@ def get_preprocessing_data_pipelines(path_base: str, climate_policy_config: dict
     prep_data_pipelines["stocks"] = prism.Q_(prep_data_pipelines["stocks"], "km")
     prep_data_pipelines["material_intensities"] = prism.Q_(prep_data_pipelines["material_intensities"], "kg/km")
     prep_data_pipelines["set_unit_flexible"] = prism.U_(prep_data_pipelines["stocks"]) # prism.U_ gives the unit back
+
+
+    region_knowledge_graph= create_region_graph()
+    prep_data_pipelines["stocks"] = prep_data_pipelines["stocks"].assign_coords(Region=prep_data_pipelines["stocks"].coords["Region"].astype(str))
+    prep_data_pipelines["stocks"] = region_knowledge_graph.rebroadcast_xarray(prep_data_pipelines["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
     #     # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
 
     return prep_data_pipelines
