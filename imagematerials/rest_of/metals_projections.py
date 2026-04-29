@@ -190,12 +190,14 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
     
     group_1 = ["class_ 1", "class_ 24"]
     group_2 = ["class_ 10", "class_ 16"]
-    group_3 = ["class_ 5", "class_ 6", "class_ 14", "class_ 26"]
-    group_4 = ["class_ 15", "class_ 17", "class_ 20"]
+    group_3 = ["class_ 5", "class_ 6", "class_ 14", "class_ 15","class_ 26"]
+    group_4 = [ "class_ 20"]
+
 
     little_data = ["class_ 8", "class_ 11", "class_ 12", "class_ 18", "class_ 22"]
     no_data = ["class_ 2", "class_ 3", "class_ 4", "class_ 7", "class_ 9",
             "class_ 13", "class_ 19", "class_ 21", "class_ 23", "class_ 25"]
+    scattered = ["class_ 17"] # assign middle
 
     aluminium_logical_groups = {
         'all' : all_regions_list_class[:-1],
@@ -240,8 +242,8 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
                                         assign_model='low_consumption_stable', 
                                         model_nr=1, 
                                         overwrite_existing=True)
-    aluminium.assign_fit_to_groups_not_fitted(no_data,
-                                        assign_model='low_consumption_stable',
+    aluminium.assign_fit_to_groups_not_fitted(scattered,
+                                        assign_model='medium_consumption_stable',
                                         model_nr=1,
                                         overwrite_existing=True)
     
