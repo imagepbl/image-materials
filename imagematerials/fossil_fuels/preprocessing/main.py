@@ -214,6 +214,7 @@ def get_preprocessing_data_pipelines(path_base: str, climate_policy_config: dict
 
     pipelines_lifetime_xr = compute_pipelines_lifetimes(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out) 
     pipelines_lifetime_xr = convert_lifetime(pipelines_lifetime_xr)
+    
     pipelinecap_xr = compute_pipelines_capacity(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
     pipelines_materials_xr = compute_pipelines_materials(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out) 
 
