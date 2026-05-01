@@ -10,8 +10,8 @@ from pint.errors import UnitStrippedWarning
 
 import prism
 from imagematerials.constants import IMAGE_REGIONS
-from imagematerials.concepts import create_image_region_graph
-from imagematerials.electricity.constants import COLORS_IMAGE_REGIONS
+from imagematerials.concepts import KnowledgeGraph, Node, create_image_region_graph
+from imagematerials.electricity.constants import COLORS_IMAGE_REGIONS, IHA_REGIONS, iha_region_map, create_iha_region_graph
 from imagematerials.electricity.utils import interpolate_xr
 
 path_current = Path().resolve()
@@ -45,6 +45,12 @@ df_data2 = df_data2[df_data2["Region"] != "World"] # drop global estimates, only
 df_data2_country = df_data2.groupby(["Region", "Time"])[["value"]].sum()
 da_data2_country = xr.DataArray.from_series(df_data2_country["value"]).rename("PumpedHydropowerStorageCapacity") # create Dataarray
 da_data2_country = prism.Q_(da_data2_country, "MW")
+
+# Dataset 3: IHA data on PHS projects under contruction, planned and announced per IHA region
+df_data3 =  pd.read_csv(Path(path_data,"electricity","IHA_future_planned_PHS_capacity_MW_per_world_region.txt"),
+                        usecols=["status", "Region", "value"])
+unit_data3 = pd.read_csv(Path(path_data,"electricity","IHA_future_planned_PHS_capacity_MW_per_world_region.txt"),
+                        usecols=["unit"])["unit"].iloc[0] # extract unit from the file (assumes it's the same for all rows)
 
 #%%% tests
 
@@ -120,8 +126,8 @@ has_nonzero = mask.any(dim="Cohort")
 earliest_cohort = earliest_cohort.where(has_nonzero)
 
 # As a dict
-result = {
-    region.item(): int(val.item()) if not np.isnan(val.item()) else 2030
+dict_regional_start_years = {
+    region.item(): int(val.item()) if not np.isnan(val.item()) else 2024
     for region, val in zip(earliest_cohort.Region, earliest_cohort)
 }
 regions_no_cohort = has_nonzero.Region[~has_nonzero].values.tolist()
@@ -137,13 +143,18 @@ zero_regions = (da_data2_image_region.sel(Time=2014) == 0)
 zero_regions.Region[zero_regions].values
 
 
+####################################################################################################
 #%% intra and extrapolate phs data
 
-test = interpolate_xr(da_data2_image_region, result, 2050, interp_method='linear', extrap_before='zero', extrap_before_method='logistic')
+#---------------------------------------------------------------------------------------------------
+#%%% extrapolating historic data + constant extrapolation after last known data point (2024) until 2060
+phs = interpolate_xr(da_data2_image_region, dict_regional_start_years, 2060, interp_method='linear', extrap_before='zero', extrap_before_method='logistic')
 
-
+test = phs
+regions= ["WAF", "TUR"]
+regions = test.Region.values
 fig, ax = plt.subplots(figsize=(14, 6))
-for i, region in enumerate(test.Region.values):
+for i, region in enumerate(regions): #test.Region.values
     ax.plot(test.Time.values, test.sel(Region=region).values, linewidth=1.5, color=COLORS_IMAGE_REGIONS[i], label=region)
 ax.axvline(x=2014, color='gray', linestyle='--', alpha=0.5)
 ax.axvline(x=2019, color='gray', linestyle='--', alpha=0.5)
@@ -153,6 +164,163 @@ plt.ylabel("Pumped Hydropower Storage Capacity (MW)")
 plt.title("Interpolated PHS capacity trajectories by IMAGE region")
 plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize=8, ncol=2)
 plt.tight_layout()
+
+#---------------------------------------------------------------------------------------------------
+#%%% calculate region shares
+
+# select time
+da = test.sel(Time=[2024])
+
+# mapping
+
+# create a coordinate for superregions
+superregion = xr.DataArray(
+    [iha_region_map[r] for r in da.Region.values],
+    coords={"Region": da.Region},
+    dims="Region"
+)
+
+# attach it
+da = da.assign_coords(Superregion=superregion)
+
+# compute shares within each superregion
+shares = da.groupby("Superregion").map(lambda x: x / x.sum())
+shares = shares.pint.dequantify()
+
+years = np.arange(2024, 2061)
+shares = shares.reindex(Time=years, method="ffill") # forward fill shares to future years (assumes shares remain constant after 2024)
+
+# Adjust shares based on literature insights
+override_regions = ["JAP", "INDO", "CHN", "OCE", "KOR", "SEAS"]
+override_2030 = {
+    "JAP": 0.12,
+    "INDO": 0.05,
+    "CHN": 0.7,
+    "OCE": 0.05,
+    "KOR": 0.03,
+    "SEAS": 0.05
+}
+da_override = xr.full_like(
+    shares.sel(Time=[2024, 2030]),
+    fill_value=np.nan
+)
+for r in override_regions:
+    da_override.loc[dict(Region=r, Time=2030)] = override_2030[r]
+    da_override.loc[dict(Region=r, Time=2024)] = shares.sel(Time=2024, Region=r).values
+# Interpolate only between 2024–2030
+da_override = interpolate_xr(da_override, t_start=2024, t_end=2060, interp_method="linear")
+
+# update shares
+shares.loc[dict(Time=slice(2024, None), Region=override_regions)] = da_override.sel(Time=slice(2024, None), Region=override_regions)
+
+
+#---------------------------------------------------------------------------------------------------
+#%%% extrapolating future data (2024-2060)
+
+def build_status_timeseries(df: pd.DataFrame, status: str, t_start: int, t_end: int, shares: xr.DataArray, unit: str) -> xr.DataArray:
+    """ Build a region-level time series DataArray for a given PHS planning status.
+
+    This function extracts values for a specific planning status from a dataframe, and constructs a 
+    time-expanded xarray DataArray. The values are initialized at the start and end time points,
+    interpolated over the full time range, and finally rebroadcast to a target
+    regional classification using a region graph and weighting shares.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input dataframe containing at least the columns:
+        - "status" (str): project status category
+        - "Region" (str): region identifier (IHA region names)
+        - "value" (numeric): associated value for each region-status pair
+
+    status : str
+        Status category to filter the dataframe ("under construction", "planned regulator approved",
+        "planned pending approval" or "announced").
+
+    t_start : int
+        Start year of the time dimension.
+
+    t_end : int
+        End year of the time dimension.
+
+    shares : xr.DataArray
+        Regional share weights used for rebroadcasting values across the
+        target regional classification (IMAGE_REGIONS).
+
+    unit : str
+        Unit of the values in the dataframe.
+
+    Returns
+    -------
+    xr.DataArray
+        A (Time × Region) DataArray representing the interpolated and
+        regionally rebroadcast time series for the given status.
+    """
+    if status not in ["under construction", "planned regulator approved", "planned pending approval",
+                       "announced"]:
+        raise ValueError(f"Invalid status: {status}. Must be one of 'under construction', 'planned regulator approved', 'planned pending approval' or 'announced'.")
+    
+    # select the relevant row based on status
+    df_status = df[df["status"] == status]
+    values = (
+        df_status.set_index("Region")
+            .reindex(IHA_REGIONS)["value"]
+            .fillna(0)
+            .values
+    )
+    
+    # create a new DataArray with Time dimension from t_start to t_end
+    xr_status = xr.DataArray(
+        data=np.vstack([np.zeros(len(IHA_REGIONS)), values]),
+        coords={
+            "Time": [t_start, t_end],
+            "Region": IHA_REGIONS
+        },
+        dims=["Time", "Region"],
+    )
+    xr_status = interpolate_xr(xr_status, t_start, t_end)
+
+    region_graph = create_iha_region_graph()
+    xr_status = region_graph.rebroadcast_xarray(xr_status, output_coords=IMAGE_REGIONS, dim="Region", shares=shares)
+    
+    xr_status = prism.Q_(xr_status, unit)
+
+    return xr_status
+
+# build time series for each status category
+xr_under_construction = build_status_timeseries(df_data3, "under construction", 2024, 2035, shares, unit_data3)
+xr_planned_regulator_approved = build_status_timeseries(df_data3, "planned regulator approved", 2035, 2060, shares, unit_data3)
+xr_planned_pending_approval = build_status_timeseries(df_data3, "planned pending approval", 2035, 2060, shares, unit_data3)
+xr_announced = build_status_timeseries(df_data3, "announced", 2035, 2060, shares, unit_data3)
+
+time = np.arange(phs.Time.min().item(), 2061)
+# if flag_phs == "phs_low":
+uc = xr_under_construction.reindex(Time=time, method="ffill").fillna(0)
+pra = xr_planned_regulator_approved.reindex(Time=time).fillna(0)
+phs_test = phs + uc + pra
+# elif flag_phs == "phs_high":
+#     uc = xr_under_construction.reindex(Time=time, method="ffill").fillna(0)
+#     pra = xr_planned_regulator_approved.reindex(Time=time).fillna(0)
+#     ppa = xr_planned_pending_approval.reindex(Time=time).fillna(0)
+#     ann = xr_announced.reindex(Time=time).fillna(0)
+#     phs_test = phs + uc + pra + ppa + ann
+
+test = phs_test
+regions= ["WAF", "TUR"]
+regions = test.Region.values
+fig, ax = plt.subplots(figsize=(14, 6))
+for i, region in enumerate(regions): #test.Region.values
+    ax.plot(test.Time.values, test.sel(Region=region).values, linewidth=1.5, color=COLORS_IMAGE_REGIONS[i], label=region)
+ax.axvline(x=2014, color='gray', linestyle='--', alpha=0.5)
+ax.axvline(x=2019, color='gray', linestyle='--', alpha=0.5)
+ax.axvline(x=2024, color='gray', linestyle='--', alpha=0.5)
+plt.xlabel("Year")
+plt.ylabel("Pumped Hydropower Storage Capacity (MW)")
+plt.title("Interpolated PHS capacity trajectories by IMAGE region")
+plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize=8, ncol=2)
+plt.tight_layout()
+
+#%% intra and extrapolate phs data
 
 ####################################################################################################
 #%% Plots

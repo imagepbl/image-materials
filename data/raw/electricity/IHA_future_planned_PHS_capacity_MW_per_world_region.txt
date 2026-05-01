@@ -1,0 +1,28 @@
+source,status,type_data,unit,Region,category,technology,sub_technology,value
+IHA,under construction,stock,MW,East Asia & Pacific,grid_scale_storage,PHS,,94870
+IHA,under construction,stock,MW,South & Central Asia,grid_scale_storage,PHS,,7124
+IHA,under construction,stock,MW,South America,grid_scale_storage,PHS,,0
+IHA,under construction,stock,MW,North & Central America,grid_scale_storage,PHS,,0
+IHA,under construction,stock,MW,Africa,grid_scale_storage,PHS,,600
+IHA,under construction,stock,MW,Europe,grid_scale_storage,PHS,,3025
+
+IHA,planned regulator approved,stock,MW,East Asia & Pacific,grid_scale_storage,PHS,,137925
+IHA,planned regulator approved,stock,MW,South & Central Asia,grid_scale_storage,PHS,,4700
+IHA,planned regulator approved,stock,MW,South America,grid_scale_storage,PHS,,0
+IHA,planned regulator approved,stock,MW,North & Central America,grid_scale_storage,PHS,,5087
+IHA,planned regulator approved,stock,MW,Africa,grid_scale_storage,PHS,,2400
+IHA,planned regulator approved,stock,MW,Europe,grid_scale_storage,PHS,,6669
+
+IHA,planned pending approval,stock,MW,East Asia & Pacific,grid_scale_storage,PHS,,81460
+IHA,planned pending approval,stock,MW,South & Central Asia,grid_scale_storage,PHS,,6510
+IHA,planned pending approval,stock,MW,South America,grid_scale_storage,PHS,,300
+IHA,planned pending approval,stock,MW,North & Central America,grid_scale_storage,PHS,,61773
+IHA,planned pending approval,stock,MW,Africa,grid_scale_storage,PHS,,1509
+IHA,planned pending approval,stock,MW,Europe,grid_scale_storage,PHS,,31160
+
+IHA,announced,stock,MW,East Asia & Pacific,grid_scale_storage,PHS,,18895
+IHA,announced,stock,MW,South & Central Asia,grid_scale_storage,PHS,,85529
+IHA,announced,stock,MW,South America,grid_scale_storage,PHS,,0
+IHA,announced,stock,MW,North & Central America,grid_scale_storage,PHS,,27574
+IHA,announced,stock,MW,Africa,grid_scale_storage,PHS,,3080
+IHA,announced,stock,MW,Europe,grid_scale_storage,PHS,,12039

@@ -377,6 +377,11 @@ class KnowledgeGraph():
             Dimension of the input_array to disaggregate over, by default "Type"
         shares, optional
             Shares to be used for rebroadcasting, by default None. Must have the dimension "Type".
+            Shares of subtypes per supertype must not sum to 1, since the value of the supertype is 
+            multiplied by the shares to get the value of the subtypes. E.g., if you have a supertype with 
+            value 100, and two subtypes with shares 0.5 and 0.5, the values of the subtypes will be 
+            50 and 50. But if the shares are 0.25 and 0.25, the values of the subtypes will be 25 
+            and 25, and the remaining 50 will not be allocated to any subtype.
         dim_shares, optional
             Dimension of the shares DataArray. By default None. If shares is defined and
             dim_shares not, dim is used. In case the shares have a different dimension name than

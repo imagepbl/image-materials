@@ -4,6 +4,7 @@ import os
 import pint
 import itertools
 import matplotlib.pyplot as plt
+from imagematerials.concepts import KnowledgeGraph, Node
 
 ureg = pint.UnitRegistry(force_ndarray_like=True)
 
@@ -78,6 +79,55 @@ region_list_old  = [
     'Oceania',
     'Rest S.Asia',
     'Rest S.Africa']
+
+IHA_REGIONS = ["North & Central America", "South America", "East Asia & Pacific", "South & Central Asia", "Europe", "Africa"]
+
+iha_region_map = {
+    # North & Central America
+    "CAN": "North & Central America", "USA": "North & Central America", "MEX": "North & Central America", "RCAM": "North & Central America",
+    # South America
+    "BRA": "South America", "RSAM": "South America",
+    # East Asia & Pacific
+    "INDO": "East Asia & Pacific", "CHN": "East Asia & Pacific", "KOR": "East Asia & Pacific", "JAP": "East Asia & Pacific", "SEAS": "East Asia & Pacific", "OCE": "East Asia & Pacific",
+    # South & Central Asia
+    "ME": "South & Central Asia", "RUS": "South & Central Asia", "STAN": "South & Central Asia", "INDIA": "South & Central Asia", "RSAS": "South & Central Asia",
+    # Europe
+    "WEU": "Europe", "CEU": "Europe", "TUR": "Europe", "UKR": "Europe",
+    # Africa
+    "NAF": "Africa", "WAF": "Africa", "SAF": "Africa", "RSAF": "Africa", "EAF": "Africa",
+}
+
+def create_iha_region_graph():
+    """Construct and return a knowledge graph representing a mapping betweenIHA regions and their
+        associated IMAGE regions.
+
+        The graph consists of two hierarchical layers:
+        1. Superregion nodes ("North & Central America") from the International Hydropower 
+        Association (IHA) dataset.
+        2. IMAGE regions, each linked to a parent superregion via the `inherits_from` attribute.
+
+        Returns:
+        -------
+            KnowledgeGraph: A populated knowledge graph containing:
+        """
+    iha_region_knowledge_graph = KnowledgeGraph()
+
+    for super_region in ["North & Central America", "South America", "East Asia & Pacific", "South & Central Asia", "Europe", "Africa"]:
+        iha_region_knowledge_graph.add(Node(super_region, inherits_from=None))
+    for region in ["CAN", "USA", "MEX", "RCAM"]:
+        iha_region_knowledge_graph.add(Node(region, inherits_from="North & Central America"))
+    for region in ["BRA", "RSAM"]:
+        iha_region_knowledge_graph.add(Node(region, inherits_from="South America"))
+    for region in ["INDO", "CHN", "KOR", "JAP", "SEAS", "OCE"]:
+        iha_region_knowledge_graph.add(Node(region, inherits_from="East Asia & Pacific"))
+    for region in ["ME", "RUS", "STAN", "INDIA", "RSAS"]:
+        iha_region_knowledge_graph.add(Node(region, inherits_from="South & Central Asia"))
+    for region in ["WEU", "CEU", "TUR", "UKR"]:
+        iha_region_knowledge_graph.add(Node(region, inherits_from="Europe"))
+    for region in ["NAF", "WAF", "SAF", "RSAF", "EAF"]:
+        iha_region_knowledge_graph.add(Node(region, inherits_from="Africa"))
+
+    return iha_region_knowledge_graph
 
 # Electricity Generation related constants ---------------------------------------------
 
