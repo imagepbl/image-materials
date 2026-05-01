@@ -40,11 +40,14 @@ year_end = 2100
 gcap_data = read_mym_df(Path(path_data, "image", "SSP2_baseline", "EnergyServices", "GCap.out"))
 #storage capacity in MW (power capacity), to compare it to Pumped hydro storage projections (also given in MW, power capacity)
 storage_power = read_mym_df(Path(path_data, "image", "SSP2_baseline", "EnergyServices", "StorCapTot.out"))
+# storage energy capacity (MWh, reservoir)
+storage_energy = read_mym_df(Path(path_data, "image", "SSP2_baseline", "EnergyServices", "StorResTot.out"))
 
 ratio_btm_deployment_data = pd.read_csv(Path(path_data, "electricity",'behind_the_meter_battery_deployment_ratio.txt'), usecols=["Time", "Region", "Value"])
 ratio_btm_deployment_data["Value"] = ratio_btm_deployment_data["Value"] / 100 # convert percentage to fraction
-ratio_btm_to_solar = 0.5 #0.5 MW storage per 1 MW Solar PV
-
+# ratio_btm_to_solar = 0.5 #0.5 MW power capacity per 1 MW Solar PV
+ratio_btm_to_solar = 2 #2 MWh energy capacity per 1 MW Solar PV
+unit = "MWh"
 
 # Transform to xarray -----------------------------------------
 knowledge_graph_region = create_image_region_graph() #create_region_graph()
@@ -84,7 +87,7 @@ ratio_btm_deployment = prism.Q_(ratio_btm_deployment, "fraction")
 storage_power = storage_power.iloc[:, :26]
 storage_power.index.name = "Time"
 storage_power.columns.name = "Region"
-storage_xr = xr.DataArray(
+storage_power_xr = xr.DataArray(
     storage_power.values,
     dims=["Time", "Region"],
     coords={
@@ -92,8 +95,21 @@ storage_xr = xr.DataArray(
         "Region": [("region_" + str(r)) for r in storage_power.columns]
     }
 )
-storage_xr = knowledge_graph_region.rebroadcast_xarray(storage_xr, output_coords=IMAGE_REGIONS, dim="Region") 
+storage_power_xr = knowledge_graph_region.rebroadcast_xarray(storage_power_xr, output_coords=IMAGE_REGIONS, dim="Region") 
 
+# Storage capacity ------
+storage_energy = storage_energy.iloc[:, :26]
+storage_energy.index.name = "Time"
+storage_energy.columns.name = "Region"
+storage_energy_xr = xr.DataArray(
+    storage_energy.values,
+    dims=["Time", "Region"],
+    coords={
+        "Time": storage_energy.index,
+        "Region": [("region_" + str(r)) for r in storage_energy.columns]
+    }
+)
+storage_energy_xr = knowledge_graph_region.rebroadcast_xarray(storage_energy_xr, output_coords=IMAGE_REGIONS, dim="Region") 
 
 # Interpolate -----------------------------------------
 # TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921
@@ -101,10 +117,10 @@ gcap_xr_interp = add_historic_stock(gcap_xr, YEAR_FIRST_GRID)
 
 ratio_btm_deployment_xr_interp = interpolate_xr(ratio_btm_deployment, t_start = 2000, t_end = 2100)
 
-
+var = ratio_btm_deployment_xr_interp
 fig, ax = plt.subplots(figsize=(14, 6))
-for i, region in enumerate(test.Region.values):
-    ax.plot(test.Time.values, test.sel(Region=region).values, linewidth=1.5, color=COLORS_IMAGE_REGIONS[i], label=region)
+for i, region in enumerate(var.Region.values):
+    ax.plot(var.Time.values, var.sel(Region=region).values, linewidth=1.5, color=COLORS_IMAGE_REGIONS[i], label=region)
 # ax.axvline(x=2014, color='gray', linestyle='--', alpha=0.5)
 # ax.axvline(x=2019, color='gray', linestyle='--', alpha=0.5)
 # ax.axvline(x=2024, color='gray', linestyle='--', alpha=0.5)
@@ -126,20 +142,23 @@ for i, region in enumerate(btm.Region.values):
     ax.plot(btm.Time.values, btm.sel(Region=region).values, linewidth=1.5, color=COLORS_IMAGE_REGIONS[i], label=region)
 ax.plot(btm_global.Time.values, btm_global.values, linewidth=2, color='black', label="Global")
 plt.xlabel("Year")
-plt.ylabel("behind-the-meter battery capacity (MW)")
+plt.ylabel(f"behind-the-meter battery capacity ({unit})")
 plt.title("behind-the-meter battery deployment capacities by IMAGE region")
 plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize=8, ncol=2)
 plt.tight_layout()
 
-test = storage_xr.sum("Region")
+
+
+# timer = storage_power_xr.sum("Region")
+timer = storage_energy_xr.sum("Region")
 
 fig, ax = plt.subplots(figsize=(14, 6))
 for i, region in enumerate(btm.Region.values):
     ax.plot(btm.sel(Time=slice(2015, 2040)).Time.values, btm.sel(Region=region,Time=slice(2015, 2040)).values, linewidth=1.5, color=COLORS_IMAGE_REGIONS[i], label=region)
 ax.plot(btm_global.sel(Time=slice(2015, 2040)).Time.values, btm_global.sel(Time=slice(2015, 2040)).values, linewidth=2, color='black', label="Global")
-ax.plot(test.sel(Time=slice(2015, 2040)).Time.values, test.sel(Time=slice(2015, 2040)).values, linewidth=2, color='red', label="TIMER storage demand", linestyle='--')
+ax.plot(timer.sel(Time=slice(2015, 2040)).Time.values, timer.sel(Time=slice(2015, 2040)).values, linewidth=2, color='red', label="TIMER storage demand", linestyle='--')
 plt.xlabel("Year")
-plt.ylabel("behind-the-meter battery capacity (MW)")
+plt.ylabel(f"behind-the-meter battery capacity ({unit})")
 plt.title("behind-the-meter battery deployment capacities by IMAGE region")
 plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize=8, ncol=2)
 plt.tight_layout()
