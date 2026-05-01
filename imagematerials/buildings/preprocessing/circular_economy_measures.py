@@ -184,8 +184,10 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
                 commercial_scenario_settings_xr_mapped, implementation_rate)
 
             logging.debug(f"implemented '{ce_scen}' for Commercial Buildings (relative only)")
+            print(f"implemented '{ce_scen}' for Commercial Buildings (relative only)")
 
         elif commercial_ce_mode == "convergence":
+            print(f"implemented '{ce_scen}' for Commercial Buildings (convergence)")
             print(f"Called with ce keys: {list(circular_economy_config.keys())}")
             # ── Relative reductions + three-category convergence toward cap ──
             convergence_cap = float(circular_economy_config[ce_scen]["buildings"].get(
