@@ -13,10 +13,13 @@ from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.concepts import KnowledgeGraph, Node, create_image_region_graph
 from imagematerials.electricity.constants import COLORS_IMAGE_REGIONS, IHA_REGIONS, iha_region_map, create_iha_region_graph
 from imagematerials.electricity.utils import interpolate_xr
+from imagematerials.read_mym import read_mym_df
 
 path_current = Path().resolve()
 path_base = path_current.parent.parent # base path of the project -> image-materials
 path_data = Path(path_base, "data", "raw")
+
+flag_phs = "phs_high"
 
 ####################################################################################################
 #%% Load data
@@ -52,20 +55,23 @@ df_data3 =  pd.read_csv(Path(path_data,"electricity","IHA_future_planned_PHS_cap
 unit_data3 = pd.read_csv(Path(path_data,"electricity","IHA_future_planned_PHS_capacity_MW_per_world_region.txt"),
                         usecols=["unit"])["unit"].iloc[0] # extract unit from the file (assumes it's the same for all rows)
 
-#%%% tests
 
-# countries = [
-#     "Burundi", "Comoros", "Ethiopia", "Eritrea", "Djibouti",
-#     "Kenya", "Madagascar", "Mauritius", "Reunion", "Rwanda",
-#     "Seychelles", "Somalia", "Sudan", "Uganda"
-# ]
-# countries = [
-#     "Afghanistan", "Bangladesh", "Bhutan", "Sri Lanka", "Maldives",
-#     "Nepal", "Pakistan"
-# ]
+# storage energy capacity (MWh, reservoir)
+storage_energy = read_mym_df(Path(path_data, "image", "SSP2_baseline", "EnergyServices", "StorResTot.out"))
+storage_energy = storage_energy.iloc[:, :26]
+storage_energy.index.name = "Time"
+storage_energy.columns.name = "Region"
+storage_energy_xr = xr.DataArray(
+    storage_energy.values,
+    dims=["Time", "Region"],
+    coords={
+        "Time": storage_energy.index,
+        "Region": [("region_" + str(r)) for r in storage_energy.columns]
+    }
+)
+storage_energy_xr = knowledge_graph_region.rebroadcast_xarray(storage_energy_xr, output_coords=IMAGE_REGIONS, dim="Region") 
 
-# test = df_data1.loc[df_data1["Region"].isin(countries)]
-# test
+
 
 ####################################################################################################
 #%% Aggregate to IMAGE regions
@@ -213,6 +219,7 @@ da_override = interpolate_xr(da_override, t_start=2024, t_end=2060, interp_metho
 # update shares
 shares.loc[dict(Time=slice(2024, None), Region=override_regions)] = da_override.sel(Time=slice(2024, None), Region=override_regions)
 
+df = shares.to_dataframe(name="value").reset_index()
 
 #---------------------------------------------------------------------------------------------------
 #%%% extrapolating future data (2024-2060)
@@ -293,17 +300,18 @@ xr_planned_regulator_approved = build_status_timeseries(df_data3, "planned regul
 xr_planned_pending_approval = build_status_timeseries(df_data3, "planned pending approval", 2035, 2060, shares, unit_data3)
 xr_announced = build_status_timeseries(df_data3, "announced", 2035, 2060, shares, unit_data3)
 
+# flag_phs = "phs_high"
 time = np.arange(phs.Time.min().item(), 2061)
-# if flag_phs == "phs_low":
-uc = xr_under_construction.reindex(Time=time, method="ffill").fillna(0)
-pra = xr_planned_regulator_approved.reindex(Time=time).fillna(0)
-phs_test = phs + uc + pra
-# elif flag_phs == "phs_high":
-#     uc = xr_under_construction.reindex(Time=time, method="ffill").fillna(0)
-#     pra = xr_planned_regulator_approved.reindex(Time=time).fillna(0)
-#     ppa = xr_planned_pending_approval.reindex(Time=time).fillna(0)
-#     ann = xr_announced.reindex(Time=time).fillna(0)
-#     phs_test = phs + uc + pra + ppa + ann
+if flag_phs == "phs_low":
+    uc = xr_under_construction.reindex(Time=time, method="ffill").fillna(0)
+    pra = xr_planned_regulator_approved.reindex(Time=time).fillna(0)
+    phs_test = phs + uc + pra
+elif flag_phs == "phs_high":
+    uc = xr_under_construction.reindex(Time=time, method="ffill").fillna(0)
+    pra = xr_planned_regulator_approved.reindex(Time=time).fillna(0)
+    ppa = xr_planned_pending_approval.reindex(Time=time).fillna(0)
+    ann = xr_announced.reindex(Time=time).fillna(0)
+    phs_test = phs + uc + pra + ppa + ann
 
 test = phs_test
 regions= ["WAF", "TUR"]
@@ -320,7 +328,89 @@ plt.title("Interpolated PHS capacity trajectories by IMAGE region")
 plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize=8, ncol=2)
 plt.tight_layout()
 
-#%% intra and extrapolate phs data
+#---------------------------------------------------------------------------------------------------
+#%% extrapolating future data (2060-2100)
+
+# TEST TEST: 
+# for the high PHS scenario, we assume that after 2060, the capacity continues to grow with the same rate as the total storage energy capacity demand. We assume no negative growth, in case the storage energy capacity demand decreases in the future, due to the high lifetime and upfront investment cost of PHS which make it unlikely to be decommissioned once built.
+growth_rate = (
+    (storage_energy_xr.sel(Time=slice(2060, 2100))
+    .shift(Time=-1) / storage_energy_xr.sel(Time=slice(2060, 2100))) - 1
+) # growth rate = f(t+1)/f(t) - 1
+growth_rate = growth_rate.clip(min=0) # set negative growth rates to 0, assuming storage energy capacity does not decrease over time
+growth_rate = growth_rate.shift(Time=1) # align growth rate with the correct time steps for the following multiplication (the growth rate calculated above is the growth from t to t+1, so if multiplicated with f(t) it should give f(t+1) with correct time dimension t+1)
+# cumulative product of (1 + growth)
+factor = (1 + growth_rate).cumulative("Time").prod().sel(Time=slice(2061, 2100))
+# apply growth
+phs_test_2061_to_2100 = phs_test.sel(Time=2060, drop=True) * factor
+phs_test2 = xr.concat([phs_test.sel(Time=slice(None, 2060)), phs_test_2061_to_2100], dim="Time")
+
+
+a = phs_test.sel(Time=slice(2020, 2060)) / storage_energy_xr.sel(Time=slice(2020, 2060))
+
+test = a
+# test = storage_energy_xr.sel(Time=slice(2015, 2100))
+regions= test.Region.values
+# regions = [r for r in test.Region.values if r not in ["WAF", "EAF","NAF", "BRA"]]
+fig, ax = plt.subplots(figsize=(14, 6))
+for i, region in enumerate(regions): #test.Region.values
+    ax.plot(test.Time.values, test.sel(Region=region).values, linewidth=1.5, color=COLORS_IMAGE_REGIONS[i], label=region)
+plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize=8, ncol=2)
+
+
+
+#-----------------------------
+flag_phs = "phs_low"
+time = np.arange(phs.Time.min().item(), 2101)
+
+if flag_phs == "phs_low":
+    # for the low PHS scenario, we assume that after 2060, the capacity remains constant at the 2060 
+    # level (i.e., no further growth after 2060)
+    phs_test2 = phs_test.reindex(Time=time, method="ffill").fillna(0)
+elif flag_phs == "phs_high":
+    # for now the same as in the low scenario, but could be updated with a growth assumption
+    phs_test2 = phs_test.reindex(Time=time, method="ffill").fillna(0)
+
+test = phs_test2.sel(Time=slice(2015, 2100))
+# test = storage_energy_xr.sel(Time=slice(2015, 2100))
+regions= test.Region.values
+# regions = [r for r in test.Region.values if r not in ["WAF", "EAF","NAF", "BRA"]]
+fig, ax = plt.subplots(figsize=(14, 6))
+for i, region in enumerate(regions): #test.Region.values
+    ax.plot(test.Time.values, test.sel(Region=region).values, linewidth=1.5, color=COLORS_IMAGE_REGIONS[i], label=region)
+plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize=8, ncol=2)
+
+######
+test = phs_test2.sel(Time=slice(2015, 2100))
+test2 = storage_energy_xr.sel(Time=slice(2015, 2100))
+regions= test.Region.values
+# regions = [r for r in test.Region.values if r not in ["WAF", "EAF","NAF", "BRA"]]
+fig, ax = plt.subplots(figsize=(14, 6))
+for i, region in enumerate(["RUS"]): #test.Region.values
+    ax.plot(test.Time.values, test.sel(Region=region).values, linewidth=1.5, color=COLORS_IMAGE_REGIONS[i], label=region)
+    ax.plot(test2.Time.values, test2.sel(Region=region).values, linewidth=1.5, color=COLORS_IMAGE_REGIONS[i], label=region)
+plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize=8, ncol=2)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ####################################################################################################
 #%% Plots
