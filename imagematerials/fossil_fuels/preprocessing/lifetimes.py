@@ -141,7 +141,7 @@ def compute_extraction_lifetimes(path_base: str, climate_policy_config: dict, ci
 
     # Build xarray with shape (ScipyParam, Time, Type)
     data_array = np.stack([values, values * SD_LIFETIME], axis=0)
-#   data_array = np.stack([values, np.full_like(values, np.nan)], axis=0)
+    # data_array = np.stack([values, np.full_like(values, np.nan)], axis=0)
     #create xarray with dimensions and coordinates
     extraction_lifetime_xr = xr.DataArray(
         data_array,
