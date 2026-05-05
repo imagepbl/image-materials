@@ -1,11 +1,4 @@
 Time,source,scenario,type_data,unit,Region,category,technology,sub_technology,value
-2014,IRENA,historic,stock,GW,World,grid_scale_storage,PHS,,142
-2021,IEA,historic,stock,GW,World,grid_scale_storage,PHS,,160
-2023,IEA,historic,stock,GW,World,grid_scale_storage,PHS,,181
-2025,IHA,historic,stock,GW,World,grid_scale_storage,PHS,,200
-
-2017,IRENA,historic,stock,GWh,World,grid_scale_storage,PHS,,4508
-
 2024,IHA,historic,stock,MW,Canada,grid_scale_storage,PHS,,177
 2024,IHA,historic,stock,MW,United States,grid_scale_storage,PHS,,22266
 2024,IHA,historic,stock,MW,Argentina,grid_scale_storage,PHS,,974

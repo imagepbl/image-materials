@@ -19,212 +19,9 @@ path_current = Path().resolve()
 path_base = path_current.parent.parent # base path of the project -> image-materials
 path_data = Path(path_base, "data", "raw")
 
-flag_phs = "phs_high"
-
-####################################################################################################
-#%% Load data
-
-# Dataset 1: IHA data set of individual PHS sites, with commissioning year, capacity, energy stored, operating status, and hydro type
-df_data1 =  pd.read_csv(Path(path_data,"electricity","IHA_PSH_Capacity_data.csv"), 
-                      usecols=["Operational Status", "Country", "Commisioning Year", "Hydro Type", 
-                               "Generating Capacity", "Energy stored (GWh)"])
-df_data1 = df_data1.loc[df_data1["Operational Status"] == "Operational"]
-df_data1 = df_data1.rename(columns={'Country': 'Region', 'Commisioning Year': 'Cohort'})
-df_data1["Cohort"] = pd.to_numeric(df_data1["Cohort"], errors="coerce").astype("Int64")
-
-df_data1_country = df_data1.groupby(["Region", "Cohort"])[
-    ["Generating Capacity", "Energy stored (GWh)"]
-].sum() # rows with NaN in Region or Cohort are dropped during this step
-
-ds_data1_country = df_data1_country.to_xarray()
 
 
-# Dataset 2: IHA World Hydropower Outlook dataset of aggregated PHS power capacity (MW) by country for 3 years (2014, 2019, 2024) 
-#           + IEA global estimates
-
-df_data2 =  pd.read_csv(Path(path_data,"electricity","pumped_hydropower_storage_historic_stocks.csv"),
-                        usecols=["Time", "Region", "value"])
-df_data2 = df_data2[df_data2["Region"] != "World"] # drop global estimates, only keep World Hydropower Outlook
-df_data2_country = df_data2.groupby(["Region", "Time"])[["value"]].sum()
-da_data2_country = xr.DataArray.from_series(df_data2_country["value"]).rename("PumpedHydropowerStorageCapacity") # create Dataarray
-da_data2_country = prism.Q_(da_data2_country, "MW")
-
-# Dataset 3: IHA data on PHS projects under contruction, planned and announced per IHA region
-df_data3 =  pd.read_csv(Path(path_data,"electricity","IHA_future_planned_PHS_capacity_MW_per_world_region.txt"),
-                        usecols=["status", "Region", "value"])
-unit_data3 = pd.read_csv(Path(path_data,"electricity","IHA_future_planned_PHS_capacity_MW_per_world_region.txt"),
-                        usecols=["unit"])["unit"].iloc[0] # extract unit from the file (assumes it's the same for all rows)
-
-
-# storage energy capacity (MWh, reservoir)
-storage_energy = read_mym_df(Path(path_data, "image", "SSP2_baseline", "EnergyServices", "StorResTot.out"))
-storage_energy = storage_energy.iloc[:, :26]
-storage_energy.index.name = "Time"
-storage_energy.columns.name = "Region"
-storage_energy_xr = xr.DataArray(
-    storage_energy.values,
-    dims=["Time", "Region"],
-    coords={
-        "Time": storage_energy.index,
-        "Region": [("region_" + str(r)) for r in storage_energy.columns]
-    }
-)
-storage_energy_xr = knowledge_graph_region.rebroadcast_xarray(storage_energy_xr, output_coords=IMAGE_REGIONS, dim="Region") 
-
-
-
-####################################################################################################
-#%% Aggregate to IMAGE regions
-
-knowledge_graph_region = create_image_region_graph()
-
-ds_data1_image_region = ds_data1_country.copy()
-ds_data1_image_region = knowledge_graph_region.aggregate_sum(ds_data1_image_region, output_coords=IMAGE_REGIONS, dim="Region", require_relation=False)
-
-da_data2_image_region = da_data2_country.copy()
-da_data2_image_region = knowledge_graph_region.aggregate_sum(da_data2_image_region, output_coords=IMAGE_REGIONS, dim="Region", require_relation=False)
-
-####################################################################################################
-#%% Aggregate years to decades and calculate shares
-
-ds = ds_data1_image_region.copy()
-# Define 10-year bin edges — extend as needed to cover your full range
-bin_edges = range(1905, 2045, 10)  # 1905, 1915, 1925, ...
-labels = [f"{y}-{y+9}" for y in range(1905, 2035, 10)]
-
-years = ds["Commissioning Year"].values
-
-# Assign each year to a bin label
-bin_labels = pd.cut(years, bins=list(bin_edges), right=False, labels=labels)
-year_to_bin = dict(zip(years, bin_labels))
-
-# Add a bin coordinate to the dataset
-ds = ds.assign_coords(bin_years=("Commissioning Year",
-                           [year_to_bin[y] for y in years]))
-
-# Sum over each bin per region
-ds_binned = ds.groupby("bin_years").sum("Commissioning Year")
-# Result: dims (Region, bin_years)
-
-# Compute regional shares per bin (each region's fraction of the bin total)
-bin_totals = ds_binned.sum("Region")
-ds_shares = ds_binned / bin_totals # ds_shares has the same dims; each value is that region's fraction [0–1]
-
-# Inspect
-print(ds_binned)
-print(ds_shares)
-
-
-####################################################################################################
-#%% Find starting year per region
-
-# Mask where Generating Capacity != 0, then find the first True along Cohort axis
-mask = ds_data1_image_region["Generating Capacity"] != 0  # shape: (Region, Cohort)
-
-# Get index position of first nonzero per region (-1 if none found)
-first_idx = mask.argmax(dim="Cohort")
-
-# Map index positions back to actual Cohort coordinate values
-earliest_cohort = ds_data1_image_region.Cohort.isel(Cohort=first_idx).astype(float)
-
-# For regions where ALL values are 0, argmax returns 0 (misleading) — mask those out
-has_nonzero = mask.any(dim="Cohort")
-earliest_cohort = earliest_cohort.where(has_nonzero)
-
-# As a dict
-dict_regional_start_years = {
-    region.item(): int(val.item()) if not np.isnan(val.item()) else 2024
-    for region, val in zip(earliest_cohort.Region, earliest_cohort)
-}
-regions_no_cohort = has_nonzero.Region[~has_nonzero].values.tolist()
-
-
-#
-# check which regions are 0 in all time steps
-zero_regions = (da_data2_image_region == 0).all(dim="Time")
-zero_regions.Region[zero_regions].values
-
-# check only if 0 in 2014
-zero_regions = (da_data2_image_region.sel(Time=2014) == 0)
-zero_regions.Region[zero_regions].values
-
-
-####################################################################################################
-#%% intra and extrapolate phs data
-
-#---------------------------------------------------------------------------------------------------
-#%%% extrapolating historic data + constant extrapolation after last known data point (2024) until 2060
-phs = interpolate_xr(da_data2_image_region, dict_regional_start_years, 2060, interp_method='linear', extrap_before='zero', extrap_before_method='logistic')
-
-test = phs
-regions= ["WAF", "TUR"]
-regions = test.Region.values
-fig, ax = plt.subplots(figsize=(14, 6))
-for i, region in enumerate(regions): #test.Region.values
-    ax.plot(test.Time.values, test.sel(Region=region).values, linewidth=1.5, color=COLORS_IMAGE_REGIONS[i], label=region)
-ax.axvline(x=2014, color='gray', linestyle='--', alpha=0.5)
-ax.axvline(x=2019, color='gray', linestyle='--', alpha=0.5)
-ax.axvline(x=2024, color='gray', linestyle='--', alpha=0.5)
-plt.xlabel("Year")
-plt.ylabel("Pumped Hydropower Storage Capacity (MW)")
-plt.title("Interpolated PHS capacity trajectories by IMAGE region")
-plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize=8, ncol=2)
-plt.tight_layout()
-
-#---------------------------------------------------------------------------------------------------
-#%%% calculate region shares
-
-# select time
-da = test.sel(Time=[2024])
-
-# mapping
-
-# create a coordinate for superregions
-superregion = xr.DataArray(
-    [iha_region_map[r] for r in da.Region.values],
-    coords={"Region": da.Region},
-    dims="Region"
-)
-
-# attach it
-da = da.assign_coords(Superregion=superregion)
-
-# compute shares within each superregion
-shares = da.groupby("Superregion").map(lambda x: x / x.sum())
-shares = shares.pint.dequantify()
-
-years = np.arange(2024, 2061)
-shares = shares.reindex(Time=years, method="ffill") # forward fill shares to future years (assumes shares remain constant after 2024)
-
-# Adjust shares based on literature insights
-override_regions = ["JAP", "INDO", "CHN", "OCE", "KOR", "SEAS"]
-override_2030 = {
-    "JAP": 0.12,
-    "INDO": 0.05,
-    "CHN": 0.7,
-    "OCE": 0.05,
-    "KOR": 0.03,
-    "SEAS": 0.05
-}
-da_override = xr.full_like(
-    shares.sel(Time=[2024, 2030]),
-    fill_value=np.nan
-)
-for r in override_regions:
-    da_override.loc[dict(Region=r, Time=2030)] = override_2030[r]
-    da_override.loc[dict(Region=r, Time=2024)] = shares.sel(Time=2024, Region=r).values
-# Interpolate only between 2024–2030
-da_override = interpolate_xr(da_override, t_start=2024, t_end=2060, interp_method="linear")
-
-# update shares
-shares.loc[dict(Time=slice(2024, None), Region=override_regions)] = da_override.sel(Time=slice(2024, None), Region=override_regions)
-
-df = shares.to_dataframe(name="value").reset_index()
-
-#---------------------------------------------------------------------------------------------------
-#%%% extrapolating future data (2024-2060)
-
-def build_status_timeseries(df: pd.DataFrame, status: str, t_start: int, t_end: int, shares: xr.DataArray, unit: str) -> xr.DataArray:
+def _build_status_timeseries_phs_data(df: pd.DataFrame, status: str, t_start: int, t_end: int, shares: xr.DataArray, unit: str) -> xr.DataArray:
     """ Build a region-level time series DataArray for a given PHS planning status.
 
     This function extracts values for a specific planning status from a dataframe, and constructs a 
@@ -294,25 +91,528 @@ def build_status_timeseries(df: pd.DataFrame, status: str, t_start: int, t_end: 
 
     return xr_status
 
-# build time series for each status category
-xr_under_construction = build_status_timeseries(df_data3, "under construction", 2024, 2035, shares, unit_data3)
-xr_planned_regulator_approved = build_status_timeseries(df_data3, "planned regulator approved", 2035, 2060, shares, unit_data3)
-xr_planned_pending_approval = build_status_timeseries(df_data3, "planned pending approval", 2035, 2060, shares, unit_data3)
-xr_announced = build_status_timeseries(df_data3, "announced", 2035, 2060, shares, unit_data3)
+
+####################################################################################################
+#%% Load data
+
+# Dataset 1: IHA data set of individual PHS sites, with commissioning year, capacity, energy stored,
+# operating status, and hydro type
+df_data1 =  pd.read_csv(Path(path_data,"electricity","iha_phs_capacity_data.csv"), 
+                      usecols=["Operational Status", "Country", "Commisioning Year", "Hydro Type", 
+                               "Generating Capacity", "Energy stored (GWh)"])
+
+# Dataset 2: IHA World Hydropower Outlook dataset of aggregated PHS power capacity (MW) by country for 3 years (2014, 2019, 2024) 
+#           + IEA global estimates
+df_data2 =  pd.read_csv(Path(path_data,"electricity","iha_world_hydropower_outlook_phs_historic_stocks.csv"),
+                        usecols=["Time", "unit", "Region", "value"])
+
+# Dataset 3: IHA data on PHS projects under contruction, planned and announced per IHA region
+df_data3 =  pd.read_csv(Path(path_data,"electricity","iha_future_planned_phs_capacity_mw_per_world_region.txt"),
+                        usecols=["status", "unit", "Region", "value"])
+
+# Manual adjustments to future shares based on literature insights, but authors estimation (unit: shares)
+df_shares_adjustment_2030 =  pd.read_csv(Path(path_data,"electricity","phs_regional_shares_per_iha_region_in_2030.txt"),
+                        usecols=["time", "Region", "value"])
+
+# IMAGE-energy: storage energy capacity (MWh, reservoir)
+storage_energy = read_mym_df(Path(path_data, "image", "SSP2_baseline", "EnergyServices", "StorResTot.out"))
+
+knowledge_graph_region = create_image_region_graph()
+storage_energy = storage_energy.iloc[:, :26]
+storage_energy.index.name = "Time"
+storage_energy.columns.name = "Region"
+storage_energy_xr = xr.DataArray(
+    storage_energy.values,
+    dims=["Time", "Region"],
+    coords={
+        "Time": storage_energy.index,
+        "Region": [("region_" + str(r)) for r in storage_energy.columns]
+    }
+)
+storage_energy_xr = knowledge_graph_region.rebroadcast_xarray(storage_energy_xr, output_coords=IMAGE_REGIONS, dim="Region")
+
+
+data_phs = [df_data1, df_data2, df_data3, df_shares_adjustment_2030, storage_energy_xr]
+
+
+#storage power capacity in MW
+storage_power = read_mym_df(Path(path_data, "image", "SSP2_baseline", "EnergyServices", "StorCapTot.out"))
+
+storage_power = storage_power.iloc[:, :26]
+storage_power.index.name = "Time"
+storage_power.columns.name = "Region"
+storage_power_xr = xr.DataArray(
+    storage_power.values,
+    dims=["Time", "Region"],
+    coords={
+        "Time": storage_power.index,
+        "Region": [("region_" + str(r)) for r in storage_power.columns]
+    }
+)
+storage_power_xr = knowledge_graph_region.rebroadcast_xarray(storage_power_xr, output_coords=IMAGE_REGIONS, dim="Region") 
+
+# Constants ----------------------------------------------------------------------------------------
+factor_phs_growth_rel_demand = 0.5
+# Assumption on average discharge duration of PHS plants in hours. The discharge duration can vary 
+# widely in reality, typically ranging 6-24 h. This simplifying assumption is needed due to the lack
+# of data on installed storage energy capacity of PHS plants (MWh). Since the stock model is done in 
+# terms of energy capacity, we need to convert the available power capacity data (MW) to energy capacity.
+# Note: important for us is not the total energy produced by the PHS plant/energy cycled in a year, 
+# but the energy capacity of the reservoir, which determines how much energy can be stored at a given 
+# time as well as the materials needed for the reservoir construction (size of the reservoir).
+mean_discharge_duration = 10
+
+####################################################################################################
+####################################################################################################
+#%% Run as script
+
+################################################################################################
+# Pretreat data
+
+df_data1 = df_data1.loc[df_data1["Operational Status"] == "Operational"]
+df_data1 = df_data1.rename(columns={'Country': 'Region', 'Commisioning Year': 'Cohort'})
+df_data1["Cohort"] = pd.to_numeric(df_data1["Cohort"], errors="coerce").astype("Int64")
+df_data1_country = df_data1.groupby(["Region", "Cohort"])[
+    ["Generating Capacity", "Energy stored (GWh)"]
+].sum() # rows with NaN in Region or Cohort are dropped during this step
+ds_data1_country = df_data1_country.to_xarray()
+
+unit_data2 = df_data2["unit"].iloc[0] # extract unit from the file (assumes it's the same for all rows)
+df_data2 = df_data2.drop(columns="unit")
+df_data2_country = df_data2.groupby(["Region", "Time"])[["value"]].sum()
+da_data2_country = xr.DataArray.from_series(df_data2_country["value"]).rename("PumpedHydropowerStorageCapacity") # create Dataarray
+da_data2_country = prism.Q_(da_data2_country, unit_data2)
+
+unit_data3 = df_data3["unit"].iloc[0] # extract unit from the file (assumes it's the same for all rows)
+df_data3 = df_data3.drop(columns="unit")
+mean_discharge_duration = prism.Q_(mean_discharge_duration, "hour")
+
+####################################################################################################
+# Aggregate to IMAGE regions
+
+ds_data1_image_region = ds_data1_country.copy()
+ds_data1_image_region = knowledge_graph_region.aggregate_sum(ds_data1_image_region, output_coords=IMAGE_REGIONS, dim="Region", require_relation=False)
+
+da_data2_image_region = da_data2_country.copy()
+da_data2_image_region = knowledge_graph_region.aggregate_sum(da_data2_image_region, output_coords=IMAGE_REGIONS, dim="Region", require_relation=False)
+
+####################################################################################################
+# Find starting year per region
+
+# Mask where Generating Capacity != 0, then find the first True along Cohort axis
+mask = ds_data1_image_region["Generating Capacity"] != 0  # shape: (Region, Cohort)
+# Get index position of first nonzero per region (-1 if none found)
+first_idx = mask.argmax(dim="Cohort")
+# Map index positions back to actual Cohort coordinate values
+earliest_cohort = ds_data1_image_region.Cohort.isel(Cohort=first_idx).astype(float)
+# For regions where ALL values are 0, argmax returns 0 (misleading) — mask those out
+has_nonzero = mask.any(dim="Cohort")
+earliest_cohort = earliest_cohort.where(has_nonzero)
+# As a dict
+dict_regional_start_years = {
+    region.item(): int(val.item()) if not np.isnan(val.item()) else 2024
+    for region, val in zip(earliest_cohort.Region, earliest_cohort)
+}
+
+####################################################################################################
+# intra and extrapolate phs data
+
+#---------------------------------------------------------------------------------------------------
+# extrapolating historic data (+ constant extrapolation after last known data point (2024) until 2060, overwritten later)
+phs = interpolate_xr(da_data2_image_region, dict_regional_start_years, 2060, interp_method='linear', extrap_before='zero', extrap_before_method='logistic')
+
+
+#---------------------------------------------------------------------------------------------------
+# calculate region shares
+
+# select time
+da = phs.sel(Time=[2024])
+# mapping
+# create a coordinate for superregions
+superregion = xr.DataArray(
+    [iha_region_map[r] for r in da.Region.values],
+    coords={"Region": da.Region},
+    dims="Region"
+)
+# attach it
+da = da.assign_coords(Superregion=superregion)
+# compute shares within each superregion
+shares = da.groupby("Superregion").map(lambda x: x / x.sum())
+shares = shares.pint.dequantify()
+shares = shares.reindex(Time=np.arange(2024, 2061), method="ffill") # forward fill shares to future years (assumes shares remain constant after 2024)
+
+# Adjust shares based on literature insights
+override_regions = df_shares_adjustment_2030["Region"].values
+time_override = 2030
+da_override = xr.full_like(
+    shares.sel(Time=[2024, 2030]),
+    fill_value=np.nan
+)
+for r in override_regions:
+    da_override.loc[dict(Region=r, Time=time_override)] = df_shares_adjustment_2030.loc[(df_shares_adjustment_2030["time"] == time_override) & (df_shares_adjustment_2030["Region"] == r), "value"].values[0] #override_2030[r]
+    da_override.loc[dict(Region=r, Time=2024)] = shares.sel(Time=2024, Region=r).values
+# Interpolate shares (linearly between 2024–2030, constant after 2030)
+da_override = interpolate_xr(da_override, t_start=2024, t_end=2060, interp_method="linear")
+
+# update shares
+shares.loc[dict(Time=slice(2024, None), Region=override_regions)] = da_override.sel(Time=slice(2024, None), Region=override_regions)
+
+#---------------------------------------------------------------------------------------------------
+# extrapolating future data (2024-2060)
+
+# build time series for each operational status category
+xr_under_construction = _build_status_timeseries_phs_data(df_data3, "under construction", 2024, 2035, shares, unit_data3)
+xr_planned_regulator_approved = _build_status_timeseries_phs_data(df_data3, "planned regulator approved", 2035, 2060, shares, unit_data3)
+xr_planned_pending_approval = _build_status_timeseries_phs_data(df_data3, "planned pending approval", 2035, 2060, shares, unit_data3)
+xr_announced = _build_status_timeseries_phs_data(df_data3, "announced", 2035, 2060, shares, unit_data3)
 
 # flag_phs = "phs_high"
 time = np.arange(phs.Time.min().item(), 2061)
 if flag_phs == "phs_low":
     uc = xr_under_construction.reindex(Time=time, method="ffill").fillna(0)
     pra = xr_planned_regulator_approved.reindex(Time=time).fillna(0)
-    phs_test = phs + uc + pra
+    phs_2060 = phs + uc + pra
 elif flag_phs == "phs_high":
     uc = xr_under_construction.reindex(Time=time, method="ffill").fillna(0)
     pra = xr_planned_regulator_approved.reindex(Time=time).fillna(0)
     ppa = xr_planned_pending_approval.reindex(Time=time).fillna(0)
     ann = xr_announced.reindex(Time=time).fillna(0)
-    phs_test = phs + uc + pra + ppa + ann
+    phs_2060 = phs + uc + pra + ppa + ann
 
+#---------------------------------------------------------------------------------------------------
+# extrapolating future data (2060-2100)
+
+if flag_phs == "phs_low":
+    # for the low PHS scenario, we assume that after 2060, the capacity remains constant at the 2060 
+    # level (i.e., no further growth after 2060)
+    phs_power = phs_2060.reindex(Time=np.arange(phs.Time.min().item(), 2101), method="ffill").fillna(0)
+elif flag_phs == "phs_high":
+    # --- select relevant time range ---
+    # this factor determines how strongly the growth of PHS capacity is linked to the growth of storage 
+    # energy demand; a value of 0.5 means that if the storage energy demand grows by 10% from one year 
+    # to the next, the PHS capacity will grow by 5% in that year, if the condition below is met. This is 
+    # a simplifying assumption and can be adjusted based on literature insights or sensitivity analysis. 
+    phs_temporary = phs_2060.sel(Time=[2060]).reindex(Time=np.arange(2060, 2101), method="ffill") # forward fill from 2060 to 2100 with constant values (will be updated with growth assumption in the next steps)
+    demand = storage_energy_xr.sel(Time=slice(2060, 2100))
+    # align sequence of dimensions
+    phs_temporary = phs_temporary.transpose("Time", "Region")
+    demand = demand.transpose("Time", "Region")
+
+    # --- compute base growth rates (NumPy) ---
+    # growth rate = f(t+1)/f(t) - 1, by rolling -1 values for year 2061 are now saved under year 2060, 
+    # so when we divide by demand_vals which are still aligned with the original years, we get the 
+    # growth rate from t to t+1 aligned with year t. 
+    demand_vals = demand.values
+    growth_rate = (np.roll(demand_vals, -1, axis=0) / demand_vals) - 1 
+    # last timestep has no forward value → set to 0
+    growth_rate[-1, ...] = 0
+    # clip negative growth
+    growth_rate = np.clip(growth_rate, 0, None)
+    # shift to align with t+1
+    # growth_rate = np.roll(growth_rate, 1, axis=0)
+    growth_rate[0, ...] = 0  # first year has no previous growth
+
+    # --- initialize result array ---
+    phs_vals = phs_temporary.values.copy()
+
+    # --- recursive loop over time ---
+    for t in range(1, phs_vals.shape[0]):
+        prev = phs_vals[t - 1]
+        gr = growth_rate[t - 1]
+        # condition: grow only if previous PHS <= 0.8 * demand at t-1
+        mask = prev <= 0.8 * demand_vals[t - 1]
+        # apply growth selectively
+        phs_vals[t] = np.where(mask, prev * (1 + factor_phs_growth_rel_demand * gr), prev)
+
+    # --- convert back to xarray ---
+    phs_updated = xr.DataArray(
+        phs_vals,
+        coords=phs_temporary.coords,
+        dims=phs_temporary.dims,
+        name=phs_temporary.name
+    )
+    phs_updated = prism.Q_(phs_updated, "MW")
+    # --- merge with original before 2060 ---
+    phs_power = xr.concat(
+        [phs_2060.sel(Time=slice(None, 2059)), phs_updated],
+        dim="Time"
+    )
+
+
+#---------------------------------------------------------------------------------------------------
+# convert power capacity (MW) to energy capacity (MWh)
+
+phs_energy = phs_power * mean_discharge_duration
+
+# phs_test2_energy_high = phs_test2_energy.copy()
+
+
+
+
+####################################################################################################
+####################################################################################################
+#%% As function
+
+def derive_phs_installed_capacity(data: list,
+                                  factor_phs_growth_rel_demand: int = 0.5,
+                                  mean_discharge_duration: int = 10,
+                                  flag_phs: str = "phs_low"):
+    
+    df_data1 = data[0]
+    df_data2 = data[1]
+    df_data3 = data[2]
+    df_shares_adjustment_2030 = data[3]
+    storage_energy_xr = data[4]
+
+    ################################################################################################
+    # Pretreat data 
+    
+    df_data1 = df_data1.loc[df_data1["Operational Status"] == "Operational"]
+    df_data1 = df_data1.rename(columns={'Country': 'Region', 'Commisioning Year': 'Cohort'})
+    df_data1["Cohort"] = pd.to_numeric(df_data1["Cohort"], errors="coerce").astype("Int64")
+    df_data1_country = df_data1.groupby(["Region", "Cohort"])[
+        ["Generating Capacity", "Energy stored (GWh)"]
+    ].sum() # rows with NaN in Region or Cohort are dropped during this step
+    ds_data1_country = df_data1_country.to_xarray()
+
+    unit_data2 = df_data2["unit"].iloc[0] # extract unit from the file (assumes it's the same for all rows)
+    df_data2 = df_data2.drop(columns="unit")
+    df_data2_country = df_data2.groupby(["Region", "Time"])[["value"]].sum()
+    da_data2_country = xr.DataArray.from_series(df_data2_country["value"]).rename("PumpedHydropowerStorageCapacity") # create Dataarray
+    da_data2_country = prism.Q_(da_data2_country, unit_data2)
+    
+    unit_data3 = df_data3["unit"].iloc[0] # extract unit from the file (assumes it's the same for all rows)
+    df_data3 = df_data3.drop(columns="unit")
+
+    mean_discharge_duration = prism.Q_(mean_discharge_duration, "hour")
+    
+    ################################################################################################
+    # Aggregate to IMAGE regions
+
+    ds_data1_image_region = ds_data1_country.copy()
+    ds_data1_image_region = knowledge_graph_region.aggregate_sum(ds_data1_image_region, output_coords=IMAGE_REGIONS, dim="Region", require_relation=False)
+
+    da_data2_image_region = da_data2_country.copy()
+    da_data2_image_region = knowledge_graph_region.aggregate_sum(da_data2_image_region, output_coords=IMAGE_REGIONS, dim="Region", require_relation=False)
+
+    ################################################################################################
+    # Find starting year per region
+
+    # Mask where Generating Capacity != 0, then find the first True along Cohort axis
+    mask = ds_data1_image_region["Generating Capacity"] != 0  # shape: (Region, Cohort)
+    # Get index position of first nonzero per region (-1 if none found)
+    first_idx = mask.argmax(dim="Cohort")
+    # Map index positions back to actual Cohort coordinate values
+    earliest_cohort = ds_data1_image_region.Cohort.isel(Cohort=first_idx).astype(float)
+    # For regions where ALL values are 0, argmax returns 0 (misleading) — mask those out
+    has_nonzero = mask.any(dim="Cohort")
+    earliest_cohort = earliest_cohort.where(has_nonzero)
+    # As a dict
+    dict_regional_start_years = {
+        region.item(): int(val.item()) if not np.isnan(val.item()) else 2024
+        for region, val in zip(earliest_cohort.Region, earliest_cohort)
+    }
+
+    ####################################################################################################
+    # intra and extrapolate phs data
+
+    #---------------------------------------------------------------------------------------------------
+    # extrapolating historic data (+ constant extrapolation after last known data point (2024) until 2060, overwritten later)
+    phs = interpolate_xr(da_data2_image_region, dict_regional_start_years, 2060, interp_method='linear', extrap_before='zero', extrap_before_method='logistic')
+
+    #---------------------------------------------------------------------------------------------------
+    # calculate region shares
+
+    # select time
+    da = phs.sel(Time=[2024])
+    # mapping
+    # create a coordinate for superregions
+    superregion = xr.DataArray(
+        [iha_region_map[r] for r in da.Region.values],
+        coords={"Region": da.Region},
+        dims="Region"
+    )
+    # attach it
+    da = da.assign_coords(Superregion=superregion)
+    # compute shares within each superregion
+    shares = da.groupby("Superregion").map(lambda x: x / x.sum())
+    shares = shares.pint.dequantify()
+    shares = shares.reindex(Time=np.arange(2024, 2061), method="ffill") # forward fill shares to future years (assumes shares remain constant after 2024)
+
+    # Adjust shares based on literature insights
+    override_regions = df_shares_adjustment_2030["Region"].values
+    time_override = 2030
+    da_override = xr.full_like(
+        shares.sel(Time=[2024, 2030]),
+        fill_value=np.nan
+    )
+    for r in override_regions:
+        da_override.loc[dict(Region=r, Time=time_override)] = df_shares_adjustment_2030.loc[(df_shares_adjustment_2030["time"] == time_override) & (df_shares_adjustment_2030["Region"] == r), "value"].values[0] #override_2030[r]
+        da_override.loc[dict(Region=r, Time=2024)] = shares.sel(Time=2024, Region=r).values
+    # Interpolate shares (linearly between 2024–2030, constant after 2030)
+    da_override = interpolate_xr(da_override, t_start=2024, t_end=2060, interp_method="linear")
+
+    # update shares
+    shares.loc[dict(Time=slice(2024, None), Region=override_regions)] = da_override.sel(Time=slice(2024, None), Region=override_regions)
+
+    #---------------------------------------------------------------------------------------------------
+    # extrapolating future data (2024-2060)
+
+    # build time series for each operational status category
+    xr_under_construction = _build_status_timeseries_phs_data(df_data3, "under construction", 2024, 2035, shares, unit_data3)
+    xr_planned_regulator_approved = _build_status_timeseries_phs_data(df_data3, "planned regulator approved", 2035, 2060, shares, unit_data3)
+    xr_planned_pending_approval = _build_status_timeseries_phs_data(df_data3, "planned pending approval", 2035, 2060, shares, unit_data3)
+    xr_announced = _build_status_timeseries_phs_data(df_data3, "announced", 2035, 2060, shares, unit_data3)
+
+    time = np.arange(phs.Time.min().item(), 2061)
+    if flag_phs == "phs_low":
+        uc = xr_under_construction.reindex(Time=time, method="ffill").fillna(0)
+        pra = xr_planned_regulator_approved.reindex(Time=time).fillna(0)
+        phs_2060 = phs + uc + pra
+    elif flag_phs == "phs_high":
+        uc = xr_under_construction.reindex(Time=time, method="ffill").fillna(0)
+        pra = xr_planned_regulator_approved.reindex(Time=time).fillna(0)
+        ppa = xr_planned_pending_approval.reindex(Time=time).fillna(0)
+        ann = xr_announced.reindex(Time=time).fillna(0)
+        phs_2060 = phs + uc + pra + ppa + ann
+
+    #---------------------------------------------------------------------------------------------------
+    # extrapolating future data (2060-2100)
+
+    if flag_phs == "phs_low":
+        # for the low PHS scenario, we assume that after 2060, the capacity remains constant at the 2060 
+        # level (i.e., no further growth after 2060)
+        phs_power = phs_2060.reindex(Time=np.arange(phs.Time.min().item(), 2101), method="ffill").fillna(0)
+    elif flag_phs == "phs_high":
+        # --- select relevant time range ---
+        # this factor determines how strongly the growth of PHS capacity is linked to the growth of storage 
+        # energy demand; a value of 0.5 means that if the storage energy demand grows by 10% from one year 
+        # to the next, the PHS capacity will grow by 5% in that year, if the condition below is met. This is 
+        # a simplifying assumption and can be adjusted based on literature insights or sensitivity analysis. 
+        phs_temporary = phs_2060.sel(Time=[2060]).reindex(Time=np.arange(2060, 2101), method="ffill") # forward fill from 2060 to 2100 with constant values (will be updated with growth assumption in the next steps)
+        demand = storage_energy_xr.sel(Time=slice(2060, 2100))
+        # align sequence of dimensions
+        phs_temporary = phs_temporary.transpose("Time", "Region")
+        demand = demand.transpose("Time", "Region")
+
+        # --- compute base growth rates (NumPy) ---
+        # growth rate = f(t+1)/f(t) - 1, by rolling -1 values for year 2061 are now saved under year 2060, 
+        # so when we divide by demand_vals which are still aligned with the original years, we get the 
+        # growth rate from t to t+1 aligned with year t. 
+        demand_vals = demand.values
+        growth_rate = (np.roll(demand_vals, -1, axis=0) / demand_vals) - 1 
+        # last timestep has no forward value → set to 0
+        growth_rate[-1, ...] = 0
+        # clip negative growth
+        growth_rate = np.clip(growth_rate, 0, None)
+        # shift to align with t+1
+        # growth_rate = np.roll(growth_rate, 1, axis=0)
+        growth_rate[0, ...] = 0  # first year has no previous growth
+
+        # --- initialize result array ---
+        phs_vals = phs_temporary.values.copy()
+
+        # --- recursive loop over time ---
+        for t in range(1, phs_vals.shape[0]):
+            prev = phs_vals[t - 1]
+            gr = growth_rate[t - 1]
+            # condition: grow only if previous PHS <= 0.8 * demand at t-1
+            mask = prev <= 0.8 * demand_vals[t - 1]
+            # apply growth selectively
+            phs_vals[t] = np.where(mask, prev * (1 + factor_phs_growth_rel_demand * gr), prev)
+
+        # --- convert back to xarray ---
+        phs_updated = xr.DataArray(
+            phs_vals,
+            coords=phs_temporary.coords,
+            dims=phs_temporary.dims,
+            name=phs_temporary.name
+        )
+        phs_updated = prism.Q_(phs_updated, "MW")
+        # --- merge with original before 2060 ---
+        phs_power = xr.concat(
+            [phs_2060.sel(Time=slice(None, 2059)), phs_updated],
+            dim="Time"
+        )
+
+    #---------------------------------------------------------------------------------------------------
+    # convert power capacity (MW) to energy capacity (MWh)
+
+    phs_energy = phs_power * mean_discharge_duration
+
+    return phs_power, phs_energy
+
+
+
+
+phs_power_low, phs_energy_low = derive_phs_installed_capacity(data_phs, factor_phs_growth_rel_demand, 20, "phs_low") #mean_discharge_duration
+phs_power_high, phs_energy_high = derive_phs_installed_capacity(data_phs, factor_phs_growth_rel_demand, 20, "phs_high")
+
+
+####################################################################################################
+#%% Plots
+
+
+
+
+#%%%% COMPARISON - GWh -----------------------------------------------------------------------------
+
+phs_low_world = phs_energy_low.sel(Time=slice(2000, 2100)).sum(dim="Region").pint.to("GWh")
+phs_high_world = phs_energy_high.sel(Time=slice(2000, 2100)).sum(dim="Region").pint.to("GWh")
+timer = storage_energy_xr.sel(Time=slice(2000, 2100)).sum(dim="Region")
+timer = prism.Q_(timer, "MWh")
+timer = timer.pint.to("GWh")
+
+fig, ax = plt.subplots(figsize=(14, 6))
+ax.plot(phs_low_world.Time.values, phs_low_world.values, linewidth=1.5, color="black", label="PHS - low scenario")
+ax.plot(phs_high_world.Time.values, phs_high_world.values, linewidth=1.5, color="grey", label="PHS - high scenario")
+ax.plot(timer.Time.values, timer.values, linewidth=1.5, color="black", linestyle="--", label="TIMER")
+ax.scatter(2017, 4508, marker="v",s=100, color="#06DE8B", label="IRENA")
+ax.scatter(2030, 6068, marker="v",s=100, color="#A0F3D3", label="IRENA-REmap_Doubling_min")
+ax.scatter(2030, 6848, marker="v",s=100, color="#508C75", label="IRENA-REmap_Doubling_max")
+
+plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize=8, ncol=2)
+ax.set_xlabel("Time", fontsize=14)
+ax.set_ylabel("Installed energy capacity (GWh)", fontsize=14)
+ax.set_title("Global PHS Energy Capacity (GWh)", fontweight="bold")
+ax.legend(title="Source")
+ax.grid(True, linestyle="--", alpha=0.3)
+plt.xticks(fontsize=14)
+plt.yticks(fontsize=14)
+plt.tight_layout()
+
+
+#%%%% COMPARISON - GW ------------------------------------------------------------------------------
+
+iha_world = da_data2_image_region.sum("Region").pint.to("GW")
+timer = storage_power_xr.sel(Time=slice(2000, 2100)).sum(dim="Region")
+timer = prism.Q_(timer, "MW")
+timer = timer.pint.to("GW")
+phs_low_world = phs_power_low.sel(Time=slice(2000, 2100)).sum(dim="Region").pint.to("GW")
+phs_high_world = phs_power_high.sel(Time=slice(2000, 2100)).sum(dim="Region").pint.to("GW")
+
+fig, ax = plt.subplots(figsize=(14, 6))
+ax.plot(phs_low_world.Time.values, phs_low_world.values, linewidth=1.5, color="black", label="PHS - low scenario")
+ax.plot(phs_high_world.Time.values, phs_high_world.values, linewidth=1.5, color="grey", label="PHS - high scenario")
+# ax.plot(timer.Time.values, timer.values, linewidth=1.5, color="black", linestyle="--", label="TIMER")
+ax.scatter([2021,2023], [160,181], marker="v",s=100, color="#BD09CA", label="IEA")
+ax.scatter([2030], [249], marker="v",s=100, color="#F18BF9", label="IEA-STEPS")
+ax.scatter([2014], [142], marker="v",s=100, color="#06DE8B", label="IRENA")
+ax.scatter(iha_world.Time.values, iha_world.values, marker="v",s=100, color="#3B7EFA", label="IHA")
+
+plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize=8, ncol=2)
+ax.set_xlabel("Time", fontsize=14)
+ax.set_ylabel("Installed capacity (GW)", fontsize=14)
+ax.set_title("Global PHS Power Capacity (GW)", fontweight="bold")
+ax.legend(title="Source")
+ax.grid(True, linestyle="--", alpha=0.3)
+plt.xticks(fontsize=14)
+plt.yticks(fontsize=14)
+plt.tight_layout()
+
+
+
+#%%%%
 test = phs_test
 regions= ["WAF", "TUR"]
 regions = test.Region.values
@@ -328,27 +628,10 @@ plt.title("Interpolated PHS capacity trajectories by IMAGE region")
 plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize=8, ncol=2)
 plt.tight_layout()
 
-#---------------------------------------------------------------------------------------------------
-#%% extrapolating future data (2060-2100)
 
-# TEST TEST: 
-# for the high PHS scenario, we assume that after 2060, the capacity continues to grow with the same rate as the total storage energy capacity demand. We assume no negative growth, in case the storage energy capacity demand decreases in the future, due to the high lifetime and upfront investment cost of PHS which make it unlikely to be decommissioned once built.
-growth_rate = (
-    (storage_energy_xr.sel(Time=slice(2060, 2100))
-    .shift(Time=-1) / storage_energy_xr.sel(Time=slice(2060, 2100))) - 1
-) # growth rate = f(t+1)/f(t) - 1
-growth_rate = growth_rate.clip(min=0) # set negative growth rates to 0, assuming storage energy capacity does not decrease over time
-growth_rate = growth_rate.shift(Time=1) # align growth rate with the correct time steps for the following multiplication (the growth rate calculated above is the growth from t to t+1, so if multiplicated with f(t) it should give f(t+1) with correct time dimension t+1)
-# cumulative product of (1 + growth)
-factor = (1 + growth_rate).cumulative("Time").prod().sel(Time=slice(2061, 2100))
-# apply growth
-phs_test_2061_to_2100 = phs_test.sel(Time=2060, drop=True) * factor
-phs_test2 = xr.concat([phs_test.sel(Time=slice(None, 2060)), phs_test_2061_to_2100], dim="Time")
+#%%%%
 
-
-a = phs_test.sel(Time=slice(2020, 2060)) / storage_energy_xr.sel(Time=slice(2020, 2060))
-
-test = a
+test = phs_test2_energy.sel(Time=slice(2000, 2100))
 # test = storage_energy_xr.sel(Time=slice(2015, 2100))
 regions= test.Region.values
 # regions = [r for r in test.Region.values if r not in ["WAF", "EAF","NAF", "BRA"]]
@@ -357,63 +640,16 @@ for i, region in enumerate(regions): #test.Region.values
     ax.plot(test.Time.values, test.sel(Region=region).values, linewidth=1.5, color=COLORS_IMAGE_REGIONS[i], label=region)
 plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize=8, ncol=2)
 
-
-
-#-----------------------------
-flag_phs = "phs_low"
-time = np.arange(phs.Time.min().item(), 2101)
-
-if flag_phs == "phs_low":
-    # for the low PHS scenario, we assume that after 2060, the capacity remains constant at the 2060 
-    # level (i.e., no further growth after 2060)
-    phs_test2 = phs_test.reindex(Time=time, method="ffill").fillna(0)
-elif flag_phs == "phs_high":
-    # for now the same as in the low scenario, but could be updated with a growth assumption
-    phs_test2 = phs_test.reindex(Time=time, method="ffill").fillna(0)
-
-test = phs_test2.sel(Time=slice(2015, 2100))
-# test = storage_energy_xr.sel(Time=slice(2015, 2100))
-regions= test.Region.values
-# regions = [r for r in test.Region.values if r not in ["WAF", "EAF","NAF", "BRA"]]
-fig, ax = plt.subplots(figsize=(14, 6))
-for i, region in enumerate(regions): #test.Region.values
-    ax.plot(test.Time.values, test.sel(Region=region).values, linewidth=1.5, color=COLORS_IMAGE_REGIONS[i], label=region)
-plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize=8, ncol=2)
-
-######
-test = phs_test2.sel(Time=slice(2015, 2100))
+#%%%%
+test = phs_test2_energy.sel(Time=slice(2015, 2100))
 test2 = storage_energy_xr.sel(Time=slice(2015, 2100))
 regions= test.Region.values
 # regions = [r for r in test.Region.values if r not in ["WAF", "EAF","NAF", "BRA"]]
 fig, ax = plt.subplots(figsize=(14, 6))
-for i, region in enumerate(["RUS"]): #test.Region.values
-    ax.plot(test.Time.values, test.sel(Region=region).values, linewidth=1.5, color=COLORS_IMAGE_REGIONS[i], label=region)
-    ax.plot(test2.Time.values, test2.sel(Region=region).values, linewidth=1.5, color=COLORS_IMAGE_REGIONS[i], label=region)
+for i, region in enumerate(["CHN"]): #test.Region.values
+    ax.plot(test.Time.values, test.sel(Region=region).values, linewidth=1.5, color=COLORS_IMAGE_REGIONS[i], label=region+" PHS capacity")
+    ax.plot(test2.Time.values, test2.sel(Region=region).values, linewidth=1.5, color=COLORS_IMAGE_REGIONS[i], label=region+" storage energy demand", linestyle="--")
 plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize=8, ncol=2)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-####################################################################################################
-#%% Plots
 
 #---------------------------------------------------------------------------------------------------
 #%%% 

@@ -1,0 +1,7 @@
+time,Region,unit,value
+2030,JAP,share,0.12
+2030,INDO,share,0.05
+2030,CHN,share,0.7
+2030,OCE,share,0.05
+2030,KOR,share,0.03
+2030,SEAS,share,0.05
