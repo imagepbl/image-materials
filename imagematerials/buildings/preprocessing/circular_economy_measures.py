@@ -6,6 +6,7 @@ import prism
 import xarray as xr
 
 from imagematerials.concepts import create_region_graph
+from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.util import apply_change_per_region
 
 
@@ -101,6 +102,9 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
         Updated floorspace for commercial targets with circular economy configuration.
 
     """
+    
+    print("FUNCTION CALLED")
+    print(f"ce keys: {list(circular_economy_config.keys())}")
     region_knowledge_graph = create_region_graph()
     regions = floorspace_commercial.coords["Region"].values
     # floorspace_commercial in m^2/cap
@@ -126,25 +130,35 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
         floor_pc_2020_mapped = region_knowledge_graph.rebroadcast_xarray(
             floor_pc_2020_xr, output_coords=regions_mapped, dim="Region")
         target_vals = floor_pc_2020_mapped
-        current_vals = floorspace_commercial.sel(Time=2020).sum(dim="Type")
+        current_vals = floorspace_commercial.sel(Time=2020, Region=regions_mapped).sum(dim="Type")
 
-        scaling_factors = target_vals / current_vals
+        scaling_factors = xr.where(current_vals > 0, target_vals / current_vals, 1.0)
 
         floorspace_commercial.loc[{"Region": regions_mapped}] *= scaling_factors
         logging.debug("implemented 'base' for Commercial Buildings")
 
     ce_scen = None  # INITIALIZE ce_scen
+
+    # Right after ce_scen is set
+    print(f"ce_scen = {ce_scen}")
+
     if "narrow" in circular_economy_config.keys():
         ce_scen = "narrow"
     if "narrow_activity" in circular_economy_config.keys():
         ce_scen = "narrow_activity"
     # narrow_activity scenario
     if ce_scen in circular_economy_config.keys():
+        commercial_ce_mode = circular_economy_config[ce_scen]["buildings"].get(
+            "commercial_ce_mode", "relative")
+        implementation_rate = circular_economy_config[ce_scen]['buildings']['implementation_rate']
         base_year = circular_economy_config[ce_scen]["buildings"]["base_year"]
         target_year = circular_economy_config[ce_scen]["buildings"]["target_year"]
 
-        commercial_scenario_settings = circular_economy_config[ce_scen]["buildings"]['commercial']['m2_change_pc']
-        implementation_rate = circular_economy_config[ce_scen]['buildings']['implementation_rate']
+        # --- Build the region-mapped relative-change array (shared by both modes) ---
+        commercial_scenario_settings = circular_economy_config[ce_scen]["buildings"]\
+            ['commercial']['m2_change_pc']
+
+        print(f"mode = {commercial_ce_mode}")
 
         commercial_scenario_settings_xr = xr.DataArray(
             list(commercial_scenario_settings.values()),
@@ -161,13 +175,190 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
         region_coords = np.sort(commercial_scenario_settings_xr_mapped.coords["Region"]
                                 .values.astype(int)).astype(str)
         commercial_scenario_settings_xr_mapped = region_knowledge_graph.rebroadcast_xarray(
-            commercial_scenario_settings_xr_mapped, region_coords, dim ="Region")
-        floorspace_commercial = apply_change_per_region(floorspace_commercial, base_year,
-                                                        target_year,
-                                                        commercial_scenario_settings_xr_mapped,
-                                                        implementation_rate)
-        logging.debug(f"implemented '{ce_scen}' for Commercial Buildings")
-        # fix unit like this for now :TODO to improve
+            commercial_scenario_settings_xr_mapped, region_coords, dim="Region")
+
+        if commercial_ce_mode == "relative":
+            # ── Plain relative reductions only (no convergence, no exclusions) ──
+            floorspace_commercial = apply_change_per_region(
+                floorspace_commercial, base_year, target_year,
+                commercial_scenario_settings_xr_mapped, implementation_rate)
+
+            logging.debug(f"implemented '{ce_scen}' for Commercial Buildings (relative only)")
+            print(f"implemented '{ce_scen}' for Commercial Buildings (relative only)")
+
+        elif commercial_ce_mode == "convergence":
+            print(f"implemented '{ce_scen}' for Commercial Buildings (convergence)")
+            print(f"Called with ce keys: {list(circular_economy_config.keys())}")
+            # ── Relative reductions + three-category convergence toward cap ──
+            convergence_cap = float(circular_economy_config[ce_scen]["buildings"].get(
+                "convergence_cap", 14.0))
+            convergence_year_end = int(circular_economy_config[ce_scen]["buildings"].get(
+                "convergence_year_end", 2100))
+            low_threshold = float(circular_economy_config[ce_scen]["buildings"].get(
+                "low_threshold", 5.0))
+
+            # Dequantify to plain floats upfront — .loc item-assignment strips pint units,
+            # so working with plain floats throughout avoids the DimensionalityError at the end.
+            if prism.U_(floorspace_commercial) is not None:
+                floorspace_commercial = floorspace_commercial.pint.dequantify()
+
+            # Save baseline (plain float) before any narrow_activity changes
+            baseline = floorspace_commercial.copy(deep=True)
+
+            # Classify regions by 2020 per-capita commercial floorspace (plain float)
+            total_pc_2020 = floorspace_commercial.sel(Time=2020).sum(dim="Type")
+
+            # Helper: numeric region string -> name (1-indexed into IMAGE_REGIONS)
+            def _reg_name(r):
+                try:
+                    return IMAGE_REGIONS[int(str(r)) - 1]
+                except (ValueError, IndexError):
+                    return str(r)
+
+            low_regions = total_pc_2020.where(total_pc_2020 < low_threshold, drop=True)\
+                .coords["Region"].values
+            low_region_strs = set(str(r) for r in low_regions)
+            eligible_regions = total_pc_2020.where(total_pc_2020 >= low_threshold, drop=True)\
+                .coords["Region"].values
+
+            logging.info(
+                "Commercial CE: low regions (< %.1f m²/cap in 2020, no relative reduction): %s",
+                low_threshold, [_reg_name(r) for r in low_regions]
+            )
+
+            # Phase 1: relative reductions until target_year (skip low regions)
+            changes_for_convergence = commercial_scenario_settings_xr_mapped.copy()
+            for r in low_region_strs:
+                if r in changes_for_convergence.coords["Region"].values:
+                    changes_for_convergence.loc[{"Region": r}] = 0.0
+
+            floorspace_commercial = apply_change_per_region(
+                floorspace_commercial, base_year, target_year,
+                changes_for_convergence, implementation_rate)
+
+            # Re-dequantify in case apply_change_per_region re-added pint units
+            if prism.U_(floorspace_commercial) is not None:
+                floorspace_commercial = floorspace_commercial.pint.dequantify()
+
+            # apply_change_per_region uses groupby+concat which may reorder the Region
+            # coordinate (xarray sorts lexicographically). Realign baseline so that all
+            # subsequent .sel() calls work without AlignmentError.
+            baseline = baseline.reindex_like(floorspace_commercial)
+
+            # Prevent the narrow_activity scenario from exceeding the baseline
+            # (use np.minimum on raw arrays to avoid xarray exact-alignment issues).
+            floorspace_commercial.values = np.minimum(
+                floorspace_commercial.values, baseline.values
+            )
+
+            # Phase 2: convergence after target_year (all comparisons on plain floats)
+            total_pc_at_target = floorspace_commercial.sel(Time=target_year).sum(dim="Type")
+
+            # Exclude low regions from above-cap classification (they are handled separately)
+            above_cap_at_target = [
+                r for r in total_pc_at_target.where(
+                    total_pc_at_target > convergence_cap, drop=True).coords["Region"].values
+                if str(r) not in low_region_strs
+            ]
+
+            mid_range_regions = [
+                r for r in total_pc_at_target.coords["Region"].values
+                if str(r) not in low_region_strs
+                and str(r) not in set(str(r) for r in above_cap_at_target)
+            ]
+
+            logging.info("CE phase 2 — above cap at %s (linear decline to cap by %s): %s",
+                          target_year, convergence_year_end,
+                          [_reg_name(r) for r in above_cap_at_target])
+            logging.info("CE phase 2 — low regions (follow baseline, linear cap at %s by %s): %s",
+                          convergence_cap, convergence_year_end,
+                          [_reg_name(r) for r in low_regions])
+            logging.info("CE phase 2 — mid-range (linear transition to baseline, capped at %s by %s): %s",
+                          convergence_cap, convergence_year_end,
+                          [_reg_name(r) for r in mid_range_regions])
+
+            all_times = floorspace_commercial.Time.values
+            post_mask = all_times > target_year
+
+            ramp = xr.DataArray(
+                np.clip(
+                    (all_times - target_year) / (convergence_year_end - target_year),
+                    0.0, 1.0
+                ),
+                dims=["Time"],
+                coords={"Time": all_times},
+            )
+
+            def _capped_end_vals(fs_end: np.ndarray) -> np.ndarray:
+                """Scale type values so total does not exceed convergence_cap."""
+                total = fs_end.sum()
+                if total > convergence_cap and total > 0:
+                    return fs_end * (convergence_cap / total)
+                return fs_end.copy()
+
+            # (a) Above cap at target_year — linear decline to cap by convergence_year_end
+            for reg in above_cap_at_target:
+                fs_at_target = floorspace_commercial.sel(Time=target_year, Region=reg).values
+                total_at_target = fs_at_target.sum()
+                type_shares = fs_at_target / total_at_target if total_at_target > 0 \
+                    else np.zeros_like(fs_at_target)
+                end_vals = convergence_cap * type_shares  # exactly at cap
+
+                for t in all_times[post_mask]:
+                    r = float(ramp.sel(Time=t))
+                    floorspace_commercial.loc[{"Time": t, "Region": reg}] = \
+                        fs_at_target * (1 - r) + end_vals * r
+
+            # (b) Low regions — follow baseline, linearly capped if baseline exceeds cap.
+            # Restore baseline for all years first, then apply a smooth linear ramp
+            # from the baseline value at target_year toward the capped endpoint at
+            # convergence_year_end (identical ramp logic to category a).
+            for reg in low_regions:
+                floorspace_commercial.loc[{"Region": reg}] = baseline.sel(Region=reg).values
+
+            for reg in low_regions:
+                fs_at_target = floorspace_commercial.sel(Time=target_year, Region=reg).values
+                baseline_end = baseline.sel(Region=reg, Time=convergence_year_end).values
+                end_vals = _capped_end_vals(baseline_end)
+
+                for t in all_times[post_mask]:
+                    r = float(ramp.sel(Time=t))
+                    floorspace_commercial.loc[{"Time": t, "Region": reg}] = \
+                        fs_at_target * (1 - r) + end_vals * r
+
+            # (c) Mid-range — linear transition from CE value at target_year toward
+            # the (capped) baseline value at convergence_year_end.
+            for reg in mid_range_regions:
+                fs_at_target = floorspace_commercial.sel(Time=target_year, Region=reg).values
+                baseline_end = baseline.sel(Region=reg, Time=convergence_year_end).values
+                end_vals = _capped_end_vals(baseline_end)
+
+                for t in all_times[post_mask]:
+                    r = float(ramp.sel(Time=t))
+                    floorspace_commercial.loc[{"Time": t, "Region": reg}] = \
+                        fs_at_target * (1 - r) + end_vals * r
+
+            # Final clamp: ensure convergence interpolation never exceeds baseline
+            # at any year (the linear ramp can overshoot baseline at intermediate years
+            # when the baseline is non-monotonic).
+            floorspace_commercial.values = np.minimum(
+                floorspace_commercial.values, baseline.values
+            )
+
+            logging.debug(
+                f"implemented '{ce_scen}' for Commercial Buildings (relative + convergence)")
+
+        else:
+            raise ValueError(
+                f"Invalid commercial_ce_mode: '{commercial_ce_mode}'. "
+                "Use 'relative' or 'convergence'."
+            )
+        # Re-attach unit cleanly. After dequantify(), pint-xarray stores "dimensionless"
+        # in attrs["units"], which makes prism.Q_ call .pint.to() and raise a
+        # DimensionalityError. Strip that attr first so Q_ does a fresh assignment.
+        if prism.U_(floorspace_commercial) is not None:
+            floorspace_commercial = floorspace_commercial.pint.dequantify()
+        floorspace_commercial.attrs.pop("units", None)
         floorspace_commercial = prism.Q_(floorspace_commercial, "m^2/person")
 
     return floorspace_commercial.transpose("Time", "Region", "Type")

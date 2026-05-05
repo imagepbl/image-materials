@@ -101,13 +101,13 @@ def steel_projection(scenario: str, path_input_data, path_input_data_image):
                         path_input_data=path_input_data,
                         path_input_data_image=path_input_data_image)
     
-    group_2 = ['class_ 1'] 
-    group_3 = ['class_ 3', 'class_ 10', 'class_ 17']
-    group_4 = ['class_ 24']
-    group_5 = ['class_ 19', 'class_ 23']
-    group_6 = ['class_ 20']
-    group_7 = ['class_ 2', 'class_ 11' , 'class_ 13', 'class_ 12', "class_ 21"]
-    group_8 = ["class_ 5", "class_ 6", "class_ 7"]
+    group_1 = ['class_ 1'] 
+    group_2 = ['class_ 3', 'class_ 10', 'class_ 17']
+    group_3 = ['class_ 24']
+    group_4 = ['class_ 19', 'class_ 23']
+    group_5 = ['class_ 20']
+    group_6 = ['class_ 2', 'class_ 11' , 'class_ 13', 'class_ 12', "class_ 21"]
+    group_7 = ["class_ 5", "class_ 6", "class_ 7"]
 
     # trajectory not to forseen, will be fitted with global regression
     spreaded_and_global = ['class_ 14', 'class_ 15', 'class_ 16']
@@ -116,13 +116,13 @@ def steel_projection(scenario: str, path_input_data, path_input_data_image):
 
     # for these models a regression will be made
     steel_grouping = {'all_regions' : all_regions_list_class[:-1],
+                    'group_1': group_1,
                     'group_2': group_2,
                     'group_3': group_3,
                     'group_4': group_4,
                     'group_5': group_5,
                     'group_6': group_6,
-                    'group_7': group_7,
-                    'group_8': group_8
+                    'group_7': group_7
                 }
     
     steel.data_grouped_regions(regions_grouping = steel_grouping)
@@ -141,23 +141,23 @@ def steel_projection(scenario: str, path_input_data, path_input_data_image):
 
     bounds = {
     'all_regions': ([0, 0, 0], [0.5, 20, 100]),
+    'group_1': ([0, 0, 0], [0.5, 20, 100]),
     'group_2': ([0, 0, 0], [0.5, 20, 100]),
     'group_3': ([0, 0, 0], [0.5, 20, 100]),
     'group_4': ([0, 0, 0], [0.5, 20, 100]),
     'group_5': ([0, 0, 0], [0.5, 20, 100]),
     'group_6': ([0, 0, 0], [0.5, 20, 100]),
-    'group_7': ([0, 0, 0], [0.5, 20, 100]),
-    'group_8': ([0, 0, 0], [0.5, 20, 100])}
+    'group_7': ([0, 0, 0], [0.5, 20, 100])}
 
     # enforce that for all groups gompertz model is selected as best fit
     steel.fit_models(best_rmse_models={'all_regions' : 'gompertz model',
+                                    'group_1': 'gompertz model',
                                     'group_2': 'gompertz model',
                                     'group_3': 'gompertz model',
                                     'group_4': 'gompertz model',
                                     'group_5': 'gompertz model',
                                     'group_6': 'gompertz model',
-                                    'group_7': 'gompertz model',
-                                    'group_8': 'gompertz model'},
+                                    'group_7': 'gompertz model'},
                                     bounds=bounds)  
     
     steel.get_X_max_scaling_factor()
@@ -166,7 +166,7 @@ def steel_projection(scenario: str, path_input_data, path_input_data_image):
                                         model_nr=1, 
                                         overwrite_existing=True)
     steel.assign_fit_to_groups_not_fitted(low,
-                                        assign_model='group_8',
+                                        assign_model='group_7',
                                         model_nr=1,
                                         overwrite_existing=True)
     
@@ -201,10 +201,10 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
 
     aluminium_logical_groups = {
         'all' : all_regions_list_class[:-1],
-        'high_consumption_high_income': group_1,
-        'medium_consumption_stable': group_2,
-        'low_consumption_stable': group_3,
-        'low_consumption_volatile': group_4,
+        'group_1': group_1,
+        'group_2': group_2,
+        'group_3': group_3,
+        'group_4': group_4,
 }
     
     aluminium.data_grouped_regions(regions_grouping = aluminium_logical_groups)
@@ -220,18 +220,18 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
     # Fit models 
     best_rmse_models= {
         'all' : 'gompertz model',
-        'high_consumption_high_income': 'gompertz model',
-        'medium_consumption_stable': 'gompertz model',
-        'low_consumption_stable': 'gompertz model',
-        'low_consumption_volatile': 'gompertz model',
+        'group_1': 'gompertz model',
+        'group_2': 'gompertz model',
+        'group_3': 'gompertz model',
+        'group_4': 'gompertz model',
     }
 
     bounds = {
         'all' :                     ([0, 0, 0], [1, 2000, 100]),
-        'high_consumption_high_income': ([0, 0, 0], [10, 2000, 100]),
-        'medium_consumption_stable': ([0, 0, 0], [10, 1000, 100]),
-        'low_consumption_stable': ([0, 0, 0], [10, 1000, 100]),
-        'low_consumption_volatile': ([0, 0, 0], [10, 1000, 100]),
+        'group_1': ([0, 0, 0], [10, 2000, 100]),
+        'group_2': ([0, 0, 0], [10, 1000, 100]),
+        'group_3': ([0, 0, 0], [10, 1000, 100]),
+        'group_4': ([0, 0, 0], [10, 1000, 100]),
     }
 
     aluminium.calculate_regressors(aluminium.historic_other_fraction_consumption)
@@ -239,11 +239,11 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
     aluminium.get_X_max_scaling_factor()
 
     aluminium.assign_fit_to_groups_not_fitted(little_data, 
-                                        assign_model='low_consumption_stable', 
+                                        assign_model='group_3', 
                                         model_nr=1, 
                                         overwrite_existing=True)
     aluminium.assign_fit_to_groups_not_fitted(scattered,
-                                        assign_model='medium_consumption_stable',
+                                        assign_model='group_2',
                                         model_nr=1,
                                         overwrite_existing=True)
     
