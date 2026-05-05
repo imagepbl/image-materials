@@ -48,6 +48,7 @@ ratio_btm_deployment_data["Value"] = ratio_btm_deployment_data["Value"] / 100 # 
 # ratio_btm_to_solar = 0.5 #0.5 MW power capacity per 1 MW Solar PV
 ratio_btm_to_solar = 2 #2 MWh energy capacity per 1 MW Solar PV
 unit = "MWh"
+ratio_btm_to_solar = prism.Q_(ratio_btm_to_solar, "MWh/MW")
 
 # Transform to xarray -----------------------------------------
 knowledge_graph_region = create_image_region_graph() #create_region_graph()
@@ -81,7 +82,7 @@ gcap_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_xr, output_coords=EPG_T
 
 ratio_btm_deployment = ratio_btm_deployment_data.groupby(["Region", "Time"])[["Value"]].sum()
 ratio_btm_deployment = xr.DataArray.from_series(ratio_btm_deployment["Value"])
-ratio_btm_deployment = prism.Q_(ratio_btm_deployment, "fraction")
+ratio_btm_deployment = prism.Q_(ratio_btm_deployment, "dimensionless")
 
 # Storage capacity ------
 storage_power = storage_power.iloc[:, :26]
@@ -95,6 +96,7 @@ storage_power_xr = xr.DataArray(
         "Region": [("region_" + str(r)) for r in storage_power.columns]
     }
 )
+storage_power_xr = prism.Q_(storage_power_xr, "MW")
 storage_power_xr = knowledge_graph_region.rebroadcast_xarray(storage_power_xr, output_coords=IMAGE_REGIONS, dim="Region") 
 
 # Storage capacity ------
@@ -109,6 +111,7 @@ storage_energy_xr = xr.DataArray(
         "Region": [("region_" + str(r)) for r in storage_energy.columns]
     }
 )
+storage_energy_xr = prism.Q_(storage_energy_xr, "MWh")
 storage_energy_xr = knowledge_graph_region.rebroadcast_xarray(storage_energy_xr, output_coords=IMAGE_REGIONS, dim="Region") 
 
 # Interpolate -----------------------------------------
@@ -150,17 +153,29 @@ plt.tight_layout()
 
 
 # timer = storage_power_xr.sum("Region")
-timer = storage_energy_xr.sum("Region")
+timer = storage_energy_xr.sum("Region").pint.to("GWh")
+btm = btm.pint.to("GWh")
+btm_global = btm_global.pint.to("GWh")
+t_start = 2015
+t_end = 2035 #2035 #2100
+
 
 fig, ax = plt.subplots(figsize=(14, 6))
 for i, region in enumerate(btm.Region.values):
-    ax.plot(btm.sel(Time=slice(2015, 2040)).Time.values, btm.sel(Region=region,Time=slice(2015, 2040)).values, linewidth=1.5, color=COLORS_IMAGE_REGIONS[i], label=region)
-ax.plot(btm_global.sel(Time=slice(2015, 2040)).Time.values, btm_global.sel(Time=slice(2015, 2040)).values, linewidth=2, color='black', label="Global")
-ax.plot(timer.sel(Time=slice(2015, 2040)).Time.values, timer.sel(Time=slice(2015, 2040)).values, linewidth=2, color='red', label="TIMER storage demand", linestyle='--')
-plt.xlabel("Year")
-plt.ylabel(f"behind-the-meter battery capacity ({unit})")
-plt.title("behind-the-meter battery deployment capacities by IMAGE region")
-plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize=8, ncol=2)
+    ax.plot(btm.sel(Time=slice(t_start, t_end)).Time.values, btm.sel(Region=region,Time=slice(t_start, t_end)).values, linewidth=1.5, color=COLORS_IMAGE_REGIONS[i], label=region)
+ax.plot(btm_global.sel(Time=slice(t_start, t_end)).Time.values, btm_global.sel(Time=slice(t_start, t_end)).values, linewidth=2, color='black', label="Global")
+ax.plot(timer.sel(Time=slice(t_start, t_end)).Time.values, timer.sel(Time=slice(t_start, t_end)).values, linewidth=2, color='black', label="TIMER storage demand", linestyle='--')
+ax.scatter(2030, 235.2, marker="v",s=100, color="#06DE8B", label="IRENA (absolute value)") #-Doubling_max
+ax.scatter(2030, timer.sel(Time=2030)*0.56, marker="v",s=100, color="#A0F3D3", label="IRENA (relative value)")
+
+plt.xlabel("Year", fontsize=14)
+plt.ylabel(f"behind-the-meter battery capacity (GWh)", fontsize=14)
+plt.title("behind-the-meter battery deployment capacity + total storage demand", fontsize=14, fontweight="bold")
+plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize=12, ncol=2)
+ax.grid(True, linestyle="--", alpha=0.3)
+plt.xticks(fontsize=14)
+plt.yticks(fontsize=14)
+ax.xaxis.set_major_locator(plt.MaxNLocator(integer=True))
 plt.tight_layout()
 
 
