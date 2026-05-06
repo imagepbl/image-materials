@@ -6,6 +6,7 @@
 
 
 import pint
+from scipy import interpolate
 import xarray as xr
 import prism
 import pandas as pd
@@ -51,7 +52,8 @@ from imagematerials.electricity.utils import (
    calculate_fraction_underground, 
    apply_ce_measures_to_elc
 )
-
+from imagematerials.vehicles.preprocessing.util import xarray_conversion
+from imagematerials.vehicles.modelling_functions import interpolate
 
 # from imagematerials.fossil_fuels.preprocessing.ffconstants import (
 #     circular_economy_config,
@@ -196,9 +198,10 @@ def compute_processing_materials(path_base: str, climate_policy_config: dict, ci
 
     return processing_materials_xr
 
-#%% Transport/Vehicles stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
+# #%% Transport/Vehicles stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 
-###########################################################################################################
+# ###########################################################################################################
+# def compute_transport_material_fraction(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 def compute_transport_materials(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
     path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
@@ -206,16 +209,39 @@ def compute_transport_materials(path_base: str, climate_policy_config: dict, cir
     if not path_external_data_scenario.exists():
         path_external_data_scenario = Path(path_base, "fossil_fuels", STANDARD_SCEN_EXTERNAL_DATA)
 
-    # assert path_external_data_scenario.is_dir()
-###########################################################################################################
-    # Read in files #
+#     # assert path_external_data_scenario.is_dir()
+# ###########################################################################################################
+#     # Read in files #
 
-    # 1. External Data --------------------------------------------- 
-   # material compositions of transport infrastructure in kg/kg/year
+#     # 1. External Data --------------------------------------------- 
+#    # material compositions of transport infrastructure in kg/kg/year
+#     transport_material_fraction_data = pd.read_csv(
+#     DATA_DIR / "Transport" / "Transport_material_fraction.csv",
+#     index_col=[0, 1]
+#     )
+
     transport_materials_data = pd.read_csv(DATA_DIR / "Transport" / "Transport_materials.csv")
-     # Material Intensities -------
 
-    # Set index
+
+#      # Material Fraction -------
+
+#     transport_materials_fraction = transport_material_fraction_data.rename_axis(
+#         "mode", axis=1
+#     ).rename_axis(
+#         ["year", "material"], axis=0
+#     ).stack().unstack(["mode", "material"])
+#     transport_material_fraction = interpolate(pd.DataFrame(transport_materials_fraction))
+
+
+#     transport_material_fraction_xr = xarray_conversion(
+#         transport_material_fraction,
+#         (["Cohort"], ["Type", "material"],)
+#     )
+
+#     # transport_material_fraction_xr = prism.Q_(transport_material_fraction_xr, "%")
+
+
+#     # # Set index
     transport_materials_data = transport_materials_data.set_index(['Year', 'Tech Type'])
 
     # Convert to 3D array: (Material, Year, Tech)
@@ -233,11 +259,35 @@ def compute_transport_materials(path_base: str, climate_policy_config: dict, cir
     transport_materials_xr = value_2020.expand_dims(Cohort=year_range).transpose("material", "Cohort", "Type")
     transport_materials_xr = prism.Q_(transport_materials_xr, "kg/kg")
 
-    #Rebroadcast to standard technology names from TIMER, and convert coordinate type back to python strings (since rebroadcast changes it to numpy strings)
-    # transport_materials_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(transport_materials_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
-    # transport_materials_xr = transport_materials_xr.assign_coords(Type=np.array(transport_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
+#     #Rebroadcast to standard technology names from TIMER, and convert coordinate type back to python strings (since rebroadcast changes it to numpy strings)
+#     # transport_materials_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(transport_materials_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
+#     # transport_materials_xr = transport_materials_xr.assign_coords(Type=np.array(transport_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
+#     return transport_material_fraction_xr
     return transport_materials_xr
+
+
+
+# ###########################################################################################################
+# def compute_transport_material_weight(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+
+#     path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
+#     # test if path_external_data_scenario exists and if not set to standard scenario
+#     if not path_external_data_scenario.exists():
+#         path_external_data_scenario = Path(path_base, "fossil_fuels", STANDARD_SCEN_EXTERNAL_DATA)
+
+#     # assert path_external_data_scenario.is_dir()
+# ###########################################################################################################
+
+#     #Weight of vehicles
+#     transport_material_weight = pd.read_csv(DATA_DIR / "Transport" / "Transport_materials_weight.csv", index_col=0)
+#     transport_material_weight = interpolate(pd.DataFrame(transport_material_weight))
+
+#     transport_material_weight_xr = xarray_conversion(transport_material_weight, (["Cohort"], ["Type"],))
+#     # transport_material_weight_xr = prism.Q_(transport_material_weight_xr, "kg/count") 
+
+
+#     return transport_material_weight_xr
 
 #%% Pipelines stage (oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 ###########################################################################################################

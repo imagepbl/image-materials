@@ -1,0 +1,28 @@
+This run was done on 
+Tue 11/08/2022 22:31:49.09 
+ 
+Using the following modelversion: 
+Path: .
+Working Copy Root Path: X:\user\boerdhs\Projects\SSPs_IMAGE33\2_TIMER\TIMER_3_3
+URL: https://pbl.sliksvn.com/timer/branches/TIMER_3_3
+Relative URL: ^/branches/TIMER_3_3
+Repository Root: https://pbl.sliksvn.com/timer
+Repository UUID: f099b7eb-94ce-ac4c-b60a-c38653ba2815
+Revision: 5346
+Node Kind: directory
+Schedule: normal
+Last Changed Author: harmensytzedebo
+Last Changed Rev: 5344
+Last Changed Date: 2022-10-26 20:22:09 +0200 (Wed, 26 Oct 2022)
+
+ 
+Below follows a list of files that were unversioned(?) or carried local modifications(M) when running. 
+?       ModelVersionInfo
+?       in_SSP1_LI_ELEC
+?       in_SSP2_CP
+X       lib\source\source_timerlib
+X       lib\source\source_utillib
+
+Performing status on external item at 'lib\source\source_timerlib':
+
+Performing status on external item at 'lib\source\source_utillib':

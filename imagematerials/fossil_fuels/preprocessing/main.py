@@ -183,6 +183,8 @@ def get_preprocessing_data_transport(path_base: str, climate_policy_config: dict
     # assert path_external_data_scenario.is_dir()
     transport_lifetime_xr = compute_transport_lifetimes(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
     transport_lifetime_xr = convert_lifetime(transport_lifetime_xr)
+    # transport_material_fraction_xr = compute_transport_material_fraction(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
+    # transport_material_weight_xr = compute_transport_material_weight(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
     transport_materials_xr = compute_transport_materials(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
     transportcap_xr = compute_transport_capacity(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
 
@@ -190,11 +192,15 @@ def get_preprocessing_data_transport(path_base: str, climate_policy_config: dict
     prep_data_transport = {}
     prep_data_transport["lifetimes"] = transport_lifetime_xr
     prep_data_transport["stocks"] = transportcap_xr
+    # prep_data_transport["material_fractions"] = transport_material_fraction_xr
+    # prep_data_transport["weights"] = transport_material_weight_xr
     prep_data_transport["material_intensities"] = transport_materials_xr
     prep_data_transport["knowledge_graph"] = create_fossil_fuel_graph() 
 
     # add units
     prep_data_transport["stocks"] = prism.Q_(prep_data_transport["stocks"], "kg")
+    # prep_data_transport["material_fractions"] = prism.Q_(prep_data_transport["material_fractions"], "%")
+    # prep_data_transport["weights"] = prism.Q_(prep_data_transport["weights"], "kg/count")
     prep_data_transport["material_intensities"] = prism.Q_(prep_data_transport["material_intensities"], "kg/kg")
     prep_data_transport["set_unit_flexible"] = prism.U_(prep_data_transport["stocks"]) # prism.U_ gives the unit back
 
