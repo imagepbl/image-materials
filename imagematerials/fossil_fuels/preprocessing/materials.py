@@ -263,7 +263,7 @@ def compute_transport_materials(path_base: str, climate_policy_config: dict, cir
 #     # transport_materials_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(transport_materials_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
 #     # transport_materials_xr = transport_materials_xr.assign_coords(Type=np.array(transport_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
 
-#     return transport_material_fraction_xr
+#   return transport_material_fraction_xr
     return transport_materials_xr
 
 
