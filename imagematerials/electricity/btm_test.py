@@ -43,12 +43,8 @@ storage_power = read_mym_df(Path(path_data, "image", "SSP2_baseline", "EnergySer
 # storage energy capacity (MWh, reservoir)
 storage_energy = read_mym_df(Path(path_data, "image", "SSP2_baseline", "EnergyServices", "StorResTot.out"))
 
-ratio_btm_deployment_data = pd.read_csv(Path(path_data, "electricity",'behind_the_meter_battery_deployment_ratio.txt'), usecols=["Time", "Region", "Value"])
-ratio_btm_deployment_data["Value"] = ratio_btm_deployment_data["Value"] / 100 # convert percentage to fraction
-# ratio_btm_to_solar = 0.5 #0.5 MW power capacity per 1 MW Solar PV
-ratio_btm_to_solar = 2 #2 MWh energy capacity per 1 MW Solar PV
-unit = "MWh"
-ratio_btm_to_solar = prism.Q_(ratio_btm_to_solar, "MWh/MW")
+ratio_btm_deployment_data = pd.read_csv(Path(path_data, "electricity","standard_data","behind_the_meter_battery_deployment_ratio.csv"), usecols=["Time", "Region", "Value"])
+
 
 # Transform to xarray -----------------------------------------
 knowledge_graph_region = create_image_region_graph() #create_region_graph()
@@ -77,12 +73,8 @@ gcap_xr = xr.DataArray(
 gcap_xr = prism.Q_(gcap_xr, "MW")
 gcap_xr = knowledge_graph_region.rebroadcast_xarray(gcap_xr, output_coords=IMAGE_REGIONS, dim="Region") 
 gcap_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_xr, output_coords=EPG_TECHNOLOGIES, dim="Type")
-
-# deployment ratio ------
-
-ratio_btm_deployment = ratio_btm_deployment_data.groupby(["Region", "Time"])[["Value"]].sum()
-ratio_btm_deployment = xr.DataArray.from_series(ratio_btm_deployment["Value"])
-ratio_btm_deployment = prism.Q_(ratio_btm_deployment, "dimensionless")
+# TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921
+gcap_xr_interp = add_historic_stock(gcap_xr, YEAR_FIRST_GRID)
 
 # Storage capacity ------
 storage_power = storage_power.iloc[:, :26]
@@ -114,44 +106,99 @@ storage_energy_xr = xr.DataArray(
 storage_energy_xr = prism.Q_(storage_energy_xr, "MWh")
 storage_energy_xr = knowledge_graph_region.rebroadcast_xarray(storage_energy_xr, output_coords=IMAGE_REGIONS, dim="Region") 
 
-# Interpolate -----------------------------------------
-# TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921
-gcap_xr_interp = add_historic_stock(gcap_xr, YEAR_FIRST_GRID)
-
-ratio_btm_deployment_xr_interp = interpolate_xr(ratio_btm_deployment, t_start = 2000, t_end = 2100)
-
-var = ratio_btm_deployment_xr_interp
-fig, ax = plt.subplots(figsize=(14, 6))
-for i, region in enumerate(var.Region.values):
-    ax.plot(var.Time.values, var.sel(Region=region).values, linewidth=1.5, color=COLORS_IMAGE_REGIONS[i], label=region)
-# ax.axvline(x=2014, color='gray', linestyle='--', alpha=0.5)
-# ax.axvline(x=2019, color='gray', linestyle='--', alpha=0.5)
-# ax.axvline(x=2024, color='gray', linestyle='--', alpha=0.5)
-plt.xlabel("Year")
-plt.ylabel("behind-the-meter battery deployment ratio")
-plt.title("Interpolated behind-the-meter battery deployment ratios by IMAGE region")
-plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize=8, ncol=2)
-plt.tight_layout()
-
 
 ####################################################################################################
-#%%
+#%% As a script
+
+# ratio_btm_deployment_data["Value"] = ratio_btm_deployment_data["Value"] / 100 # convert percentage to fraction
+# ratio_btm_to_solar = 0.5 #0.5 MW power capacity per 1 MW Solar PV
+ratio_btm_to_solar = 2 #2 MWh energy capacity per 1 MW Solar PV
+unit = "MWh"
+ratio_btm_to_solar = prism.Q_(ratio_btm_to_solar, "MWh/MW")
+
+ratio_btm_deployment = ratio_btm_deployment_data.groupby(["Region", "Time"])[["Value"]].sum()
+ratio_btm_deployment = xr.DataArray.from_series(ratio_btm_deployment["Value"])
+ratio_btm_deployment = prism.Q_(ratio_btm_deployment, "dimensionless")
+
+ratio_btm_deployment_xr_interp = interpolate_xr(ratio_btm_deployment, t_start = 2000, t_end = 2100)
 
 btm = ratio_btm_deployment_xr_interp * gcap_xr.sel(Type="SPVR").drop_vars("Type") * ratio_btm_to_solar
 btm_global = btm.sum(dim="Region")
 
+
+####################################################################################################
+#%% As a function
+
+# ratio_btm_to_solar = 0.5 #0.5 MW power capacity per 1 MW Solar PV
+ratio_btm_to_solar = 2 #2 MWh energy capacity per 1 MW Solar PV
+
+def derive_btm_installed_capacity(gcap_xr_interp: xr.DataArray,
+                                  ratio_btm_deployment_data: pd.DataFrame,
+                                  ratio_btm_to_solar: float = 2) -> xr.DataArray:
+    """ Derive behind-the-meter (BTM) battery storage installed energy capacity from
+    solar PV capacity and BTM deployment ratios.
+
+    The BTM energy capacity is estimated as:
+        BTM [MWh] = btm_deployment_ratio [–] × solar_PV_capacity [MW] × ratio_btm_to_solar [MWh/MW]
+
+    where the BTM deployment ratio represents the fraction of solar PV installations
+    that are paired with a BTM battery, and ratio_btm_to_solar defines the energy
+    capacity of that battery per unit of solar PV power capacity.
+
+    Parameters
+    ----------
+    gcap_xr_interp : xr.DataArray
+        Interpolated installed power capacity by technology type, with dimensions
+        (Time, Region, Type) and units in MW. Must contain a "SPVR" entry along
+        the Type dimension (rooftop solar PV).
+    ratio_btm_deployment_data : pd.DataFrame
+        Raw BTM deployment ratio data with columns ["Region", "Time", "Value"],
+        where Value is expressed as a fraction (0–1) representing the share
+        of solar PV capacity paired with BTM storage.
+    ratio_btm_to_solar : int, optional
+        Energy capacity of BTM battery storage per unit of paired solar PV power
+        capacity, in MWh/MW. Default is 2, meaning a 1 MW solar installation is
+        paired with a 2 MWh battery.
+
+    Returns
+    -------
+    xr.DataArray
+        BTM installed energy capacity with dimensions (Time, Region) and units
+        in MWh, interpolated over the period 2000–2100.
+    """
+    
+    ratio_btm_to_solar = prism.Q_(ratio_btm_to_solar, "MWh/MW")
+
+    ratio_btm_deployment = ratio_btm_deployment_data.groupby(["Region", "Time"])[["Value"]].sum()
+    ratio_btm_deployment = xr.DataArray.from_series(ratio_btm_deployment["Value"])
+    ratio_btm_deployment = prism.Q_(ratio_btm_deployment, "dimensionless")
+    ratio_btm_deployment_xr_interp = interpolate_xr(ratio_btm_deployment, t_start = 2000, t_end = 2100)
+
+    btm = ratio_btm_deployment_xr_interp * gcap_xr_interp.sel(Type="SPVR").drop_vars("Type") * ratio_btm_to_solar
+
+    return btm
+
+
+btm = derive_btm_installed_capacity(gcap_xr_interp, ratio_btm_deployment_data, ratio_btm_to_solar)
+btm_global = btm.sum(dim="Region")
+
+
+####################################################################################################
+#%% Plots
+
+# per region ---------------------------------------------------------------------------------------
 fig, ax = plt.subplots(figsize=(14, 6))
 for i, region in enumerate(btm.Region.values):
     ax.plot(btm.Time.values, btm.sel(Region=region).values, linewidth=1.5, color=COLORS_IMAGE_REGIONS[i], label=region)
 ax.plot(btm_global.Time.values, btm_global.values, linewidth=2, color='black', label="Global")
 plt.xlabel("Year")
-plt.ylabel(f"behind-the-meter battery capacity ({unit})")
+plt.ylabel(f"behind-the-meter battery capacity (MWh)")
 plt.title("behind-the-meter battery deployment capacities by IMAGE region")
 plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize=8, ncol=2)
 plt.tight_layout()
 
 
-
+# Global + comparison to TIMER storage demand ------------------------------------------------------
 # timer = storage_power_xr.sum("Region")
 timer = storage_energy_xr.sum("Region").pint.to("GWh")
 btm = btm.pint.to("GWh")
@@ -176,6 +223,22 @@ ax.grid(True, linestyle="--", alpha=0.3)
 plt.xticks(fontsize=14)
 plt.yticks(fontsize=14)
 ax.xaxis.set_major_locator(plt.MaxNLocator(integer=True))
+plt.tight_layout()
+
+
+#%%%
+
+var = ratio_btm_deployment_xr_interp
+fig, ax = plt.subplots(figsize=(14, 6))
+for i, region in enumerate(var.Region.values):
+    ax.plot(var.Time.values, var.sel(Region=region).values, linewidth=1.5, color=COLORS_IMAGE_REGIONS[i], label=region)
+# ax.axvline(x=2014, color='gray', linestyle='--', alpha=0.5)
+# ax.axvline(x=2019, color='gray', linestyle='--', alpha=0.5)
+# ax.axvline(x=2024, color='gray', linestyle='--', alpha=0.5)
+plt.xlabel("Year")
+plt.ylabel("behind-the-meter battery deployment ratio")
+plt.title("Interpolated behind-the-meter battery deployment ratios by IMAGE region")
+plt.legend(loc="upper left", bbox_to_anchor=(1, 1), fontsize=8, ncol=2)
 plt.tight_layout()
 
 

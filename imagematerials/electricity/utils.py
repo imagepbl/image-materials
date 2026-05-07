@@ -845,8 +845,8 @@ def _build_status_timeseries_phs_data(df: pd.DataFrame,
     return xr_status
 
 def derive_phs_installed_capacity(data: list,
-                                  factor_phs_growth_rel_demand: int = 0.5,
-                                  mean_discharge_duration: int = 10,
+                                  factor_phs_growth_rel_demand: float = 0.5,
+                                  mean_discharge_duration: float = 10,
                                   flag_phs: str = "phs_low"):
     """ Derive installed pumped hydro storage (PHS) power and energy capacity across IMAGE regions
     from historical data, pipeline projects, and demand-linked growth assumptions.
@@ -1075,7 +1075,7 @@ def derive_phs_installed_capacity(data: list,
         # growth rate = f(t+1)/f(t) - 1, by rolling -1 values for year 2061 are now saved under year 2060, 
         # so when we divide by demand_vals which are still aligned with the original years, we get the 
         # growth rate from t to t+1 aligned with year t. 
-        demand_vals = demand.values
+        demand_vals = demand.pint.magnitude # get values without attached unit
         growth_rate = (np.roll(demand_vals, -1, axis=0) / demand_vals) - 1 
         # last timestep has no forward value → set to 0
         growth_rate[-1, ...] = 0
@@ -1086,7 +1086,7 @@ def derive_phs_installed_capacity(data: list,
         growth_rate[0, ...] = 0  # first year has no previous growth
 
         # --- initialize result array ---
-        phs_vals = phs_temporary.values.copy()
+        phs_vals = phs_temporary.pint.magnitude.copy() # get values without attached unit
 
         # --- recursive loop over time ---
         for t in range(1, phs_vals.shape[0]):
@@ -1117,6 +1117,52 @@ def derive_phs_installed_capacity(data: list,
     phs_energy = phs_power * mean_discharge_duration
 
     return phs_power, phs_energy
+
+def derive_btm_installed_capacity(gcap_xr_interp: xr.DataArray,
+                                  ratio_btm_deployment_data: pd.DataFrame,
+                                  ratio_btm_to_solar: float = 2) -> xr.DataArray:
+    """ Derive behind-the-meter (BTM) battery storage installed energy capacity from
+    solar PV capacity and BTM deployment ratios.
+
+    The BTM energy capacity is estimated as:
+        BTM [MWh] = btm_deployment_ratio [–] × solar_PV_capacity [MW] × ratio_btm_to_solar [MWh/MW]
+
+    where the BTM deployment ratio represents the fraction of solar PV installations
+    that are paired with a BTM battery, and ratio_btm_to_solar defines the energy
+    capacity of that battery per unit of solar PV power capacity.
+
+    Parameters
+    ----------
+    gcap_xr_interp : xr.DataArray
+        Interpolated installed power capacity by technology type, with dimensions
+        (Time, Region, Type) and units in MW. Must contain a "SPVR" entry along
+        the Type dimension (rooftop solar PV).
+    ratio_btm_deployment_data : pd.DataFrame
+        Raw BTM deployment ratio data with columns ["Region", "Time", "Value"],
+        where Value is expressed as a fraction (0–1) representing the share
+        of solar PV capacity paired with BTM storage.
+    ratio_btm_to_solar : int, optional
+        Energy capacity of BTM battery storage per unit of paired solar PV power
+        capacity, in MWh/MW. Default is 2, meaning a 1 MW solar installation is
+        paired with a 2 MWh battery.
+
+    Returns
+    -------
+    xr.DataArray
+        BTM installed energy capacity with dimensions (Time, Region) and units
+        in MWh, interpolated over the period 2000–2100.
+    """
+    
+    ratio_btm_to_solar = prism.Q_(ratio_btm_to_solar, "MWh/MW")
+
+    ratio_btm_deployment = ratio_btm_deployment_data.groupby(["Region", "Time"])[["Value"]].sum()
+    ratio_btm_deployment = xr.DataArray.from_series(ratio_btm_deployment["Value"])
+    ratio_btm_deployment = prism.Q_(ratio_btm_deployment, "dimensionless")
+    ratio_btm_deployment_xr_interp = interpolate_xr(ratio_btm_deployment, t_start = 2000, t_end = 2100)
+
+    btm = ratio_btm_deployment_xr_interp * gcap_xr_interp.sel(Type="SPVR").drop_vars("Type") * ratio_btm_to_solar
+
+    return btm
 
 def calculate_storage_market_shares(
     storage_costs: xr.DataArray,

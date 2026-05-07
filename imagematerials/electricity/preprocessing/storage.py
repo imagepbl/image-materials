@@ -9,11 +9,13 @@ from importlib.resources import files
 import prism
 from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
-from imagematerials.concepts import create_electricity_graph, create_region_graph
+from imagematerials.concepts import create_electricity_graph, create_image_region_graph, create_region_graph
 from imagematerials.electricity.utils import (
     MNLogit, 
     stock_tail, 
-    create_prep_data, 
+    create_prep_data,
+    derive_phs_installed_capacity,
+    derive_btm_installed_capacity,
     logistic, 
     quadratic,
     interpolate_xr, 
@@ -29,12 +31,24 @@ from imagematerials.electricity.constants import (
     YEAR_FIRST_GRID,
     SENS_ANALYSIS,
     STD_LIFETIMES_ELECTR,
-    unit_mapping
+    unit_mapping,
+    mean_discharge_duration,
+    factor_phs_growth_rel_demand,
+    flag_phs_scenario,
+    ratio_btm_to_solar
 )
 
 # for ttesting, remove later:
 END_YEAR = 2100
 INTERMEDIATE_YEAR = 2080
+
+# delete again ------------------
+scenario = "SSP2_baseline"
+path_current = Path().resolve()
+path_base = path_current.parent.parent # base path of the project -> image-materials
+path_image_output = Path(path_base, "data", "raw", "image", scenario, "EnergyServices")
+path_base = Path(path_base, "data", "raw")
+# ----------------------------------
 
 
 #############################################################################################################
@@ -100,7 +114,6 @@ Notes
 
 """
 
-# path_image_output = Path(path_base, "data", "raw", "image", scen_folder, "EnergyServices")
 path_external_data_standard = Path(path_base, "electricity", "standard_data")
 path_external_data_scenario = Path(path_base, "electricity", scenario) #test
 
@@ -144,42 +157,48 @@ kilometrage = pd.read_csv(path_external_data_scenario / 'kilometrage.csv', index
 # material compositions (storage) in wt%
 storage_materials = pd.read_csv(path_external_data_standard / 'storage_materials_dynamic.csv',index_col=[0,1],usecols=lambda col: col != "unit").transpose()  # wt% of total battery weight for various materials, total battery weight is given by the density file above
 
-# Data for Pumped Hydropower Storage (PHS) -----------------------------------------------------
+# Data for Pumped Hydropower Storage (PHS) ---------------------------------------------------------
 # Hydro-dam power capacity (also MW) within 5 regions reported by the IHA (international Hydropwer Association)
 # phs_projections = pd.read_csv(path_external_data_standard / 'PHS.csv', index_col='t')   # pumped hydro storage capacity (MW)
 # Dataset 1: IHA data set of individual PHS sites, with commissioning year, capacity, energy stored,
 # operating status, and hydro type
-df_data1 =  pd.read_csv(Path(path_external_data_standard,"electricity","standard_data","phs_data1_iha_capacity_by_individual_facility.csv"), 
+df_data1 =  pd.read_csv(Path(path_external_data_standard,"phs_data1_iha_capacity_by_individual_facility.csv"), 
                     usecols=["Operational Status", "Country", "Commisioning Year", "Hydro Type", 
                             "Generating Capacity", "Energy stored (GWh)"])
 
 # Dataset 2: IHA World Hydropower Outlook dataset of aggregated PHS power capacity (MW) by country for 3 years (2014, 2019, 2024) 
 #           + IEA global estimates
-df_data2 =  pd.read_csv(Path(path_external_data_standard,"electricity","standard_data","phs_data2_iha_world_hydropower_outlook_historic_stocks.csv"),
+df_data2 =  pd.read_csv(Path(path_external_data_standard,"phs_data2_iha_world_hydropower_outlook_historic_stocks.csv"),
                         usecols=["Time", "unit", "Region", "value"])
 
 # Dataset 3: IHA data on PHS projects under contruction, planned and announced per IHA region
-df_data3 =  pd.read_csv(Path(path_external_data_standard,"electricity","standard_data","phs_data3_iha_future_planned_capacity_mw_per_iha_region.csv"),
+df_data3 =  pd.read_csv(Path(path_external_data_standard,"phs_data3_iha_future_planned_capacity_mw_per_iha_region.csv"),
                         usecols=["status", "unit", "Region", "value"])
 
 # Manual adjustments to future shares based on literature insights, but authors estimation (unit: shares)
-df_shares_adjustment_2030 =  pd.read_csv(Path(path_external_data_standard,"electricity","standard_data","phs_regional_shares_per_iha_region_in_2030.csv"),
+df_shares_adjustment_2030 =  pd.read_csv(Path(path_external_data_standard,"phs_regional_shares_per_iha_region_in_2030.csv"),
                         usecols=["time", "Region", "value"])
+
+# Data for Behind-the-Meter Storage (BTM) ----------------------------------------------------------
+# share of solar PV capacity paired with BTM storage per IMAGE region (values: 0-1)
+ratio_btm_deployment_data = pd.read_csv(Path(path_data, "electricity","standard_data","behind_the_meter_battery_deployment_ratio.csv"), usecols=["Time", "Region", "Value"])
+
 
 
 # 2. IMAGE/TIMER files ====================================================================================
 
 # IMAGE-energy: storage energy capacity demand (MWh, reservoir)
-# storage = read_mym_df(path_image_output.joinpath("StorResTot.out"))   #storage capacity in MWh (reservoir, so energy capacity, not power capacity, the latter is used later on in the pumped hydro storage calculations)
-storage_energy = read_mym_df(climate_policy_config["config_file_path"] / climate_policy_config["data_files"]['StorResTot'])
+storage_energy = read_mym_df(path_image_output.joinpath("StorResTot.out"))   #storage capacity in MWh (reservoir, so energy capacity, not power capacity, the latter is used later on in the pumped hydro storage calculations)
+# storage_energy = read_mym_df(climate_policy_config["config_file_path"] / climate_policy_config["data_files"]['StorResTot'])
 
 # IMAGE-energy: storage power capacity demand (MW)
-# storage_power = read_mym_df(path_image_output / 'StorCapTot.out')  
-storage_power = read_mym_df(climate_policy_config["config_file_path"] / climate_policy_config["data_files"]['StorCapTot'])
+storage_power = read_mym_df(path_image_output / 'StorCapTot.out')  
+# storage_power = read_mym_df(climate_policy_config["config_file_path"] / climate_policy_config["data_files"]['StorCapTot'])
 
 # Generation capacity (stock & inflow/new) in MW peak capacity, FILES from TIMER
-gcap_data = read_mym_df(climate_policy_config["config_file_path"] / climate_policy_config["data_files"]['GCap']) # needed to get hydro power for storage
-gcap_data = gcap_data.iloc[:, :26]
+gcap_data = read_mym_df(path_image_output / 'GCap.out')  
+# gcap_data = read_mym_df(climate_policy_config["config_file_path"] / climate_policy_config["data_files"]['GCap']) # needed to get hydro power for storage
+# gcap_data = gcap_data.iloc[:, :26]
 
 
 # ----------------------------------------------------------------------------------------------------------
@@ -188,7 +207,86 @@ gcap_data = gcap_data.iloc[:, :26]
 # ##########################################################################################################
 # ----------------------------------------------------------------------------------------------------------
 
-# Calculations used in both 'vehicle battery storage' and 'other storage'
+# ##########################################################################################################
+# %%% TIMER variables
+
+knowledge_graph_region = create_image_region_graph()
+
+storage_energy = storage_energy.iloc[:, :26]
+storage_energy.index.name = "Time"
+storage_energy.columns.name = "Region"
+storage_energy_xr = xr.DataArray(
+    storage_energy.values,
+    dims=["Time", "Region"],
+    coords={
+        "Time": storage_energy.index,
+        "Region": [("region_" + str(r)) for r in storage_energy.columns]
+    }
+)
+storage_energy_xr = prism.Q_(storage_energy_xr, unit="MWh")
+storage_energy_xr = knowledge_graph_region.rebroadcast_xarray(storage_energy_xr, output_coords=IMAGE_REGIONS, dim="Region")
+
+storage_power = storage_power.iloc[:, :26]
+storage_power.index.name = "Time"
+storage_power.columns.name = "Region"
+storage_power_xr = xr.DataArray(
+    storage_power.values,
+    dims=["Time", "Region"],
+    coords={
+        "Time": storage_power.index,
+        "Region": [("region_" + str(r)) for r in storage_power.columns]
+    }
+)
+storage_power_xr = prism.Q_(storage_power_xr, unit="MW")
+storage_power_xr = knowledge_graph_region.rebroadcast_xarray(storage_power_xr, output_coords=IMAGE_REGIONS, dim="Region")
+
+gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
+gcap_data = gcap_data.loc[gcap_data['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', *range(1, len(EPG_TECHNOLOGIES) + 1)]]  # only keep relevant years and technology columns
+# Extract coordinate labels
+years = sorted(gcap_data['time'].unique())
+regions = sorted(gcap_data['DIM_1'].unique())
+techs = list(range(1, len(EPG_TECHNOLOGIES)+1))
+# Convert to 3D array: (Year, Region, Tech)
+data_array = gcap_data[techs].to_numpy().reshape(len(years), len(regions), len(techs))
+# Build xarray DataArray
+gcap_xr = xr.DataArray(
+    data_array,
+    dims=('Time', 'Region', 'Type'),
+    coords={
+        'Time': years,
+        'Region': [("region_" + str(r)) for r in regions],
+        'Type': [str(r) for r in techs]
+    },
+    name='GenerationCapacity'
+)
+gcap_xr = prism.Q_(gcap_xr, "MW")
+gcap_xr = knowledge_graph_region.rebroadcast_xarray(gcap_xr, output_coords=IMAGE_REGIONS, dim="Region") 
+gcap_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_xr, output_coords=EPG_TECHNOLOGIES, dim="Type")
+
+
+##################
+# Interpolations #
+##################
+
+# TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921
+gcap_xr_interp = add_historic_stock(gcap_xr, YEAR_FIRST_GRID)
+
+####################################################################################################
+#%%% 1. Pumped Hydropower Storage
+
+data_phs = [df_data1, df_data2, df_data3, df_shares_adjustment_2030, storage_energy_xr]
+phs_power, phs_energy = derive_phs_installed_capacity(data_phs, factor_phs_growth_rel_demand, mean_discharge_duration, flag_phs_scenario) #mean_discharge_duration
+
+
+####################################################################################################
+#%%% 2. Behind-the-meter storage
+
+btm = derive_btm_installed_capacity(gcap_xr_interp, ratio_btm_deployment_data, ratio_btm_to_solar)
+
+
+
+####################################################################################################
+#%%% 2. Behind-the-meter storage
 
 ##################
 # Interpolations #

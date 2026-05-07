@@ -130,7 +130,7 @@ storage_energy_xr = xr.DataArray(
     }
 )
 storage_energy_xr = knowledge_graph_region.rebroadcast_xarray(storage_energy_xr, output_coords=IMAGE_REGIONS, dim="Region")
-
+storage_energy_xr = prism.Q_(storage_energy_xr, unit="MWh")
 
 data_phs = [df_data1, df_data2, df_data3, df_shares_adjustment_2030, storage_energy_xr]
 
@@ -150,9 +150,14 @@ storage_power_xr = xr.DataArray(
     }
 )
 storage_power_xr = knowledge_graph_region.rebroadcast_xarray(storage_power_xr, output_coords=IMAGE_REGIONS, dim="Region") 
+storage_power_xr = prism.Q_(storage_power_xr, unit="MW")
+
 
 # Constants ----------------------------------------------------------------------------------------
-factor_phs_growth_rel_demand = 0.5
+# growth factor for PHS capacity relative to growth in storage energy demand after 2060 in the high 
+# PHS scenario (phs_high); a value of 0.5 means that if the storage energy demand grows by 10% from 
+# one year to the next, the PHS capacity will grow by 5% in that year.
+factor_phs_growth_rel_demand = 0.5 
 # Assumption on average discharge duration of PHS plants in hours. The discharge duration can vary 
 # widely in reality, typically ranging 6-24 h. This simplifying assumption is needed due to the lack
 # of data on installed storage energy capacity of PHS plants (MWh). Since the stock model is done in 
@@ -160,7 +165,7 @@ factor_phs_growth_rel_demand = 0.5
 # Note: important for us is not the total energy produced by the PHS plant/energy cycled in a year, 
 # but the energy capacity of the reservoir, which determines how much energy can be stored at a given 
 # time as well as the materials needed for the reservoir construction (size of the reservoir).
-mean_discharge_duration = 10
+mean_discharge_duration = 12
 
 ####################################################################################################
 ####################################################################################################
@@ -168,6 +173,7 @@ mean_discharge_duration = 10
 
 ################################################################################################
 # Pretreat data
+flag_phs = "phs_high" # "phs_low" or "phs_high"
 
 df_data1 = df_data1.loc[df_data1["Operational Status"] == "Operational"]
 df_data1 = df_data1.rename(columns={'Country': 'Region', 'Commisioning Year': 'Cohort'})
@@ -302,7 +308,7 @@ elif flag_phs == "phs_high":
     # growth rate = f(t+1)/f(t) - 1, by rolling -1 values for year 2061 are now saved under year 2060, 
     # so when we divide by demand_vals which are still aligned with the original years, we get the 
     # growth rate from t to t+1 aligned with year t. 
-    demand_vals = demand.values
+    demand_vals = demand.pint.magnitude # get values without attached unit
     growth_rate = (np.roll(demand_vals, -1, axis=0) / demand_vals) - 1 
     # last timestep has no forward value → set to 0
     growth_rate[-1, ...] = 0
@@ -313,7 +319,7 @@ elif flag_phs == "phs_high":
     growth_rate[0, ...] = 0  # first year has no previous growth
 
     # --- initialize result array ---
-    phs_vals = phs_temporary.values.copy()
+    phs_vals = phs_temporary.pint.magnitude.copy() # get values without attached unit
 
     # --- recursive loop over time ---
     for t in range(1, phs_vals.shape[0]):
@@ -354,8 +360,8 @@ phs_energy = phs_power * mean_discharge_duration
 #%% As function
 
 def derive_phs_installed_capacity(data: list,
-                                  factor_phs_growth_rel_demand: int = 0.5,
-                                  mean_discharge_duration: int = 10,
+                                  factor_phs_growth_rel_demand: float = 0.5,
+                                  mean_discharge_duration: float = 10,
                                   flag_phs: str = "phs_low"):
     
     df_data1 = data[0]
@@ -499,7 +505,7 @@ def derive_phs_installed_capacity(data: list,
         # growth rate = f(t+1)/f(t) - 1, by rolling -1 values for year 2061 are now saved under year 2060, 
         # so when we divide by demand_vals which are still aligned with the original years, we get the 
         # growth rate from t to t+1 aligned with year t. 
-        demand_vals = demand.values
+        demand_vals = demand.pint.magnitude # get values without attached unit
         growth_rate = (np.roll(demand_vals, -1, axis=0) / demand_vals) - 1 
         # last timestep has no forward value → set to 0
         growth_rate[-1, ...] = 0
@@ -510,7 +516,7 @@ def derive_phs_installed_capacity(data: list,
         growth_rate[0, ...] = 0  # first year has no previous growth
 
         # --- initialize result array ---
-        phs_vals = phs_temporary.values.copy()
+        phs_vals = phs_temporary.pint.magnitude.copy() # get values without attached unit
 
         # --- recursive loop over time ---
         for t in range(1, phs_vals.shape[0]):

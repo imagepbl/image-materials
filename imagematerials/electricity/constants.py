@@ -31,8 +31,8 @@ MEGA_TO_TERA = 1_000_000  # 1 Tera = 1,000,000 Mega
 PKMS_TO_VKMS = 1_000_000_000_000
 TONNES_TO_KGS = 1000
 
-
-# General constants ---------------------------------------------
+####################################################################################################
+# General constants
 
 STD_LIFETIMES_ELECTR = 0.214  # standard deviation as a fraction of the mean lifetime applicable to energy equipment (Asset Management for Infrastructure Systems: Energy and Water, Balzer & Schorn 2015)
 # TODO: different std for lines, transformers, generation, storage, etc.? scenario dependent?
@@ -50,35 +50,6 @@ unit_mapping = {
     'GW': ureg.gigawatt, #added
     'MWh': ureg.megawatthour, #added
 }
-
-#  #regions in the file kilometrage.csv are like this:
-region_list_old  = [
-    'Canada',
-    'US',
-    'Mexico',
-    'Rest C.Am.',
-    'Brazil',
-    'Rest S.Am.',
-    'N.Africa',
-    'W.Africa',
-    'E.Africa',
-    'South Africa',
-    'W.Europe',
-    'C.Europe',
-    'Turkey',
-    'Ukraine',
-    'Stan',
-    'Russia',
-    'M.East',
-    'India',
-    'Korea',
-    'China',
-    'SE.Asia',
-    'Indonesia',
-    'Japan',
-    'Oceania',
-    'Rest S.Asia',
-    'Rest S.Africa']
 
 IHA_REGIONS = ["North & Central America", "South America", "East Asia & Pacific", "South & Central Asia", "Europe", "Africa"]
 
@@ -129,7 +100,8 @@ def create_iha_region_graph():
 
     return iha_region_knowledge_graph
 
-# Electricity Generation related constants ---------------------------------------------
+####################################################################################################
+# Generation related constants 
 
 TECH_GEN = 34   # number of electricity generation technologies -> 33 technologies + 1 empty row
 
@@ -239,11 +211,31 @@ PHEV_CAPACITY_CURRENT = 11.2    #kWh current battery capacity of plugin electric
 
 EV_BATTERIES = ['NiMH', 'LMO', 'NMC', 'NCA', 'LFP', 'Lithium Sulfur', 'Lithium Ceramic', 'Lithium-air']
 
-# Storage related constants ---------------------------------------------
 
-# TECH_STORAGE = ?
+####################################################################################################
+# Storage related constants 
+
+# Pumped Hydropower Storage (PHS) related constants ------------------------------------------------
+# growth factor for PHS capacity relative to growth in storage energy demand after 2060 in the high 
+# PHS scenario (phs_high); a value of 0.5 means that if the storage energy demand grows by 10% from 
+# one year to the next, the PHS capacity will grow by 5% in that year.
+factor_phs_growth_rel_demand = 0.5 
+# Assumption on average discharge duration of PHS plants in hours. The discharge duration can vary 
+# widely in reality, typically ranging 6-24 h. This simplifying assumption is needed due to the lack
+# of data on installed storage energy capacity of PHS plants (MWh). Since the stock model is done in 
+# terms of energy capacity, we need to convert the available power capacity data (MW) to energy capacity.
+# Note: important for us is not the total energy produced by the PHS plant/energy cycled in a year, 
+# but the energy capacity of the reservoir, which determines how much energy can be stored at a given 
+# time as well as the materials needed for the reservoir construction (size of the reservoir).
+mean_discharge_duration = 12
+flag_phs_scenario = "phs_low" # "phs_low" or "phs_high"
 
 PHS_KG_PERKWH = 26.8   # kg per kWh storage capacity (as weight addition to existing hydro plants to make them pumped) 
+
+# Behind-the-meter storage related constants -------------------------------------------------------
+# ratio_btm_to_solar = 0.5 #0.5 MW power capacity per 1 MW Solar PV
+ratio_btm_to_solar = 2 #2 MWh energy capacity per 1 MW Solar PV
+
 
 dict_storage_tech_to_groups  = {
     "nickel battery":           ["NiMH"],
@@ -257,7 +249,8 @@ dict_storage_tech_to_groups  = {
 }
 
 
-# Visualization related ---------------------------------------------
+####################################################################################################
+# Visualization related 
 
 # IMAGE regions
 # Generate 26 distinct colors by combining named color sets
