@@ -97,21 +97,21 @@ def _build_status_timeseries_phs_data(df: pd.DataFrame, status: str, t_start: in
 
 # Dataset 1: IHA data set of individual PHS sites, with commissioning year, capacity, energy stored,
 # operating status, and hydro type
-df_data1 =  pd.read_csv(Path(path_data,"electricity","iha_phs_capacity_data.csv"), 
+df_data1 =  pd.read_csv(Path(path_data,"electricity","standard_data","phs_data1_iha_capacity_by_individual_facility.csv"), 
                       usecols=["Operational Status", "Country", "Commisioning Year", "Hydro Type", 
                                "Generating Capacity", "Energy stored (GWh)"])
 
 # Dataset 2: IHA World Hydropower Outlook dataset of aggregated PHS power capacity (MW) by country for 3 years (2014, 2019, 2024) 
 #           + IEA global estimates
-df_data2 =  pd.read_csv(Path(path_data,"electricity","iha_world_hydropower_outlook_phs_historic_stocks.csv"),
+df_data2 =  pd.read_csv(Path(path_data,"electricity","standard_data","phs_data2_iha_world_hydropower_outlook_historic_stocks.csv"),
                         usecols=["Time", "unit", "Region", "value"])
 
 # Dataset 3: IHA data on PHS projects under contruction, planned and announced per IHA region
-df_data3 =  pd.read_csv(Path(path_data,"electricity","iha_future_planned_phs_capacity_mw_per_world_region.txt"),
+df_data3 =  pd.read_csv(Path(path_data,"electricity","standard_data","phs_data3_iha_future_planned_capacity_mw_per_iha_region.csv"),
                         usecols=["status", "unit", "Region", "value"])
 
 # Manual adjustments to future shares based on literature insights, but authors estimation (unit: shares)
-df_shares_adjustment_2030 =  pd.read_csv(Path(path_data,"electricity","phs_regional_shares_per_iha_region_in_2030.txt"),
+df_shares_adjustment_2030 =  pd.read_csv(Path(path_data,"electricity","standard_data","phs_regional_shares_per_iha_region_in_2030.csv"),
                         usecols=["time", "Region", "value"])
 
 # IMAGE-energy: storage energy capacity (MWh, reservoir)
