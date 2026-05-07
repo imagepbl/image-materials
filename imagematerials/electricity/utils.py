@@ -769,7 +769,12 @@ def calculate_fraction_underground(grid_lines, gdp_pc, ratio_underground):
 # Storage preprocessing functions
 ##########################################################################################
 
-def _build_status_timeseries_phs_data(df: pd.DataFrame, status: str, t_start: int, t_end: int, shares: xr.DataArray, unit: str) -> xr.DataArray:
+def _build_status_timeseries_phs_data(df: pd.DataFrame, 
+                                      status: str, 
+                                      t_start: int, 
+                                      t_end: int, 
+                                      shares: xr.DataArray, 
+                                      unit: str) -> xr.DataArray:
     """ Build a region-level time series DataArray for a given PHS planning status.
 
     This function extracts values for a specific planning status from a dataframe, and constructs a 
@@ -843,7 +848,92 @@ def derive_phs_installed_capacity(data: list,
                                   factor_phs_growth_rel_demand: int = 0.5,
                                   mean_discharge_duration: int = 10,
                                   flag_phs: str = "phs_low"):
-    
+    """ Derive installed pumped hydro storage (PHS) power and energy capacity across IMAGE regions
+    from historical data, pipeline projects, and demand-linked growth assumptions.
+
+    The function performs the following steps:
+      1. Preprocesses three input datasets and aggregates them to IMAGE regions.
+      2. Interpolates/extrapolates historical PHS capacity data from each region's
+         first recorded cohort year up to 2060.
+      3. Distributes superregional totals to individual regions using shares derived
+         from 2024 data, optionally adjusted by literature-based overrides for 2030.
+      4. Adds pipeline capacity (under construction, planned, announced) depending on
+         the selected scenario flag.
+      5. Extends the time series to 2100: constant capacity for ``phs_low``, or
+         demand-linked growth for ``phs_high``.
+      6. Converts power capacity (MW) to energy capacity (MWh) using the mean
+         discharge duration.
+
+    Parameters
+    ----------
+    data : list
+        A list of five input objects in the following order:
+
+        - **data[0]** (*pd.DataFrame*): Plant-level PHS dataset with columns
+          ``'Operational Status'``, ``'Country'``, ``'Commisioning Year'``,
+          ``'Generating Capacity'``, and ``'Energy stored (GWh)'``.
+          Only rows with ``Operational Status == 'Operational'`` are used.
+
+        - **data[1]** (*pd.DataFrame*): Historical PHS capacity time series by country
+          with columns ``'Region'``, ``'Time'``, ``'value'``, and ``'unit'``.
+
+        - **data[2]** (*pd.DataFrame*): PHS pipeline data (future projects) with columns
+          including ``'Region'``, ``'value'``, ``'unit'``, and an operational status
+          category column. Expected status strings: ``'under construction'``,
+          ``'planned regulator approved'``, ``'planned pending approval'``,
+          ``'announced'``.
+
+        - **data[3]** (*pd.DataFrame*): Region-level share adjustment overrides for 2030,
+          with columns ``'Region'``, ``'time'``, and ``'value'``.
+
+        - **data[4]** (*xr.DataArray*): Storage energy demand time series (from IMAGE-energy) with dimensions
+          ``('Time', 'Region')``, used only in the ``phs_high`` scenario for
+          post-2060 growth.
+
+    factor_phs_growth_rel_demand : float, optional
+        Scaling factor that controls how strongly PHS capacity growth tracks storage
+        energy demand growth after 2060 (``phs_high`` only). A value of ``0.5`` means
+        PHS grows at half the rate of demand growth in years where the condition
+        ``PHS <= 0.8 * demand`` is satisfied. Default is ``0.5``.
+
+    mean_discharge_duration : int or float, optional
+        Assumed mean discharge duration in hours, used to convert power capacity (MW)
+        to energy capacity (MWh). Default is ``10``.
+
+    flag_phs : {'phs_low', 'phs_high'}, optional
+        Scenario selector:
+
+        - ``'phs_low'``: Adds only *under construction* and *planned regulator approved*
+          projects; capacity is held constant after 2060.
+        - ``'phs_high'``: Adds all pipeline categories (including *pending approval* and
+          *announced*); capacity grows after 2060 proportional to storage energy demand.
+
+        Default is ``'phs_low'``.
+
+    Returns
+    -------
+    phs_power : xr.DataArray
+        Installed PHS power capacity in MW with dimensions ``('Time', 'Region')``,
+        covering the full modelling horizon from the earliest recorded cohort year
+        to 2100.
+
+    phs_energy : xr.DataArray
+        Installed PHS energy capacity in MWh, computed as
+        ``phs_power * mean_discharge_duration``, with the same dimensions and
+        time horizon as ``phs_power``.
+
+    Notes
+    -----
+    - Regions with no recorded capacity in ``data[0]`` are assigned a start year
+      of 2024 for extrapolation purposes.
+    - Share normalisation is performed within IHA superregions; shares are held
+      constant after 2024 unless overridden by ``data[3]``.
+    - Negative demand growth rates are clipped to zero before computing post-2060
+      PHS growth to prevent capacity from shrinking.
+    - The capacity is only allowed to grow after 2060 (``phs_high``) when the
+      previous year's PHS capacity is at most 80 % of the corresponding storage
+      energy demand.
+    """
     df_data1 = data[0]
     df_data2 = data[1]
     df_data3 = data[2]
