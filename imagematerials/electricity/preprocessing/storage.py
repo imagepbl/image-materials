@@ -144,17 +144,39 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
     # material compositions (storage) in wt%
     storage_materials = pd.read_csv(path_external_data_standard / 'storage_materials_dynamic.csv',index_col=[0,1],usecols=lambda col: col != "unit").transpose()  # wt% of total battery weight for various materials, total battery weight is given by the density file above
 
+    # Data for Pumped Hydropower Storage (PHS) -----------------------------------------------------
     # Hydro-dam power capacity (also MW) within 5 regions reported by the IHA (international Hydropwer Association)
-    phs_projections = pd.read_csv(path_external_data_standard / 'PHS.csv', index_col='t')   # pumped hydro storage capacity (MW)
+    # phs_projections = pd.read_csv(path_external_data_standard / 'PHS.csv', index_col='t')   # pumped hydro storage capacity (MW)
+    # Dataset 1: IHA data set of individual PHS sites, with commissioning year, capacity, energy stored,
+    # operating status, and hydro type
+    df_data1 =  pd.read_csv(Path(path_data,"electricity","iha_phs_capacity_data.csv"), 
+                        usecols=["Operational Status", "Country", "Commisioning Year", "Hydro Type", 
+                                "Generating Capacity", "Energy stored (GWh)"])
+
+    # Dataset 2: IHA World Hydropower Outlook dataset of aggregated PHS power capacity (MW) by country for 3 years (2014, 2019, 2024) 
+    #           + IEA global estimates
+    df_data2 =  pd.read_csv(Path(path_data,"electricity","iha_world_hydropower_outlook_phs_historic_stocks.csv"),
+                            usecols=["Time", "unit", "Region", "value"])
+
+    # Dataset 3: IHA data on PHS projects under contruction, planned and announced per IHA region
+    df_data3 =  pd.read_csv(Path(path_data,"electricity","iha_future_planned_phs_capacity_mw_per_world_region.txt"),
+                            usecols=["status", "unit", "Region", "value"])
+
+    # Manual adjustments to future shares based on literature insights, but authors estimation (unit: shares)
+    df_shares_adjustment_2030 =  pd.read_csv(Path(path_data,"electricity","phs_regional_shares_per_iha_region_in_2030.txt"),
+                            usecols=["time", "Region", "value"])
+
+    # IMAGE-energy: storage energy capacity (MWh, reservoir)
+    storage_energy = read_mym_df(Path(path_data, "image", "SSP2_baseline", "EnergyServices", "StorResTot.out"))
 
 
     # 2. IMAGE/TIMER files ====================================================================================
 
-    # read TIMER installed storage capacity (MWh, reservoir)
+    # IMAGE-energy: storage energy capacity demand (MWh, reservoir)
     # storage = read_mym_df(path_image_output.joinpath("StorResTot.out"))   #storage capacity in MWh (reservoir, so energy capacity, not power capacity, the latter is used later on in the pumped hydro storage calculations)
-    storage = read_mym_df(climate_policy_config["config_file_path"] / climate_policy_config["data_files"]['StorResTot'])
+    storage_energy = read_mym_df(climate_policy_config["config_file_path"] / climate_policy_config["data_files"]['StorResTot'])
 
-    #storage capacity in MW (power capacity), to compare it to Pumped hydro storage projections (also given in MW, power capacity)
+    # IMAGE-energy: storage power capacity demand (MW)
     # storage_power = read_mym_df(path_image_output / 'StorCapTot.out')  
     storage_power = read_mym_df(climate_policy_config["config_file_path"] / climate_policy_config["data_files"]['StorCapTot'])
 
@@ -175,15 +197,15 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
     # Interpolations #
     ##################
 
-    storage = storage.iloc[:, :26]    # drop global total column and empty (27) column
+    storage_energy = storage_energy.iloc[:, :26]    # drop global total column and empty (27) column
 
     # J: in high storage scenario the storage demand linearly increases between 2021 and 2050 compared to its original value until it is double by 2050, and then remains constant
     if SENS_ANALYSIS == 'high_stor':
-        storage_multiplier = storage
+        storage_multiplier = storage_energy
         for year in range(2021,2051):
-            storage_multiplier.loc[year] = storage.loc[year] * (1 + (1/30*(year-2020)))
+            storage_multiplier.loc[year] = storage_energy.loc[year] * (1 + (1/30*(year-2020)))
         for year in range(2051,year_end+1):
-            storage_multiplier.loc[year] = storage.loc[year] * 2
+            storage_multiplier.loc[year] = storage_energy.loc[year] * 2
 
 
     # turn index to integer for sorting during the next step
@@ -303,14 +325,14 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
     
     # total = storage_market_share.sum(axis=1)
     region_list = list(kilometrage.columns.values)   
-    storage.columns = region_list
+    storage_energy.columns = region_list
 
     #%% 2.4) Hydro Power & Other Storage
     ###########################################################################################################
 
     # OPTION: NO V2G ---------------------------------------------------------------
     # TODO: this is a temporary solution, until the coupling with the vehicle sector and the battery module calculations are implemented/integrated
-    storage_vehicles = pd.DataFrame(0, index=storage.index, columns=storage.columns)  # set vehicle storage to zero when not using V2G
+    storage_vehicles = pd.DataFrame(0, index=storage_energy.index, columns=storage_energy.columns)  # set vehicle storage to zero when not using V2G
     storage_vehicles = storage_vehicles.loc[:year_out]
     #-------------------------------------------------------------------------------
 
@@ -348,9 +370,9 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
 
     # Calculate the fractions of the storage capacity that is provided through pumped hydro-storage, electric vehicles or other storage (larger than 1 means the capacity superseeds the demand for energy storage, in terms of power in MW or enery in MWh) 
     phs_storage_fraction = phs_projections_IMAGE.divide(storage_power.loc[:year_out]).clip(upper=1) # the phs storage fraction deployed to fulfill storage demand, both phs & storage_power here are expressed in MW
-    storage_remaining = storage.loc[:year_out] * (1 - phs_storage_fraction) # asumption here (?): share in MW = share in GHh (not really true, though since both are very high for PHS for early years, this might be okey)
+    storage_remaining = storage_energy.loc[:year_out] * (1 - phs_storage_fraction) # asumption here (?): share in MW = share in GHh (not really true, though since both are very high for PHS for early years, this might be okey)
 
-    phs_storage = storage.loc[:year_out] * phs_storage_fraction
+    phs_storage = storage_energy.loc[:year_out] * phs_storage_fraction
     oth_storage = storage_remaining 
 
 
