@@ -95,9 +95,9 @@ region_knowledge_graph = create_region_graph()
 fossil_fuel_knowledge_graph = create_fossil_fuel_graph()
 
 #Import xarrays from lifetimes, materials and capacity folders 
-from imagematerials.fossil_fuels.preprocessing.lifetimes_test import compute_extraction_lifetimes, compute_processing_lifetimes, compute_transport_lifetimes, compute_pipelines_lifetimes, compute_volume_lifetimes
-from imagematerials.fossil_fuels.preprocessing.materials_test import compute_extraction_materials, compute_processing_materials, compute_transport_materials, compute_pipelines_materials, compute_volume_materials
-from imagematerials.fossil_fuels.preprocessing.capacity_test import compute_extraction_capacity, compute_processing_capacity, compute_transport_capacity, compute_pipelines_capacity, compute_volume_capacity
+from imagematerials.fossil_fuels.preprocessing.lifetimes import compute_extraction_lifetimes, compute_processing_lifetimes, compute_transport_lifetimes, compute_pipelines_lifetimes
+from imagematerials.fossil_fuels.preprocessing.materials import compute_extraction_materials, compute_processing_materials, compute_transport_materials, compute_pipelines_materials
+from imagematerials.fossil_fuels.preprocessing.capacity import compute_extraction_capacity, compute_processing_capacity, compute_transport_capacity, compute_pipelines_capacity
 
 #%%Extraction stage
 def get_preprocessing_data_extraction(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
@@ -111,6 +111,7 @@ def get_preprocessing_data_extraction(path_base: str, climate_policy_config: dic
     extraction_lifetime_xr = compute_extraction_lifetimes (path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
     extraction_lifetime_xr = convert_lifetime(extraction_lifetime_xr)
 
+        
     extraction_materials_xr = compute_extraction_materials(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
     extractioncap_xr = compute_extraction_capacity(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
 
@@ -132,7 +133,7 @@ def get_preprocessing_data_extraction(path_base: str, climate_policy_config: dic
 
     return prep_data_extraction
 
-#%%Processing stage (Just coal preparation and oil refinery)
+#%%Processing stage
 def get_preprocessing_data_processing(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
     path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
@@ -148,9 +149,11 @@ def get_preprocessing_data_processing(path_base: str, climate_policy_config: dic
     processing_lifetime_xr = compute_processing_lifetimes(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
     processing_lifetime_xr = convert_lifetime(processing_lifetime_xr)
 
+
     processing_materials_xr = compute_processing_materials(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
     processingcap_xr = compute_processing_capacity(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
     
+   
     # bring preprocessing data into a generic format for the model
     prep_data_processing = {}
     prep_data_processing["lifetimes"] = processing_lifetime_xr
@@ -168,43 +171,6 @@ def get_preprocessing_data_processing(path_base: str, climate_policy_config: dic
     #     # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
 
     return prep_data_processing
-
-#%%Processing stage (Just gas processing and oil storage)
-def get_preprocessing_data_volume(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
-
-    path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
-    # test if path_external_data_scenario exists and if not set to standard scenario
-    if not path_external_data_scenario.exists():
-        path_external_data_scenario = Path(path_base, "fossil_fuels", STANDARD_SCEN_EXTERNAL_DATA)
-
-    # assert path_external_data_scenario.is_dir()
-
-    #return path_external_data_scenario
-
-     # The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
-    volume_lifetime_xr = compute_volume_lifetimes(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
-    volume_lifetime_xr = convert_lifetime(volume_lifetime_xr)
-
-    volume_materials_xr = compute_volume_materials(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
-    volumecap_xr = compute_volume_capacity(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
-
-    # bring preprocessing data into a generic format for the model
-    prep_data_volume = {}
-    prep_data_volume["lifetimes"] = volume_lifetime_xr
-    prep_data_volume["stocks"] = volumecap_xr
-    prep_data_volume["material_intensities"] = volume_materials_xr
-    prep_data_volume["knowledge_graph"] = create_fossil_fuel_graph() 
-    # add units
-    prep_data_volume["stocks"] = prism.Q_(prep_data_volume["stocks"], "meter**3")
-    prep_data_volume["material_intensities"] = prism.Q_(prep_data_volume["material_intensities"], "kg/meter**3")
-    prep_data_volume["set_unit_flexible"] = prism.U_(prep_data_volume["stocks"]) # prism.U_ gives the unit back
-
-    region_knowledge_graph = create_region_graph()
-    prep_data_volume["stocks"] = prep_data_volume["stocks"].assign_coords(Region=prep_data_volume["stocks"].coords["Region"].astype(str))
-    prep_data_volume["stocks"] = region_knowledge_graph.rebroadcast_xarray(prep_data_volume["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
-    #     # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
-
-    return prep_data_volume
 
 #%% Transport stage
 def get_preprocessing_data_transport(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):

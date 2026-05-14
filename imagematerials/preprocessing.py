@@ -16,6 +16,7 @@ from imagematerials.fossil_fuels.preprocessing.main import get_preprocessing_dat
 from imagematerials.fossil_fuels.preprocessing.main import get_preprocessing_data_processing as prep_ff_proc
 from imagematerials.fossil_fuels.preprocessing.main import get_preprocessing_data_pipelines as prep_ff_pipe
 from imagematerials.fossil_fuels.preprocessing.main import get_preprocessing_data_transport as prep_ff_trp
+from imagematerials.fossil_fuels.preprocessing.main import get_preprocessing_data_storage as prep_ff_str  
 
 from imagematerials.factory import Sector
 from imagematerials.util import (
@@ -48,12 +49,14 @@ def _get_fossilfuels_prep_data(base_dir, climate_policy_scenario_dir, circular_e
         prep_data_processing = prep_ff_proc(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
         prep_data_pipelines = prep_ff_pipe(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
         prep_data_transport = prep_ff_trp(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
+        prep_data_storage = prep_ff_str(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
             
         prep_data = {
             "prep_data_extraction": prep_data_extraction,
             "prep_data_processing": prep_data_processing,
             "prep_data_pipelines": prep_data_pipelines,
             "prep_data_transport": prep_data_transport,
+            "prep_data_storage": prep_data_storage  
 
         }
     return prep_data
@@ -113,9 +116,10 @@ def _get_fossilfuels_sector(prep_data):
     sec_ff_proc = Sector("ff_proc", prep_data["prep_data_processing"])
     sec_ff_pipe = Sector("ff_pipe", prep_data["prep_data_pipelines"])
     sec_ff_trp = Sector("ff_trp", prep_data["prep_data_transport"])
+    sec_ff_str = Sector("ff_str", prep_data["prep_data_storage"])
 
 
-    sec_ff = [sec_ff_extr, sec_ff_proc, sec_ff_pipe, sec_ff_trp]
+    sec_ff = [sec_ff_extr, sec_ff_proc, sec_ff_pipe, sec_ff_trp, sec_ff_str]
 
     return sec_ff
 

@@ -9,12 +9,12 @@ ureg = pint.UnitRegistry(force_ndarray_like=True)
 #Select scenario and policy config
 
 circular_economy_config = None
-climate_policy_config = "SSP2" #SSP2_baseline is the only option right now given the existing files of primpersec and final_energy_rt
-scenario = "SSP2" #SSP2_baseline is the only option right now given the existing files of primpersec and final_energy_rt
+climate_policy_config = "SSP2_baseline" #SSP2_baseline is the only option right now given the existing files of primpersec and final_energy_rt
+scenario = "SSP2_baseline" #SSP2_baseline is the only option right now given the existing files of primpersec and final_energy_rt
 
 scen_folder = scenario #SSP2_baseline is the only option right now given the existing files of primpersec and final_energy_rt
 STANDARD_SCEN_EXTERNAL_DATA = scenario #SSP2_baseline is the only option right now given the existing files of primpersec and final_energy_rt
-SCENARIO_DEFAULT = "SSP2"
+SCENARIO_DEFAULT = "SSP2_baseline"
 
 # Define paths (change to be consistent with other OS)
 

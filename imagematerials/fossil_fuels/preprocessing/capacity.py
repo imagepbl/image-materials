@@ -237,7 +237,7 @@ def compute_extraction_capacity(path_base: str, climate_policy_config: dict, cir
     
     return extractioncap_xr
 
-#%% Processing stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
+#%% Processing stage (coal preparation and oil refinery) ---------------------------------------------------------------------------------------------------------------------------------
 def compute_processing_capacity(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
     path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
@@ -257,7 +257,7 @@ def compute_processing_capacity(path_base: str, climate_policy_config: dict, cir
     preparation_stock_coal = coal_drivers["processing"]
 
     oil_drivers = oil_infra()
-    oil_storage, refinery_stock_oil = oil_drivers["storage"], oil_drivers["refinery"]
+    refinery_stock_oil = oil_drivers["refinery"]
 
     gas_drivers = gas_infra()
     processing_stock_gas = gas_drivers["processing"]
@@ -273,23 +273,17 @@ def compute_processing_capacity(path_base: str, climate_policy_config: dict, cir
         inplace=True
     )
 
-    oil_storage.index.set_names(
-        ['type', 'time', 'fuel', 'stage', 'unit'],
-        inplace=True
-    )
-
     processing_stock_gas.index.set_names(
         ['type', 'time', 'fuel', 'stage', 'unit'],
         inplace=True
-    )
+    )    
 
     df_processing_coal = preparation_stock_coal.reset_index()
-    df_processing_oil = oil_storage.reset_index() 
     df_processing_refinery_oil = refinery_stock_oil.reset_index()
     df_processing_gas = processing_stock_gas.reset_index()
 
+
     df_processing_coal["fuel"] = "coal"
-    df_processing_oil["fuel"] = "oil"
     df_processing_refinery_oil["fuel"] = "oil"  
     df_processing_gas["fuel"] = "gas"
 
@@ -301,7 +295,7 @@ def compute_processing_capacity(path_base: str, climate_policy_config: dict, cir
 
     #Combine the dataframes for coal, oil, and gas into one dataframe and then melt it to long format so that we have one row per combination of time, region, fuel, technology, and value (stock)
     df_processing_all = pd.concat(
-        [df_processing_coal, df_processing_oil, df_processing_refinery_oil, df_processing_gas],
+        [df_processing_coal, df_processing_refinery_oil, df_processing_gas],
         ignore_index=True
     )
 
@@ -353,11 +347,6 @@ def compute_processing_capacity(path_base: str, climate_policy_config: dict, cir
         .to_xarray()['value']
         .rename({'time': 'Time', 'DIM_1': 'Region', 'Tech Type': 'Type'})
     )
-    #Combine oil crude and oil products into one "oil storage" category 
-    oil_storage = processingcap_xr.sel(Type=['Oil Crude', 'Oil Products']).sum(dim='Type')
-    processingcap_xr = processingcap_xr.drop_sel(Type=['Oil Crude', 'Oil Products'])
-    oil_storage = oil_storage.expand_dims({'Type': ['Oil Storage']})
-    processingcap_xr = xr.concat([processingcap_xr, oil_storage], dim='Type')
 
     #Add units
     processingcap_xr = prism.Q_(processingcap_xr, "kg")
@@ -376,6 +365,116 @@ def compute_processing_capacity(path_base: str, climate_policy_config: dict, cir
     # processingcap_xr.isnull().sum()
 
     return processingcap_xr
+
+#%% Processing stage (oil storage) ---------------------------------------------------------------------------------------------------------------------------------
+def compute_storage_capacity(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+
+    path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
+    # test if path_external_data_scenario exists and if not set to standard scenario
+    if not path_external_data_scenario.exists():
+        path_external_data_scenario = Path(path_base, "fossil_fuels", STANDARD_SCEN_EXTERNAL_DATA)
+
+    # assert path_external_data_scenario.is_dir()
+
+    #return path_external_data_scenario
+
+    # 2. FUMA output  -----------------------------------------
+
+    #Stock of each type of extraction infrastructure (stock demand per generation technology) per region per year
+
+    oil_drivers = oil_infra()
+    oil_storage = oil_drivers["storage"]
+
+
+        # --- FIX INDEX NAMES FIRST (IMPORTANT) ---
+    oil_storage.index.set_names(
+        ['type', 'time', 'fuel', 'stage', 'unit'],
+        inplace=True
+    )
+
+    df_processing_oil = oil_storage.reset_index() 
+
+    df_processing_oil["fuel"] = "oil"
+
+    # print("COAL INDEX NAMES:", preparation_stock_coal.index.names)
+    # print(preparation_stock_coal.head())
+
+    # print("OIL INDEX NAMES:", oil_storage.index.names)
+    # print("GAS INDEX NAMES:", processing_stock_gas.index.names)
+
+    #Combine the dataframes for coal, oil, and gas into one dataframe and then melt it to long format so that we have one row per combination of time, region, fuel, technology, and value (stock)
+    # df_volume_all = pd.concat(
+    #     [df_processing_oil],
+    #     ignore_index=True
+    # )
+
+    df_storage_all = df_processing_oil.reset_index(drop=True)
+
+    # print(df_processing_all.columns)
+    # print(df_processing_all.head())
+    # print(df_processing_all['type'].unique())
+
+
+    df_storage_all = df_storage_all.melt(
+        id_vars=['type', 'time', 'fuel', 'stage', 'unit'],  
+        var_name='DIM_1',
+        value_name='value'
+    )
+
+    #Combine fuel and type columns to one column "Tech Type"
+    df_storage_all['Tech Type'] = df_storage_all['fuel'].str.strip() + ' ' + df_storage_all['type'].str.strip()
+
+    # Clean up the "Tech Type" column to have consistent formatting and naming, and to match the technology names in the lifetime and material intensity data (since we will need to combine these later in the model, so they all need to have the same technology names)
+    df_storage_all['Tech Type'] = (
+        df_storage_all['Tech Type']
+        .str.replace(r'\s+', ' ', regex=True)
+        .str.strip()
+        .str.title()
+        )
+    
+
+    # Drop columns that are not needed for the analysis
+    df_storage_all = df_storage_all.drop(columns=['stage', 'unit', 'type', 'fuel'])  
+# Gcap ------
+    # combine the processing data for coal, oil, gas into one df and then put it into this 
+    df_storage_all = df_storage_all.loc[~df_storage_all['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
+    df_storage_all = df_storage_all.loc[df_storage_all['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', 'value', 'Tech Type']]  # only keep relevant years and technology columns
+    df_storage_all['DIM_1'] = df_storage_all['DIM_1'].astype(int)
+
+
+    # Extract coordinate labels for years, regions, technologies
+    regions = sorted(df_storage_all['DIM_1'].unique())
+    techtypes = sorted(df_storage_all['Tech Type'].unique())
+
+    # Convert to 3D array: (Year, Region, Fuel, Type)
+    storagecap_xr = (
+        df_storage_all
+        .set_index(['time', 'DIM_1', 'Tech Type'])
+        .to_xarray()['value']
+        .rename({'time': 'Time', 'DIM_1': 'Region', 'Tech Type': 'Type'})
+    )
+    #Combine oil crude and oil products into one "oil storage" category 
+    oil_storage = storagecap_xr.sel(Type=['Oil Crude', 'Oil Products']).sum(dim='Type')
+    storagecap_xr = storagecap_xr.drop_sel(Type=['Oil Crude', 'Oil Products'])
+    oil_storage = oil_storage.expand_dims({'Type': ['Oil Storage']})
+    storagecap_xr = xr.concat([storagecap_xr, oil_storage], dim='Type')
+
+    #Add units
+    storagecap_xr = prism.Q_(storagecap_xr, "meter**3")
+    # #rebroadcast to standard region and technology names from TIMER, and convert coordinate type back to python strings (since rebroadcast changes it to numpy strings)
+    # storagecap_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(storagecap_xr, output_coords=IMAGE_REGIONS, dim="Region") 
+    # storagecap_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(storagecap_xr, output_coords=FF_TECHNOLOGIES, dim="Type")
+    # storagecap_xr = storagecap_xr.assign_coords(Type=np.array(storagecap_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
+    # print("=== storagecap_xr ===")
+    # print(storagecap_xr)
+    # print("\nDims:", storagecap_xr.dims)
+    # print("Sizes:", storagecap_xr.sizes)
+    # print("\nTime labels:", processingcap_xr['Time'].values)
+    # print("Region labels:", processingcap_xr['Region'].values)
+    # print("Type labels:", processingcap_xr['Type'].values)
+    # processingcap_xr.isnull().sum()
+
+    return storagecap_xr
 
 #%% Transport/Vehicles stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 
@@ -645,7 +744,7 @@ def compute_pipelines_capacity(path_base: str, climate_policy_config: dict, circ
 
     return pipelinecap_xr
 
-print("capacity.py ran successfully!")
+# print("capacity.py ran successfully!")
 
 # print("coal extraction index names:", extraction_stock_coal.index.names)
 # print("coal transport index names:", transport_total_coal.index.names)

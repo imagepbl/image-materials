@@ -653,5 +653,5 @@ def oil_infra():
 # oilresults[3].to_csv(OUTPUT_DIR / scenario / "oil_storage_volume_m3.csv")
 # oilresults[4].to_csv(OUTPUT_DIR / scenario / "oil_refinery_stock_kg.csv")
 
-print("drivers.py ran successfully!")
+# print("drivers.py ran successfully!")
 
