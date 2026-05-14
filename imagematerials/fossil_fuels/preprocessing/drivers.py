@@ -546,12 +546,6 @@ def coal_infra():
         "transport": transport_total_coal,
     }
 
-#Comment back in if running for a new scenario, otherwise it will overwrite the existing files with the same name (since the input data is the same)
-# coalresults = coal_infra()
-# coalresults[0].to_csv(OUTPUT_DIR / scenario / "coal_extraction_stock_kg.csv")
-# coalresults[1].to_csv(OUTPUT_DIR / scenario / "coal_preparation_stock_kg.csv")
-# coalresults[2].to_csv(OUTPUT_DIR / scenario / "coal_transport_stock_kg.csv")
-
 
 def gas_infra():
     fuel = "gas"
@@ -591,13 +585,6 @@ def gas_infra():
         "pipelines": gas_pipelines,
         "processing": processing_stock_gas,
     }
-
-#Comment back in if running for a new scenario, otherwise it will overwrite the existing files with the same name (since the input data is the same)
-# gasresults = gas_infra()
-# gasresults[0].to_csv(OUTPUT_DIR / scenario / "gas_extraction_stock_kg.csv")
-# gasresults[1].to_csv(OUTPUT_DIR / scenario / "gas_transport_stock_kg.csv")
-# gasresults[2].to_csv(OUTPUT_DIR / scenario / "gas_pipelines_length_km.csv")
-# gasresults[3].to_csv(OUTPUT_DIR / scenario / "gas_processing_stock_kg.csv")
 
 
 def oil_infra():
@@ -644,14 +631,6 @@ def oil_infra():
         "storage": oil_storage,
         "refinery": refinery_stock_oil,
     }
-
-#Comment back in if running for a new scenario, otherwise it will overwrite the existing files with the same name (since the input data is the same)
-# oilresults = oil_infra()
-# oilresults[0].to_csv(OUTPUT_DIR / scenario / "oil_extraction_stock_kg.csv")
-# oilresults[1].to_csv(OUTPUT_DIR / scenario / "oil_transport_stock_kg.csv")
-# oilresults[2].to_csv(OUTPUT_DIR / scenario / "oil_pipelines_length_km.csv")
-# oilresults[3].to_csv(OUTPUT_DIR / scenario / "oil_storage_volume_m3.csv")
-# oilresults[4].to_csv(OUTPUT_DIR / scenario / "oil_refinery_stock_kg.csv")
 
 # print("drivers.py ran successfully!")
 

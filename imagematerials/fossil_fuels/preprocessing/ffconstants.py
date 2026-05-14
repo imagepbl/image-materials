@@ -9,25 +9,13 @@ ureg = pint.UnitRegistry(force_ndarray_like=True)
 #Select scenario and policy config
 
 circular_economy_config = None
-climate_policy_config = "SSP2_baseline" #SSP2_baseline is the only option right now given the existing files of primpersec and final_energy_rt
-scenario = "SSP2_baseline" #SSP2_baseline is the only option right now given the existing files of primpersec and final_energy_rt
+climate_policy_config = "SSP2_baseline" 
+scenario = "SSP2_baseline" 
 
-scen_folder = scenario #SSP2_baseline is the only option right now given the existing files of primpersec and final_energy_rt
-STANDARD_SCEN_EXTERNAL_DATA = scenario #SSP2_baseline is the only option right now given the existing files of primpersec and final_energy_rt
+scen_folder = scenario 
+STANDARD_SCEN_EXTERNAL_DATA = scenario 
 SCENARIO_DEFAULT = "SSP2_baseline"
 
-# Define paths (change to be consistent with other OS)
-
-# BASE_DIR = Path(__file__).resolve()
-# while BASE_DIR.name != "image-materials":
-#     BASE_DIR = BASE_DIR.parent
-
-# DATA_DIR = BASE_DIR / "data" / "raw" / "fossil_fuels"
-# IMAGE_DIR = BASE_DIR / "data" / "raw" / "image"
-# OUTPUT_DIR = DATA_DIR / "Scenario_data"
-# CLIMATE_POLICY_SCENARIO_DIR = IMAGE_DIR / scen_folder  
-# path_base = BASE_DIR / "imagematerials"
-# climate_policy_scenario_dir = CLIMATE_POLICY_SCENARIO_DIR
 
 # Define paths (change to be consistent with other OS)
 path_base = Path(__file__).resolve()
