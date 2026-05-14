@@ -52,56 +52,6 @@ from imagematerials.electricity.utils import (
 
 #from prism.prism.examples.fuel import scenario
 
-# from imagematerials.fossil_fuels.preprocessing.ffconstants import (
-#     circular_economy_config,
-#     climate_policy_config,
-#     scenario,
-#     scen_folder,
-#     STANDARD_SCEN_EXTERNAL_DATA,
-#     BASE_DIR,
-#     DATA_DIR,
-#     IMAGE_DIR,
-#     OUTPUT_DIR,
-#     CLIMATE_POLICY_SCENARIO_DIR,
-#     path_base,
-#     climate_policy_scenario_dir,
-# )
-# scen_folder = "SSP2_baseline" #SSP2_baseline is the only option right now given the existing files of primpersec and final_energy_rt
-# STANDARD_SCEN_EXTERNAL_DATA = "SSP2_baseline" #SSP2_baseline is the only option right now given the existing files of primpersec and final_energy_rt
-
-# BASE_DIR = Path(__file__).resolve()
-# while BASE_DIR.name != "image-materials":
-#     BASE_DIR = BASE_DIR.parent
-
-# DATA_DIR = BASE_DIR / "data" / "raw" / "fossil_fuels"
-# IMAGE_DIR = BASE_DIR / "data" / "raw" / "image"
-# OUTPUT_DIR = DATA_DIR / "Scenario_data"
-# CLIMATE_POLICY_SCENARIO_DIR = IMAGE_DIR / scen_folder  
-# path_base = BASE_DIR / "imagematerials"
-# climate_policy_scenario_dir = CLIMATE_POLICY_SCENARIO_DIR
-
-# path_current = Path().resolve()
-# path_base = path_current.parents [1]
-# print("current:", path_current)
-# print("base:", path_base)
-
-#still not sure what to do with these 
-# scen_folder = "SSP2_baseline"
-# climate_policy_scenario_dir = Path(path_base, "data", "raw", "image", scen_folder)
-# STANDARD_SCEN_EXTERNAL_DATA = "SSP2_baseline" 
-
-# BASE_DIR = Path(__file__).resolve().parent
-# DATA_DIR = Path(__file__).resolve().parents[3] / "data" / "raw" / "fossil_fuels"
-# OUTPUT_DIR = Path(__file__).resolve().parents[3] / "data" / "raw" / "fossil_fuels" / "Scenario_data"
-# IMAGE_DIR = Path(__file__).resolve().parents[3] / "data" / "raw" / "image"
-
-# print("current:", path_current)
-# print("base:", path_base)
-# print("climate policy scenario dir:", climate_policy_scenario_dir)
-# print("data dir:", DATA_DIR)    
-# print("output dir:", OUTPUT_DIR)
-# print("image dir:", IMAGE_DIR)  
-
 year_start = 1880
 year_end = 2100
 year_out = 2100
@@ -113,7 +63,7 @@ fossil_fuel_knowledge_graph = create_fossil_fuel_graph()
 # Extraction stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 
 ###########################################################################################################
-def compute_extraction_lifetimes(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+def compute_extraction_lifetimes_test(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
     path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
     # test if path_external_data_scenario exists and if not set to standard scenario
@@ -181,24 +131,11 @@ def compute_extraction_lifetimes(path_base: str, climate_policy_config: dict, ci
     # print("Params:", extraction_lifetime_xr['DistributionParams'].values)
     # extraction_lifetime_xr.isnull().sum()
 
-    # #Rebroadcast to standard technology names from TIMER, and convert coordinate type back to python strings (since rebroadcast changes it to numpy strings)
-    # extraction_lifetime_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(extraction_lifetime_xr, output_coords=FF_TECHNOLOGIES, dim="Type") # convert technology names to the standard names from TIMER
-    # extraction_lifetime_xr = extraction_lifetime_xr.assign_coords(Type=np.array(extraction_lifetime_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
-
-    # print("=== extractionlifetimes_xr ===")
-    # print(extraction_lifetime_xr)
-    # print("Dims:", extraction_lifetime_xr.dims)
-    # print("Sizes:", extraction_lifetime_xr.sizes)
-    # print("Cohort:", extraction_lifetime_xr['Cohort'].values)
-    # print("Type:", extraction_lifetime_xr['Type'].values)
-    # print("Params:", extraction_lifetime_xr['DistributionParams'].values)
-    # extraction_lifetime_xr.isnull().sum()
-    # print(extraction_lifetime_xr.values[:10])
     return extraction_lifetime_xr
 
 #%% Processing stage (coal preparation and oil refinery) ---------------------------------------------------------------------------------------------------------------------------------
 
-def compute_processing_lifetimes(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+def compute_processing_lifetimes_test(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
     path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
     # test if path_external_data_scenario exists and if not set to standard scenario
@@ -243,16 +180,12 @@ def compute_processing_lifetimes(path_base: str, climate_policy_config: dict, ci
     value_2020 = processing_lifetime_xr.sel(Cohort=2020)
     processing_lifetime_xr = value_2020.expand_dims(Cohort=year_range).transpose("DistributionParams", "Cohort", "Type")
     processing_lifetime_xr = prism.Q_(processing_lifetime_xr, "year")
- 
-    #  #Rebroadcast to standard technology names from TIMER, and convert coordinate type back to python strings (since rebroadcast changes it to numpy strings)
-    # processing_lifetime_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(processing_lifetime_xr, output_coords=FF_TECHNOLOGIES, dim="Type") # convert technology names to the standard names from TIMER
-    # processing_lifetime_xr = processing_lifetime_xr.assign_coords(Type=np.array(processing_lifetime_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
-    # print(processing_lifetime_xr.values[:10])
+
     return processing_lifetime_xr
 
 #%% Processing stage (oil storage and gas processing) ---------------------------------------------------------------------------------------------------------------------------------
 
-def compute_volume_lifetimes(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+def compute_storage_lifetimes_test(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
     path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
     # test if path_external_data_scenario exists and if not set to standard scenario
@@ -268,21 +201,21 @@ def compute_volume_lifetimes(path_base: str, climate_policy_config: dict, circul
     # 1. External Data --------------------------------------------- 
 
     # lifetimes of processing tech in years
-    volume_lifetime_data = pd.read_csv(DATA_DIR / "Processing" / "Volume_lifetimes.csv",
+    storage_lifetime_data = pd.read_csv(DATA_DIR / "Processing" / "Storage_lifetimes.csv",
         index_col=["Year", "Tech Type"]
     ) 
 
            # Lifetimes -------
-    values = volume_lifetime_data["Lifetime"].unstack().to_numpy(dtype=float)
+    values = storage_lifetime_data["Lifetime"].unstack().to_numpy(dtype=float)
     #Create coordinates
-    times = volume_lifetime_data.index.get_level_values("Year").unique().astype(int).tolist()
-    types = volume_lifetime_data.index.get_level_values("Tech Type").unique().astype(str).tolist()
+    times = storage_lifetime_data.index.get_level_values("Year").unique().astype(int).tolist()
+    types = storage_lifetime_data.index.get_level_values("Tech Type").unique().astype(str).tolist()
     scipy_params = ["mean", "stdev"]
         # Build full array: shape (ScipyParam, Time, Type)
     data_array = np.stack([values, values * SD_LIFETIME], axis=0)
     # data_array = np.stack([values, np.full_like(values, np.nan)], axis=0)
         # Create DataArray
-    volume_lifetime_xr = xr.DataArray(
+    storage_lifetime_xr = xr.DataArray(
             data_array,
             dims=["DistributionParams", "Cohort", "Type"],
             coords={
@@ -290,24 +223,20 @@ def compute_volume_lifetimes(path_base: str, climate_policy_config: dict, circul
                 "Cohort": times,
                 "Type": types
             },
-            name="ProcessingVolumeLifetime"
+            name="ProcessingStorageLifetime"
         )
     # Expand 2020 across 1880-2100
     year_range = np.arange(1880, 2101)
-    value_2020 = volume_lifetime_xr.sel(Cohort=2020)
-    volume_lifetime_xr = value_2020.expand_dims(Cohort=year_range).transpose("DistributionParams", "Cohort", "Type")
-    volume_lifetime_xr = prism.Q_(volume_lifetime_xr, "year")
+    value_2020 = storage_lifetime_xr.sel(Cohort=2020)
+    storage_lifetime_xr = value_2020.expand_dims(Cohort=year_range).transpose("DistributionParams", "Cohort", "Type")
+    storage_lifetime_xr = prism.Q_(storage_lifetime_xr, "year")
  
-    #  #Rebroadcast to standard technology names from TIMER, and convert coordinate type back to python strings (since rebroadcast changes it to numpy strings)
-    # processing_lifetime_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(processing_lifetime_xr, output_coords=FF_TECHNOLOGIES, dim="Type") # convert technology names to the standard names from TIMER
-    # processing_lifetime_xr = processing_lifetime_xr.assign_coords(Type=np.array(processing_lifetime_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
-    # print(processing_lifetime_xr.values[:10])
-    return volume_lifetime_xr
+    return storage_lifetime_xr
 
 #%% Transport/Vehicles stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 
 ###########################################################################################################
-def compute_transport_lifetimes(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+def compute_transport_lifetimes_test(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
     path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
     # test if path_external_data_scenario exists and if not set to standard scenario
@@ -350,16 +279,12 @@ def compute_transport_lifetimes(path_base: str, climate_policy_config: dict, cir
     transport_lifetime_xr = value_2020.expand_dims(Cohort=year_range).transpose("DistributionParams", "Cohort", "Type")
     transport_lifetime_xr = prism.Q_(transport_lifetime_xr, "year")
 
-    # #Rebroadcast to standard technology names from TIMER, and convert coordinate type back to python strings (since rebroadcast changes it to numpy strings)
-    # transport_lifetime_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(transport_lifetime_xr, output_coords=FF_TECHNOLOGIES, dim="Type") # convert technology names to the standard names from TIMER
-    # transport_lifetime_xr = transport_lifetime_xr.assign_coords(Type=np.array(transport_lifetime_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
-    # print(transport_lifetime_xr.values[:10])
     return transport_lifetime_xr
 
 #%% Pipelines stage (oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 ###########################################################################################################
 
-def compute_pipelines_lifetimes(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+def compute_pipelines_lifetimes_test(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
 
     path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
     # test if path_external_data_scenario exists and if not set to standard scenario
@@ -412,10 +337,6 @@ def compute_pipelines_lifetimes(path_base: str, climate_policy_config: dict, cir
     pipelines_lifetime_xr = value_2020.expand_dims(Cohort=year_range).transpose("DistributionParams", "Cohort", "Type")
     pipelines_lifetime_xr = prism.Q_(pipelines_lifetime_xr, "year")
 
-    # # Rebroadcast to standard technology names from TIMER, and convert coordinate type back to python strings (since rebroadcast changes it to numpy strings)
-    # pipelines_lifetime_xr = fossil_fuel_knowledge_graph.rebroadcast_xarray(pipelines_lifetime_xr, output_coords=FF_TECHNOLOGIES, dim="Type") # convert technology names to the standard names from TIMER
-    # pipelines_lifetime_xr = pipelines_lifetime_xr.assign_coords(Type=np.array(pipelines_lifetime_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
-    
     pipeline_order = [
         'Gas Distribution Pipeline',
         'Gas Transmission Pipeline',
@@ -430,5 +351,5 @@ def compute_pipelines_lifetimes(path_base: str, climate_policy_config: dict, cir
 
     return pipelines_lifetime_xr
 
-print("lifetimes.py ran successfully!")
+print("lifetimes_test.py ran successfully!")
 

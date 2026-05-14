@@ -34,35 +34,6 @@ from imagematerials.fossil_fuels.preprocessing.ffconstants import (
     SD_LIFETIME,
 )
 
-# # SET SCENARIO HERE (Select from SSP1_delayed_action, SSP1_climate_policy, SSP2, SSP2_2D, SSP2_delayed_action, SSP2_climate_policy, SSP2_climate_policy_resource_efficiency SSP3_no_policy)
-# scenario = "SSP2_baseline"
-# scen_folder = "SSP2_baseline" #SSP2_baseline is the only option right now given the existing files of primpersec and final_energy_rt
-# STANDARD_SCEN_EXTERNAL_DATA = "SSP2_baseline" #SSP2_baseline is the only option right now given the existing files of primpersec and final_energy_rt
-
-# BASE_DIR = Path(__file__).resolve()
-# while BASE_DIR.name != "image-materials":
-#     BASE_DIR = BASE_DIR.parent
-
-# DATA_DIR = BASE_DIR / "data" / "raw" / "fossil_fuels"
-# IMAGE_DIR = BASE_DIR / "data" / "raw" / "image"
-# OUTPUT_DIR = DATA_DIR / "Scenario_data"
-# CLIMATE_POLICY_SCENARIO_DIR = IMAGE_DIR / scen_folder  
-# path_base = BASE_DIR / "imagematerials"
-# climate_policy_scenario_dir = CLIMATE_POLICY_SCENARIO_DIR
-
-# BASE_DIR = Path(__file__).resolve().parent
-# DATA_DIR = Path(__file__).resolve().parents[3] / "data" / "raw" / "fossil_fuels"
-# OUTPUT_DIR = Path(__file__).resolve().parents[3] / "data" / "raw" / "fossil_fuels" / "Scenario_data"
-# IMAGE_DIR = Path(__file__).resolve().parents[3] / "data" / "raw" / "image"
-
-# (OUTPUT_DIR / scenario).mkdir(parents=True, exist_ok=True)
-# print(f"Output directory ready: {OUTPUT_DIR / scenario}")
-
-
-# print("data dir:", DATA_DIR)    
-# print("output dir:", OUTPUT_DIR)
-# print("image dir:", IMAGE_DIR) 
-
 # General constants
 NUM_REGIONS = 26  # 26 IMAGE regions
 FIRST_YEAR = 1900  # first year for the historically generated dataset
@@ -126,6 +97,10 @@ import os
 primpersec = read_mym_df(
     IMAGE_DIR / scenario / "EnergyFlows" / "PrimPerSec.out"
 )
+
+# primpersec = read_mym_df(
+#     path_base.parent / "extended_scenarios" / scenario / "EnergyFlows" / "PrimPerSec.out"
+# )
   # primary enery consumption per sector in GJ
 
 
@@ -133,6 +108,9 @@ final_energy = read_mym_df(
     IMAGE_DIR / scenario / "EnergyFlows" / "final_energy_rt.out"
 )  
 
+# final_energy = read_mym_df(
+#     path_base.parent / "extended_scenarios" / scenario / "EnergyFlows" / "final_energy_rt.out"
+# )  
 # final enery consumption per sector in PJ
 
 
@@ -546,12 +524,6 @@ def coal_infra():
         "transport": transport_total_coal,
     }
 
-#Comment back in if running for a new scenario, otherwise it will overwrite the existing files with the same name (since the input data is the same)
-# coalresults = coal_infra()
-# coalresults[0].to_csv(OUTPUT_DIR / scenario / "coal_extraction_stock_kg.csv")
-# coalresults[1].to_csv(OUTPUT_DIR / scenario / "coal_preparation_stock_kg.csv")
-# coalresults[2].to_csv(OUTPUT_DIR / scenario / "coal_transport_stock_kg.csv")
-
 
 def gas_infra():
     fuel = "gas"
@@ -592,12 +564,6 @@ def gas_infra():
         "processing": processing_stock_gas,
     }
 
-#Comment back in if running for a new scenario, otherwise it will overwrite the existing files with the same name (since the input data is the same)
-# gasresults = gas_infra()
-# gasresults[0].to_csv(OUTPUT_DIR / scenario / "gas_extraction_stock_kg.csv")
-# gasresults[1].to_csv(OUTPUT_DIR / scenario / "gas_transport_stock_kg.csv")
-# gasresults[2].to_csv(OUTPUT_DIR / scenario / "gas_pipelines_length_km.csv")
-# gasresults[3].to_csv(OUTPUT_DIR / scenario / "gas_processing_stock_kg.csv")
 
 
 def oil_infra():
@@ -645,13 +611,6 @@ def oil_infra():
         "refinery": refinery_stock_oil,
     }
 
-#Comment back in if running for a new scenario, otherwise it will overwrite the existing files with the same name (since the input data is the same)
-# oilresults = oil_infra()
-# oilresults[0].to_csv(OUTPUT_DIR / scenario / "oil_extraction_stock_kg.csv")
-# oilresults[1].to_csv(OUTPUT_DIR / scenario / "oil_transport_stock_kg.csv")
-# oilresults[2].to_csv(OUTPUT_DIR / scenario / "oil_pipelines_length_km.csv")
-# oilresults[3].to_csv(OUTPUT_DIR / scenario / "oil_storage_volume_m3.csv")
-# oilresults[4].to_csv(OUTPUT_DIR / scenario / "oil_refinery_stock_kg.csv")
 
 print("drivers.py ran successfully!")
 

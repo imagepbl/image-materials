@@ -17,19 +17,6 @@ STANDARD_SCEN_EXTERNAL_DATA = scenario #SSP2_baseline is the only option right n
 SCENARIO_DEFAULT = "SSP2"
 
 # Define paths (change to be consistent with other OS)
-
-# BASE_DIR = Path(__file__).resolve()
-# while BASE_DIR.name != "image-materials":
-#     BASE_DIR = BASE_DIR.parent
-
-# DATA_DIR = BASE_DIR / "data" / "raw" / "fossil_fuels"
-# IMAGE_DIR = BASE_DIR / "data" / "raw" / "image"
-# OUTPUT_DIR = DATA_DIR / "Scenario_data"
-# CLIMATE_POLICY_SCENARIO_DIR = IMAGE_DIR / scen_folder  
-# path_base = BASE_DIR / "imagematerials"
-# climate_policy_scenario_dir = CLIMATE_POLICY_SCENARIO_DIR
-
-# Define paths (change to be consistent with other OS)
 path_base = Path(__file__).resolve()
 while path_base.name != "image-materials":
     path_base = path_base.parent
@@ -368,60 +355,6 @@ DICT_MATERIALS_COLORS = {
     'Ni':        '#FCB1A6',
     'Other':     '#FFD97D'
 }
-
-# DICT_GRID_COLORS = {
-#     #'Lines Overhead': '#FF9B85',
-#     #'Lines Underground': '#FFD97D',
-#     'Lines':        '#8cb369', #'#007f5f',
-#     'Transformers': '#f4a259', #'#aacc00',
-#     'Substations':  '#bc4b51' #'#55a630'
-# }
-
-# DICT_GRID_STYLES_1 = {
-#     'HV':                           ('#ef767a', '-'),
-#     'HV - Lines - Overhead':        ('#ef767a', '-'),
-#     'HV - Lines - Underground':     ('#ef767a', '--'),
-#     'HV - Transformers':            ('#ef767a', '-'),
-#     'HV - Substations':             ('#ef767a', '--'),
-
-#     'MV':                           ('#456990', '-'),
-#     'MV - Lines - Overhead':        ('#456990', '-'),
-#     'MV - Lines - Underground':     ('#456990', '--'),
-#     'MV - Transformers':            ('#456990', '-'),
-#     'MV - Substations':             ('#456990', '--'),
-
-#     'LV':                           ('#49beaa', '-'),
-#     'LV - Lines - Overhead':        ('#49beaa', '-'),
-#     'LV - Lines - Underground':     ('#49beaa', '--'),
-#     'LV - Transformers':            ('#49beaa', '-'),
-#     'LV - Substations':             ('#49beaa', '--')
-# }
-
-# DICT_GRID_STYLES_2 = {
-#     'HV':                           ('#ef767a', '-'),
-#     'HV - Lines - Overhead':        ('#f4845f', '-'),
-#     'HV - Lines - Underground':     ('#f4845f', '--'),
-#     'HV - Transformers':            ('#f7b267', '-'),
-#     'HV - Substations':             ('#f25c54', '--'),
-
-#     'MV':                           ('#456990', '-'),
-#     'MV - Lines - Overhead':        ('#0077b6', '-'),
-#     'MV - Lines - Underground':     ('#0077b6', '--'),
-#     'MV - Transformers':            ('#c0fdff', '-'),
-#     'MV - Substations':             ('#023e8a', '--'),
-
-#     'LV':                           ('#38b000', '-'), ##49beaa
-#     'LV - Lines - Overhead':        ('#70e000', '-'),
-#     'LV - Lines - Underground':     ('#70e000', '--'),
-#     'LV - Transformers':            ('#ccff33', '-'),
-#     'LV - Substations':             ('#007200', '--')
-# }
-
-# DICT_ELECTR_COLORS = {
-#     'Generation':   '#277da1',
-#     'Storage':      '#f9844a',
-#     'Transmission': '#90be6d'
-# }
 
 
 """Module containing global constants
