@@ -40,7 +40,7 @@ INTERMEDIATE_YEAR = 2080
 
 
 path_current = Path().resolve()
-path_base = path_current.parent.parent # base path of the project -> image-materials
+path_base = path_current.parent.parent.parent # base path of the project -> image-materials
 path_base = Path(path_base, "data", "raw")
 
 scenario = "SSP2_baseline"
@@ -92,6 +92,9 @@ storage_ltdecline = pd.Series(pd.read_csv(path_external_data_standard / 'storage
 #read in the energy density assumptions (kg/kWh storage capacity - mass required to store one unit of energy — more mass per energy = worse performance)
 storage_density = pd.read_csv(path_external_data_standard / 'storage_density_kg_per_kwh.csv',index_col=0).transpose()
 
+# material compositions (storage) in wt%
+storage_materials = pd.read_csv(path_external_data_standard / 'storage_materials_dynamic.csv',index_col=[0,1],usecols=lambda col: col != "unit").transpose()  # wt% of total battery weight for various materials, total battery weight is given by the density file above
+
 
 # 2. IMAGE/TIMER files ====================================================================================
 
@@ -103,6 +106,40 @@ storage = read_mym_df(Path(path_image, "EnergyServices", "StorResTot.out"))   #s
 storage_power = read_mym_df(Path(path_image, "EnergyServices", "StorCapTot.out"))
 # storage_power = read_mym_df(climate_policy_config["config_file_path"] / climate_policy_config["data_files"]['StorCapTot'])
 
+#%%
+
+# Read both CSVs
+materials_df = pd.read_csv(path_external_data_standard / 'storage_materials_dynamic.csv')
+energy_df = pd.read_csv(path_external_data_standard / 'storage_density_kg_per_kwh.csv')
+
+# Keep only Cohort == 2000
+materials_2000 = materials_df[materials_df["Cohort"] == 2000].copy()
+
+# Merge on technology name
+merged = materials_2000.merge(
+    energy_df,
+    left_on="Type",
+    right_on="kg/kWh",
+    how="left"
+)
+
+# Columns containing material fractions
+material_cols = [
+    "steel", "aluminium", "concrete", "plastics", "glass",
+    "copper", "neodymium", "cobalt", "lead", "lithium",
+    "nickel", "manganese"
+]
+
+# Multiply each material wt% by the 2018 value
+result = merged.copy()
+
+for col in material_cols:
+    result[col] = result[col] * result["2018"]
+
+# Keep useful columns
+result = result[["Type", "2018"] + material_cols]
+
+result.to_csv(path_external_data_standard / "storage_materials_kg_per_kwh.csv", index=False)
 
 # ----------------------------------------------------------------------------------------------------------
 # ##########################################################################################################

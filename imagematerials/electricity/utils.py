@@ -14,7 +14,7 @@ from pint.errors import UnitStrippedWarning
 
 
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
-from imagematerials.concepts import create_electricity_graph
+from imagematerials.concepts import create_electricity_graph, create_image_region_graph
 
 from imagematerials.constants import (
     IMAGE_REGIONS,
@@ -965,6 +965,8 @@ def derive_phs_installed_capacity(data: list,
     ################################################################################################
     # Aggregate to IMAGE regions
 
+    knowledge_graph_region = create_image_region_graph()
+    
     ds_data1_image_region = ds_data1_country.copy()
     ds_data1_image_region = knowledge_graph_region.aggregate_sum(ds_data1_image_region, output_coords=IMAGE_REGIONS, dim="Region", require_relation=False)
 

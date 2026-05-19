@@ -31,6 +31,7 @@ from imagematerials.electricity.constants import (
     YEAR_FIRST_GRID,
     SENS_ANALYSIS,
     STD_LIFETIMES_ELECTR,
+    EPG_TECHNOLOGIES,
     unit_mapping,
     mean_discharge_duration,
     factor_phs_growth_rel_demand,
@@ -45,9 +46,11 @@ INTERMEDIATE_YEAR = 2080
 # delete again ------------------
 scenario = "SSP2_baseline"
 path_current = Path().resolve()
-path_base = path_current.parent.parent # base path of the project -> image-materials
+path_base = path_current.parent.parent.parent # base path of the project -> image-materials
 path_image_output = Path(path_base, "data", "raw", "image", scenario, "EnergyServices")
 path_base = Path(path_base, "data", "raw")
+year_start = 1971
+year_end = 2100
 # ----------------------------------
 
 
@@ -181,7 +184,7 @@ df_shares_adjustment_2030 =  pd.read_csv(Path(path_external_data_standard,"phs_r
 
 # Data for Behind-the-Meter Storage (BTM) ----------------------------------------------------------
 # share of solar PV capacity paired with BTM storage per IMAGE region (values: 0-1)
-ratio_btm_deployment_data = pd.read_csv(Path(path_data, "electricity","standard_data","behind_the_meter_battery_deployment_ratio.csv"), usecols=["Time", "Region", "Value"])
+ratio_btm_deployment_data = pd.read_csv(Path(path_external_data_standard, "behind_the_meter_battery_deployment_ratio.csv"), usecols=["Time", "Region", "Value"])
 
 
 
@@ -211,6 +214,7 @@ gcap_data = read_mym_df(path_image_output / 'GCap.out')
 # %%% TIMER variables
 
 knowledge_graph_region = create_image_region_graph()
+knowledge_graph_electr = create_electricity_graph()
 
 storage_energy = storage_energy.iloc[:, :26]
 storage_energy.index.name = "Time"
@@ -286,7 +290,20 @@ btm = derive_btm_installed_capacity(gcap_xr_interp, ratio_btm_deployment_data, r
 
 
 ####################################################################################################
-#%%% 2. Behind-the-meter storage
+#%%% 3. Grid-scale storage
+
+
+
+
+
+
+
+
+
+####################################################################################################
+#%%% OLD
+
+
 
 ##################
 # Interpolations #
