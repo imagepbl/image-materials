@@ -16,26 +16,17 @@ from imagematerials.read_mym import read_mym_df
 prism.unit_registry.load_definitions(files("imagematerials") / "units.txt")
 
 
-def _get_pop_q_xr(
+def _load_pop_q_raw(
     image_directory: Path,
     region_range: range,
     area_labels: dict[int, str] = area_labels) -> xr.DataArray:
-    """Load IMAGE population quintile data and convert it to an xarray DataArray.
-
-    Parameters
-    ----------
-    image_directory : Path
-        Directory containing IMAGE scenario files, including
-        ``Socioeconomic/pop_q.out``.
-    region_range : range
-        Region identifiers to keep from the source data.
-    area_labels : dict[int, str], optional
-        Mapping from numeric area IDs to area names.
+    """Load IMAGE population quintile data as a flat DataArray.
 
     Returns
     -------
     xr.DataArray
-        Population data with dimensions ``("Time", "Region", "Area")``.
+        Population data with dimensions ``("Time", "Region", "Area")``, where
+        ``Area`` contains ``Total``, ``Urban``, ``Rural``, and all quintile labels.
     """
     pop_q = read_mym_df(image_directory.joinpath("Socioeconomic", "pop_q.out"))
     pop_q = pop_q.rename(columns={"time": "Time", "DIM_1": "Region"})
@@ -52,7 +43,56 @@ def _get_pop_q_xr(
     pop_q_xr = pop_q_xr.assign_coords(Area=[area_labels.get(a, a) for a in pop_q_xr.coords["Area"].values])
     # remove global region (27) by selecting only the specified region range
     pop_q_xr = _as_string_regions(pop_q_xr.sel(Region=region_range))
+
+    # quantify with people unit
+    pop_q_xr = prism.Q_(pop_q_xr, "people")
     return pop_q_xr
+
+
+def _get_pop_q_xr(
+    image_directory: Path,
+    region_range: range,
+    area_labels: dict[int, str] = area_labels,
+    urban_q_areas: list[str] = urban_q_areas,
+    rural_q_areas: list[str] = rural_q_areas) -> xr.DataArray:
+    """Load IMAGE population quintile data with quintiles as a separate coordinate.
+
+    Parameters
+    ----------
+    image_directory : Path
+        Directory containing IMAGE scenario files, including
+        ``Socioeconomic/pop_q.out``.
+    region_range : range
+        Region identifiers to keep from the source data.
+    area_labels : dict[int, str], optional
+        Mapping from numeric area IDs to area names.
+    urban_q_areas : list[str], optional
+        Area labels for urban quintiles.
+    rural_q_areas : list[str], optional
+        Area labels for rural quintiles.
+
+    Returns
+    -------
+    xr.DataArray
+        Population data with dimensions ``("Time", "Region", "Area", "Quintile")``,
+        where ``Area`` is ``["Urban", "Rural"]`` and ``Quintile`` is ``["Q1", ..., "Q5"]``.
+    """
+    pop_q_raw = _load_pop_q_raw(image_directory, region_range, area_labels)
+    q_labels = [f"Q{i}" for i in range(1, len(urban_q_areas) + 1)]
+
+    urban_q = (
+        pop_q_raw.sel(Area=urban_q_areas)
+        .assign_coords(Area=q_labels)
+        .rename({"Area": "Quintile"})
+        .expand_dims(Area=["Urban"])
+    )
+    rural_q = (
+        pop_q_raw.sel(Area=rural_q_areas)
+        .assign_coords(Area=q_labels)
+        .rename({"Area": "Quintile"})
+        .expand_dims(Area=["Rural"])
+    )
+    return xr.concat([urban_q, rural_q], dim="Area").transpose("Time", "Region", "Area", "Quintile")
 
 
 def _build_total_population(
@@ -88,7 +128,7 @@ def _build_total_population(
 
     historic_population = pd.read_csv(historic_path, index_col=0, header=0)
     # convert to people by dividng by 1000 
-    historic_population = historic_population.loc[:1971] / 1000
+    historic_population = historic_population / 1000
     historic_population = historic_population.reindex(
         index=range(historic_population.index.min(), historic_population.index.max() + 1)  # Explicitly specify index
     ).interpolate(method="linear")
@@ -183,31 +223,34 @@ def _split_quintiles(
     xr.DataArray
         Combined population array with dimensions ``("Area", "Quintile", "Time", "Region")``.
     """
+    q_labels = [f"Q{i}" for i in range(1, len(urban_q_areas) + 1)]
+
+    # Urban quintiles
     urban_q_share = pop_q_data.sel(Area=urban_q_areas) / pop_q_data.sel(Area="Urban")
     urban_q_share = _as_string_regions(urban_q_share)
     urban_q_share = urban_q_share.reindex(Region=regions).interp(Time=time_all, kwargs={"fill_value": "extrapolate"})
     urban_q_share = _normalize_shares(urban_q_share, dim="Area", fallback=1 / len(urban_q_areas))
+    urban_q_pop = (
+        urban_q_share.assign_coords(Area=q_labels)
+        .rename({"Area": "Quintile"})
+        .expand_dims(Area=["Urban"])
+    )
+    urban_q_pop = urban_q_pop * urban_rural_population.sel(Area="Urban")
 
+    # Rural quintiles
     rural_q_share = pop_q_data.sel(Area=rural_q_areas) / pop_q_data.sel(Area="Rural")
     rural_q_share = _as_string_regions(rural_q_share)
     rural_q_share = rural_q_share.reindex(Region=regions).interp(Time=time_all, kwargs={"fill_value": "extrapolate"})
     rural_q_share = _normalize_shares(rural_q_share, dim="Area", fallback=1 / len(rural_q_areas))
-
-    urban_q_pop = urban_q_share * urban_rural_population.sel(Area="Urban")
-    rural_q_pop = rural_q_share * urban_rural_population.sel(Area="Rural")
-
-    # Align `Area` dimension sizes explicitly before concatenation
-    urban_q_pop = urban_q_pop.expand_dims(Quintile=urban_q_areas)
-    rural_q_pop = rural_q_pop.expand_dims(Quintile=rural_q_areas)
-
-    # Combine urban and rural quintiles into a single DataArray with a consistent `Area` dimension
-    combined_quintiles = xr.concat(
-        [urban_q_pop, rural_q_pop],
-        dim="Area",
-        join="outer",
+    rural_q_pop = (
+        rural_q_share.assign_coords(Area=q_labels)
+        .rename({"Area": "Quintile"})
+        .expand_dims(Area=["Rural"])
     )
+    rural_q_pop = rural_q_pop * urban_rural_population.sel(Area="Rural")
 
-    return combined_quintiles
+    # Concatenate: Area=['Urban','Rural'], Quintile=['Q1',...,'Q5']
+    return xr.concat([urban_q_pop, rural_q_pop], dim="Area")
 
 
 def _align_core_population(population_split: xr.DataArray, base_population: xr.DataArray) -> xr.DataArray:
@@ -232,25 +275,27 @@ def _align_core_population(population_split: xr.DataArray, base_population: xr.D
     common_time = np.intersect1d(population_split.coords["Time"].values, aligned_base.coords["Time"].values)
     common_region = np.intersect1d(population_split.coords["Region"].values, aligned_base.coords["Region"].values)
 
-    # For Total/Urban/Rural, replace values with the base dataset on the overlap.
+    n_quintiles = population_split.sizes.get("Quintile", 1)
+
     for area in ["Total", "Urban", "Rural"]:
-        population_split.loc[{"Time": common_time, "Region": common_region, "Area": area}] = aligned_base.sel(
-            Time=common_time,
-            Region=common_region,
-            Area=area,
-        )
+        base_vals = aligned_base.sel(Time=common_time, Region=common_region, Area=area)
+        if area in ["Urban", "Rural"] and n_quintiles > 1:
+            # Distribute equally across quintiles so that sum("Quintile") == base_vals
+            population_split.loc[{"Time": common_time, "Region": common_region, "Area": area}] = base_vals / n_quintiles
+        else:
+            population_split.loc[{"Time": common_time, "Region": common_region, "Area": area}] = base_vals
     return population_split
 
 
-def _equalize_quintiles(population_split: xr.DataArray, quintile_areas: list[str], target_area: str) -> xr.DataArray:
+def _equalize_quintiles(population_split: xr.DataArray, q_labels: list[str], target_area: str) -> xr.DataArray:
     """Set all quintiles in a group to equal shares of a target area.
 
     Parameters
     ----------
     population_split : xr.DataArray
         Population split containing quintile areas and a target aggregate area.
-    quintile_areas : list[str]
-        Area labels corresponding to quintiles that should be equalized.
+    q_labels : list[str]
+        Quintile coordinate labels (e.g. ``["Q1", "Q2", "Q3", "Q4", "Q5"]``).
     target_area : str
         Aggregate area whose values are split equally across quintiles.
 
@@ -259,8 +304,11 @@ def _equalize_quintiles(population_split: xr.DataArray, quintile_areas: list[str
     xr.DataArray
         Population split with equalized quintile values.
     """
-    equal_vals = population_split.sel(Area=target_area) / len(quintile_areas)
-    population_split.loc[{"Area": quintile_areas}] = equal_vals
+    # Divide the sum over Quintile equally across all quintile slots
+    total_vals = population_split.sel(Area=target_area).sum(dim="Quintile")
+    equal_vals = total_vals / len(q_labels)
+    for q in q_labels:
+        population_split.loc[{"Area": target_area, "Quintile": q}] = equal_vals
     return population_split
 
 
@@ -288,8 +336,9 @@ def compute_population_split(
         Quantified population split in units of people.
     """
     regions_all = [str(r) for r in region_range]
+    q_labels = [f"Q{i}" for i in range(1, len(urban_q_areas) + 1)]
 
-    pop_q_data = _get_pop_q_xr(image_directory, region_range)
+    pop_q_data = _load_pop_q_raw(image_directory, region_range)
     population = pop_q_data.sel(Area=["Total", "Urban", "Rural"]).transpose("Time", "Region", "Area")
 
     total_population_xr, time_all = _build_total_population(
@@ -314,11 +363,11 @@ def compute_population_split(
         urban_q_areas=urban_q_areas,
         rural_q_areas=rural_q_areas,
     )
+    # combined_quintiles_population_xr: Area=['Urban','Rural'], Quintile=['Q1',...,'Q5']
 
     population_split_xr = xr.concat(
         [
-            total_population_xr.expand_dims(Area=["Total"]),
-            urban_rural_population_xr,
+            total_population_xr.expand_dims(Area=["Total"]).expand_dims(Quintile=q_labels),
             combined_quintiles_population_xr,
         ],
         dim="Area",
@@ -326,7 +375,7 @@ def compute_population_split(
     ).transpose("Time", "Region", "Area", "Quintile").clip(min=0)
 
     population_split_xr = _align_core_population(population_split_xr, population)
-    population_split_xr = _equalize_quintiles(population_split_xr, urban_q_areas, "Urban")
-    population_split_xr = _equalize_quintiles(population_split_xr, rural_q_areas, "Rural")
+    population_split_xr = _equalize_quintiles(population_split_xr, q_labels, "Urban")
+    population_split_xr = _equalize_quintiles(population_split_xr, q_labels, "Rural")
 
     return prism.Q_(population_split_xr, "people")

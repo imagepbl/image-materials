@@ -59,18 +59,14 @@ def buildings_preprocessing(base_directory: Path, climate_policy_config: dict,
     # Get floorspace for commercial + urban/rural
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        floorspace_image_commercial_rururb, minimum_comm = get_image_floorspace(image_directory,
-                                                                                base_directory)
-    floorspace_commercial_rururb = extrapolate_floorspace(floorspace_image_commercial_rururb,
-                                                          minimum_comm)
-
-    # Rural/Urban floorspace [Time, Region, Area]
-    floorspace_rururb = floorspace_commercial_rururb.sel(
-        {"Type": ["Urban", "Rural"]}).rename({"Type": "Area"})
+        floorspace_image_residential, floorspace_image_commercial, minimum_comm = get_image_floorspace(
+            image_directory,
+            base_directory,
+        )
+    floorspace_rururb = extrapolate_floorspace(floorspace_image_residential)
+    floorspace_commercial = extrapolate_floorspace(floorspace_image_commercial, minimum_comm)
 
     # Commercial floorspace [Time, Region, Type]
-    floorspace_commercial = floorspace_commercial_rururb.sel(
-        {"Type": [x.values for x in floorspace_commercial_rururb.coords["Type"] if x.values not in ["Urban", "Rural"]]})
     
     if "base" or "narrow_activity" or "narrow" in circular_economy_config.keys():
         # Implement circular economy for commercial floorspace

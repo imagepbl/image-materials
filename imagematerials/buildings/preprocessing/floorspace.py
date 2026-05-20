@@ -21,7 +21,8 @@ from imagematerials.buildings.constants import (
     YEARS,
     urban_q_areas,
     rural_q_areas,
-    area_graph
+    area_graph,
+    commercial_types
 )
 from imagematerials.buildings.preprocessing.circular_economy_measures import (
     ce_measures_residential_housing,
@@ -97,7 +98,7 @@ def get_service_value_added(image_directory: Path) -> pd.DataFrame:
     return service_value_added
 
 def get_image_floorspace(image_directory: Path,
-                         base_directory: Path) -> (xr.DataArray, xr.DataArray):
+                         base_directory: Path) -> tuple[xr.DataArray, xr.DataArray, xr.DataArray]:
     """Get the commercial and residential floorspace computed by image.
 
     Parameters
@@ -109,8 +110,10 @@ def get_image_floorspace(image_directory: Path,
 
     Returns
     -------
-    floorspace:
-        XArray DataArray containing the floorspace for residential and commercial buildings.
+    floorspace_residential:
+        XArray DataArray with dims ``(Time, Region, Area, Quintile)`` for residential buildings.
+    floorspace_commercial:
+        XArray DataArray with dims ``(Time, Region, Type)`` for commercial buildings.
     minimum_comm:
         Computed minimum floorspace for commercial buildings.
 
@@ -120,86 +123,87 @@ def get_image_floorspace(image_directory: Path,
     commercial_m2_cap_sum = compute_commercial_floor_m2_cap_sum(gompertz, service_value_added)
     commercial_m2_cap, minimum_comm = compute_commercial_floor_m2_cap(
         gompertz, commercial_m2_cap_sum, service_value_added)
-    floorspace_urb_rur = get_floorspace_urban_rural(image_directory)
 
-    floorspace_all = floorspace_urb_rur.merge(commercial_m2_cap, how = "left", left_index=True,
-                                              right_index=True)
-    floorspace_dataset = floorspace_all.to_xarray()
+    # Residential: (Time, Region, Area, Quintile) — Area=["Urban","Rural"], Quintile=["Q1",...,"Q5"]
+    floorspace_residential_xr = get_floorspace_urban_rural(image_directory)
 
-    floorspace_xr = xr.DataArray(0.0, dims=("Time", "Region", "Type"), coords={
-        "Time": floorspace_dataset.coords["Time"],
-        "Region": floorspace_dataset.coords["Region"],
-        "Type": ["Urban", "Rural", 
-                 "Urban Q1", "Urban Q2", "Urban Q3", "Urban Q4", "Urban Q5", 
-                 "Rural Q1", "Rural Q2", "Rural Q3", "Rural Q4", "Rural Q5",
-                 "Office", "Retail+", "Hotels+", "Govt+"],
-    })
-
-    for data_name, data_var in floorspace_dataset.data_vars.items():
-        floorspace_xr.loc[:, :, data_name] = data_var
-    floorspace_xr.coords["Region"] = [str(x.values) for x in floorspace_xr.coords["Region"]]
+    # Commercial: convert DataFrame (Time×Region) × Type → xarray (Time, Region, Type)
+    floorspace_commercial_xr = (
+        commercial_m2_cap
+        .rename_axis("Type", axis=1)
+        .stack()
+        .to_xarray()
+        .transpose("Time", "Region", "Type")
+    )
+    floorspace_commercial_xr.coords["Region"] = [
+        str(r) for r in floorspace_commercial_xr.coords["Region"].values
+    ]
 
     # Quantify units
-    floorspace_xr = prism.Q_(floorspace_xr, "m^2/person")
+    floorspace_residential_xr = prism.Q_(floorspace_residential_xr, "m^2/person")
+    floorspace_commercial_xr = prism.Q_(floorspace_commercial_xr, "m^2/person")
     minimum_comm = prism.Q_(minimum_comm, "m^2/person")
 
-    return floorspace_xr, minimum_comm
+    return floorspace_residential_xr, floorspace_commercial_xr, minimum_comm
 
 def extrapolate_floorspace(floorspace_image: xr.DataArray,
-                           minimum_comm: xr.DataArray) -> xr.DataArray:
+                           minimum_values: xr.DataArray | None = None) -> xr.DataArray:
     """Extrapolate the floorspace back to 1721.
 
-    For the RESIDENTIAL & COMMERCIAL floorspace: Derive the annual trend (in m2/cap)
-    over the initial 10 years of IMAGE data Get the growth by year (for the first 10 years)
+    Derive the annual trend (in m2/cap) over the initial 10 years of IMAGE data and
+    extrapolate backwards to 1721.
 
     Parameters
     ----------
     floorspace_image:
-        The non-extrapolated floorspace values. The output of :func:`get_image_floorspace`.
-    minimum_comm:
-        The minimum values for residential and commercial floorspace.
-        Output of :func:`get_image_floorspace`.
+        The non-extrapolated floorspace values. Can be either:
+        ``(Time, Region, Area, Quintile)`` for residential, or
+        ``(Time, Region, Type)`` for commercial.
+    minimum_values:
+        Optional lower-bound values for non-time/region dimensions.
+        For commercial this is typically ``minimum_comm``.
 
     """
     interp_coor = floorspace_image.sel(Time=range(1971, 1981)).coords
     trend_1971_1981 = xr.DataArray(
         floorspace_image.sel(Time=range(1971, 1981)).to_numpy()/floorspace_image.sel(
             Time=range(1972, 1982)).to_numpy(),
-        dims=("Time", "Region", "Type"),
-        coords=interp_coor
+        dims=floorspace_image.dims,
+        coords=interp_coor,
     )
 
-    # Average global annual decline in floorspace/cap in %, rural: 1%; urban 1.2%;
-    # commercial: 1.26-2.18% /yr
+    # Average global annual trend across regions and first IMAGE decade
     avg_trend_1971_1981 = trend_1971_1981.mean(["Time", "Region"])
 
-    # Find minimum or maximum values in the original IMAGE data
-    # (Just for residential, commercial minimum values have been calculated above)
-    # min_floorspace = floorspace_image.min(["Time", "Region"])
-    min_floorspace = xr.concat(
-        (floorspace_image.sel(Type=["Urban", "Rural", 
-                                    "Urban Q1", "Urban Q2", "Urban Q3", "Urban Q4", "Urban Q5",
-                                    "Rural Q1", "Rural Q2", "Rural Q3", "Rural Q4", "Rural Q5"]).min(["Time", "Region"]), minimum_comm),
-        dim="Type")
+    # Determine lower bounds from IMAGE minima and optional explicit minimum values.
+    min_floorspace = floorspace_image.min(["Time", "Region"])
+    if (minimum_values is not None
+            and set(minimum_values.dims).issubset(set(min_floorspace.dims))):
+        # Align labels/order explicitly to avoid join='exact' alignment errors in xarray.where.
+        minimum_aligned = minimum_values.reindex(
+            {dim: min_floorspace.coords[dim].values for dim in minimum_values.dims}
+        )
+        min_floorspace = xr.where(
+            min_floorspace > minimum_aligned,
+            min_floorspace,
+            minimum_aligned,
+        )
+
     # Compute the floorspace between 1820 and 1970 with extrapolation
     floor_1820_1970 = floorspace_image.loc[1971]*avg_trend_1971_1981**(end_year+1-years_1820_1971)
     floor_1820_1970 = floor_1820_1970.where(floor_1820_1970 > min_floorspace, min_floorspace)
-    floor_1820_1970 = floor_1820_1970.transpose()
 
-    floor_1721_1820 = floor_1820_1970[0]*(
-        1-(start_year - years_1721_1820)/(start_year-far_start_year+1)).transpose()
+    # Build far historic segment from the first extrapolated year (1820) while preserving dims.
+    early_scale = 1 - (start_year - years_1721_1820) / (start_year - far_start_year + 1)
+    floor_1721_1820 = floor_1820_1970.sel(Time=start_year) * early_scale
 
     # combine historic with IMAGE data here
     floorspace = xr.concat((floor_1721_1820, floor_1820_1970, floorspace_image), dim="Time")
-
-    # Quantify units
-    floorspace = prism.Q_(floorspace, "m^2/person")
-
-    return floorspace.transpose()
+    return floorspace.transpose(*floorspace_image.dims)
 
 
-def get_floorspace_urban_rural(image_directory: Path) -> pd.DataFrame:
-    """Load the residential floorspace from a file.
+def get_floorspace_urban_rural(image_directory: Path) -> xr.DataArray:
+    """Load the residential floorspace from a file and restructure into xarray.
 
     Parameters
     ----------
@@ -209,34 +213,54 @@ def get_floorspace_urban_rural(image_directory: Path) -> pd.DataFrame:
     Returns
     -------
     floorspace:
-        Pandas dataframe containing the urban and rural average floorspace in m^2/person.
+        DataArray with dims ``(Time, Region, Area, Quintile)`` where
+        ``Area=["Urban","Rural"]`` and ``Quintile=["Q1",...,"Q5"]``.
+        Units not yet quantified (m^2/person).
 
     """
     # load IMAGE data-files (MyM file format)
     floorspace: pd.DataFrame = read_mym_df(image_directory.joinpath("EnergyServices",
                                                                     "res_FloorSpace.out"))
-    floorspace = floorspace[['time','DIM_1',2,3, 4,5,6,7,8,9,10,11,12,13]].rename(columns={"DIM_1": "Region", "time":"Time", 
-                                                                    2:'Urban',
-                                                                    3:'Rural',
-                                                                    4:'Urban Q1',
-                                                                    5:'Urban Q2',
-                                                                    6:'Urban Q3',
-                                                                    7:'Urban Q4',
-                                                                    8:'Urban Q5',
-                                                                    9:'Rural Q1',
-                                                                    10:'Rural Q2',
-                                                                    11:'Rural Q3',
-                                                                    12:'Rural Q4',
-                                                                    13:'Rural Q5'})
-    # the other columns are average per capita floorspace per quintile
-    # (we also exclude the average per capita floorspace of the total population in column 1,
-    # because we use the urban & rural specific totals)
-    floorspace = floorspace[floorspace.Region != REGIONS + 1] # removing region 27
-    floorspace = floorspace[floorspace['Time'].isin(list(range(START_YEAR, END_YEAR+1)))]
+    floorspace = floorspace[['time', 'DIM_1', 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]].rename(
+        columns={"DIM_1": "Region", "time": "Time",
+                 2: 'Urban',    3: 'Rural',
+                 4: 'Urban Q1', 5: 'Urban Q2', 6: 'Urban Q3', 7: 'Urban Q4', 8: 'Urban Q5',
+                 9: 'Rural Q1', 10: 'Rural Q2', 11: 'Rural Q3', 12: 'Rural Q4', 13: 'Rural Q5'})
+    # (column 1 / total average is excluded; we use the urban & rural specific totals)
+    floorspace = floorspace[floorspace.Region != REGIONS + 1]  # removing region 27
+    floorspace = floorspace[floorspace['Time'].isin(list(range(START_YEAR, END_YEAR + 1)))]
     floorspace = floorspace.set_index(["Time", "Region"])
-    floorspace = floorspace.rename_axis("Type", axis = 1)
-    # UNIT: df has no pint --> ("m^2/person")
-    return floorspace
+
+    # Restructure into (Area, Quintile) dims — same logic as population
+    q_labels = ["Q1", "Q2", "Q3", "Q4", "Q5"]
+    urban_q_cols = ["Urban Q1", "Urban Q2", "Urban Q3", "Urban Q4", "Urban Q5"]
+    rural_q_cols = ["Rural Q1", "Rural Q2", "Rural Q3", "Rural Q4", "Rural Q5"]
+
+    flat_xr = (
+        floorspace
+        .rename_axis("Area", axis=1)
+        .stack()
+        .to_xarray()
+    )
+    flat_xr.coords["Region"] = [str(r) for r in flat_xr.coords["Region"].values]
+
+    urban_q = (
+        flat_xr.sel(Area=urban_q_cols)
+        .assign_coords(Area=q_labels)
+        .rename({"Area": "Quintile"})
+        .expand_dims(Area=["Urban"])
+    )
+    rural_q = (
+        flat_xr.sel(Area=rural_q_cols)
+        .assign_coords(Area=q_labels)
+        .rename({"Area": "Quintile"})
+        .expand_dims(Area=["Rural"])
+    )
+
+    # assign units (m^2/person) here, before extrapolation
+    urban_q = prism.Q_(urban_q, "m^2/person")
+    rural_q = prism.Q_(rural_q, "m^2/person")
+    return xr.concat([urban_q, rural_q], dim="Area").transpose("Time", "Region", "Area", "Quintile")
 
 
 def compute_commercial_floor_m2_cap_sum(gompertz: dict,
@@ -355,7 +379,8 @@ def compute_housing_type(database_directory: Path) -> xr.DataArray:
     Returns
     -------
     housing_type_xr:
-        Shares per housing type.
+        Shares per housing type with dims
+        ``(Time, Region, Area, Quintile, Type)``.
 
     """
     housing_type_data: pd.DataFrame = pd.read_csv(database_directory / 'Housing_type_dynamic.csv',
@@ -380,12 +405,28 @@ def compute_housing_type(database_directory: Path) -> xr.DataArray:
                                        ["Type"])
     housing_type_xr.coords["Region"] = [str(x.values) for x in housing_type_xr.coords["Region"]]
 
-    # rebroadcast to quintiles
+    # Rebroadcast to flat quintile areas first, then split into Area + Quintile coords
     target_areas = list(housing_type_xr.coords["Area"].values) + urban_q_areas + rural_q_areas
     housing_type_xr = area_graph.rebroadcast_xarray(
                         housing_type_xr,
                         output_coords=target_areas,
                         dim="Area")
+
+    q_labels = [f"Q{i}" for i in range(1, len(urban_q_areas) + 1)]
+    housing_type_urban = (
+        housing_type_xr.sel(Area=urban_q_areas)
+        .assign_coords(Area=q_labels)
+        .rename({"Area": "Quintile"})
+        .expand_dims(Area=["Urban"])
+    )
+    housing_type_rural = (
+        housing_type_xr.sel(Area=rural_q_areas)
+        .assign_coords(Area=q_labels)
+        .rename({"Area": "Quintile"})
+        .expand_dims(Area=["Rural"])
+    )
+    housing_type_xr = xr.concat([housing_type_urban, housing_type_rural], dim="Area").transpose(
+        "Time", "Region", "Area", "Quintile", "Type")
 
     # Quantify units (share - dimensionless)
     housing_type_xr = prism.Q_(housing_type_xr, "")
@@ -404,7 +445,7 @@ def compute_average_m2_capita(base_directory: Path) -> xr.DataArray:
     Returns
     -------
     average_m2_capita:
-        Average residential floorspace by region, area, time and type.
+        Average residential floorspace by region, area, quintile and type.
 
     """
     cap_fp = base_directory.joinpath('buildings', 'files_DB','Average_m2_per_cap.csv')
@@ -415,12 +456,31 @@ def compute_average_m2_capita(base_directory: Path) -> xr.DataArray:
                                          ["Type"])
     average_m2_capita.coords["Region"] = [str(x.values) for x in average_m2_capita.coords["Region"]]
 
-    #rebroadcast to quintiles #TODO: this could be improved with better data availability, quintiles have probably other sqm/cap than average, but for now we assume the same
+    # Rebroadcast to flat quintile areas first, then split into Area + Quintile coords.
+    # TODO: this could be improved with better data availability; quintiles likely have
+    # different sqm/cap than the area average, but for now we assume the same.
     target_areas = list(average_m2_capita.coords["Area"].values) + urban_q_areas + rural_q_areas
     average_m2_capita = area_graph.rebroadcast_xarray(
                         average_m2_capita,
                         output_coords=target_areas,
                         dim="Area",)
+
+    q_labels = [f"Q{i}" for i in range(1, len(urban_q_areas) + 1)]
+    average_urban = (
+        average_m2_capita.sel(Area=urban_q_areas)
+        .assign_coords(Area=q_labels)
+        .rename({"Area": "Quintile"})
+        .expand_dims(Area=["Urban"])
+    )
+    average_rural = (
+        average_m2_capita.sel(Area=rural_q_areas)
+        .assign_coords(Area=q_labels)
+        .rename({"Area": "Quintile"})
+        .expand_dims(Area=["Rural"])
+    )
+    average_m2_capita = xr.concat([average_urban, average_rural], dim="Area").transpose(
+        "Region", "Area", "Quintile", "Type")
+
     # Quantify units
     average_m2_capita = prism.Q_(average_m2_capita, "m^2/person")
 
