@@ -200,3 +200,7 @@ data/raw/image/SSP2_climate_policy_overshoot/EnergyFlows/
 data/raw/image/SSP2_climate_policy_overshoot/EnergyServices/
 data/raw/image/SSP2_resource_efficiency/EnergyFlows/
 data/raw/image/SSP2_resource_efficiency/EnergyServices/
+
+# Claude agent internal files
+.claude/
+

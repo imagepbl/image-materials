@@ -14,6 +14,7 @@ from imagematerials.__main__ import export_model_netcdf, _convert_timevar
 import prism
 
 SCEN = "SSP2"
+IMAGE_SCEN = "SSP2_baseline"
 
 # Simulation horizon — declared locally, matching the pattern used in
 # imagematerials.electricity.electricity. Adjust here if you want a different
@@ -60,7 +61,13 @@ def run_infrastructure_simulation(prep_data=None, scenario=SCEN):
         The preprocessing dict used (returned for downstream reporting).
     """
     if prep_data is None:
-        prep_data = get_preprocessing_data_infrastructure(path_base, scenario)
+        prep_data = get_preprocessing_data_infrastructure(
+            base_directory=path_base / "data" / "raw",
+            climate_policy_config={
+                "config_file_path": path_base / "data" / "raw" / "image" / IMAGE_SCEN,
+            },
+            image_scenario=scenario,
+        )
 
     print("\n--- Running Infrastructure Sector Model ---")
     time_start = int(prep_data["stocks"].coords["Time"].min().values)
