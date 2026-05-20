@@ -197,6 +197,13 @@ def extrapolate_floorspace(floorspace_image: xr.DataArray,
     early_scale = 1 - (start_year - years_1721_1820) / (start_year - far_start_year + 1)
     floor_1721_1820 = floor_1820_1970.sel(Time=start_year) * early_scale
 
+    # Avoid duplicate years at the historical/IMAGE boundary (e.g., commercial includes 1970).
+    overlap_years = np.intersect1d(floor_1820_1970.coords["Time"].values,
+                                   floorspace_image.coords["Time"].values)
+    floor_1820_1970 = floor_1820_1970.sel(
+        Time=~floor_1820_1970.coords["Time"].isin(overlap_years)
+    )
+
     # combine historic with IMAGE data here
     floorspace = xr.concat((floor_1721_1820, floor_1820_1970, floorspace_image), dim="Time")
     return floorspace.transpose(*floorspace_image.dims)
@@ -510,21 +517,25 @@ def compute_housing_residential(population: xr.DataArray,
     Returns
     -------
     floorspace_residential:
-        Residiential floorspace over different housing types in urban and rural setting.
+        Residential floorspace over different housing types in urban and rural setting.
 
     """
     # Calculate the m2 per capita for each housing type
     m2_housing_per_capita = average_m2_capita * housing_type
     # Calculate the share of housing types on a m2 basis
-    m2_housing_share = m2_housing_per_capita / m2_housing_per_capita.sum(["Type"])
-    total_m2_housing_per_cap = m2_housing_share*floorspace_rururb
+    m2_housing_share = m2_housing_per_capita / m2_housing_per_capita.sum("Type")
+    total_m2_housing_per_cap = m2_housing_share * floorspace_rururb
     total_m2_housing_per_cap = prism.Q_(total_m2_housing_per_cap, "m^2/person")
 
     # Implement circular economy measures if configuration is provided
-    if 'base' in circular_economy_config.keys():
+    if "base" in circular_economy_config:
         total_m2_housing_per_cap = ce_measures_residential_housing(total_m2_housing_per_cap,
                                                                    circular_economy_config)
 
-    total_m2_housing = total_m2_housing_per_cap * population.sel({"Area": ["Rural", "Urban"]})
+    # Align Area labels/order with the split residential floorspace coordinates.
+    population_urbrur = population.sel(Area=total_m2_housing_per_cap.coords["Area"])
+    total_m2_housing = total_m2_housing_per_cap * population_urbrur
+
+    # Keep quintiles explicit and merge only Type + Area into the Type axis.
     floorspace_residential = merge_dims(total_m2_housing, "Type", "Area")
-    return floorspace_residential.transpose("Time", "Region", "Type")
+    return floorspace_residential.transpose("Time", "Region", "Type", "Quintile")
