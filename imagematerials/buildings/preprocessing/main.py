@@ -5,7 +5,6 @@ from pathlib import Path
 import numpy as np
 import xarray as xr
 
-from imagematerials.buildings.constants import SCENARIO_SELECT
 from imagematerials.buildings.preprocessing.circular_economy_measures import (
     apply_circular_economy_commercial_floorspace,
 )
@@ -21,14 +20,14 @@ from imagematerials.buildings.preprocessing.materials import (
     compute_mat_intensities_commercial,
     compute_mat_intensities_residential,
 )
-from imagematerials.buildings.preprocessing.population import compute_population
+from imagematerials.buildings.preprocessing.population import compute_population_split
 from imagematerials.concepts import create_building_graph, create_region_graph
 from imagematerials.constants import IMAGE_REGIONS
 
 
 def buildings_preprocessing(base_directory: Path, climate_policy_config: dict,
                             circular_economy_config: dict,
-                            image_scenario: str = SCENARIO_SELECT) -> xr.DataArray:
+                            image_scenario: str) -> xr.DataArray:
     """Preprocess the buildings data from start to finish.
 
     Parameters

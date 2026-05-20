@@ -19,6 +19,9 @@ from imagematerials.buildings.constants import (
     REGIONS_RANGE,
     START_YEAR,
     YEARS,
+    urban_q_areas,
+    rural_q_areas,
+    area_graph
 )
 from imagematerials.buildings.preprocessing.circular_economy_measures import (
     ce_measures_residential_housing,
@@ -126,7 +129,10 @@ def get_image_floorspace(image_directory: Path,
     floorspace_xr = xr.DataArray(0.0, dims=("Time", "Region", "Type"), coords={
         "Time": floorspace_dataset.coords["Time"],
         "Region": floorspace_dataset.coords["Region"],
-        "Type": ["Urban", "Rural", "Office", "Retail+", "Hotels+", "Govt+"],
+        "Type": ["Urban", "Rural", 
+                 "Urban Q1", "Urban Q2", "Urban Q3", "Urban Q4", "Urban Q5", 
+                 "Rural Q1", "Rural Q2", "Rural Q3", "Rural Q4", "Rural Q5",
+                 "Office", "Retail+", "Hotels+", "Govt+"],
     })
 
     for data_name, data_var in floorspace_dataset.data_vars.items():
@@ -171,7 +177,9 @@ def extrapolate_floorspace(floorspace_image: xr.DataArray,
     # (Just for residential, commercial minimum values have been calculated above)
     # min_floorspace = floorspace_image.min(["Time", "Region"])
     min_floorspace = xr.concat(
-        (floorspace_image.sel(Type=["Urban", "Rural"]).min(["Time", "Region"]), minimum_comm),
+        (floorspace_image.sel(Type=["Urban", "Rural", 
+                                    "Urban Q1", "Urban Q2", "Urban Q3", "Urban Q4", "Urban Q5",
+                                    "Rural Q1", "Rural Q2", "Rural Q3", "Rural Q4", "Rural Q5"]).min(["Time", "Region"]), minimum_comm),
         dim="Type")
     # Compute the floorspace between 1820 and 1970 with extrapolation
     floor_1820_1970 = floorspace_image.loc[1971]*avg_trend_1971_1981**(end_year+1-years_1820_1971)
@@ -207,16 +215,24 @@ def get_floorspace_urban_rural(image_directory: Path) -> pd.DataFrame:
     # load IMAGE data-files (MyM file format)
     floorspace: pd.DataFrame = read_mym_df(image_directory.joinpath("EnergyServices",
                                                                     "res_FloorSpace.out"))
-    floorspace = floorspace[['time','DIM_1',2,3]].rename(columns={"DIM_1": "Region", 'time':'t',
-                                                                  2:'Urban', 3:'Rural'})
+    floorspace = floorspace[['time','DIM_1',2,3, 4,5,6,7,8,9,10,11,12,13]].rename(columns={"DIM_1": "Region", "time":"Time", 
+                                                                    2:'Urban',
+                                                                    3:'Rural',
+                                                                    4:'Urban Q1',
+                                                                    5:'Urban Q2',
+                                                                    6:'Urban Q3',
+                                                                    7:'Urban Q4',
+                                                                    8:'Urban Q5',
+                                                                    9:'Rural Q1',
+                                                                    10:'Rural Q2',
+                                                                    11:'Rural Q3',
+                                                                    12:'Rural Q4',
+                                                                    13:'Rural Q5'})
     # the other columns are average per capita floorspace per quintile
     # (we also exclude the average per capita floorspace of the total population in column 1,
     # because we use the urban & rural specific totals)
     floorspace = floorspace[floorspace.Region != REGIONS + 1] # removing region 27
-    floorspace = floorspace[floorspace['t'].isin(list(range(START_YEAR, END_YEAR+1)))]
-    # remove all data beyond 2060 to save runtime,
-    # we have not yet generated scenario results beyond 2060
-    floorspace = floorspace.rename({"t":"Time"}, axis = 1)
+    floorspace = floorspace[floorspace['Time'].isin(list(range(START_YEAR, END_YEAR+1)))]
     floorspace = floorspace.set_index(["Time", "Region"])
     floorspace = floorspace.rename_axis("Type", axis = 1)
     # UNIT: df has no pint --> ("m^2/person")
@@ -364,6 +380,13 @@ def compute_housing_type(database_directory: Path) -> xr.DataArray:
                                        ["Type"])
     housing_type_xr.coords["Region"] = [str(x.values) for x in housing_type_xr.coords["Region"]]
 
+    # rebroadcast to quintiles
+    target_areas = list(housing_type_xr.coords["Area"].values) + urban_q_areas + rural_q_areas
+    housing_type_xr = area_graph.rebroadcast_xarray(
+                        housing_type_xr,
+                        output_coords=target_areas,
+                        dim="Area")
+
     # Quantify units (share - dimensionless)
     housing_type_xr = prism.Q_(housing_type_xr, "")
 
@@ -392,6 +415,12 @@ def compute_average_m2_capita(base_directory: Path) -> xr.DataArray:
                                          ["Type"])
     average_m2_capita.coords["Region"] = [str(x.values) for x in average_m2_capita.coords["Region"]]
 
+    #rebroadcast to quintiles #TODO: this could be improved with better data availability, quintiles have probably other sqm/cap than average, but for now we assume the same
+    target_areas = list(average_m2_capita.coords["Area"].values) + urban_q_areas + rural_q_areas
+    average_m2_capita = area_graph.rebroadcast_xarray(
+                        average_m2_capita,
+                        output_coords=target_areas,
+                        dim="Area",)
     # Quantify units
     average_m2_capita = prism.Q_(average_m2_capita, "m^2/person")
 

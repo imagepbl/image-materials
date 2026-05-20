@@ -1,3 +1,5 @@
+import xarray as xr
+
 def scale_to_target(dataarray, target_values, year=2020):
     """
     Scales the entire time series for selected regions so that the 2020 values match the targets.
@@ -26,3 +28,13 @@ def scale_to_target(dataarray, target_values, year=2020):
         scaled.loc[{"Region": region_str}] *= scale_factor
 
     return scaled
+
+
+def _as_string_regions(data_array: xr.DataArray) -> xr.DataArray:
+    return data_array.assign_coords(Region=[str(r) for r in data_array.coords["Region"].values])
+
+
+def _normalize_shares(shares: xr.DataArray, dim: str = "Area", fallback: float = 0.0) -> xr.DataArray:
+    shares = shares.clip(min=0)
+    denom = shares.sum(dim=dim)
+    return xr.where(denom > 0, shares / denom, fallback)
