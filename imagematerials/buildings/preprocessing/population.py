@@ -312,7 +312,7 @@ def _equalize_quintiles(population_split: xr.DataArray, q_labels: list[str], tar
     return population_split
 
 
-def compute_population_split(
+def compute_population(
     image_directory: Path,
     region_range: range = REGIONS_RANGE,
     urban_q_areas: list[str] = urban_q_areas,

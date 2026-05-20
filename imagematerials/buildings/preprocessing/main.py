@@ -20,14 +20,14 @@ from imagematerials.buildings.preprocessing.materials import (
     compute_mat_intensities_commercial,
     compute_mat_intensities_residential,
 )
-from imagematerials.buildings.preprocessing.population import compute_population_split
+from imagematerials.buildings.preprocessing.population import compute_population
 from imagematerials.concepts import create_building_graph, create_region_graph
 from imagematerials.constants import IMAGE_REGIONS
 
 
 def buildings_preprocessing(base_directory: Path, climate_policy_config: dict,
                             circular_economy_config: dict,
-                            image_scenario: str) -> xr.DataArray:
+                            image_scenario:str = "SSP2_CP") -> xr.DataArray:
     """Preprocess the buildings data from start to finish.
 
     Parameters
@@ -74,7 +74,7 @@ def buildings_preprocessing(base_directory: Path, climate_policy_config: dict,
         floorspace_commercial = apply_circular_economy_commercial_floorspace(floorspace_commercial, circular_economy_config)
         
     # Calculate population ("Total", "Rural", "Urban")
-    population = compute_population(image_directory, base_directory)
+    population = compute_population(image_directory)
 
     average_m2_capita = compute_average_m2_capita(base_directory)
 
