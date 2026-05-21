@@ -12,7 +12,8 @@ import pandas as pd
 import prism
 
 from imagematerials.concepts import KnowledgeGraph, create_region_graph
-from imagematerials.constants import IMAGE_REGIONS
+from imagematerials.constants import IMAGE_REGIONS, base_directory
+from imagematerials.preprocessing import get_preprocessing_data
 from imagematerials.vehicles.constants import (
     END_YEAR,
     LIGHT_COMMERCIAL_VEHICLE_SHARE,
@@ -20,7 +21,7 @@ from imagematerials.vehicles.constants import (
     PKMS_TO_VKMS,
     REGIONS,
     START_YEAR,
-    all_modes,
+    all_modes
 )
 from imagematerials.vehicles.preprocessing.main_prism import vehicles_preprocessing
 from imagematerials.vehicles.shares_prism import get_vehicle_shares_prism
@@ -79,16 +80,9 @@ class VehicleStocks(prism.Model):
     Time: prism.Coords[TIME]
     
     # Inputs - Time-varying
-    passengerkms: prism.TimeVariable
-    tonekms: prism.TimeVariable
-    vehicle_shares: prism.TimeVariable
-    
-    # Inputs - Static
-    conversion_factor_tkms: xr.DataArray
-    first_year_vehicle: pd.DataFrame
-    market_share: xr.DataArray
-    knowledge_graph: KnowledgeGraph
-    set_unit_flexible: prism.VarUnit[UnitFlexibleStock]
+    #passengerkms: prism.TimeVariable
+    #tonekms: prism.TimeVariable
+    #vehicle_shares: prism.TimeVariable
     
     # Output
     stocks: prism.TimeVariable[REGION, STOCK_TYPE, UnitFlexibleStock] = prism.export()
@@ -119,9 +113,19 @@ class VehicleStocks(prism.Model):
         )
         self.stocks = prism.Q_(self.stocks, unit)
 
-        vehicle_preprocessing = vehicles_preprocessing
+        # Note: add flag to set settings 
+        vehicle_preprocessing = get_preprocessing_data("vehicles", base_directory)
+        self.knowledge_graph = vehicle_preprocessing["knowledge_graph"]
+        self.lifetimes = vehicle_preprocessing["lifetimes"]
+        self.maintenance_material_fractions = vehicle_preprocessing["maintenance_material_fractions"]
+        self.material_fractions = vehicle_preprocessing["material_fractions"]
+        self.conversion_factor_tkms = vehicle_preprocessing["conversion_factor_tkms"]
+        self.first_year_vehicle = vehicle_preprocessing["first_year_vehicle"]
+        self.market_share = vehicle_preprocessing["market_share"]
+        self.weights = vehicle_preprocessing["weights"]
 
-        #compute historic tail
+        # dimension check?
+        # compute historic tail
     
     def compute_values(self, time: prism.Time):
         """Calculate vehicle stocks for the current timestep.

@@ -4,7 +4,7 @@ from imagematerials.model import GenericStocks, GenericMaterials, MaterialIntens
 from imagematerials.factory import ModelFactory, Sector
 from imagematerials.vehicles.preprocessing.util import get_passengerkms, get_tonkms
 from imagematerials.util import read_climate_policy_config
-from imagematerials.vehicles.timermodel import TIMERVehicleMaterials
+from imagematerials.vehicles.timermodel import TIMERMaterials, TIMERVehicleMaterials
 
 
 def test_vehicle_stocks(vhc_prep_data, tmpdir):
@@ -97,7 +97,7 @@ def test_timer_interface(tmpdir):
             "tonkms": tonkms[t]
         }
 
-    timer_vehicle_model = TIMERVehicleMaterials(complete_timeline) # TODO: fix signature
+    timer_vehicle_model = TIMERMaterials(complete_timeline) # TODO: fix signature
     # Simulate TIMER's input using the timer_input function
     timer_vehicle_model.simulate(simulation_timeline, inputs=timer_input)
     
