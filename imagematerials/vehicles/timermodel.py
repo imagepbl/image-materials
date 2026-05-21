@@ -16,11 +16,12 @@ class TIMERMaterials(prism.Model):
     """
     """
 
-    # Dimensions - TODO: deal with them differently?
-    Region: prism.Coords[REGION]
-    Type: prism.Coords[STOCK_TYPE]
+    # Dimensions - derived dynamically from VehicleStocks submodel
+    # TODO ensure this follows the way of defining coordinates as desired by prism
+    # Region: prism.Coords[REGION]
+    # Type: prism.Coords[STOCK_TYPE]
     #Cohort: prism.Coords[COHORT]
-    Time: prism.Coords[TIME]
+    # Time: prism.Coords[TIME]
 
     # Exported variables
     #inflow_materials: prism.TimeVariable[REGION, STOCK_TYPE, MATERIAL_TYPE, "kg"] = prism.export()
@@ -34,6 +35,20 @@ class TIMERMaterials(prism.Model):
 
     def init_submodels(self, timeline: prism.Timeline):
         vehicles = VehicleStocks(timeline)
+        vehicles.compute_initial_values(timeline)
+        
+        # TODO: find a better way to do this
+        # Extract dimensions from the VehicleStocks submodel if not already set
+        if not hasattr(self, 'Region') or self.Region is None:
+            self.Region = vehicles.Region
+        if not hasattr(self, 'Type') or self.Type is None:
+            self.Type = vehicles.Type
+        if not hasattr(self, 'Time') or self.Time is None:
+            self.Time = vehicles.Time
+        
+        # Set compute_args for the submodel (empty for now, as VehicleStocks doesn't need dynamic inputs yet)
+        vehicles.compute_args = {}
+            
         self.submodels = [vehicles]
 
 

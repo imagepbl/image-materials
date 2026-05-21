@@ -22,15 +22,19 @@ from imagematerials.util import (
     rebroadcast_prep_data,
 )
 from imagematerials.constants import IMAGE_REGIONS
+from imagematerials.vehicles.preprocessing.main_prism import vehicles_preprocessing_integration
 
 
-def _get_vehicles_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_scenario_dirs):
+def _get_vehicles_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_scenario_dirs, integration_preprocessing=False):
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
         circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
-        prep_data = prep_vhc(base_dir, climate_policy_config, circular_economy_config)
+        if integration_preprocessing == False:
+            prep_data = prep_vhc(base_dir, climate_policy_config, circular_economy_config)
+        elif integration_preprocessing == True:
+            prep_data = vehicles_preprocessing_integration(base_dir, climate_policy_config, circular_economy_config)
 
     return prep_data
 
@@ -113,7 +117,8 @@ def get_preprocessing_data(
         standard_scenario: str = "SSP2",
         year_start: int = 1971,
         year_end: int = 2100,
-        year_out: int = 2100):
+        year_out: int = 2100,
+        integration_preprocessing: bool = False):
     """Get preprocessing data with optional caching.
 
     Parameters
@@ -173,7 +178,7 @@ def get_preprocessing_data(
     if cache is False or not Path(cache).is_file():
         if sector == "vehicles":
             prep_data = _get_vehicles_prep_data(base_dir, climate_policy_scenario_dir,
-                                                circular_economy_scenario_dirs)
+                                                circular_economy_scenario_dirs, integration_preprocessing)
         elif sector == "buildings":
             prep_data = _get_buildings_prep_data(base_dir, climate_policy_scenario_dir,
                                                  circular_economy_scenario_dirs)
