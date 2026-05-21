@@ -22,6 +22,7 @@ from imagematerials.vehicles.constants import (
     START_YEAR,
     all_modes,
 )
+from imagematerials.vehicles.preprocessing.main_prism import vehicles_preprocessing
 from imagematerials.vehicles.shares_prism import get_vehicle_shares_prism
 from imagematerials.vehicles.preprocessing.util import (
     xarray_conversion
@@ -34,7 +35,7 @@ UnitFlexibleStock = prism.DynamicUnit("my_unit_stock")
 
 
 @prism.interface
-class Stocks(prism.Model):
+class VehicleStocks(prism.Model):
     """Vehicle stocks prism model for yearly calculations.
     
     Calculates vehicle stocks from yearly passenger and tonne kilometer demands,
@@ -117,6 +118,10 @@ class Stocks(prism.Model):
             }
         )
         self.stocks = prism.Q_(self.stocks, unit)
+
+        vehicle_preprocessing = vehicles_preprocessing
+
+        #compute historic tail
     
     def compute_values(self, time: prism.Time):
         """Calculate vehicle stocks for the current timestep.

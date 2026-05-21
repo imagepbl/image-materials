@@ -9,7 +9,7 @@ MATERIAL_TYPE = prism.Dimension("material")
 
 
 @prism.interface
-class TIMERVehicleMaterials(prism.Model):
+class TIMERMaterials(prism.Model):
     """
     """
 
