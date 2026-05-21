@@ -38,9 +38,12 @@ year_out = 2100
 END_YEAR = 2100
 INTERMEDIATE_YEAR = 2080
 
+units_file = files("imagematerials") / "units.txt"
+prism.unit_registry.load_definitions(units_file)
+
 
 path_current = Path().resolve()
-path_base = path_current.parent.parent.parent # base path of the project -> image-materials
+path_base = path_current.parent.parent #.parent # base path of the project -> image-materials
 path_base = Path(path_base, "data", "raw")
 
 scenario = "SSP2_baseline"
@@ -106,40 +109,49 @@ storage = read_mym_df(Path(path_image, "EnergyServices", "StorResTot.out"))   #s
 storage_power = read_mym_df(Path(path_image, "EnergyServices", "StorCapTot.out"))
 # storage_power = read_mym_df(climate_policy_config["config_file_path"] / climate_policy_config["data_files"]['StorCapTot'])
 
-#%%
+
+##################################################################################################
+#%% To extract Sebastiaans material intensities in kg/kWh 
 
 # Read both CSVs
-materials_df = pd.read_csv(path_external_data_standard / 'storage_materials_dynamic.csv')
-energy_df = pd.read_csv(path_external_data_standard / 'storage_density_kg_per_kwh.csv')
+materials_df = pd.read_csv(path_external_data_standard / 'storage_materials_dynamic.csv', usecols=lambda col: col != "unit") #pd.read_csv(path_external_data_standard / 'storage_materials_dynamic.csv')
+energy_density = pd.read_csv(path_external_data_standard / "storage_density_kg_per_kwh.csv",index_col=0).transpose() #pd.read_csv(path_external_data_standard / 'storage_density_kg_per_kwh.csv')
 
-# Keep only Cohort == 2000
-materials_2000 = materials_df[materials_df["Cohort"] == 2000].copy()
 
-# Merge on technology name
-merged = materials_2000.merge(
-    energy_df,
-    left_on="Type",
-    right_on="kg/kWh",
-    how="left"
+years = energy_density.index.astype(int)
+energy_density.columns.name = None # remove header "kg/kWh" to avoid issues
+techs = energy_density.columns
+data_array = energy_density.to_numpy()
+xr_energy_density = xr.DataArray(
+    data_array,
+    dims=("Cohort", "BatteryType"),
+    coords={
+        "Cohort": years,
+        "BatteryType": techs
+    },
+    name="EnergyDensity"
 )
+xr_energy_density = prism.Q_(xr_energy_density, "kg/kWh")
 
-# Columns containing material fractions
-material_cols = [
-    "steel", "aluminium", "concrete", "plastics", "glass",
-    "copper", "neodymium", "cobalt", "lead", "lithium",
-    "nickel", "manganese"
-]
+storage_materials = materials_df.melt(id_vars=['Cohort', 'Type'], var_name='material', value_name='MaterialFractions')
+# Make sure Cohort and Type are treated as categorical (to preserve order)
+storage_materials['Cohort'] = storage_materials['Cohort'].astype(int)
+storage_materials['Type'] = storage_materials['Type'].astype(str)
+# Create xarray DataArray directly
+xr_storage_materials = storage_materials.set_index(['material', 'Cohort', 'Type'])['MaterialFractions'].to_xarray()
+# Ensure correct dimension order
+xr_storage_materials = xr_storage_materials.transpose('material', 'Cohort', 'Type')
+xr_storage_materials = xr_storage_materials.rename({'Type': 'BatteryType'})
+xr_storage_materials = prism.Q_(xr_storage_materials, "fraction")
 
-# Multiply each material wt% by the 2018 value
-result = merged.copy()
+xr_materials_interp = interpolate_xr(xr_storage_materials, 2000, 2050)
+xr_energy_density_interp = interpolate_xr(xr_energy_density, 2000, 2050)
 
-for col in material_cols:
-    result[col] = result[col] * result["2018"]
+xr_material_intensity_interp = xr_materials_interp * xr_energy_density_interp
 
-# Keep useful columns
-result = result[["Type", "2018"] + material_cols]
+print(xr_material_intensity_interp.sel(Cohort=2020).to_pandas())
+# xr_material_intensity_interp.sel(Cohort=2020).to_pandas().round(3).to_csv(path_external_data_standard / "storage_materials_kg_per_kwh.csv", index=True)
 
-result.to_csv(path_external_data_standard / "storage_materials_kg_per_kwh.csv", index=False)
 
 # ----------------------------------------------------------------------------------------------------------
 # ##########################################################################################################
