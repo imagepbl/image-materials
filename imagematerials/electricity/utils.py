@@ -79,7 +79,6 @@ def add_historic_stock(da_stock, year_start=1920, interp_method="linear"):
         return da_stock
     
     unit = prism.U_(da_stock)
-
     t_hist = np.arange(year_start, t_first)
     n_hist = len(t_hist)
 

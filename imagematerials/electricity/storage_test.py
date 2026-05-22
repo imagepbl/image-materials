@@ -83,20 +83,68 @@ def plot_market_shares(shares, name, save=False):
 
 # 1. External Data ======================================================================================== 
 
-# read in the storage costs according to IRENA storage report & other sources in the SI
-storage_costs = pd.read_csv(path_external_data_standard / 'storage_cost.csv', index_col=0).transpose()
+# # read in the storage costs according to IRENA storage report & other sources in the SI
+# storage_costs = pd.read_csv(path_external_data_standard / 'storage_cost.csv', index_col=0).transpose()
 
-# read in the assumed malus & bonus of storage costs (malus for advanced technologies, still under development; bonus for batteries currently used in EVs, we assume that a large volume of used EV batteries will be available and used for dedicated electricity storage, thus lowering costs), only the bonus remains by 2030
-storage_malus = pd.read_csv(path_external_data_standard / 'storage_malus.csv', index_col=0).transpose()
+# # read in the assumed malus & bonus of storage costs (malus for advanced technologies, still under development; bonus for batteries currently used in EVs, we assume that a large volume of used EV batteries will be available and used for dedicated electricity storage, thus lowering costs), only the bonus remains by 2030
+# storage_malus = pd.read_csv(path_external_data_standard / 'storage_malus.csv', index_col=0).transpose()
 
-#read in the assumptions on the long-term price decline after 2050. Prices are in $ct / kWh electricity cycled (the fraction of the annual growth rate (determined based on 2018-2030) that will be applied after 2030, ranging from 0.25 to 1 - 0.25 means the price decline is not expected to continue strongly, while 1 means that the same (2018-2030) annual price decline is also applied between 2030 and 2050)
-storage_ltdecline = pd.Series(pd.read_csv(path_external_data_standard / 'storage_ltdecline.csv',index_col=0,  header=None).transpose().iloc[0])
+# #read in the assumptions on the long-term price decline after 2050. Prices are in $ct / kWh electricity cycled (the fraction of the annual growth rate (determined based on 2018-2030) that will be applied after 2030, ranging from 0.25 to 1 - 0.25 means the price decline is not expected to continue strongly, while 1 means that the same (2018-2030) annual price decline is also applied between 2030 and 2050)
+# storage_ltdecline = pd.Series(pd.read_csv(path_external_data_standard / 'storage_ltdecline.csv',index_col=0,  header=None).transpose().iloc[0])
 
-#read in the energy density assumptions (kg/kWh storage capacity - mass required to store one unit of energy — more mass per energy = worse performance)
-storage_density = pd.read_csv(path_external_data_standard / 'storage_density_kg_per_kwh.csv',index_col=0).transpose()
+# #read in the energy density assumptions (kg/kWh storage capacity - mass required to store one unit of energy — more mass per energy = worse performance)
+# storage_density = pd.read_csv(path_external_data_standard / 'storage_density_kg_per_kwh.csv',index_col=0).transpose()
 
-# material compositions (storage) in wt%
-storage_materials = pd.read_csv(path_external_data_standard / 'storage_materials_dynamic.csv',index_col=[0,1],usecols=lambda col: col != "unit").transpose()  # wt% of total battery weight for various materials, total battery weight is given by the density file above
+# # material compositions (storage) in wt%
+# storage_materials = pd.read_csv(path_external_data_standard / 'storage_materials_dynamic.csv',index_col=[0,1],usecols=lambda col: col != "unit").transpose()  # wt% of total battery weight for various materials, total battery weight is given by the density file above
+material_intensities = pd.read_csv(path_external_data_standard / 'storage_and_EV_batteries_material_intensities.csv', usecols=["Time", "sub_technology", "material", "value"])# .transpose()
+market_shares = pd.read_csv(path_external_data_standard / 'storage_stationary_market_shares.csv', usecols=["Time", "sub_technology", "value"]) #index_col=[0,1],usecols=lambda col: col != "unit"
+
+TECH_STATIONARY_STORAGE = ['LFP', 'NMC333', 'NMC532', 'NMC622', 'NMC811', 'NMC955', 'Na-ion', 
+                           'flow-ZnBr', 'flow-vanadium', 'lead-acid']
+
+# Build the xarray DataArray
+# Pivot to get a multi-index, then convert to xarray
+da_material_intensities = (
+    material_intensities.set_index(["Time", "sub_technology", "material"])["value"]
+    .to_xarray()
+    .rename({"sub_technology": "Type"})
+)
+da_material_intensities = prism.Q_(da_material_intensities, "kg/kWh")
+
+da_market_shares = (
+    market_shares.set_index(["Time", "sub_technology"])["value"]
+    .to_xarray()
+    .rename({"sub_technology": "Type"})
+)
+da_market_shares = prism.Q_(da_market_shares, "dimensionless")
+
+year_start = YEAR_FIRST_GRID
+year_end = 2100
+# if material intensities only have one value (e.g., for 2020), then we can simply broadcast this 
+# value across all years, otherwise we need to interpolate between the given values and then 
+# extrapolate the interpolated values to the full time range
+if da_material_intensities.sizes["Time"] == 1:
+    # Broadcast the single value across all new time coordinates
+    da_material_intensities = da_material_intensities.reindex(Time=np.arange(year_start, year_end), method="nearest")
+else:
+    da_material_intensities = interpolate_xr(da_material_intensities, year_start, year_end)
+
+da_market_shares = interpolate_xr(da_market_shares, year_start, year_end)
+
+fig, ax = plt.subplots()
+for t in da_market_shares.Type.values:
+    ax.plot(da_market_shares.Time, da_market_shares.sel(Type=t), label=t)
+ax.set_xlim(1980, 2070)
+ax.legend(loc="center left", bbox_to_anchor=(1.02, 0.5), frameon=False)
+plt.title("Market shares of stationary storage technologies", fontweight="bold")
+
+fig, ax = plt.subplots()
+for t in da_material_intensities.material.values:
+    ax.plot(da_material_intensities.Time, da_material_intensities.sel(material=t, Type="NMC333"), label=t)
+ax.set_xlim(1980, 2070)
+ax.legend(loc="center left", bbox_to_anchor=(1.02, 0.5), frameon=False)
+plt.title("Material intensities of stationary storage technologies", fontweight="bold")
 
 
 # 2. IMAGE/TIMER files ====================================================================================
@@ -110,9 +158,9 @@ storage_power = read_mym_df(Path(path_image, "EnergyServices", "StorCapTot.out")
 # storage_power = read_mym_df(climate_policy_config["config_file_path"] / climate_policy_config["data_files"]['StorCapTot'])
 
 
-##################################################################################################
+####################################################################################################
 #%% To extract Sebastiaans material intensities in kg/kWh 
-
+ 
 # Read both CSVs
 materials_df = pd.read_csv(path_external_data_standard / 'storage_materials_dynamic.csv', usecols=lambda col: col != "unit") #pd.read_csv(path_external_data_standard / 'storage_materials_dynamic.csv')
 energy_density = pd.read_csv(path_external_data_standard / "storage_density_kg_per_kwh.csv",index_col=0).transpose() #pd.read_csv(path_external_data_standard / 'storage_density_kg_per_kwh.csv')
@@ -150,7 +198,7 @@ xr_energy_density_interp = interpolate_xr(xr_energy_density, 2000, 2050)
 xr_material_intensity_interp = xr_materials_interp * xr_energy_density_interp
 
 print(xr_material_intensity_interp.sel(Cohort=2020).to_pandas())
-# xr_material_intensity_interp.sel(Cohort=2020).to_pandas().round(3).to_csv(path_external_data_standard / "storage_materials_kg_per_kwh.csv", index=True)
+xr_material_intensity_interp.sel(Cohort=2020).to_pandas().round(3).to_csv(path_external_data_standard / "storage_materials_kg_per_kwh.csv", index=True)
 
 
 # ----------------------------------------------------------------------------------------------------------
