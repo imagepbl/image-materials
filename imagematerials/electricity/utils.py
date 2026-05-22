@@ -1,33 +1,26 @@
+"""Utilities for the electricity sector."""
 
-from statistics import mode
+import warnings
+from pathlib import Path
+from typing import Optional
+
 import numpy as np
 import pandas as pd
-import xarray as xr
-import math
-import scipy.stats
-import pint
 import prism
-from typing import Optional
-from pathlib import Path
-import warnings
+import xarray as xr
 from pint.errors import UnitStrippedWarning
 
-
-from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
 from imagematerials.concepts import create_electricity_graph
-
 from imagematerials.constants import (
     IMAGE_REGIONS,
 )
-
 from imagematerials.electricity.constants import (
-    YEAR_FIRST_GRID,
-    YEAR_SWITCH,
-    REGIONS,
-    EPG_TECHNOLOGIES,
     EPG_TECHNOLOGIES_VRE,
-    STD_LIFETIMES_ELECTR,
+    REGIONS,
+    YEAR_FIRST_GRID,
 )
+from imagematerials.util import convert_lifetime, dataset_to_array, pandas_to_xarray
+
 # from imagematerials.vehicles.constants import END_YEAR, FIRST_YEAR, REGIONS
 
 # from read_scripts.dynamic_stock_model_BM import DynamicStockModel as DSM
@@ -48,8 +41,8 @@ def stock_tail(stock, YEAR_OUT):
 
 
 def add_historic_stock(da_stock, year_start=1920, interp_method="linear"):
-    """
-    Calculates historic (pre TIMER simulation time = before 1971) stock values.
+    """Calculate historic (pre TIMER simulation time = before 1971) stock values.
+
     In year_start the stock is 0, then it (linearly) increases to the first existing year in da.
 
     Parameters
@@ -69,12 +62,12 @@ def add_historic_stock(da_stock, year_start=1920, interp_method="linear"):
     xarray.DataArray
         DataArray extended backwards to year_start, with historic values
         interpolated according to `interp_method` up to the first year in `da`
-    """
 
+    """
     t_first = int(da_stock.Time.min())
     if year_start >= t_first:
         return da_stock
-    
+
     unit = prism.U_(da_stock)
 
     t_hist = np.arange(year_start, t_first)
@@ -106,8 +99,9 @@ def add_historic_stock(da_stock, year_start=1920, interp_method="linear"):
 
 
 def interpolate_xr(data_array, t_start, t_end, interp_method = 'linear'):
-    """ Interpolate an xarray.DataArray over a continuous time range and 
-    extend its boundary values beyond the available data to span t_start - t_end.
+    """Interpolate an xarray.DataArray over a continuous time range.
+
+    And extend its boundary values beyond the available data to span t_start - t_end.
 
     The function performs (linear) interpolation between all existing time 
     coordinates in the input DataArray and fills values outside the 
@@ -128,18 +122,19 @@ def interpolate_xr(data_array, t_start, t_end, interp_method = 'linear'):
     -------
     xarray.DataArray
         DataArray interpolated across the full range from `t_start` to `t_end`
-    
-    Note:
+
+    Note
+    ----
     Units are temporarily stripped during interpolation but are reattached
     before returning the result. The corresponding warning is suppressed.
-    """
 
+    """
     # Determine which dimension to use
     dim = 'Time' if 'Time' in data_array.dims else 'Cohort'
 
     # The interpolations strips the unit, so save it here and reattach later
     unit = prism.U_(data_array)
-    
+
     # Get the coordinate values along that dimension
     coord_values = data_array[dim].values
     # Define new full range
@@ -160,28 +155,28 @@ def interpolate_xr(data_array, t_start, t_end, interp_method = 'linear'):
 
     return da_interp
 
-def MNLogit(data: xr.DataArray | pd.DataFrame, 
-            logitpar: float, 
+def MNLogit(data: xr.DataArray | pd.DataFrame,
+            logitpar: float,
             dim_type: str | None =None
             ) -> xr.DataArray | pd.DataFrame:
-    """ Multinomial Logit function to calculate market shares from technology prices.
+    """Calculate market shares from technology prices with multinomial Logit function.
 
     Works with:
-      - pandas.DataFrame (index = years, columns = technologies)
-      - xarray.DataArray (dims: Cohort, Type)
+    - pandas.DataFrame (index = years, columns = technologies)
+    - xarray.DataArray (dims: Cohort, Type)
 
     Returns the same type as the input, containing market shares.
 
-    Note:
+    Notes
+    -----
     logitpar: calibrated Logit parameter (usually a negative number between 0 and 1)
     - represents the price sensitivity or substitution elasticity between different technologies.
     -> how responsive consumers/markets are to price differences between technologies.
     - More negative values (e.g., -2, -5) = higher price sensitivity -> Small price differences lead to large changes in market share = Technologies are highly substitutable
     - Less negative values (e.g., -0.1, -0.5) = lower price sensitivity -> Price differences have less impact on market share = Technologies are less substitutable (perhaps due to quality differences, switching costs, etc.)
-
     - mathematically: exp(logitpar * price) means: when logitpar is negative and prices are positive, higher prices get exponentially smaller weights
-    """
 
+    """
     # ---------- xarray ----------
     if isinstance(data, xr.DataArray):
 
@@ -191,7 +186,7 @@ def MNLogit(data: xr.DataArray | pd.DataFrame,
                 d for d in ["Type", "BatteryType", "SuperType"]
                 if d in data.dims
             )
-        
+
         # strip physical units (required for exp)
         values = data.pint.dequantify() if hasattr(data, "pint") else data
 
@@ -259,22 +254,30 @@ def flexible_plot_1panel(
     figsize=(8, 5),
     plot_type = 'line' # 'line' or 'scatter'
 ):
-    """
-    da          : xarray.DataArray
-    x_dim       : dimension to use on the x axis (e.g. 'Time' or 'Cohort')
-    varying_dims: list of dims that define separate lines (e.g. ['Type', 'Region'])
-    fixed       : dict of {dim: value or list} to filter (e.g. {'Type': [1, 2], 'Region': 5})
+    """Plot panel in flexible plot.
 
-    use as e.g.:
-    flexible_plot_1panel(
-        da=grid_length,
-        x_dim="Time",
-        varying_dims=["Type", "Region"],
-        fixed={"Type": [1, 2], "Region": [0, 3]},
-        plot_type='scatter'
-    )
+    Parameters
+    ----------
+    da: xarray.DataArray
+        Data array to plot
+    x_dim:
+        dimension to use on the x axis (e.g. 'Time' or 'Cohort')
+    varying_dims:
+        list of dims that define separate lines (e.g. ['Type', 'Region'])
+    fixed:
+        dict of {dim: value or list} to filter (e.g. {'Type': [1, 2], 'Region': 5})
+
+    Examples
+    --------
+    >>> flexible_plot_1panel(
+    >>>     da=grid_length,
+    >>>     x_dim="Time",
+    >>>     varying_dims=["Type", "Region"],
+    >>>     fixed={"Type": [1, 2], "Region": [0, 3]},
+    >>>     plot_type='scatter'
+    >>> )
+
     """
-    
     # 1. Apply filtering
     if fixed:
         for dim, sel in fixed.items():
@@ -291,7 +294,7 @@ def flexible_plot_1panel(
             else:
                 # Otherwise interpret as positional integers → use isel
                 da = da.isel({dim: sel})
-    
+
     # 2. Ensure requested dims exist
     for d in varying_dims + [x_dim]:
         if d not in da.dims:
@@ -335,7 +338,7 @@ def flexible_plot_1panel(
 
 
 def logistic(x, L, x0=None):
-    """ Compute logistic-curve values for given x values.
+    """Compute logistic-curve values for given x values.
 
     Parameters
     ----------
@@ -353,8 +356,8 @@ def logistic(x, L, x0=None):
     -------
     numpy.ndarray
         Logistic-curve y values corresponding to x.
-    """
 
+    """
     x0 = x0 if x0 is not None else x.iloc[[int(len(x)/2)],:].index[0]
 
     x_fct = x.iloc[1:-1] # exclude first and last point to keep them fixed
@@ -369,7 +372,7 @@ def logistic(x, L, x0=None):
 
 
 def quadratic(x):
-    """ Compute quadratic values for given x values.
+    """Compute quadratic values for given x values.
 
     Parameters
     ----------
@@ -380,80 +383,85 @@ def quadratic(x):
     -------
     numpy.ndarray
         Quadratic y values corresponding to x.
+
     """
     return x**2
 
 
 def print_df_info(df, name):
-    """
-    Prints basic information about a DataFrame, including its shape, columns, and first few index values.
-    Just for testing and debugging purposes.   
+    """Print basic information about a DataFrame.
+
+    Including its shape, columns, and first few index values.
+    Just for testing and debugging purposes.
     """
     print(f"""{name}
-          Shape: {df.shape}, 
+          Shape: {df.shape},
           Columns: {df.columns.tolist()},
           Index name(s): {df.index.names},
           Index: {df.index.tolist()[:5]}...""")
-    
+
 
 def sanitize_attrs(da): # for saving xarray objects to netcdf
-	""" Sanitize the attributes of a DataArray and its coordinates for safe serialization. This function 
+    """Sanitize the attributes of a DataArray and its coordinates for safe serialization.
+ 
+    This function
     converts all attribute values that are not of type str, int, or float into strings. It applies this 
     transformation to both the DataArray's `.attrs` and each coordinate's `.attrs`. This is useful when 
     saving xarray objects to formats like NetCDF, which require attribute values to be basic serializable 
     types.
-	
-	Parameters
-	----------
-	da : xarray.DataArray
-		The input DataArray whose attributes need to be sanitized.
-	
-	Returns
-	-------
-	xarray.DataArray
-		A copy of the input DataArray with sanitized attributes.
-	
-	Notes
-	-----
-	- This function does not modify the original DataArray in-place; it returns a copy.
-	- It preserves the data, coordinates, and dimensions of the original DataArray.
-	"""
-	
-	# use as:
-	# da_example = sanitize_attrs(model_lines.inflow.to_array())
-	# da_example.to_netcdf(path_test / "grid_lines_inflow_v0.nc")
-	
-	da = da.copy()
-	da.attrs = {k: str(v) if not isinstance(v, (str, int, float)) else v
-				for k, v in da.attrs.items()}
-	for c in da.coords:
-		da.coords[c].attrs = {
-			k: str(v) if not isinstance(v, (str, int, float)) else v
-			for k, v in da.coords[c].attrs.items()
-		}
-	return da
 
-def compare_da(da_new: xr.DataArray, 
-               da_old: xr.DataArray = None, 
+    Parameters
+    ----------
+    da : xarray.DataArray
+        The input DataArray whose attributes need to be sanitized.
+
+    Returns
+    -------
+    xarray.DataArray
+        A copy of the input DataArray with sanitized attributes.
+
+    Notes
+    -----
+    - This function does not modify the original DataArray in-place; it returns a copy.
+    - It preserves the data, coordinates, and dimensions of the original DataArray.
+
+    """
+    # use as:
+    # da_example = sanitize_attrs(model_lines.inflow.to_array())
+    # da_example.to_netcdf(path_test / "grid_lines_inflow_v0.nc")
+
+    da = da.copy()
+    da.attrs = {k: str(v) if not isinstance(v, (str, int, float)) else v
+                for k, v in da.attrs.items()}
+    for c in da.coords:
+        da.coords[c].attrs = {
+            k: str(v) if not isinstance(v, (str, int, float)) else v
+            for k, v in da.coords[c].attrs.items()
+        }
+    return da
+
+def compare_da(da_new: xr.DataArray,
+               da_old: xr.DataArray = None,
                path_to_saved_da: Optional[str | Path] = None): # for testing xarray objects
-    """ Compare a (saved) DataArray to a new one.
-	
-	Parameters
-	----------
-	path : str or Path
-		Path to the saved DataArray file.
-	da_new : xarray.DataArray
-		The new DataArray to compare.
-	
-	Returns
-	-------
-	equal : bool
-		True if the DataArrays match numerically (after removing units in case of a saved da).
-	diff_nonzero : xarray.DataArray or None
-		Differences where values differ; None if equal.
-	"""
-	# use as:
-	# compare_da(model_lines.inflow.to_array(), path_test / "grid_lines_inflow_v0.nc")
+    """Compare a (saved) DataArray to a new one.
+
+    Parameters
+    ----------
+    path : str or Path
+        Path to the saved DataArray file.
+    da_new : xarray.DataArray
+        The new DataArray to compare.
+
+    Returns
+    -------
+    equal : bool
+        True if the DataArrays match numerically (after removing units in case of a saved da).
+    diff_nonzero : xarray.DataArray or None
+        Differences where values differ; None if equal.
+
+    """
+    # use as:
+    # compare_da(model_lines.inflow.to_array(), path_test / "grid_lines_inflow_v0.nc")
 
     if path_to_saved_da is not None and da_old is None:
         da_old = xr.open_dataarray(str(path_to_saved_da))
@@ -464,7 +472,7 @@ def compare_da(da_new: xr.DataArray,
         da_new_clean = da_new
     else:
         raise ValueError("Either da_old or path_to_saved_da must be provided, but not both or neither.")
-	
+
     equal = da_old_clean.equals(da_new_clean)
 
     if not equal:
@@ -482,7 +490,7 @@ def compare_da(da_new: xr.DataArray,
 
 
 def calculate_grid_growth(gcap, grid_lines):
-    """ Calculate grid line growth factors over time based on regional generation capacity development.
+    """Calculate grid line growth factors over time based on regional generation capacity development.
 
     Total (peak) generation capacity is used as a proxy for grid expansion. Growth factors are
     defined relative to a base year (2016) and applied uniformly to all voltage levels for
@@ -508,8 +516,8 @@ def calculate_grid_growth(gcap, grid_lines):
     grid_growth_expanded : xarray.DataArray
         Growth factors for grid line lengths with the same dimensions and coordinates as
         ``grid_lines``. Values represent multiplicative factors relative to 2016.
-    """
 
+    """
     # regional total (peak) generation capacity is used as a proxy for the grid growth
     gcap_total = gcap.sum(dim='Type')
     gcap_growth = gcap_total / gcap_total.loc[2016]        # define growth according to 2016 as base year
@@ -540,7 +548,7 @@ def calculate_grid_growth(gcap, grid_lines):
 
 
 def calculate_fraction_underground(grid_lines, gdp_pc, ratio_underground):
-    """ Calculate fractions of underground and overhead grid lines by region, voltage level, and time.
+    """Calculate fractions of underground and overhead grid lines by region, voltage level, and time.
 
     Underground fractions are estimated as linear functions of GDP per capita, with separate
     parameterizations for European and non-European regions. Fractions are bounded between
@@ -562,6 +570,7 @@ def calculate_fraction_underground(grid_lines, gdp_pc, ratio_underground):
     fraction_lines_above_below : xarray.DataArray
         Fractions of underground and overhead grid lines with the same dimensions as
         ``grid_lines``.
+
     """
     fraction_lines_above_below = xr.full_like(grid_lines, np.nan).rename("FractionUndergroundAboveground")
 
@@ -586,7 +595,7 @@ def calculate_fraction_underground(grid_lines, gdp_pc, ratio_underground):
         under = f"{level} - Lines - Underground"
         # grid_lines.loc[dict(Type=under)] = grid_lines.sel(Type=over) # copy the aboveground length into the underground length
         fraction_lines_above_below.loc[dict(Type=over)] = 1-fraction_lines_above_below.loc[dict(Type=under)] # above = 1 - under
-    
+
     return fraction_lines_above_below
 
 
@@ -605,8 +614,9 @@ def calculate_storage_market_shares(
     t_start_interpolation: int = 1970,
     t_end_interpolation: int = 2050,
     dim_type: str | None = None) -> xr.DataArray:
-    """ Calculate technology market shares for energy storage based on cost
-    developments and a multinomial logit model.
+    """Calculate technology market shares for energy storage.
+
+    Based on cost developments and a multinomial logit model.
 
     The function interpolates storage costs and correction factors over a
     specified time range, applies cost decline assumptions for future and past
@@ -644,8 +654,8 @@ def calculate_storage_market_shares(
     - Past costs assume twice the average long-term annual decline rate,
       except for deep-cycle lead-acid technology, which is held constant
       at its 2018 level.
-    """
 
+    """
     # if dim_type not specified as input: detect from data. Raise warning if multiple candidates found.
     if dim_type is None:
         candidates = [d for d in ["Type", "BatteryType", "SuperType"] if d in storage_costs.dims]
@@ -710,7 +720,7 @@ def normalize_selected_techs(market_share: xr.DataArray | pd.DataFrame,
                              techs: list[str], 
                              dim_type: str | None = None
                              ) -> xr.DataArray | pd.DataFrame:
-    """ Select technologies and renormalize their market shares to sum to 1 per year.
+    """Select technologies and renormalize their market shares to sum to 1 per year.
 
     Works with:
     - xarray.DataArray (dimension: Type)
@@ -727,6 +737,7 @@ def normalize_selected_techs(market_share: xr.DataArray | pd.DataFrame,
     -------
     Same type as input
         Normalized market shares of the selected technologies.
+
     """
     if isinstance(market_share, xr.DataArray):
         # if type dimension not specified as input: detect from data (Type / SuperType / BatteryType)
@@ -752,7 +763,7 @@ def normalize_selected_techs(market_share: xr.DataArray | pd.DataFrame,
 
 def apply_ce_measures_to_elc(arr: xr.DataArray, base_year: int, target_year: int, change: dict,
                     implementation_rate: str, data_sector: Optional[str]=None, data_type: Optional[str]=None, steepness: float=0.5) -> xr.DataArray:
-        """ Apply CE measures to an xarray DataArray over time for (technology) types.
+        r"""Apply CE measures to an xarray DataArray over time for (technology) types.
 
         The function modifies values by applying a percentage change according to a chosen
         implementation pathway (immediate, linear, or s-curve) between a base year and a target year.
@@ -797,8 +808,8 @@ def apply_ce_measures_to_elc(arr: xr.DataArray, base_year: int, target_year: int
         - Supports either 'Type' or 'SuperType' as the vehicle classification dimension.
         - A pandas-based implementation exists for vehicle-level data.
         - A general xarray-based version is available in general utilities for regional data.
-        """
 
+        """
         result = arr.copy()
 
         # Determine time and type dimensions (to support different types of DataArrays)
@@ -808,20 +819,20 @@ def apply_ce_measures_to_elc(arr: xr.DataArray, base_year: int, target_year: int
             time_dim = "Cohort"
         else:
             raise ValueError("Input DataArray must have either 'Time' or 'Cohort' dimension.")
-        
+
         if "Type" in arr.dims:
             type_dim = "Type"
         elif "SuperType" in arr.dims:
             type_dim = "SuperType"
         else:
             raise ValueError("Input DataArray must have either 'Type' or 'SuperType' dimension.")
-        
+
         # If CE measures are only specified for aggregated grid items, expand to all relevant types
         if data_sector == 'electricity grid':
             change = expand_change_dict_for_grid_items(change)
         elif data_sector is not None:
             raise ValueError(f"Unknown data_sector: '{data_sector}'. Supported types are 'electricity grid' or None.")
-        
+
         # If data_type is 'lifetime', we need to determine which distribution parameter to modify
         if data_type == "lifetime":
             dist_param = 'mean'
@@ -900,7 +911,7 @@ def apply_ce_measures_to_elc(arr: xr.DataArray, base_year: int, target_year: int
                                     "Supported methods are 'immediate', 'linear', and 's-curve'.")
             else:
                 raise ValueError(f"{type_stock} not found in DataArray.")
-            
+
         nan_mask = result.isnull()
         if nan_mask.any():
             years_with_nans = result[time_dim].where(nan_mask.any(dim=[d for d in result.dims if d != time_dim]), drop=True)
@@ -917,12 +928,12 @@ def expand_change_dict_for_grid_items(dict_change: dict) -> dict:
     This function takes a dictionary describing changes for grid components and
     expands generic keys ("Transformers", "Substations") into their corresponding
     voltage-level-specific keys:
-        - Transformers → "HV - Transformers", "MV - Transformers", "LV - Transformers"
-        - Substations → "HV - Substations", "MV - Substations", "LV - Substations"
+    - Transformers → "HV - Transformers", "MV - Transformers", "LV - Transformers"
+    - Substations → "HV - Substations", "MV - Substations", "LV - Substations"
 
     Expansion only occurs if:
-        - The generic key (e.g. "Transformers") is present, AND
-        - None of the corresponding expanded keys are already present.
+    - The generic key (e.g. "Transformers") is present, AND
+    - None of the corresponding expanded keys are already present.
 
     If expansion is performed, the generic key is removed and replaced by the
     expanded keys, all assigned the same value.
@@ -937,8 +948,8 @@ def expand_change_dict_for_grid_items(dict_change: dict) -> dict:
     dict
         A new dictionary where generic categories are expanded into
         voltage-specific categories when applicable.
-    """
 
+    """
     transformer_expanded = {
         "HV - Transformers",
         "MV - Transformers",

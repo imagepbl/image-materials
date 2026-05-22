@@ -39,9 +39,9 @@ Where :math:`t-c` is the age of the cohort at time :math:`t`.
 Implementation in IMAGE Materials
 ----------------------------------
 
-IMAGE materials uses the :class:`imagematerials.survival.SurvivalMatrix` class to handle survival calculations. For detailed API documentation, see :doc:`SurvivalMatrix <api/models_detail>`.
+IMAGE materials uses the :class:`imagematerials.survival.SurvivalMatrix` class to handle survival calculations. For detailed API documentation, see :doc:`SurvivalMatrix <../api/models_detail>`.
 
-The :class:`imagematerials.survival.ScipySurvival` class provides scipy-based distributions for computing survival probabilities. For detailed API documentation, see :doc:`ScipySurvival <api/models_detail>`.
+The :class:`imagematerials.survival.ScipySurvival` class provides scipy-based distributions for computing survival probabilities. For detailed API documentation, see :doc:`ScipySurvival <../api/models_detail>`.
 
 Usage in Stock Models
 ---------------------
@@ -67,12 +67,12 @@ Different sectors use different survival characteristics:
 
 For detailed examples of survival matrix usage, see the sector-specific documentation:
 
-- :doc:`Buildings <api/buildings>`
-- :doc:`Vehicles <api/vehicles>`
-- :doc:`Electricity <api/electricity>`
+- :doc:`Buildings <../api/buildings>`
+- :doc:`Vehicles <../api/vehicles>`
+- :doc:`Electricity <../api/electricity>`
 
 See Also
 ---------
 
-- :doc:`Models Overview <models>` - How survival matrices fit into the overall modeling framework
-- :doc:`API Reference <api/modules>` - Technical documentation for survival classes
+- :doc:`Models Overview <../models>` - How survival matrices fit into the overall modeling framework
+- :doc:`API Reference <../api/modules>` - Technical documentation for survival classes

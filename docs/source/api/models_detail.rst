@@ -1,9 +1,12 @@
 Detailed Model Documentation
-======================
+============================
+
 **Stock Classes**
 ----------------
+
 GenericStocks
 -------------
+
 .. autoclass:: imagematerials.model.GenericStocks
 
 SharesInflowStocks
@@ -11,7 +14,7 @@ SharesInflowStocks
 .. autoclass:: imagematerials.model.SharesInflowStocks
 
 **Material Classes**
-----------------
+--------------------
 
 GenericMaterials
 ----------------
@@ -22,7 +25,7 @@ MaterialIntensities
 .. autoclass:: imagematerials.model.MaterialIntensities
 
 **Survival Classes**
-----------------
+--------------------
 
 SurvivalMatrix
 ^^^^^^^^^^^^^^
