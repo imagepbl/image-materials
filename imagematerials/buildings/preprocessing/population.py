@@ -28,7 +28,7 @@ def _load_pop_q_raw(
         Population data with dimensions ``("Time", "Region", "Area")``, where
         ``Area`` contains ``Total``, ``Urban``, ``Rural``, and all quintile labels.
     """
-    pop_q = read_mym_df(image_directory.joinpath("Socioeconomic", "pop_q.out"))
+    pop_q = read_mym_df(image_directory.joinpath("Socioeconomic", "Pop_q.out"))
     pop_q = pop_q.rename(columns={"time": "Time", "DIM_1": "Region"})
     value_cols = [c for c in pop_q.columns if c not in ["Time", "Region"]]
 
