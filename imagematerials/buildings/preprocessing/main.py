@@ -63,15 +63,15 @@ def buildings_preprocessing(base_directory: Path, climate_policy_config: dict,
             image_directory,
             base_directory,
         )
-    floorspace_rururb = extrapolate_floorspace(floorspace_image_residential)
-    floorspace_commercial = extrapolate_floorspace(floorspace_image_commercial, minimum_comm)
+    floorspace_residential_capita = extrapolate_floorspace(floorspace_image_residential)
+    floorspace_commercial_capita = extrapolate_floorspace(floorspace_image_commercial, minimum_comm)
 
     # Commercial floorspace [Time, Region, Type]
     
     if "base" or "narrow_activity" or "narrow" in circular_economy_config.keys():
         # Implement circular economy for commercial floorspace
         # This is only done for the base and narrow_activity scenarios, as the other scenarios do not have a circular economy component
-        floorspace_commercial = apply_circular_economy_commercial_floorspace(floorspace_commercial, circular_economy_config)
+        floorspace_commercial_capita = apply_circular_economy_commercial_floorspace(floorspace_commercial_capita, circular_economy_config)
         
     # Calculate population ("Total", "Rural", "Urban")
     population = compute_population(image_directory)
@@ -80,20 +80,21 @@ def buildings_preprocessing(base_directory: Path, climate_policy_config: dict,
 
     housing_type = compute_housing_type(database_directory)
 
-    floorspace_residential = compute_housing_residential(population, average_m2_capita,
-                                                         housing_type, floorspace_rururb,
+    floorspace_residential_total = compute_housing_residential(population, 
+                                                         average_m2_capita,
+                                                         housing_type, 
+                                                         floorspace_residential_capita,
                                                          circular_economy_config)
 
     # Commercial floorspace also needs to be multiplied by population & drop Area dimension
-    floorspace_commercial_total = floorspace_commercial * population.sel({"Area": "Total"})
-    floorspace_commercial_total = floorspace_commercial_total.drop_vars("Area")
-    floorspace = xr.concat((floorspace_residential, floorspace_commercial_total), dim="Type")
+    floorspace_commercial_total = floorspace_commercial_total = floorspace_commercial_capita * population.sel(Area=['Urban', 'Rural']).sum("Area")
+    floorspace = xr.concat((floorspace_residential_total, floorspace_commercial_total), dim="Type")
 
     # Lifetime computations, see lifetimes.py
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        lifetimes = compute_lifetimes(base_directory, floorspace_commercial.coords["Type"].values,
+        lifetimes = compute_lifetimes(base_directory, floorspace_commercial_total.coords["Type"].values,
                                       circular_economy_config)
 
     mat_intensities_comm = compute_mat_intensities_commercial(database_directory,
