@@ -56,6 +56,9 @@ authors:
     - family-names: Zahedi
         given-names: Parisa
         affiliation: Information and Technology Services - Utrecht University
+   - family-names: Staiger
+       given-names: Christine
+       affiliation: Information and Technology Services - Utrecht University
 
 license: Copyright IMAGE-materials team, Utrecht University 2026, all rights reserved
 repository-code: https://github.com/imagepbl/image-materials
