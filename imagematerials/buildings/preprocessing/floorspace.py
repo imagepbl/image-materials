@@ -88,7 +88,7 @@ def get_service_value_added(image_directory: Path) -> pd.DataFrame:
                                                                                   "sva_pc.scn"))
     service_value_added = service_value_added_2005 * INFLATION
 
-    # extrapolate to 1970, therefore first add empty 1970 value with nans
+    # # extrapolate to 1970, therefore first add empty 1970 value with nans
     service_value_added.loc[1970] = np.nan
     # TODO cubic does not work, replaced with linear for now, Sebastiaans code had cubic,
     # seems like now just value from 1971 is copied
@@ -197,13 +197,9 @@ def extrapolate_floorspace(floorspace_image: xr.DataArray,
     early_scale = 1 - (start_year - years_1721_1820) / (start_year - far_start_year + 1)
     floor_1721_1820 = floor_1820_1970.sel(Time=start_year) * early_scale
 
-    # Avoid duplicate years at the historical/IMAGE boundary (e.g., commercial includes 1970).
-    overlap_years = np.intersect1d(floor_1820_1970.coords["Time"].values,
-                                   floorspace_image.coords["Time"].values)
-    floor_1820_1970 = floor_1820_1970.sel(
-        Time=~floor_1820_1970.coords["Time"].isin(overlap_years)
-    )
-
+    # Avoid duplicate 1970 at the historical/IMAGE boundary; keep the IMAGE value.
+    if 1970 in floorspace_image.coords["Time"].values:
+        floor_1820_1970 = floor_1820_1970.sel(Time=floor_1820_1970.coords["Time"] != 1970)
     # combine historic with IMAGE data here
     floorspace = xr.concat((floor_1721_1820, floor_1820_1970, floorspace_image), dim="Time")
     return floorspace.transpose(*floorspace_image.dims)

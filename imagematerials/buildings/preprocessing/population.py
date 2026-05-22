@@ -126,9 +126,12 @@ def _build_total_population(
     base_directory = image_directory.parent.parent
     historic_path = base_directory / "buildings" / "standard_data" / "historic_population.csv"
 
-    historic_population = pd.read_csv(historic_path, index_col=0, header=0)
-    # convert to people by dividng by 1000 
-    historic_population = historic_population / 1000
+    historic_population = pd.read_csv(historic_path)
+    historic_population = (
+        historic_population
+        .rename(columns={"Year": "Time", "IMAGE_region": "Region", "Population": "Population"})
+        .pivot(index="Time", columns="Region", values="Population")
+    )
     historic_population = historic_population.reindex(
         index=range(historic_population.index.min(), historic_population.index.max() + 1)  # Explicitly specify index
     ).interpolate(method="linear")
@@ -184,12 +187,43 @@ def _split_urban_rural(pop_q_data: xr.DataArray,
     -------
     xr.DataArray
         Urban/rural population with dimensions ``("Area", "Time", "Region")``
-        (xarray order may vary by operation).
+        (xarray order may vary by operation). For years before the IMAGE
+        reference year, the urban share transitions linearly from 0 at 1700
+        to the regional IMAGE urban share at the reference year; rural is the
+        complement.
     """
     ur_share = pop_q_data.sel(Area=["Urban", "Rural"]) / pop_q_data.sel(Area="Total")
     ur_share = _as_string_regions(ur_share)
     ur_share = ur_share.reindex(Region=regions).interp(Time=time_all, kwargs={"fill_value": "extrapolate"})
-    ur_share = _normalize_shares(ur_share, dim="Area", fallback=0)
+
+    # Enforce a historical transition: Urban=0 and Rural=1 in 1700, then
+    # linearly approach IMAGE regional shares by 1971 (fallback: first IMAGE year).
+    image_years = pop_q_data.coords["Time"].values
+    reference_year = 1971 if 1971 in image_years else int(np.min(image_years))
+    transition_start_year = 1700
+
+    time_coord = xr.DataArray(time_all, dims=["Time"], coords={"Time": time_all})
+    transition_progress = (
+        (time_coord - transition_start_year)
+        / max(reference_year - transition_start_year, 1)
+    ).clip(min=0, max=1)
+
+    urban_at_reference = ur_share.sel(Area="Urban", Time=reference_year)
+    urban_share = xr.where(
+        time_coord < reference_year,
+        transition_progress * urban_at_reference,
+        ur_share.sel(Area="Urban"),
+    )
+    rural_share = 1 - urban_share
+    ur_share = xr.concat(
+        [
+            urban_share.expand_dims(Area=["Urban"]),
+            rural_share.expand_dims(Area=["Rural"]),
+        ],
+        dim="Area",
+    )
+
+    ur_share = _normalize_shares(ur_share, dim="Area", fallback=0.5)
     return ur_share * total_population
 
 
@@ -363,7 +397,6 @@ def compute_population(
         urban_q_areas=urban_q_areas,
         rural_q_areas=rural_q_areas,
     )
-    # combined_quintiles_population_xr: Area=['Urban','Rural'], Quintile=['Q1',...,'Q5']
 
     population_split_xr = xr.concat(
         [
