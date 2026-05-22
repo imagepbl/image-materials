@@ -1,59 +1,59 @@
 Time,type_data,unit,Region,category,technology,sub_technology,value
-,inflow,share,World,stationary_storage,battery,NMC111/333,0
-2010,inflow,share,World,stationary_storage,battery,NMC111/333,0.18
-2020,inflow,share,World,stationary_storage,battery,NMC111/333,0.04
-2025,inflow,share,World,stationary_storage,battery,NMC111/333,0.000
-2050,inflow,share,World,stationary_storage,battery,NMC111/333,0
+1990,inflow,share,World,stationary_storage,battery,NMC333,0
+2010,inflow,share,World,stationary_storage,battery,NMCC333,0.18
+2020,inflow,share,World,stationary_storage,battery,NMCC333,0.04
+2025,inflow,share,World,stationary_storage,battery,NMCC333,0.000
+2050,inflow,share,World,stationary_storage,battery,NMCC333,0
 
-,inflow,share,World,stationary_storage,battery,NMC532,0
+1990,inflow,share,World,stationary_storage,battery,NMC532,0
 2010,inflow,share,World,stationary_storage,battery,NMC532,0.18
 2020,inflow,share,World,stationary_storage,battery,NMC532,0.05
 2025,inflow,share,World,stationary_storage,battery,NMC532,0.012
 2050,inflow,share,World,stationary_storage,battery,NMC532,0
 
-,inflow,share,World,stationary_storage,battery,NMC622,0
+1990,inflow,share,World,stationary_storage,battery,NMC622,0
 2010,inflow,share,World,stationary_storage,battery,NMC622,0
 2020,inflow,share,World,stationary_storage,battery,NMC622,0.21
 2025,inflow,share,World,stationary_storage,battery,NMC622,0.020
 2050,inflow,share,World,stationary_storage,battery,NMC622,0.02
 
-,inflow,share,World,stationary_storage,battery,NMC811,0
+1990,inflow,share,World,stationary_storage,battery,NMC811,0
 2010,inflow,share,World,stationary_storage,battery,NMC811,0
 2020,inflow,share,World,stationary_storage,battery,NMC811,0.09
 2025,inflow,share,World,stationary_storage,battery,NMC811,0.033
 2050,inflow,share,World,stationary_storage,battery,NMC811,0.05
 
-,inflow,share,World,stationary_storage,battery,NMC955,0
+1990,inflow,share,World,stationary_storage,battery,NMC955,0
 2010,inflow,share,World,stationary_storage,battery,NMC955,0
 2020,inflow,share,World,stationary_storage,battery,NMC955,0.01
 2025,inflow,share,World,stationary_storage,battery,NMC955,0.017
 2050,inflow,share,World,stationary_storage,battery,NMC955,0.05
 
-,inflow,share,World,stationary_storage,battery,LFP,0
+1990,inflow,share,World,stationary_storage,battery,LFP,0
 2010,inflow,share,World,stationary_storage,battery,LFP,0
 2020,inflow,share,World,stationary_storage,battery,LFP,0.4
 2025,inflow,share,World,stationary_storage,battery,LFP,0.900
 2050,inflow,share,World,stationary_storage,battery,LFP,0.6
 
-,inflow,share,World,stationary_storage,battery,lead-acid,1
+1990,inflow,share,World,stationary_storage,battery,lead-acid,1
 2010,inflow,share,World,stationary_storage,battery,lead-acid,0.62
 2020,inflow,share,World,stationary_storage,battery,lead-acid,0.1
 2025,inflow,share,World,stationary_storage,battery,lead-acid,0.000
 2050,inflow,share,World,stationary_storage,battery,lead-acid,0
 
-,inflow,share,World,stationary_storage,battery,Na-ion/SIB,0
-2010,inflow,share,World,stationary_storage,battery,Na-ion/SIB,0
-2020,inflow,share,World,stationary_storage,battery,Na-ion/SIB,0.05
-2025,inflow,share,World,stationary_storage,battery,Na-ion/SIB,0.010
-2050,inflow,share,World,stationary_storage,battery,Na-ion/SIB,0.1
+1990,inflow,share,World,stationary_storage,battery,Na-ion,0
+2010,inflow,share,World,stationary_storage,battery,Na-ion,0
+2020,inflow,share,World,stationary_storage,battery,Na-ion,0.05
+2025,inflow,share,World,stationary_storage,battery,Na-ion,0.010
+2050,inflow,share,World,stationary_storage,battery,Na-ion,0.1
 
-,inflow,share,World,stationary_storage,battery,flow-ZnBr,0
+1990,inflow,share,World,stationary_storage,battery,flow-ZnBr,0
 2010,inflow,share,World,stationary_storage,battery,flow-ZnBr,0.01
 2020,inflow,share,World,stationary_storage,battery,flow-ZnBr,0.025
 2025,inflow,share,World,stationary_storage,battery,flow-ZnBr,0.005
 2050,inflow,share,World,stationary_storage,battery,flow-ZnBr,0.09
 
-,inflow,share,World,stationary_storage,battery,flow-Vanadium,0
+1990,inflow,share,World,stationary_storage,battery,flow-Vanadium,0
 2010,inflow,share,World,stationary_storage,battery,flow-Vanadium,0.01
 2020,inflow,share,World,stationary_storage,battery,flow-Vanadium,0.025
 2025,inflow,share,World,stationary_storage,battery,flow-Vanadium,0.005
