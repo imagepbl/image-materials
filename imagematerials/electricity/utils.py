@@ -1120,6 +1120,66 @@ def derive_phs_installed_capacity(data: list,
 
     return phs_power, phs_energy
 
+
+def calculate_remaining_storage_demand(storage_energy_da, phs_energy):
+    """ Calculate remaining storage demand after subtracting pumped hydro storage (PHS),
+    with a time-varying minimum floor applied after 2000.
+
+    The floor ensures that remaining storage never falls below a fraction of total
+    storage demand, ramping linearly from 5% (2010) to 20% (2020), then held at 20%.
+
+    Parameters
+    ----------
+    storage_energy_da : xr.DataArray
+        Total storage energy capacity demand with dimensions (Time, Region).
+    phs_energy : xr.DataArray
+        Pumped hydro storage energy capacity with dimension (Time, Region).
+
+    Returns
+    -------
+    xr.DataArray
+        Remaining storage demand after PHS subtraction and floor enforcement,
+        with the same dimensions as storage_energy_da. Never negative.
+
+    Notes
+    -----
+    IRENA (2017): 4508 GWh PHS in 2017 out of 4670 GWh total storage = ~96% share. Projects for 2030
+    45-51% share of PHS.
+    Floor fractions by period:
+        - before 2010 : no floor (but > 0)
+        - 2010-2017   : linearly interpolated from 0 to 0.04
+        - 2017-2025   : linearly interpolated from 0.04 to 0.1
+        - 2025-2030   : linearly interpolated from 0.1 to 0.2
+        - after 2030  : capped at 0.2
+    """
+
+    storage_energy_remaining = (storage_energy_da - phs_energy).clip(min=0)
+
+    floor_fraction = xr.zeros_like(storage_energy_remaining)
+
+    # Linearly interpolate floor fraction: 0.04 (2017) -> 0.1 (2025) -> 0.2 (2030), capped at 0.2 after
+    floor_fraction = xr.where(storage_energy_remaining.Time >= 2010,
+                        0 + (0.04 - 0) * (storage_energy_remaining.Time - 2010) / (2017 - 2010),
+                        floor_fraction)
+    floor_fraction = xr.where(storage_energy_remaining.Time >= 2017,
+                        0.04 + (0.1 - 0.04) * (storage_energy_remaining.Time - 2017) / (2025 - 2017),
+                        floor_fraction)
+    floor_fraction = xr.where(storage_energy_remaining.Time >= 2025,
+                        0.1 + (0.2 - 0.1) * (storage_energy_remaining.Time - 2025) / (2030 - 2025),
+                        floor_fraction)
+    floor_fraction = xr.where(storage_energy_remaining.Time >= 2030, 0.2, floor_fraction)
+
+    # Apply floor
+    min_value = floor_fraction * storage_energy_da
+    storage_energy_remaining = xr.where(
+        (storage_energy_remaining.Time >= 2000) & (storage_energy_remaining < min_value),
+        min_value,
+        storage_energy_remaining
+    )
+
+    return storage_energy_remaining
+
+
 def derive_btm_installed_capacity(gcap_xr_interp: xr.DataArray,
                                   ratio_btm_deployment_data: pd.DataFrame,
                                   ratio_btm_to_solar: float = 2) -> xr.DataArray:

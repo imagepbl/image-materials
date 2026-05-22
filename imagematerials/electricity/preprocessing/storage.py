@@ -21,7 +21,8 @@ from imagematerials.electricity.utils import (
     interpolate_xr, 
     add_historic_stock, 
     normalize_selected_techs,
-    calculate_storage_market_shares
+    calculate_storage_market_shares,
+    calculate_remaining_storage_demand
 )
 
 from imagematerials.constants import IMAGE_REGIONS
@@ -136,14 +137,11 @@ if not path_external_data_scenario.exists():
 
 idx = pd.IndexSlice   
 
-#----------------------------------------------------------------------------------------------------------
-###########################################################################################################
-#%%% 2.1) Read in files
-###########################################################################################################
-#----------------------------------------------------------------------------------------------------------
 
+####################################################################################################
+# Read in files
 
-# 1. External Data ======================================================================================== 
+# 1. External Data =================================================================================
 
 #read in the lifetime of storage technologies (in yrs). The lifetime is assumed to be 1.5* the number of cycles divided by the number of days in a year (assuming diurnal use, and 50% extra cycles before replacement, representing continued use below 80% remaining capacity) OR the maximum lifetime in years, which-ever comes first 
 lifetimes = pd.read_csv(path_external_data_standard / 'storage_and_EV_batteries_lifetimes.csv', usecols=["Time", "sub_technology", "value"])
@@ -153,7 +151,6 @@ material_intensities = pd.read_csv(path_external_data_standard / 'storage_and_EV
 
 # market shares in % of total storage capacity (excluding pumped hydropower storage; values: 0-1)
 market_shares = pd.read_csv(path_external_data_standard / 'storage_stationary_market_shares.csv', usecols=["Time", "sub_technology", "value"]) #index_col=[0,1],usecols=lambda col: col != "unit"
-
 
 # Data for Pumped Hydropower Storage (PHS) ---------------------------------------------------------
 # Hydro-dam power capacity (also MW) within 5 regions reported by the IHA (international Hydropwer Association)
@@ -181,9 +178,7 @@ df_shares_adjustment_2030 =  pd.read_csv(Path(path_external_data_standard,"phs_r
 # share of solar PV capacity paired with BTM storage per IMAGE region (values: 0-1)
 ratio_btm_deployment_data = pd.read_csv(Path(path_external_data_standard, "behind_the_meter_battery_deployment_ratio.csv"), usecols=["Time", "Region", "Value"])
 
-
-
-# 2. IMAGE/TIMER files ====================================================================================
+# 2. IMAGE/TIMER files =============================================================================
 
 # IMAGE-energy: storage energy capacity demand (MWh, reservoir)
 storage_energy = read_mym_df(path_image_output.joinpath("StorResTot.out"))   #storage capacity in MWh (reservoir, so energy capacity, not power capacity, the latter is used later on in the pumped hydro storage calculations)
@@ -199,15 +194,8 @@ gcap_data = read_mym_df(path_image_output / 'GCap.out')
 # gcap_data = gcap_data.iloc[:, :26]
 
 
-# ----------------------------------------------------------------------------------------------------------
 # ##########################################################################################################
-# %% 2.2) Prepare general variables
-# ##########################################################################################################
-# ----------------------------------------------------------------------------------------------------------
-
-
-# ##########################################################################################################
-# %%% To xarray
+# Convert to xarray
 
 knowledge_graph_region = create_image_region_graph()
 knowledge_graph_electr = create_electricity_graph()
@@ -286,13 +274,13 @@ market_shares_da = prism.Q_(market_shares_da, "dimensionless")
 lifetimes_da = (
     lifetimes.set_index(["Time", "sub_technology"])["value"]
     .to_xarray()
-    .rename({"sub_technology": "Type"})
+    .rename({"sub_technology": "Type", "Time": "Cohort"})
 )
 lifetimes_da = lifetimes_da.expand_dims({"DistributionParams": ["mean", "stdev"]})
-lifetimes_da = lifetimes_da.sel(Type=[t for t in TECH_STATIONARY_STORAGE if t in lifetimes_da.coords["Type"].values])
-lifetimes_da = prism.Q_(lifetimes_da, "years")
 
-# Interpolations ===================================================================================
+
+####################################################################################################
+# Interpolations 
 
 # TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921
 gcap_da_interp = add_historic_stock(gcap_da, YEAR_FIRST_GRID)
@@ -310,180 +298,58 @@ else:
 
 market_shares_da = interpolate_xr(market_shares_da, year_start, year_end)
 
+lifetimes_da = interpolate_xr(lifetimes_da, YEAR_FIRST_GRID, year_end)
+lifetimes_da.loc[dict(DistributionParams="stdev")] = lifetimes_da.loc[dict(DistributionParams="mean")] * STD_LIFETIMES_ELECTR
+
 
 ####################################################################################################
-#%%% 1. Pumped Hydropower Storage
+# 1. Pumped Hydropower Storage
 
 data_phs = [df_data1, df_data2, df_data3, df_shares_adjustment_2030, storage_energy_da]
 phs_power, phs_energy = derive_phs_installed_capacity(data_phs, factor_phs_growth_rel_demand, mean_discharge_duration, flag_phs_scenario) #mean_discharge_duration
 
 
 ####################################################################################################
-#%%% 2. Behind-the-meter storage
+# 2. Behind-the-meter storage 
+# (not used in the current version. The BTM storage demand is currently included in the "other storage" 
+# category, only adds value if technologies used in BTM storage differ from the ones used in grid storage
+# or if there is a strong imbalance between grid storage demand and BTM storage deployed to provit from 
+# arbitrage & lower electricity costs for end-users, in which case the storage demand by TIMER would
+# be an underestimate of deployed storage.)
 
 # btm = derive_btm_installed_capacity(gcap_da_interp, ratio_btm_deployment_data, ratio_btm_to_solar)
 
 
+####################################################################################################
+# 3. Grid-scale storage
+
+storage_energy_remaining = calculate_remaining_storage_demand(storage_energy_da, phs_energy)
+
 
 ####################################################################################################
-#%%% 3. Grid-scale storage
+# Prep_data file for model
 
-path_output = Path(path_base.parent.parent.parent, "elc-analysis", "output", "model_set_up")
+# The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
+lifetimes_phs_dict = convert_lifetime(lifetimes_da.sel(Type=["PHS"]))
+lifetimes_non_phs_dict = convert_lifetime(lifetimes_da.sel(Type = TECH_STATIONARY_STORAGE))
 
-storage_energy_remaining = (storage_energy_da - phs_energy).clip(min=0)
-
-floor_fraction = xr.zeros_like(storage_energy_remaining)
-
-# Linearly interpolate floor fraction from 0.05 (2010) to 0.2 (2020), capped at 0.2 after
-floor_fraction = xr.where(storage_energy_remaining.Time >= 2010,
-                    0.05 + (0.2 - 0.05) * (storage_energy_remaining.Time - 2010) / (2020 - 2010),
-                    floor_fraction)
-floor_fraction = xr.where(storage_energy_remaining.Time >= 2020, 0.2, floor_fraction)
-
-# Apply floor
-min_value = floor_fraction * storage_energy_da
-storage_energy_remaining = xr.where(
-    (storage_energy_remaining.Time >= 2000) & (storage_energy_remaining < min_value),
-    min_value,
-    storage_energy_remaining
-)
-
-import matplotlib.pyplot as plt
-fig, ax = plt.subplots()
-test = floor_fraction.sel(Region="NAF").plot(ax=ax, label="Floor Fraction")
-
-storage_energy_remaining0  = (storage_energy_da - phs_energy).clip(min=0)
-
-reg = "WEU"
-fig, ax = plt.subplots()
-storage_energy_da.sel(Region=reg).plot(ax=ax, label="Total storage demand")
-storage_energy_remaining0.sel(Region=reg).plot(ax=ax, label="(before floor)")
-storage_energy_remaining.sel(Region=reg).plot(ax=ax, label="(after floor)")
-plt.legend()
-
-
-###########################################################################################################
-#%%% 2.4.1) Prep_data File
-###########################################################################################################
-
-
-# PHS -----------------------------------------------------------------------------------------------------
-
-phs_stock = phs_storage_stock_tail.copy()
-
-# Bring dataframes into correct shape for the results_dict
-
-# stocks: years as index and regions as columns -> years as index and (technology, region) as columns
-# Current columns are regions
-regions = phs_stock.columns.tolist()
-
-# Create a MultiIndex with technology "PHS" for all columns
-multi_cols = pd.MultiIndex.from_tuples([("PHS", r) for r in regions], names=["technology", "region"])
-# Assign to the DataFrame
-phs_stock.columns = multi_cols
-
-# lifetimes
-df_mean = storage_lifetime_PHS.copy().to_frame()
-df_stdev = df_mean * STD_LIFETIMES_ELECTR
-df_mean.columns = [(col, 'mean') for col in df_mean.columns] # Rename columns to multi-level tuples
-df_stdev.columns = [(col, 'stdev') for col in df_stdev.columns]
-phs_lifetime_distr = pd.concat([df_mean, df_stdev], axis=1) # Concatenate along columns
-phs_lifetime_distr.index.name = 'year'
-
-# MIs: (years, material) index and technologies as columns -> years as index and (technology, Material) as columns
-phs_materials = stor_materials_interpol.loc[idx[:,:],'PHS'].unstack() * PHS_kg_perkWh * 1000 # wt% * kg/kWh * 1000 kWh/MWh = kg/MWh
-# Current columns are materials
-materials = phs_materials.columns.tolist()
-# Create a MultiIndex with technology "PHS" for all columns
-multi_cols = pd.MultiIndex.from_tuples([("PHS", m) for m in materials], names=["technology", "material"])
-# Assign to the DataFrame
-phs_materials.columns = multi_cols
-
-# Conversion table for all coordinates, to be removed/adapted after input tables are fixed.
-conversion_table = {
-    "phs_stock": (["Time"], ["Type", "Region"],),
-    "phs_materials": (["Cohort"], ["Type", "material"],)
-    # "gcap_materials_interpol": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]})
-}
-
-results_dict = {
-        'phs_stock': phs_stock,
-        'phs_materials': phs_materials,
-        'phs_lifetime_distr': phs_lifetime_distr,
-}
-
-prep_data_phs = create_prep_data(results_dict, conversion_table, unit_mapping)
-prep_data_phs["stocks"] = prism.Q_(prep_data_phs["stocks"], "MWh")
-prep_data_phs["material_intensities"] = prism.Q_(prep_data_phs["material_intensities"], "kg/MWh")
+# PHS ----------------------------------------------------------------------------------------------
+# bring preprocessing data into a generic format for the model
+prep_data_phs = {}
+prep_data_phs["lifetimes"] = lifetimes_phs_dict
+prep_data_phs["stocks"] = phs_energy
+prep_data_phs["material_intensities"] = material_intensities_da.sel(Type="PHS")
+prep_data_phs["knowledge_graph"] = create_electricity_graph()
 prep_data_phs["set_unit_flexible"] = str(prism.U_(prep_data_phs["stocks"])) # prism.U_ gives the unit back
 
-
-# Other storage--------------------------------------------------------------------------------------------
-
-oth_storage_stock = oth_storage.copy()
-
-# Bring dataframes into correct shape for the results_dict
-
-# stocks: (years, regions) index and technologies as columns -> years as index and (technology, region) as columns
-# Current columns are regions
-regions = oth_storage.columns.tolist()
-# stor_tech = list(storage_lifetime_interpol.columns)
-# Create a MultiIndex with technology "Other Storage" for all columns
-multi_cols = pd.MultiIndex.from_tuples([("Other Storage", r) for r in regions], names=["technology", "region"])
-# multi_cols = pd.MultiIndex.from_product([stor_tech, regions], names=["technology", "region"])
-# Assign to the DataFrame
-oth_storage_stock.columns = multi_cols
-
-# lifetimes
-df_mean = storage_lifetime_interpol.copy() #.to_frame()
-df_stdev = df_mean * STD_LIFETIMES_ELECTR
-df_mean.columns = [(col, 'mean') for col in df_mean.columns] # Rename columns to multi-level tuples
-df_stdev.columns = [(col, 'stdev') for col in df_stdev.columns]
-oth_storage_lifetime_distr = pd.concat([df_mean, df_stdev], axis=1) # Concatenate along columns
-oth_storage_lifetime_distr.index.name = 'year'
-
-# MIs: (years, material) index and technologies as columns -> years as index and (technology, Material) as columns
-stor_tech = list(storage_lifetime_interpol.columns)
-# 2nd level of the MultiIndex are materials (1971,'Aluminium')
-oth_storage_materials = stor_materials_interpol.copy()
-oth_storage_materials.index.names = ["year", "material"]  # assign names
-oth_storage_materials = oth_storage_materials.reset_index(level=["year", "material"])
-# Pivot so we get (technology, material) as columns, years as index
-oth_storage_materials = oth_storage_materials.melt(id_vars=["year", "material"], var_name="technology", value_name="value")
-oth_storage_materials = oth_storage_materials.pivot_table(index="year", columns=["technology", "material"], values="value")
-# Ensure proper MultiIndex column names
-oth_storage_materials.columns = pd.MultiIndex.from_tuples(oth_storage_materials.columns, names=["technology", "material"])
-xr_oth_storage_materials = dataset_to_array(pandas_to_xarray(oth_storage_materials, unit_mapping), *(["Cohort"], ["Type", "material"],))
-xr_storage_density_interpol = dataset_to_array(pandas_to_xarray(storage_density_interpol, unit_mapping), *(["Cohort"], ["Type"],))
-oth_storage_materialintens = xr_oth_storage_materials * xr_storage_density_interpol
-
-# Conversion table for all coordinates, to be removed/adapted after input tables are fixed.
-conversion_table = {
-    "oth_storage_stock": (["Time"], ["SuperType", "Region"],),
-    "oth_storage_materials": (["Cohort"], ["Type", "material"],), #SubType
-    "oth_storage_shares": (["Cohort"], ["Type",]) #SubType
-}
-## "gcap_materials_interpol": (["Cohort"], ["Type", "SubType", "material"], {"Type": ["Type", "SubType"]})
-
-results_dict = {
-        'oth_storage_stock': oth_storage_stock,
-        'oth_storage_materials': oth_storage_materialintens,
-        'oth_storage_lifetime_distr': oth_storage_lifetime_distr,
-        'oth_storage_shares': storage_market_share
-}
-
-prep_data_oth_storage = create_prep_data(results_dict, conversion_table, unit_mapping)
-prep_data_oth_storage["stocks"] = prism.Q_(prep_data_oth_storage["stocks"], "MWh")
-prep_data_oth_storage["material_intensities"] = prism.Q_(prep_data_oth_storage["material_intensities"], "kg/kWh")
-prep_data_oth_storage["shares"] = prism.Q_(prep_data_oth_storage["shares"], "share")
+# Other storage-------------------------------------------------------------------------------------
+prep_data_oth_storage = {}
+prep_data_oth_storage["lifetimes"] = lifetimes_non_phs_dict
+prep_data_oth_storage["stocks"] = storage_energy_remaining
+prep_data_oth_storage["material_intensities"] = material_intensities_da.sel(Type=TECH_STATIONARY_STORAGE)
+prep_data_oth_storage["shares"] = market_shares_da.sel(Type=TECH_STATIONARY_STORAGE)
 prep_data_oth_storage["set_unit_flexible"] = str(prism.U_(prep_data_oth_storage["stocks"])) # prism.U_ gives the unit back
 prep_data_oth_storage["knowledge_graph"] = create_electricity_graph()
-
-
-# change region names to IMAGE_REGIONS # TODO: this should be done in hte beginning of preprocessing
-knowledge_graph_region =            create_region_graph()
-prep_data_phs["stocks"] =           knowledge_graph_region.rebroadcast_xarray(prep_data_phs["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
-prep_data_oth_storage["stocks"] =   knowledge_graph_region.rebroadcast_xarray(prep_data_oth_storage["stocks"], output_coords=IMAGE_REGIONS, dim="Region")
 
 # Have both stocks and stocks_non_phs in the prep_data_oth_storage. In case vehicle-to-grid (V2G) is considered and the ev battery + Link module is added
 # to the joined model run, stocks_non_phs is used and stocks is replaced with the remaining storage demand after subtracting the EV battery storage. In 

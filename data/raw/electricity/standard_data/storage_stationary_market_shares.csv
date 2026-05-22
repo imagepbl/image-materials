@@ -1,9 +1,9 @@
 Time,type_data,unit,Region,category,technology,sub_technology,value
 1990,inflow,share,World,stationary_storage,battery,NMC333,0
-2010,inflow,share,World,stationary_storage,battery,NMCC333,0.18
-2020,inflow,share,World,stationary_storage,battery,NMCC333,0.04
-2025,inflow,share,World,stationary_storage,battery,NMCC333,0.000
-2050,inflow,share,World,stationary_storage,battery,NMCC333,0
+2010,inflow,share,World,stationary_storage,battery,NMC333,0.18
+2020,inflow,share,World,stationary_storage,battery,NMC333,0.04
+2025,inflow,share,World,stationary_storage,battery,NMC333,0.000
+2050,inflow,share,World,stationary_storage,battery,NMC333,0
 
 1990,inflow,share,World,stationary_storage,battery,NMC532,0
 2010,inflow,share,World,stationary_storage,battery,NMC532,0.18
@@ -53,9 +53,9 @@ Time,type_data,unit,Region,category,technology,sub_technology,value
 2025,inflow,share,World,stationary_storage,battery,flow-ZnBr,0.005
 2050,inflow,share,World,stationary_storage,battery,flow-ZnBr,0.09
 
-1990,inflow,share,World,stationary_storage,battery,flow-Vanadium,0
-2010,inflow,share,World,stationary_storage,battery,flow-Vanadium,0.01
-2020,inflow,share,World,stationary_storage,battery,flow-Vanadium,0.025
-2025,inflow,share,World,stationary_storage,battery,flow-Vanadium,0.005
-2050,inflow,share,World,stationary_storage,battery,flow-Vanadium,0.09
+1990,inflow,share,World,stationary_storage,battery,flow-vanadium,0
+2010,inflow,share,World,stationary_storage,battery,flow-vanadium,0.01
+2020,inflow,share,World,stationary_storage,battery,flow-vanadium,0.025
+2025,inflow,share,World,stationary_storage,battery,flow-vanadium,0.005
+2050,inflow,share,World,stationary_storage,battery,flow-vanadium,0.09
 
