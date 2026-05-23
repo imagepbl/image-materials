@@ -55,8 +55,8 @@ year_end = 2100
 year_out = 2100
 YEAR_START = 2100
 
-VARIANT = "M_CP"
-SCEN = "SSP2"
+# VARIANT = "M_CP"
+# SCEN = "SSP2"
 
 region_knowledge_graph = create_region_graph()
 fossil_fuel_knowledge_graph = create_fossil_fuel_graph()

@@ -9,12 +9,12 @@ ureg = pint.UnitRegistry(force_ndarray_like=True)
 #Select scenario and policy config
 
 circular_economy_config = None
-climate_policy_config = "SSP2_baseline" 
-scenario = "SSP2_baseline" 
+climate_policy_config = "SSP2_climate_policy_resource_efficiency"
+scenario = "SSP2_climate_policy_resource_efficiency"
 
 scen_folder = scenario 
 STANDARD_SCEN_EXTERNAL_DATA = scenario 
-SCENARIO_DEFAULT = "SSP2_baseline"
+SCENARIO_DEFAULT = "SSP2_climate_policy_resource_efficiency"
 
 
 # Define paths (change to be consistent with other OS)
