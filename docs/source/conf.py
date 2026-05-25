@@ -20,12 +20,11 @@ sys.path.insert(0, os.path.abspath(".."))
 # -- Project information -----------------------------------------------------
 
 project = "imagematerials"
-copyright = "2024, IMAGE"
-author = "Frederike Arp, Luja von Köckritz, Sebastiaan Deetman, Roel Brouwer, Christine Staiger, Raoul Schram"
-
+copyright = "2026, IMAGE team at Utrecht University and PBL Netherlands Environmental Assessment Agency"
+author = "Frederike Arp, Luja von Köckritz, Judith Tettenborn, Martijn van Engelenburg, Marianne Zanon-Zotin, Oreane Edelenbosch, Sebastiaan Deetman, Roel Brouwer, Christine Staiger, Raoul Schram, Parisa Zahedi"
 
 # The full version, including alpha/beta/rc tags
-release = '0.0.1'
+release = '3.5.0.1'
 
 # -- General configuration ---------------------------------------------------
 
@@ -41,6 +40,9 @@ extensions = [
     "sphinx_copybutton",
     "sphinx.ext.autosummary",
 ]
+
+# Mock optional heavy dependencies that are not required to render docs.
+autodoc_mock_imports = ["prism"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

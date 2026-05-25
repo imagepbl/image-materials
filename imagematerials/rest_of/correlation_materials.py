@@ -13,7 +13,7 @@ from imagematerials.rest_of.const import path_input_data
 
 #%% Calculate consumption, GDP, and population data both real data points and projections
 
-def calculate_gdp(scenario: str, end_year_gdp_pc: int = 47, end_year_pop: int = 48, 
+def calculate_gdp(scenario: str, end_year_gdp_pc: int = 56, end_year_pop: int = 56, 
                   keep_global = False, path_input_data_image = path_input_data):
     """
     Read in gdp per capita data and population data (real & projections) from IMAGE EDITS project to calculate total and global gdp per IMAGE region.
@@ -24,7 +24,7 @@ def calculate_gdp(scenario: str, end_year_gdp_pc: int = 47, end_year_pop: int = 
         end year of gdp per capita data that is returned. 
         The default is 47 (2017).
     end_year_pop : int, optional
-        the end year of population data that is returned. The default is 48 (2017)
+        iloc stop index for population data. The default is 56 (corresponding to 2025).
     image_pop_gd_data: str, optional
         location of image population data
     keep_global : bool, optional
@@ -59,17 +59,17 @@ def calculate_gdp(scenario: str, end_year_gdp_pc: int = 47, end_year_pop: int = 
     pop_100 = pop_100*1000_000 # convert to millions
     
     # Get exact population data (no projections)
-    pop = pop_100.iloc[1:end_year_pop, :] # 1971 - 2017
+    pop = pop_100.iloc[:end_year_pop, :] # 1971 - 2017
     
     if keep_global == False:
-        gdp_pc_2017 = gdp_pc.iloc[0:end_year_gdp_pc, 0:-1] # 1971 - 2017 & removed sum of ''region 28''
+        gdp_pc_2017 = gdp_pc.iloc[:end_year_gdp_pc, 0:-1] # 1971 - 2017 & removed sum of ''region 28''
         # gdp until 2100 for projections
         gdp_pc_2100 = gdp_pc.iloc[:, 0:-1] # 1971 - 2100 & removed global 
         # pop = pop.drop(columns=['class_ 27']) #drop empty global column
         # pop_100 = pop_100.drop(columns=['class_ 27']) #drop empty global column
     
     if keep_global == True:
-        gdp_pc_2017 = gdp_pc.iloc[0:end_year_gdp_pc, :] # 1971 - 2017 & removed sum of ''region 28''
+        gdp_pc_2017 = gdp_pc.iloc[:end_year_gdp_pc, :] # 1971 - 2017 & removed sum of ''region 28''
         gdp_pc_2017 = gdp_pc_2017
         
         gdp_pc_2100 = gdp_pc.iloc[:, :] # 1971 - 2100 & removed global

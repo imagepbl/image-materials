@@ -22,11 +22,10 @@
 
 |break|
 
-IMAGE Materials Documentation
+IMAGE-materials Documentation
 =============================
-Welcome to the `IMAGE Materials <https://github.com/imagepbl/image-materials>`_ documentation. 
+Welcome to the `IMAGE-materials <https://github.com/imagepbl/image-materials>`_ documentation. 
 
-Some description here.
 
 
 Documentation Outline
@@ -36,32 +35,41 @@ Documentation Outline
    :hidden:
    :maxdepth: 2
 
+   index
+   sectors/overview
    installation
    quickstart
    models
    api/modules
    api/models_detail
-
+   licence
 
 
 This documentation is designed to help you easily navigate and find the information you need. It is organized into the following four sections:
 
 :doc:`whatisimagematerials`
 ^^^^^^^^^^^^^^^^^^
-The :doc:`whatisimagematerials` is ...
+The :doc:`whatisimagematerials` shortly explains what IMAGE-materials is 
+
+:doc:`sectors/overview`
+^^^^^^^^^^^^^^^^^^^^^^^
+The :doc:`sectors/overview` section provides an overview of the different sectors that IMAGE-materials covers.
 
 :doc:`installation`
 ^^^^^^^^^^^^^^^^^^^
-
-The :doc:`installation` section provides an overview of IMAGE materials's purpose and functionality.
+The :doc:`installation` section provides an overview of IMAGE-materials's purpose and functionality.
 
 :doc:`quickstart`
 ^^^^^^^^^^^^^^^^^
 The :doc:`quickstart` contains detailed, step-by-step instructions, as well as best practices for using the package. If you're new to IMAGE materials, we recommend you start here!
 
+:doc:`models`
+^^^^^^^^^^^^^
+The :doc:`models` section provides an overview of the models implemented in IMAGE materials. 
+
 :doc:`api/modules`
 ^^^^^^^^^^^^^^^^^^
-The :doc:`api/modules` is a technical reference for IMAGE materials. Here, each function, class, and module is outlined in detail, giving you a comprehensive understanding of how the package works and how to use its various functionalities.  If, for example, you'd like to discover which parameters can be used for which function, you can find that here.
+The :doc:`api/modules` is a technical reference for IMAGE-materials. Here, each function, class, and module is outlined in detail, giving you a comprehensive understanding of how the package works and how to use its various functionalities.  If, for example, you'd like to discover which parameters can be used for which function, you can find that here.
 
 
 
@@ -70,3 +78,11 @@ Indices and tables
 
 * :ref:`genindex`
 * :ref:`modindex`
+
+IMAGE-materials Team
+====================
+This model was developed by the IMAGE-materials team at Utrecht University and Leiden Univerisity, in collaboration with the IMAGE team at PBL Netherlands Environmental Assessment Agency. The team consists of: 
+Luja von Köckritz, Frederike Arp, Judith Tettenborn, Martijn van Engelenburg, Marianne Zanon Zotin, Oreane Edelenbosch, Sebastiaan Deetman.
+
+Supported by the Research Data Management Support team at Utrecht University:
+Raoul Schram, Roel Brouwer, Parisa Zahedi, Christina Staiger

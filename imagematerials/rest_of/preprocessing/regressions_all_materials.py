@@ -26,34 +26,32 @@ def fit_models_all_materials(scenarios_list: list = ["SSP2_baseline"], path_inpu
         path_input_data_image = Path("../data/raw/image/")
 
     results = {}
+    regions_grouping = {}
 
     for scenario in scenarios_list:
         print(scenario)
         # Run all projections for this scenario
-        copper = copper_projection(scenario=scenario, 
+        copper, copper_regions = copper_projection(scenario=scenario, 
                                    path_input_data=path_input_data,
                                    path_input_data_image=path_input_data_image)
-        steel = steel_projection(scenario=scenario, 
+        steel, steel_regions = steel_projection(scenario=scenario, 
                                  path_input_data=path_input_data,
                                  path_input_data_image=path_input_data_image)
-        aluminium = aluminium_projection(scenario=scenario, 
+        aluminium, aluminium_regions = aluminium_projection(scenario=scenario, 
                                          path_input_data=path_input_data,
                                          path_input_data_image=path_input_data_image)
-        cement = cement_projection(scenario=scenario, 
+        cement, cement_regions = cement_projection(scenario=scenario, 
                                    path_input_data=path_input_data,
                                    path_input_data_image=path_input_data_image)
-        sand = sand_projections(scenario=scenario, 
+        sand, sand_regions = sand_projections(scenario=scenario, 
                                 path_input_data=path_input_data,
                                 path_input_data_image=path_input_data_image)
-        limestone = limestone_projection(scenario=scenario, 
+        limestone, limestone_regions = limestone_projection(scenario=scenario, 
                                          path_input_data=path_input_data,
                                          path_input_data_image=path_input_data_image)
-        clay = clay_projections(scenario=scenario, 
+        clay, clay_regions = clay_projections(scenario=scenario, 
                                 path_input_data=path_input_data,
                                 path_input_data_image=path_input_data_image)
-        # biomass = biomass_data(scenario=scenario)
-        # fossil_fuel = fossil_fuel_data(scenario=scenario)
-        # water = water_consumption(scenario=scenario)
         
         # Store model objects or just their outputs
         results[scenario] = {
@@ -64,12 +62,18 @@ def fit_models_all_materials(scenarios_list: list = ["SSP2_baseline"], path_inpu
             'sand': sand,
             'limestone': limestone,
             'clay': clay,
-            # 'biomass': biomass,
-            # 'fossil_fuel': fossil_fuel,
-            # 'water': water
     }
-        
-    return results
+        regions_grouping[scenario] = {
+            'copper': copper_regions,
+            'steel': steel_regions,
+            'aluminium': aluminium_regions,
+            'cement': cement_regions,
+            'sand': sand_regions,
+            'limestone': limestone_regions,
+            'clay': clay_regions
+        }
+
+    return results, regions_grouping
 
 
 
@@ -264,25 +268,27 @@ def historic_other_fraction_consumption_to_xr(results_models):
     return diff_cons_all
 
 
-def get_X_max_scaling_factor(results, create_class_region_graph, IAI_TO_IMAGE_CLASSES):
+def get_X_max_scaling_factor(results, save = False):
     arrays=[]
-
+    from imagematerials.concepts import create_class_region_graph
+    from imagematerials.rest_of.const import IAI_TO_IMAGE_CLASSES
     knowledge_graph_region = create_class_region_graph()
     for material in ['steel', 'aluminium', 'copper','cement', 'sand', 'limestone', 'clay']:
-        if material == 'aluminium':
-            max_x_alu = results.get('SSP2_baseline').get('aluminium').region_max_gdp_pc_match
-            max_x_image_dict = {}
+        print(material)
+        # if material == 'aluminium':
+        #     max_x_alu = results.get('SSP2_baseline').get('aluminium').region_max_gdp_pc_match
+        #     max_x_image_dict = {}
 
-            for iai_region, image_classes in IAI_TO_IMAGE_CLASSES.items():
-                    if iai_region in max_x_alu:
-                        max_x_value = max_x_alu[iai_region]
-                        for image_class in image_classes:
-                            max_x_image_dict[image_class] = max_x_value
+        #     for iai_region, image_classes in IAI_TO_IMAGE_CLASSES.items():
+        #             if iai_region in max_x_alu:
+        #                 max_x_value = max_x_alu[iai_region]
+        #                 for image_class in image_classes:
+        #                     max_x_image_dict[image_class] = max_x_value
 
-            max_x = max_x_image_dict
+        #     max_x = max_x_image_dict
 
-        else:
-            max_x = results.get('SSP2_baseline').get(material).region_max_gdp_pc_match
+        # else:
+        max_x = results.get('SSP2_baseline').get(material).region_max_gdp_pc_match
         # make the values just the numbers (not class_ 1, class_ 2, ...) but leave in a dict
 
         max_x_da = xr.DataArray(
@@ -297,7 +303,8 @@ def get_X_max_scaling_factor(results, create_class_region_graph, IAI_TO_IMAGE_CL
 
     max_x_da = xr.concat(arrays, dim='material')
     max_x_da = max_x_da.sortby('material')
-    max_x_da.to_netcdf('../data/raw/rest-of/gompertz_values/max_x_regressor.nc')
+    if save:
+        max_x_da.to_netcdf('../data/raw/rest-of/gompertz_values/max_x_regressor.nc')
 
     # convert to x_array with IMAGE regions
     return max_x_da

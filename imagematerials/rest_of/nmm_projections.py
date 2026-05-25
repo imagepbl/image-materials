@@ -33,7 +33,7 @@ def cement_projection(scenario: str, path_input_data, path_input_data_image):
     group_4 = ['class_ 19']
     group_5 = ['class_ 7', 'class_ 14', 'class_ 21']
     group_6 = ['class_ 11']
-    china = ['class_ 20']
+    group_7 = ['class_ 20']
 
     scattered_global_fit = ['class_ 15', 'class_ 16', 'class_ 17', 'class_ 22'] # get global fit assigned'
     trajectroy_not_to_forseen = ['class_ 18', 'class_ 25'] # get lowest fit assigned'
@@ -47,7 +47,7 @@ def cement_projection(scenario: str, path_input_data, path_input_data_image):
                     'group_4': group_4,
                     'group_5': group_5,
                     'group_6': group_6,
-                    'china': china, 
+                    'group_7': group_7,
                         }
 
     cement.data_grouped_regions(regions_grouping = cement_grouping)
@@ -72,7 +72,7 @@ def cement_projection(scenario: str, path_input_data, path_input_data_image):
         'group_4' :  'gompertz model',
         'group_5' : 'gompertz model',
         'group_6' : 'gompertz model',
-        'china': 'gompertz model',
+        'group_7' : 'gompertz model',
     }
 
     bounds = {
@@ -83,7 +83,7 @@ def cement_projection(scenario: str, path_input_data, path_input_data_image):
         'group_4' : ([0, 0, 0], [1, 20, 100]),
         'group_5' : ([0, 0, 0], [1, 20, 100]),
         'group_6' : ([0, 0, 0], [1, 20, 100]),
-        'china':    ([0, 0, 0], [1, 20, 100]),
+        'group_7' : ([0, 0, 0], [1, 20, 100]),
     }
 
     cement.get_X_max_scaling_factor()
@@ -103,14 +103,16 @@ def cement_projection(scenario: str, path_input_data, path_input_data_image):
 
     cement.remove_regions_with_no_good_fit_from_region_model_match(exclude)
 
-    return cement
+    return cement, cement_grouping
 
 
 def limestone_projection(scenario: str, path_input_data, path_input_data_image):
 
     # limestone
     limestone = ResourceModel(resource_group = 'nmm', resource = 'limestone', 
-                        image_mat_available = False, start_year = 1970, scenario=scenario,
+                        image_mat_available = False, 
+                        start_year = 1970, end_year = 2024, 
+                        scenario=scenario,
                         path_input_data=path_input_data,
                         path_input_data_image=path_input_data_image)
 
@@ -120,17 +122,15 @@ def limestone_projection(scenario: str, path_input_data, path_input_data_image):
 
     group_1 = ['class_ 1']
     group_2 = ['class_ 2']
-    group_3 = [ 'class_ 7', 'class_ 17', 
-            'class_ 24', 'class_ 26', 
-            'class_ 3', 'class_ 5', 'class_ 14', 'class_ 15']
-    group_4 = ['class_ 11', 'class_ 12', 'class_ 21'] 
-    group_5 = ['class_ 19', 'class_ 23']
+    group_3 = ['class_ 3', 'class_ 5', 'class_ 14', 'class_ 15', 'class_ 17', 'class_ 24', 'class_ 26']
+    group_4 = ['class_ 11', 'class_ 12'] 
+    group_5 = ['class_ 7', 'class_ 19', 'class_ 21', 'class_ 23']
     group_6 = ['class_ 4', 'class_ 6', 'class_ 22']
     group_7 = ['class_ 20']
     group_8 = ['class_ 18']
 
     scattered = ['class_ 10', 'class_ 13', 'class_ 16'] # get global fit assigned
-    low = ['class_ 8', 'class_ 9', 'class_ 25', 'class_ 26'] # assign lowest fit
+    low = ['class_ 8', 'class_ 9', 'class_ 25'] # assign lowest fit
     exclude = [] # to little and scattered data--> not projected
 
     limestone_grouping = {'all_regions' : all_regions_list_class[:-1],
@@ -185,13 +185,15 @@ def limestone_projection(scenario: str, path_input_data, path_input_data_image):
                             model_nr=1)
     limestone.remove_regions_with_no_good_fit_from_region_model_match(exclude)
 
-    return limestone
+    return limestone, limestone_grouping
 
 
 def sand_projections(scenario: str, path_input_data, path_input_data_image):
     # sand
     sand = ResourceModel(resource_group = 'nmm', resource = 'sand_gravel_crushed_rock', 
-                        image_mat_available = True, start_year = 1970, scenario=scenario,
+                        image_mat_available = True, 
+                        start_year = 1971, end_year=2024,
+                        scenario=scenario,
                         path_input_data=path_input_data,
                         path_input_data_image=path_input_data_image)
 
@@ -281,12 +283,13 @@ def sand_projections(scenario: str, path_input_data, path_input_data_image):
     
     sand.remove_regions_with_no_good_fit_from_region_model_match(exclude)
 
-    return sand
+    return sand, SAND_GROUPING_REGIONS
 
 def clay_projections(scenario: str, path_input_data, path_input_data_image):
     # clay
     clay = ResourceModel(resource_group = 'nmm', resource = 'clay', 
-                        image_mat_available = False, start_year = 1970, 
+                        image_mat_available = False, 
+                        start_year = 1970, end_year=2024,
                         scenario=scenario,
                         path_input_data=path_input_data,
                         path_input_data_image=path_input_data_image)
@@ -313,10 +316,10 @@ def clay_projections(scenario: str, path_input_data, path_input_data_image):
 
     # trajectory not to forseen, will be fitted with global regression
     clay_grouping = {'all_regions' : all_regions_list_class[:-1],
-                    'low_steady' : low_steady,
-                    'high_steady' : high_steady,
-                    'medium' : medium,
-                    'china' : china
+                    'group_1' : low_steady,
+                    'group_2' : high_steady,
+                    'group_3' : medium,
+                    'group_4' : china
                     }
 
     clay.data_grouped_regions(regions_grouping = clay_grouping) 
@@ -327,18 +330,18 @@ def clay_projections(scenario: str, path_input_data, path_input_data_image):
 
     best_rmse_models = {
         'all_regions': 'gompertz model',
-        'low_steady' : 'gompertz model',
-        'high_steady' : 'gompertz model',
-        'medium' : 'gompertz model',
-        'china' : 'gompertz model'
+        'group_1' : 'gompertz model',
+        'group_2' : 'gompertz model',
+        'group_3' : 'gompertz model',
+        'group_4' : 'gompertz model'
     }
 
     bounds = {
         'all_regions': ([0, 0, 0], [10, 20, 100]),
-        'low_steady': ([0, 0, 0], [10, 20, 100]),
-        'high_steady': ([0, 0, 0], [10, 20, 100]),
-        'medium' : ([0, 0, 0], [10, 20, 100]),
-        'china' : ([0, 0, 0], [10, 20, 100])
+        'group_1': ([0, 0, 0], [10, 20, 100]),
+        'group_2': ([0, 0, 0], [10, 20, 100]),
+        'group_3' : ([0, 0, 0], [10, 20, 100]),
+        'group_4' : ([0, 0, 0], [10, 20, 100])
     }
 
     clay.get_X_max_scaling_factor()
@@ -353,4 +356,4 @@ def clay_projections(scenario: str, path_input_data, path_input_data_image):
     # will take historic average instead
     clay.remove_regions_with_no_good_fit_from_region_model_match(exclude) # exclude+low_gdp 
 
-    return clay
+    return clay, clay_grouping
