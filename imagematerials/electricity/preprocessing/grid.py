@@ -8,21 +8,13 @@ from importlib.resources import files
 
 import prism
 from imagematerials.read_mym import read_mym_df
-from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
+from imagematerials.util import convert_lifetime
 from imagematerials.concepts import create_electricity_graph, create_region_graph
 from imagematerials.electricity.utils import (
-    MNLogit, 
-    stock_tail, 
-    create_prep_data, 
-    logistic, 
-    quadratic,
     interpolate_xr, 
     add_historic_stock, 
     calculate_grid_growth, 
-    calculate_fraction_underground, 
-    apply_ce_measures_to_elc, 
-    normalize_selected_techs,
-    calculate_storage_market_shares
+    calculate_fraction_underground,
 )
 from imagematerials.electricity.preprocessing.circular_economy_measures import (
     apply_ce_measures_to_elc_grid
@@ -33,16 +25,10 @@ from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.electricity.constants import (
     STANDARD_SCEN_EXTERNAL_DATA,
     YEAR_FIRST_GRID,
-    SENS_ANALYSIS,
     EPG_TECHNOLOGIES,
     STD_LIFETIMES_ELECTR,
-    EV_BATTERIES,
     unit_mapping
 )
-
-# for ttesting, remove later:
-END_YEAR = 2100
-INTERMEDIATE_YEAR = 2080
 
 
 #############################################################################################################
@@ -83,16 +69,16 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
 
     scen = Path(climate_policy_config["config_file_path"]).name
     path_external_data_standard = Path(path_base, "electricity", "standard_data")
-    path_external_data_scenario = Path(path_base, "electricity", scen) #test
+    path_external_data_scenario = Path(path_base, "electricity", scen)
     # test if path_external_data_scenario exists and if not set to standard scenario
     if not path_external_data_scenario.exists():
         path_external_data_scenario = Path(path_base, "electricity", STANDARD_SCEN_EXTERNAL_DATA)
 
-    ###########################################################################################################
-    # Read in files #
-
     year_start = YEAR_FIRST_GRID
     year_end = 2100
+
+    ###########################################################################################################
+    # Read in files #
 
     # lenght of the High-voltage (Hv) lines in the grid, based on Open Street Map (OSM) analysis (km)
     grid_length_hv_data    = pd.read_csv(path_external_data_standard /'grid_length_Hv.csv', index_col=0, names=None).transpose()    
@@ -107,7 +93,7 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
     # dynamic or scenario-dependent data (lifetimes & material intensity)
 
     # Average lifetime in years of grid elements
-    grid_lifetime_data     = pd.read_csv(path_external_data_scenario  / 'operational_lifetime_grid.csv', index_col=0)
+    grid_lifetime_data          = pd.read_csv(path_external_data_scenario  / 'operational_lifetime_grid.csv', index_col=0)
     # Material intensity of grid lines (Hv, Mv & Lv; specific for underground vs. aboveground lines) (kg/km)
     materials_lines_data        = pd.read_csv(path_external_data_scenario / 'Materials_grid_dynamic.csv', index_col=[0,1])
     # Material Intensity for additional infrastructure required for grid connections, such as transformers & substations (kg/unit)

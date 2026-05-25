@@ -76,11 +76,11 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
     if not path_external_data_scenario.exists():
         path_external_data_scenario = Path(path_base, "electricity", STANDARD_SCEN_EXTERNAL_DATA)
 
-    ###########################################################################################################
-    # Read in files #
-
     year_start = YEAR_FIRST_GRID
     year_end = 2100
+
+    ###########################################################################################################
+    # Read in files #
 
     # 1. External Data --------------------------------------------- 
 
@@ -209,9 +209,6 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
     prep_data["stocks"] = gcap_xr_interp
     prep_data["material_intensities"] = gcap_materials_xr_interp
     prep_data["knowledge_graph"] = create_electricity_graph()
-    # add units
-    prep_data["stocks"] = prism.Q_(prep_data["stocks"], "MW")
-    prep_data["material_intensities"] = prism.Q_(prep_data["material_intensities"], "g/MW")
     prep_data["set_unit_flexible"] = str(prism.U_(prep_data["stocks"])) # prism.U_ gives the unit back
     # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
 

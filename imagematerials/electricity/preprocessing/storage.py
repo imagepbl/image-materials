@@ -8,20 +8,13 @@ from importlib.resources import files
 
 import prism
 from imagematerials.read_mym import read_mym_df
-from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
+from imagematerials.util import convert_lifetime
 from imagematerials.concepts import create_electricity_graph, create_image_region_graph, create_region_graph
 from imagematerials.electricity.utils import (
-    MNLogit, 
-    stock_tail, 
-    create_prep_data,
     derive_phs_installed_capacity,
     derive_btm_installed_capacity,
-    logistic, 
-    quadratic,
     interpolate_xr, 
-    add_historic_stock, 
-    normalize_selected_techs,
-    calculate_storage_market_shares,
+    add_historic_stock,
     calculate_remaining_storage_demand
 )
 
@@ -30,9 +23,7 @@ from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.electricity.constants import (
     STANDARD_SCEN_EXTERNAL_DATA,
     YEAR_FIRST_GRID,
-    SENS_ANALYSIS,
     STD_LIFETIMES_ELECTR,
-    EPG_TECHNOLOGIES,
     TECH_STATIONARY_STORAGE,
     TECH_STATIONARY_STORAGE_ALL,
     unit_mapping,
@@ -42,76 +33,6 @@ from imagematerials.electricity.constants import (
     ratio_btm_to_solar
 )
 
-# for ttesting, remove later:
-END_YEAR = 2100
-INTERMEDIATE_YEAR = 2080
-
-# delete again ------------------
-scenario = "SSP2_baseline"
-path_current = Path().resolve()
-path_base = path_current.parent.parent#.parent # base path of the project -> image-materials
-path_image_output = Path(path_base, "data", "raw", "image", scenario, "EnergyServices")
-path_base = Path(path_base, "data", "raw")
-year_start = 1971
-year_end = 2100
-
-# import warnings
-# from pint.errors import UnitStrippedWarning
-# def add_historic_stock(da_stock, year_start=1920, interp_method="linear"):
-#     """
-#     Calculates historic (pre TIMER simulation time = before 1971) stock values.
-#     In year_start the stock is 0, then it (linearly) increases to the first existing year in da.
-#     Parameters
-#     ----------
-#     da_stock : xarray.DataArray
-#         Input DataArray with dims ('Time', 'Region') or ('Time', 'Region', 'Type').
-#     year_start : int
-#         The first year to start historic stock from (will be filled with zeros).
-#     interp_method : str, optional
-#         Interpolation method for historic stock growth. Supported options:
-#         - "linear": linear increase from 0 to first year value
-#         - "quadratic": quadratic increase from 0 to first year value
-#         Default is "linear".
-#     Returns
-#     -------
-#     xarray.DataArray
-#         DataArray extended backwards to year_start, with historic values
-#         interpolated according to `interp_method` up to the first year in `da`
-#     """
-#     t_first = int(da_stock.Time.min())
-#     if year_start >= t_first:
-#         return da_stock
-
-#     unit = prism.U_(da_stock)
-#     t_hist = np.arange(year_start, t_first)
-#     n_hist = len(t_hist)
-
-#     with warnings.catch_warnings():
-#         warnings.simplefilter("ignore", UnitStrippedWarning)
-#         first_values = da_stock.sel(Time=t_first).values.astype(float)
-
-#     # Build ramp dynamically to match first_values shape
-#     ramp = np.linspace(0, 1, n_hist)
-#     for _ in range(first_values.ndim):
-#         ramp = ramp[..., None]
-
-#     if interp_method == "linear":
-#         stock_hist = ramp * first_values[None, ...]
-#     elif interp_method == "quadratic":
-#         stock_hist = ramp**2 * first_values[None, ...]
-#     else:
-#         raise ValueError(f"Unknown method: {interp_method}. Choose 'linear' or 'quadratic'.")
-
-#     # Build coords dynamically
-#     extra_dims = [d for d in da_stock.dims if d != "Time"]
-#     coords = {"Time": t_hist, **{d: da_stock.coords[d] for d in extra_dims}}
-#     dims = ("Time", *extra_dims)
-
-#     da_stock_hist = xr.DataArray(stock_hist, coords=coords, dims=dims)
-#     da_stock_hist = prism.Q_(da_stock_hist, unit)
-
-#     da_stock_extended = xr.concat([da_stock_hist, da_stock], dim="Time")
-#     return da_stock_extended
 
 #############################################################################################################
 #############################################################################################################
@@ -179,27 +100,30 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
 
     scen = Path(climate_policy_config["config_file_path"]).name
     path_external_data_standard = Path(path_base, "electricity", "standard_data")
-    # path_external_data_scenario = Path(path_base, "electricity", scen) # needed if lates some input data are made scenario-specific
+    # path_external_data_scenario = Path(path_base, "electricity", scen) # needed if later some input data are made scenario-specific
     # # test if path_external_data_scenario exists and if not set to standard scenario
     # if not path_external_data_scenario.exists():
     #     path_external_data_scenario = Path(path_base, "electricity", STANDARD_SCEN_EXTERNAL_DATA)
 
-    ####################################################################################################
-    # Read in files
-
     year_start = YEAR_FIRST_GRID
     year_end = 2100
+
+    ####################################################################################################
+    # Read in files
 
     # 1. External Data =================================================================================
 
     #read in the lifetime of storage technologies (in yrs). The lifetime is assumed to be 1.5* the number of cycles divided by the number of days in a year (assuming diurnal use, and 50% extra cycles before replacement, representing continued use below 80% remaining capacity) OR the maximum lifetime in years, which-ever comes first 
-    lifetimes = pd.read_csv(path_external_data_standard / 'storage_and_EV_batteries_lifetimes.csv', usecols=["Time", "sub_technology", "value"])
+    lifetimes = pd.read_csv(path_external_data_standard / 'storage_and_EV_batteries_lifetimes.csv', 
+                            usecols=["Time", "sub_technology", "value"])
 
     # material intensities in kg/kWh
-    material_intensities = pd.read_csv(path_external_data_standard / 'storage_and_EV_batteries_material_intensities.csv', usecols=["Time", "sub_technology", "material", "value"])# .transpose()
+    material_intensities = pd.read_csv(path_external_data_standard / 'storage_and_EV_batteries_material_intensities.csv', 
+                                       usecols=["Time", "sub_technology", "material", "value"])# .transpose()
 
     # market shares in % of total storage capacity (excluding pumped hydropower storage; values: 0-1)
-    market_shares = pd.read_csv(path_external_data_standard / 'storage_stationary_market_shares.csv', usecols=["Time", "sub_technology", "value"]) #index_col=[0,1],usecols=lambda col: col != "unit"
+    market_shares = pd.read_csv(path_external_data_standard / 'storage_stationary_market_shares.csv', 
+                                usecols=["Time", "sub_technology", "value"]) #index_col=[0,1],usecols=lambda col: col != "unit"
 
     # Data for Pumped Hydropower Storage (PHS) ---------------------------------------------------------
     # Hydro-dam power capacity (also MW) within 5 regions reported by the IHA (international Hydropwer Association)
@@ -207,8 +131,8 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
     # Dataset 1: IHA data set of individual PHS sites, with commissioning year, capacity, energy stored,
     # operating status, and hydro type
     df_data1 =  pd.read_csv(Path(path_external_data_standard,"phs_data1_iha_capacity_by_individual_facility.csv"), 
-                        usecols=["Operational Status", "Country", "Commisioning Year", "Hydro Type", 
-                                "Generating Capacity", "Energy stored (GWh)"])
+                            usecols=["Operational Status", "Country", "Commisioning Year", "Hydro Type", 
+                                     "Generating Capacity", "Energy stored (GWh)"])
 
     # Dataset 2: IHA World Hydropower Outlook dataset of aggregated PHS power capacity (MW) by country for 3 years (2014, 2019, 2024) 
     #           + IEA global estimates
@@ -225,7 +149,7 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
 
     # Data for Behind-the-Meter Storage (BTM) ----------------------------------------------------------
     # share of solar PV capacity paired with BTM storage per IMAGE region (values: 0-1)
-    ratio_btm_deployment_data = pd.read_csv(Path(path_external_data_standard, "behind_the_meter_battery_deployment_ratio.csv"), usecols=["Time", "Region", "Value"])
+    # ratio_btm_deployment_data = pd.read_csv(Path(path_external_data_standard, "behind_the_meter_battery_deployment_ratio.csv"), usecols=["Time", "Region", "Value"])
 
     # 2. IMAGE/TIMER files =============================================================================
 
@@ -376,11 +300,6 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
     storage_energy_remaining = add_historic_stock(storage_energy_remaining, year_start)
     storage_energy_remaining = storage_energy_remaining.rename({"Type": "SuperType"}) # for SharesInflowStocks model, must be named "SuperType"
     storage_energy_remaining = storage_energy_remaining.assign_coords(SuperType=["Other Storage"]) # rename the coordinate value from PHS to Other Storage
-    print(storage_energy_remaining.dims)
-    print(storage_energy_remaining.coords)
-
-    print(phs_energy.dims)
-    print(phs_energy.coords)
     
     ####################################################################################################
     # Prep_data file for model

@@ -88,12 +88,11 @@ def get_preprocessing_data_evbattery(
     prism.unit_registry.load_definitions(units_file)
     # prism.unit_registry.load_definitions(path_base / "imagematerials" / "units.txt")
 
+    year_start = YEAR_FIRST_GRID
+    year_end = 2100
 
     ###########################################################################################################
     # Read in files #
-
-    year_start = YEAR_FIRST_GRID
-    year_end = 2100
     
     # 1. External Data ======================================================================================== 
 
