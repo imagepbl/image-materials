@@ -108,7 +108,7 @@ The preprocessing proceeds in the following stages:
    simulations) from *obsolete* types (kept for mass-balance with legacy data). An
    obsolete-to-active type map is built so that legacy inflows can be reconciled with
    active-type outflows in the reporting step.
-	 TO BE ADDED - obsolete stocks processing
+	TO BE ADDED - obsolete stocks processing
 
 5. **Material intensities.** Construct an ``xr.DataArray`` of kg/km² indexed by
    ``(Type, material, Region, Cohort)``. Apply the **80/20 permanent-aggregate split**:
