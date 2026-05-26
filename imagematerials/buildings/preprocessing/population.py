@@ -1,175 +1,427 @@
 """Population related functions for computing the building requirements."""
 
-from importlib.resources import files
-from pathlib import Path
-
+import numpy as np
 import pandas as pd
 import prism
 import xarray as xr
 
+from importlib.resources import files
+from pathlib import Path
+
+
+from imagematerials.buildings.constants import REGIONS_RANGE, area_labels, urban_q_areas, rural_q_areas
+from imagematerials.buildings.util import _as_string_regions, _normalize_shares
 from imagematerials.read_mym import read_mym_df
 
 prism.unit_registry.load_definitions(files("imagematerials") / "units.txt")
 
-def compute_population(image_directory: Path, base_directory: Path) -> xr.DataArray:
-    """Compute the population throught time for all regions, total, urban and rural.
 
-    Parameters
-    ----------
-    image_directory:
-        Directory that contains the image data used for preprocessing.
-    base_directory:
-        Directory specific for the buildings preprocessing.
+def _load_pop_q_raw(
+    image_directory: Path,
+    region_range: range,
+    area_labels: dict[int, str] = area_labels) -> xr.DataArray:
+    """Load IMAGE population quintile data as a flat DataArray.
 
     Returns
     -------
-    all_population:
-        Population data for all regions, subdivided over region, area (rural or urban) and time.
-
+    xr.DataArray
+        Population data with dimensions ``("Time", "Region", "Area")``, where
+        ``Area`` contains ``Total``, ``Urban``, ``Rural``, and all quintile labels.
     """
-    # Compute total/rural/urban populations
-    tot_population_xr, _ = compute_total_population(image_directory, base_directory)
-    urbpop_total, rurpop_total = compute_rur_urb_pop(image_directory, base_directory)
+    pop_q = read_mym_df(image_directory.joinpath("Socioeconomic", "Pop_q.out"))
+    pop_q = pop_q.rename(columns={"time": "Time", "DIM_1": "Region"})
+    value_cols = [c for c in pop_q.columns if c not in ["Time", "Region"]]
 
-    #TODO: use function from util if possible? problem: extra_dims?
-    rurpop_total_xr = xr.DataArray(
-    data=rurpop_total.values,                # Data values from the DataFrame
-    dims=["Time", "Region"],                 # Names for the two dimensions
-    coords={"Time": rurpop_total.index,      # Time coordinates from the DataFrame index
-            "Region": rurpop_total.columns}  # Region coordinates from the DataFrame columns
-        )
+    pop_q_xr = (
+        pop_q
+        .set_index(["Time", "Region"])[value_cols]
+        .rename_axis(columns="Area")
+        .stack(future_stack=True)
+        .to_xarray()
+        .transpose("Time", "Region", "Area")
+    )
+    pop_q_xr = pop_q_xr.assign_coords(Area=[area_labels.get(a, a) for a in pop_q_xr.coords["Area"].values])
+    # remove global region (27) by selecting only the specified region range
+    pop_q_xr = _as_string_regions(pop_q_xr.sel(Region=region_range))
 
-    urbpop_total_xr = xr.DataArray(
-    data=urbpop_total.values,                # Data values from the DataFrame
-    dims=["Time", "Region"],                 # Names for the two dimensions
-    coords={"Time": urbpop_total.index,      # Time coordinates from the DataFrame index
-            "Region": urbpop_total.columns}  # Region coordinates from the DataFrame columns
-        )
-
-    all_population = xr.concat((tot_population_xr, rurpop_total_xr, urbpop_total_xr), dim="Area")
-    all_population = all_population.assign_coords({"Area": ["Total", "Rural", "Urban"]})
-    all_population = all_population.transpose("Time", "Region", "Area")
-    all_population = all_population * 1e6 # data from TIMER comes in million persons
-    all_population = prism.Q_(all_population, "person")
-
-    return all_population
+    # quantify with people unit
+    pop_q_xr = prism.Q_(pop_q_xr, "people")
+    return pop_q_xr
 
 
-def compute_total_population(image_directory: Path, base_directory: Path) -> xr.DataArray:
-    """Compute the population throught time for all regions, not subdivided over rural/urban.
+def _get_pop_q_xr(
+    image_directory: Path,
+    region_range: range,
+    area_labels: dict[int, str] = area_labels,
+    urban_q_areas: list[str] = urban_q_areas,
+    rural_q_areas: list[str] = rural_q_areas) -> xr.DataArray:
+    """Load IMAGE population quintile data with quintiles as a separate coordinate.
 
     Parameters
     ----------
-    image_directory:
-        Directory that contains the image data used for preprocessing.
-    base_directory:
-        Directory specific for the buildings preprocessing.
+    image_directory : Path
+        Directory containing IMAGE scenario files, including
+        ``Socioeconomic/pop_q.out``.
+    region_range : range
+        Region identifiers to keep from the source data.
+    area_labels : dict[int, str], optional
+        Mapping from numeric area IDs to area names.
+    urban_q_areas : list[str], optional
+        Area labels for urban quintiles.
+    rural_q_areas : list[str], optional
+        Area labels for rural quintiles.
 
     Returns
     -------
-    regionalized_total_pop_history_future_xr:
-        Population data for all regions, subdivided over region, area (rural or urban) and time.
-    regionalized_total_pop_history_future:
-        Same as regionalized_total_pop_history_future_xr, but a pandas dataframe.
-
+    xr.DataArray
+        Population data with dimensions ``("Time", "Region", "Area", "Quintile")``,
+        where ``Area`` is ``["Urban", "Rural"]`` and ``Quintile`` is ``["Q1", ..., "Q5"]``.
     """
-    # import total population 1971 - 2100 from IMAGE
-    population_1971_future_df: pd.DataFrame = read_mym_df(image_directory.joinpath("Socioeconomic",
-                                                                                   "pop.scn"))
-    population_1971_future_df = population_1971_future_df.loc[:, :26]
-    population_1971_future_df.columns = population_1971_future_df.columns.astype(str)
+    pop_q_raw = _load_pop_q_raw(image_directory, region_range, area_labels)
+    q_labels = [f"Q{i}" for i in range(1, len(urban_q_areas) + 1)]
 
-    # read in historic global population from Maddison Project Database 2020 & 1700 value from
-    # https://www.johnstonsarchive.net/other/worldpop.html in 1000 people
-    historic_pop = pd.read_csv(base_directory / 'buildings' / 'standard_data'
-                               / 'historic_population.csv', index_col=0, header = 0)
-    historic_pop = historic_pop.loc[:1971] / 1000 # unit conversion
+    urban_q = (
+        pop_q_raw.sel(Area=urban_q_areas)
+        .assign_coords(Area=q_labels)
+        .rename({"Area": "Quintile"})
+        .expand_dims(Area=["Urban"])
+    )
+    rural_q = (
+        pop_q_raw.sel(Area=rural_q_areas)
+        .assign_coords(Area=q_labels)
+        .rename({"Area": "Quintile"})
+        .expand_dims(Area=["Rural"])
+    )
+    return xr.concat([urban_q, rural_q], dim="Area").transpose("Time", "Region", "Area", "Quintile")
 
-    # interpolate for missing years
-    # with cubic interpolation we see a drop at 1700
-    historic_pop = historic_pop.reindex(range(historic_pop.index.min(),
-                                              historic_pop.index.max() + 1)
-                                        ).interpolate(method="linear")
 
-    # regionalize data to IMAGE regions accoring to 1971 regionalization
-    share_regionalization_1971 = (population_1971_future_df.loc[1971]
-                                  / population_1971_future_df.loc[1971].sum())
+def _build_total_population(
+        image_directory: Path,
+        pop_q_data: xr.DataArray,
+        base_population: xr.DataArray,
+        regions: list[str],
+    ) -> tuple[xr.DataArray, np.ndarray]:
+    """Construct a continuous total-population series from historic and IMAGE data.
 
-    # create pd dataframe with regionalized total population based on shares in 1971
-    regionalized_total_pop = pd.DataFrame(index=historic_pop.index,
-                                          columns=share_regionalization_1971.index)
+    We need this to avoid massive build up of buildings stock by artificial start of population growth in 1971, where model is initiated.
+    
+    Parameters
+    ----------
+    pop_q_data : xr.DataArray
+        IMAGE population data with dimensions including ``Time``, ``Region``, and
+        ``Area``. The ``Area='Total'`` slice is used as IMAGE total population.
+    base_population : xr.DataArray
+        Reference population data used to ensure the final time range covers all
+        required years.
+    regions : list[str]
+        Region codes to include in the output.
 
-    for region in share_regionalization_1971.index:
-        regionalized_total_pop[region] = historic_pop * share_regionalization_1971[region]
+    Returns
+    -------
+    tuple[xr.DataArray, np.ndarray]
+        ``(total_population, time_all)`` where:
+        - ``total_population`` has dimensions ``("Time", "Region")``
+        - ``time_all`` is the full annual timeline used for reindexing.
+    """
+    base_directory = image_directory.parent.parent
+    historic_path = base_directory / "buildings" / "standard_data" / "historic_population.csv"
 
-    # concat total population data
-    regionalized_total_pop_history_future = pd.concat([regionalized_total_pop,
-                                                       population_1971_future_df])
+    historic_population = pd.read_csv(historic_path)
+    historic_population = (
+        historic_population
+        .rename(columns={"Year": "Time", "IMAGE_region": "Region", "Population": "Population"})
+        .pivot(index="Time", columns="Region", values="Population")
+    )
+    historic_population = historic_population.reindex(
+        index=range(historic_population.index.min(), historic_population.index.max() + 1)  # Explicitly specify index
+    ).interpolate(method="linear")
 
-    # to xarray
-    regionalized_total_pop_history_future = regionalized_total_pop_history_future.rename_axis(
-        index = "Time", columns = "Region")
 
-    regionalized_total_pop_history_future_xr = xr.DataArray(
-        data=regionalized_total_pop_history_future.values,
-        dims=["Time", "Region"],
-        coords={"Time": regionalized_total_pop_history_future.index,
-                "Region": regionalized_total_pop_history_future.columns}
+    historic_population.columns = [str(c) for c in historic_population.columns]
+    historic_population.index = historic_population.index.astype(int)
+    historic_population.index.name = "Time"
+
+    historic_total = xr.DataArray(
+        historic_population.values,
+        dims=("Time", "Region"),
+        coords={
+            "Time": historic_population.index.to_numpy(),
+            "Region": historic_population.columns.to_numpy(),
+        },
     )
 
-    return regionalized_total_pop_history_future_xr, regionalized_total_pop_history_future
+    image_total = _as_string_regions(pop_q_data.sel(Area="Total"))
+
+    time_all = np.arange(
+        int(min(historic_total.coords["Time"].min(), image_total.coords["Time"].min(), base_population.coords["Time"].min())),
+        int(max(historic_total.coords["Time"].max(), image_total.coords["Time"].max(), base_population.coords["Time"].max())) + 1,
+    )
+
+    historic_total = historic_total.reindex(Time=time_all, Region=regions)
+    image_total = image_total.reindex(Region=regions).interp(Time=time_all, kwargs={"fill_value": "extrapolate"})
+
+    total_population = historic_total.combine_first(image_total)
+    total_population = total_population.interpolate_na(dim="Time", method="linear").clip(min=0)
+    return total_population, time_all
 
 
-
-def compute_rur_urb_pop(image_directory, base_directory):
-    """Compute the population throught time for all regions, and rural/urban.
+def _split_urban_rural(pop_q_data: xr.DataArray, 
+                       total_population: xr.DataArray, 
+                       regions: list[str], 
+                       time_all: np.ndarray) -> xr.DataArray:
+    """Split total population into urban and rural components.
 
     Parameters
     ----------
-    image_directory:
-        Directory that contains the image data used for preprocessing.
-    base_directory:
-        Directory specific for the buildings preprocessing.
+    pop_q_data : xr.DataArray
+        Population data containing at least ``Area`` values ``Urban``, ``Rural``,
+        and ``Total``.
+    total_population : xr.DataArray
+        Total population with dimensions ``("Time", "Region")``.
+    regions : list[str]
+        Region codes to include.
+    time_all : np.ndarray
+        Full annual timeline used for interpolation.
 
     Returns
     -------
-    urb_pop_total:
-        Urban population data for all regions over time.
-    rural_pop_total:
-        Rural population data for all regions over time.
-
+    xr.DataArray
+        Urban/rural population with dimensions ``("Area", "Time", "Region")``
+        (xarray order may vary by operation). For years before the IMAGE
+        reference year, the urban share transitions linearly from 0 at 1700
+        to the regional IMAGE urban share at the reference year; rural is the
+        complement.
     """
-    (_, regionalized_total_pop_history_future) = compute_total_population(image_directory,
-                                                                          base_directory)
+    ur_share = pop_q_data.sel(Area=["Urban", "Rural"]) / pop_q_data.sel(Area="Total")
+    ur_share = _as_string_regions(ur_share)
+    ur_share = ur_share.reindex(Region=regions).interp(Time=time_all, kwargs={"fill_value": "extrapolate"})
 
-    # rural population total meaning [Million]: the total of people living in rural areas
-    # (over time, by region)
-    rural_population: pd.DataFrame = read_mym_df(image_directory.joinpath("Socioeconomic",
-                                                                          "RURPOPTOT.out"))
-    rural_population.columns = rural_population.columns.astype(str)
+    # Enforce a historical transition: Urban=0 and Rural=1 in 1700, then
+    # linearly approach IMAGE regional shares by 1971 (fallback: first IMAGE year).
+    image_years = pop_q_data.coords["Time"].values
+    reference_year = 1971 if 1971 in image_years else int(np.min(image_years))
+    transition_start_year = 1700
 
-    # urban population total meaning [Million]: the total of people living in urban areas
-    # (over time, by region)
-    urban_population: pd.DataFrame = read_mym_df(image_directory.joinpath("Socioeconomic",
-                                                                          "URBPOPTOT.out"))
-    urban_population.columns = urban_population.columns.astype(str)
+    time_coord = xr.DataArray(time_all, dims=["Time"], coords={"Time": time_all})
+    transition_progress = (
+        (time_coord - transition_start_year)
+        / max(reference_year - transition_start_year, 1)
+    ).clip(min=0, max=1)
 
-    # remove emty and global region
-    rural_population = rural_population.loc[:, :"26"]
-    urban_population = urban_population.loc[:, :"26"]
-
-    # split up in rural and urban
-    # get urban share for base year
-    urban_share = urban_population/regionalized_total_pop_history_future
-    urban_share.loc[1700] = 0
-    # interpolate urban share
-    urban_share = urban_share.interpolate()
+    urban_at_reference = ur_share.sel(Area="Urban", Time=reference_year)
+    urban_share = xr.where(
+        time_coord < reference_year,
+        transition_progress * urban_at_reference,
+        ur_share.sel(Area="Urban"),
+    )
     rural_share = 1 - urban_share
+    ur_share = xr.concat(
+        [
+            urban_share.expand_dims(Area=["Urban"]),
+            rural_share.expand_dims(Area=["Rural"]),
+        ],
+        dim="Area",
+    )
 
-    urban_pop_total = urban_share*regionalized_total_pop_history_future
-    rural_pop_total = rural_share*regionalized_total_pop_history_future
+    ur_share = _normalize_shares(ur_share, dim="Area", fallback=0.5)
+    return ur_share * total_population
 
-    urban_pop_total = urban_pop_total.rename_axis(index = "Time", columns = "Region")
-    rural_pop_total = rural_pop_total.rename_axis(index = "Time", columns = "Region")
 
-    return urban_pop_total, rural_pop_total
+def _split_quintiles(
+    pop_q_data: xr.DataArray,
+    urban_rural_population: xr.DataArray,
+    regions: list[str],
+    time_all: np.ndarray,
+    urban_q_areas: list[str],
+    rural_q_areas: list[str],
+) -> xr.DataArray:
+    """Split urban and rural populations into quintiles and combine them with a new `Quintile` dimension.
+
+    Parameters
+    ----------
+    pop_q_data : xr.DataArray
+        Population data containing quintile areas and aggregate urban/rural areas.
+    urban_rural_population : xr.DataArray
+        Population split into ``Urban`` and ``Rural`` by time and region.
+    regions : list[str]
+        Region codes to include.
+    time_all : np.ndarray
+        Full annual timeline used for interpolation.
+    urban_q_areas : list[str]
+        Area labels for urban quintiles.
+    rural_q_areas : list[str]
+        Area labels for rural quintiles.
+
+    Returns
+    -------
+    xr.DataArray
+        Combined population array with dimensions ``("Area", "Quintile", "Time", "Region")``.
+    """
+    q_labels = [f"Q{i}" for i in range(1, len(urban_q_areas) + 1)]
+
+    # Urban quintiles
+    urban_q_share = pop_q_data.sel(Area=urban_q_areas) / pop_q_data.sel(Area="Urban")
+    urban_q_share = _as_string_regions(urban_q_share)
+    urban_q_share = urban_q_share.reindex(Region=regions).interp(Time=time_all, kwargs={"fill_value": "extrapolate"})
+    urban_q_share = _normalize_shares(urban_q_share, dim="Area", fallback=1 / len(urban_q_areas))
+    urban_q_pop = (
+        urban_q_share.assign_coords(Area=q_labels)
+        .rename({"Area": "Quintile"})
+        .expand_dims(Area=["Urban"])
+    )
+    urban_q_pop = urban_q_pop * urban_rural_population.sel(Area="Urban")
+
+    # Rural quintiles
+    rural_q_share = pop_q_data.sel(Area=rural_q_areas) / pop_q_data.sel(Area="Rural")
+    rural_q_share = _as_string_regions(rural_q_share)
+    rural_q_share = rural_q_share.reindex(Region=regions).interp(Time=time_all, kwargs={"fill_value": "extrapolate"})
+    rural_q_share = _normalize_shares(rural_q_share, dim="Area", fallback=1 / len(rural_q_areas))
+    rural_q_pop = (
+        rural_q_share.assign_coords(Area=q_labels)
+        .rename({"Area": "Quintile"})
+        .expand_dims(Area=["Rural"])
+    )
+    rural_q_pop = rural_q_pop * urban_rural_population.sel(Area="Rural")
+
+    # Concatenate: Area=['Urban','Rural'], Quintile=['Q1',...,'Q5']
+    return xr.concat([urban_q_pop, rural_q_pop], dim="Area")
+
+
+def _align_core_population(population_split: xr.DataArray, base_population: xr.DataArray) -> xr.DataArray:
+    """Align total, urban, and rural values to a base population dataset.
+
+    Parameters
+    ----------
+    population_split : xr.DataArray
+        Population split data containing at least ``Total``, ``Urban``, and
+        ``Rural`` areas.
+    base_population : xr.DataArray
+        Reference population data for the same core areas.
+
+    Returns
+    -------
+    xr.DataArray
+        Updated ``population_split`` with core areas overwritten on overlapping
+        time-region coordinates.
+    """
+    aligned_base = _as_string_regions(base_population).transpose("Time", "Region", "Area")
+    # Find the years and regions that exist in both datasets.
+    common_time = np.intersect1d(population_split.coords["Time"].values, aligned_base.coords["Time"].values)
+    common_region = np.intersect1d(population_split.coords["Region"].values, aligned_base.coords["Region"].values)
+
+    n_quintiles = population_split.sizes.get("Quintile", 1)
+
+    for area in ["Total", "Urban", "Rural"]:
+        base_vals = aligned_base.sel(Time=common_time, Region=common_region, Area=area)
+        if area in ["Urban", "Rural"] and n_quintiles > 1:
+            # Distribute equally across quintiles so that sum("Quintile") == base_vals
+            population_split.loc[{"Time": common_time, "Region": common_region, "Area": area}] = base_vals / n_quintiles
+        else:
+            population_split.loc[{"Time": common_time, "Region": common_region, "Area": area}] = base_vals
+    return population_split
+
+
+def _equalize_quintiles(
+    population_split: xr.DataArray,
+    q_labels: list[str],
+    target_area: str,
+    cutoff_year: int = 1970,
+) -> xr.DataArray:
+    """Set all quintiles in a group to equal shares of a target area.
+    Needed to correct extrapolation for historic years where IMAGE population quintiles are not defined 
+
+    Parameters
+    ----------
+    population_split : xr.DataArray
+        Population split containing quintile areas and a target aggregate area.
+    q_labels : list[str]
+        Quintile coordinate labels (e.g. ``["Q1", "Q2", "Q3", "Q4", "Q5"]``).
+    target_area : str
+        Aggregate area whose values are split equally across quintiles.
+    cutoff_year : int, optional
+        Equalize only for years ``<= cutoff_year``. Years above this cutoff
+        are left unchanged.
+
+    Returns
+    -------
+    xr.DataArray
+        Population split with equalized quintile values.
+    """
+    historic_time = population_split.coords["Time"].values <= cutoff_year
+    if not np.any(historic_time):
+        return population_split
+
+    # Divide the sum over Quintile equally across all quintile slots
+    total_vals = population_split.sel(Area=target_area, Time=historic_time).sum(dim="Quintile")
+    equal_vals = total_vals / len(q_labels)
+    for q in q_labels:
+        population_split.loc[{"Area": target_area, "Quintile": q, "Time": historic_time}] = equal_vals
+    return population_split
+
+
+def compute_population(
+    image_directory: Path,
+    region_range: range = REGIONS_RANGE,
+    urban_q_areas: list[str] = urban_q_areas,
+    rural_q_areas: list[str] = rural_q_areas) -> xr.DataArray:
+    """Build full population split (total, urban/rural, and quintiles).
+
+    Parameters
+    ----------
+    image_directory : Path
+        Directory containing IMAGE scenario output.
+    region_range : range, optional
+        Region identifiers to keep.
+    urban_q_areas : list[str] | None, optional
+        Labels for urban quintile areas. Defaults to Urban Q1-Q5.
+    rural_q_areas : list[str] | None, optional
+        Labels for rural quintile areas. Defaults to Rural Q1-Q5.
+        
+    Returns
+    -------
+    xr.DataArray
+        Quantified population split in units of people.
+    """
+    regions_all = [str(r) for r in region_range]
+    q_labels = [f"Q{i}" for i in range(1, len(urban_q_areas) + 1)]
+
+    pop_q_data = _load_pop_q_raw(image_directory, region_range)
+    population = pop_q_data.sel(Area=["Total", "Urban", "Rural"]).transpose("Time", "Region", "Area")
+
+    total_population_xr, time_all = _build_total_population(
+        image_directory=image_directory,
+        pop_q_data=pop_q_data,
+        base_population=population,
+        regions=regions_all,
+    )
+
+    urban_rural_population_xr = _split_urban_rural(
+        pop_q_data=pop_q_data,
+        total_population=total_population_xr,
+        regions=regions_all,
+        time_all=time_all,
+    )
+
+    combined_quintiles_population_xr = _split_quintiles(
+        pop_q_data=pop_q_data,
+        urban_rural_population=urban_rural_population_xr,
+        regions=regions_all,
+        time_all=time_all,
+        urban_q_areas=urban_q_areas,
+        rural_q_areas=rural_q_areas,
+    )
+
+    population_split_xr = xr.concat(
+        [
+            total_population_xr.expand_dims(Area=["Total"]).expand_dims(Quintile=q_labels),
+            combined_quintiles_population_xr,
+        ],
+        dim="Area",
+        join="outer",
+    ).transpose("Time", "Region", "Area", "Quintile").clip(min=0)
+
+    population_split_xr = _align_core_population(population_split_xr, population)
+    population_split_xr = _equalize_quintiles(population_split_xr, q_labels, "Urban", cutoff_year=1970)
+    population_split_xr = _equalize_quintiles(population_split_xr, q_labels, "Rural", cutoff_year=1970)
+
+    return prism.Q_(population_split_xr, "people")
