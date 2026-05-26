@@ -321,9 +321,14 @@ def _align_core_population(population_split: xr.DataArray, base_population: xr.D
     return population_split
 
 
-def _equalize_quintiles(population_split: xr.DataArray, q_labels: list[str], target_area: str) -> xr.DataArray:
+def _equalize_quintiles(
+    population_split: xr.DataArray,
+    q_labels: list[str],
+    target_area: str,
+    cutoff_year: int = 1970,
+) -> xr.DataArray:
     """Set all quintiles in a group to equal shares of a target area.
-    Needed to correct for historic years where IMAGE population quintiles are not defined 
+    Needed to correct extrapolation for historic years where IMAGE population quintiles are not defined 
 
     Parameters
     ----------
@@ -333,17 +338,24 @@ def _equalize_quintiles(population_split: xr.DataArray, q_labels: list[str], tar
         Quintile coordinate labels (e.g. ``["Q1", "Q2", "Q3", "Q4", "Q5"]``).
     target_area : str
         Aggregate area whose values are split equally across quintiles.
+    cutoff_year : int, optional
+        Equalize only for years ``<= cutoff_year``. Years above this cutoff
+        are left unchanged.
 
     Returns
     -------
     xr.DataArray
         Population split with equalized quintile values.
     """
+    historic_time = population_split.coords["Time"].values <= cutoff_year
+    if not np.any(historic_time):
+        return population_split
+
     # Divide the sum over Quintile equally across all quintile slots
-    total_vals = population_split.sel(Area=target_area).sum(dim="Quintile")
+    total_vals = population_split.sel(Area=target_area, Time=historic_time).sum(dim="Quintile")
     equal_vals = total_vals / len(q_labels)
     for q in q_labels:
-        population_split.loc[{"Area": target_area, "Quintile": q}] = equal_vals
+        population_split.loc[{"Area": target_area, "Quintile": q, "Time": historic_time}] = equal_vals
     return population_split
 
 
@@ -409,7 +421,7 @@ def compute_population(
     ).transpose("Time", "Region", "Area", "Quintile").clip(min=0)
 
     population_split_xr = _align_core_population(population_split_xr, population)
-    population_split_xr = _equalize_quintiles(population_split_xr, q_labels, "Urban")
-    population_split_xr = _equalize_quintiles(population_split_xr, q_labels, "Rural")
+    population_split_xr = _equalize_quintiles(population_split_xr, q_labels, "Urban", cutoff_year=1970)
+    population_split_xr = _equalize_quintiles(population_split_xr, q_labels, "Rural", cutoff_year=1970)
 
     return prism.Q_(population_split_xr, "people")
