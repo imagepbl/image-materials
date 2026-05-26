@@ -323,6 +323,7 @@ def _align_core_population(population_split: xr.DataArray, base_population: xr.D
 
 def _equalize_quintiles(population_split: xr.DataArray, q_labels: list[str], target_area: str) -> xr.DataArray:
     """Set all quintiles in a group to equal shares of a target area.
+    Needed to correct for historic years where IMAGE population quintiles are not defined 
 
     Parameters
     ----------
