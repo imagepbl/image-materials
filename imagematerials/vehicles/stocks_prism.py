@@ -111,6 +111,7 @@ class VehicleStocks(prism.Model):
             integration_preprocessing = True
         )
         
+        # TODO: fix dimensions here such that they get imported from the data
         # Extract dimensions from preprocessing data if not already set
         if not hasattr(self, 'Region') or self.Region is None:
             self.Region = list(vehicle_preprocessing.coordinates["Region"])
