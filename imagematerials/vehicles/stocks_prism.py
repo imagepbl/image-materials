@@ -12,7 +12,8 @@ import pandas as pd
 import prism
 
 from imagematerials.concepts import KnowledgeGraph, create_region_graph
-from imagematerials.constants import IMAGE_REGIONS
+from imagematerials.constants import IMAGE_REGIONS, base_directory
+from imagematerials.preprocessing import get_preprocessing_data
 from imagematerials.vehicles.constants import (
     END_YEAR,
     LIGHT_COMMERCIAL_VEHICLE_SHARE,
@@ -20,8 +21,9 @@ from imagematerials.vehicles.constants import (
     PKMS_TO_VKMS,
     REGIONS,
     START_YEAR,
-    all_modes,
+    all_modes
 )
+#from imagematerials.vehicles.preprocessing.main_prism import vehicles_preprocessing_integration
 from imagematerials.vehicles.shares_prism import get_vehicle_shares_prism
 from imagematerials.vehicles.preprocessing.util import (
     xarray_conversion
@@ -34,7 +36,7 @@ UnitFlexibleStock = prism.DynamicUnit("my_unit_stock")
 
 
 @prism.interface
-class Stocks(prism.Model):
+class VehicleStocks(prism.Model):
     """Vehicle stocks prism model for yearly calculations.
     
     Calculates vehicle stocks from yearly passenger and tonne kilometer demands,
@@ -43,12 +45,12 @@ class Stocks(prism.Model):
     
     Attributes
     ----------
-    Region : prism.Coords[REGION]
-        Geographic regions
-    Type : prism.Coords[STOCK_TYPE]
-        Vehicle types (including subtypes with fuel/technology)
-    Time : prism.Coords[TIME]
-        Time steps for simulation
+    Region : list
+        Geographic regions (derived from preprocessing data)
+    Type : list
+        Vehicle types (including subtypes with fuel/technology, derived from preprocessing data)
+    Time : list
+        Time steps for simulation (derived from preprocessing data)
     passengerkms : prism.TimeVariable[Region, Type]
         Yearly passenger kilometers demanded
     tonekms : prism.TimeVariable[Region, Type]
@@ -72,25 +74,18 @@ class Stocks(prism.Model):
         Number of vehicles by type and region for each year
     """
     
-    # Dimensions
-    Region: prism.Coords[REGION]
-    Type: prism.Coords[STOCK_TYPE]
-    Time: prism.Coords[TIME]
+    # Dimensions - derived dynamically from preprocessing data in compute_initial_values
+    # Region: prism.Coords[REGION]
+    # Type: prism.Coords[STOCK_TYPE]
+    # Time: prism.Coords[TIME]
     
     # Inputs - Time-varying
-    passengerkms: prism.TimeVariable
-    tonekms: prism.TimeVariable
-    vehicle_shares: prism.TimeVariable
+    #passengerkms: prism.TimeVariable
+    #tonekms: prism.TimeVariable
+    #vehicle_shares: prism.TimeVariable
     
-    # Inputs - Static
-    conversion_factor_tkms: xr.DataArray
-    first_year_vehicle: pd.DataFrame
-    market_share: xr.DataArray
-    knowledge_graph: KnowledgeGraph
-    set_unit_flexible: prism.VarUnit[UnitFlexibleStock]
-    
-    # Output
-    stocks: prism.TimeVariable[REGION, STOCK_TYPE, UnitFlexibleStock] = prism.export()
+    # Output - dimensions are set dynamically in compute_initial_values
+    stocks: prism.TimeVariable = prism.export()
     
     input_data: tuple[str] = (
         "passengerkms", "tonekms", "vehicle_shares", "conversion_factor_tkms", 
@@ -106,6 +101,29 @@ class Stocks(prism.Model):
         time : prism.Timeline
             The simulation timeline
         """
+        # Load preprocessing data first
+        # TODO: make this flexible with scenarios etc set in settings/constants file
+        vehicle_preprocessing = get_preprocessing_data(
+            "vehicles", 
+            base_directory,
+            climate_policy_scenario_dir=base_directory / "image" / "SSP2_baseline",
+            circular_economy_scenario_dirs=None,
+            integration_preprocessing = True
+        )
+        
+        # TODO: fix dimensions here such that they get imported from the data
+        # Extract dimensions from preprocessing data if not already set
+        if not hasattr(self, 'Region') or self.Region is None:
+            self.Region = list(vehicle_preprocessing.coordinates["Region"])
+        if not hasattr(self, 'Type') or self.Type is None:
+            self.Type = list(vehicle_preprocessing.coordinates["Type"])
+        if not hasattr(self, 'Time') or self.Time is None:
+            self.Time = list(vehicle_preprocessing.coordinates["Time"])
+        
+        # Extract unit if not set
+        if not hasattr(self, 'set_unit_flexible') or self.set_unit_flexible is None:
+            self.set_unit_flexible = vehicle_preprocessing.prep_data.get("set_unit_flexible", "count")
+        
         unit = str(self.set_unit_flexible)
         self.stocks = xr.DataArray(
             0.0,
@@ -117,6 +135,20 @@ class Stocks(prism.Model):
             }
         )
         self.stocks = prism.Q_(self.stocks, unit)
+
+        # Note: add flag to set settings 
+        vehicle_data = vehicle_preprocessing.all_data
+        self.knowledge_graph = vehicle_data["knowledge_graph"]
+        self.lifetimes = vehicle_data["lifetimes"]
+        self.maintenance_material_fractions = vehicle_data["maintenance_material_fractions"]
+        self.material_fractions = vehicle_data["material_fractions"]
+        self.conversion_factor_tkms = vehicle_data["conversion_factor_tkms"]
+        self.first_year_vehicle = vehicle_data["first_year_vehicle"]
+        self.market_share = vehicle_data["market_share"]
+        self.weights = vehicle_data["weights"]
+
+        # dimension check?
+        # compute historic tail
     
     def compute_values(self, time: prism.Time):
         """Calculate vehicle stocks for the current timestep.

@@ -3,6 +3,13 @@
 import numpy as np
 import prism
 from prism import Q_
+from pathlib import Path
+
+#TIMER settings
+base_directory = Path("..", "data", "raw")
+START_YEAR_HISTORIC = Q_(1721, 'year')
+
+
 
 # Time
 BASE_TIMELINE = prism.Timeline(
