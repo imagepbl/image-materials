@@ -87,7 +87,7 @@ def buildings_preprocessing(base_directory: Path, climate_policy_config: dict,
                                                          circular_economy_config)
 
     # Commercial floorspace also needs to be multiplied by population & drop Area dimension
-    floorspace_commercial_total = floorspace_commercial_total = floorspace_commercial_capita * population.sel(Area=['Urban', 'Rural']).sum("Area")
+    floorspace_commercial_total = floorspace_commercial_capita * population.sel(Area=['Urban', 'Rural']).sum("Area")
     floorspace = xr.concat((floorspace_residential_total, floorspace_commercial_total), dim="Type")
 
     # Lifetime computations, see lifetimes.py
