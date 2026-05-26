@@ -142,6 +142,8 @@ class StocksQuintiles(prism.Model):
     """Stock class that can be used for different products.
     A model class for managing stocks and their inflows and outflows over time, 
     including the computation of initial and dynamic stock values based on input data.
+    Accounting also for income quintiles
+
     Attributes
     ----------
     Region : prism.Coords[REGION]
@@ -152,6 +154,8 @@ class StocksQuintiles(prism.Model):
         Defines the cohorts (e.g., different age groups of stock).
     Time : prism.Coords[TIME]
         Defines the time steps for the stock simulation.
+    Quintile : prism.Coords[QUINTILE]
+        Defines the income quintiles.
     lifetimes : xr.DataArray
         Expected lifetimes for each stock type.
     stocks : xr.DataArray
@@ -583,6 +587,8 @@ class MaterialIntensitiesQuintiles(prism.Model):
         The type of stock (e.g., Cars - ICE).
     Cohort : prism.Coords[COHORT]
         Cohort groups within the stock (e.g., yearly age groups).
+    Quintile : prism.Coords[QUINTILE]
+        Material demand per income quintiles 
     material : prism.Coords[MATERIAL_TYPE]
         The material types used in the model.
     input_data : tuple of str
