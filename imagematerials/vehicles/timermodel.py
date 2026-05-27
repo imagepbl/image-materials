@@ -41,7 +41,7 @@ class TIMERMaterials(prism.Model):
 
     def init_submodels(self, timeline: prism.Timeline):
         if self._submodels is None:
-            self._submodels = []
+            self._submodels = {}
 
         self.vehicles = VehicleStocks(
             timeline,
@@ -63,7 +63,7 @@ class TIMERMaterials(prism.Model):
         
         # Set compute_args for the submodel (empty for now, as VehicleStocks doesn't need dynamic inputs yet)
         self.vehicles.compute_args = {}
-        self._submodels.append(self.vehicles)
+        self._submodels['vehicles'] = self.vehicles
 
 
     def compute_values(
@@ -99,7 +99,7 @@ class TIMERMaterials(prism.Model):
         
     def _compute_one_timestep(self, time: prism.Time):
         print(f"{time.t}", end="\r")
-        for model in self._submodels:
+        for model in self._submodels.values():
             model.compute_values(time, **model.compute_args)
 
         # Interact with Stock model and Materials model from here
