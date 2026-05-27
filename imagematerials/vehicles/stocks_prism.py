@@ -10,6 +10,7 @@ import xarray as xr
 import numpy as np
 import pandas as pd
 import prism
+from pathlib import Path
 
 from imagematerials.concepts import KnowledgeGraph, create_region_graph
 from imagematerials.constants import IMAGE_REGIONS, base_directory
@@ -92,8 +93,12 @@ class VehicleStocks(prism.Model):
         "first_year_vehicle", "market_share", "knowledge_graph", "set_unit_flexible"
     )
     output_data: tuple[str] = ("stocks",)
-    
-    def compute_initial_values(self, time: prism.Timeline):
+
+    climate_policy_scenario_dir: Path | None = None
+
+    def compute_initial_values(self, 
+                               time: prism.Timeline, 
+                               climate_policy_scenario_dir: Path | None = None):
         """Initialize the stocks TimeVariable with zeros.
         
         Parameters
@@ -101,12 +106,15 @@ class VehicleStocks(prism.Model):
         time : prism.Timeline
             The simulation timeline
         """
+        if climate_policy_scenario_dir is None:
+            climate_policy_scenario_dir = self.climate_policy_scenario_dir
+
         # Load preprocessing data first
         # TODO: make this flexible with scenarios etc set in settings/constants file
         vehicle_preprocessing = get_preprocessing_data(
             "vehicles", 
             base_directory,
-            climate_policy_scenario_dir=base_directory / "image" / "SSP2_baseline",
+            climate_policy_scenario_dir=climate_policy_scenario_dir,
             circular_economy_scenario_dirs=None,
             integration_preprocessing = True
         )

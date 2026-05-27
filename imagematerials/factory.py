@@ -41,6 +41,16 @@ class Sector():
         # Add the coordinates present in the data and check compatibility.
         self.coordinates, self.coordinate_sources = self._add_data_coordinates(data, coordinates)
 
+        # TODO: not sure if this is the way to handle  problem stocks are not read in directly anymore - 
+        # but from there we got REGION and TIME coordinates
+        # check if REGIONS were added, and if not add default IMAGE_REGIONS
+        if "Region" not in self.coordinates:
+            from imagematerials.constants import IMAGE_REGIONS
+            self.coordinates["Region"] = IMAGE_REGIONS
+        # check if TIME were added, and if not add default time range
+        if "Time" not in self.coordinates:
+            self.coordinates["Time"] = list(range(1971, 2101))
+
     def _add_data_coordinates(self, data: dict[str, Any], coordinates: dict[str, list]):
         # Keep track of the arrays in which coordinates were present, used for error messages.
         coordinate_sources = {name: "manually set" for name in coordinates}

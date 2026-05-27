@@ -2,7 +2,7 @@ import prism
 
 from imagematerials.constants import START_YEAR_HISTORIC
 from imagematerials.vehicles.stocks_prism import VehicleStocks
-
+from pathlib import Path
 
 REGION = prism.Dimension("Region")
 STOCK_TYPE = prism.Dimension("Type")
@@ -15,6 +15,8 @@ MATERIAL_TYPE = prism.Dimension("material")
 class TIMERMaterials(prism.Model):
     """
     """
+
+    climate_policy_scenario_dir: Path | None = None
 
     # Dimensions - derived dynamically from VehicleStocks submodel
     # TODO ensure this follows the way of defining coordinates as desired by prism
@@ -32,24 +34,32 @@ class TIMERMaterials(prism.Model):
         self.historic_tail_computed = False
 
         self.complete_timeline = prism.Timeline(START_YEAR_HISTORIC, timeline.end, timeline.stepsize)
+        # Initialize submodels eagerly so inspection in notebooks works after setup.
+        self._submodels = []
+        self.init_submodels(timeline)
 
     def init_submodels(self, timeline: prism.Timeline):
-        vehicles = VehicleStocks(timeline)
-        vehicles.compute_initial_values(timeline)
+        self.vehicles = VehicleStocks(
+            timeline,
+            climate_policy_scenario_dir=self.climate_policy_scenario_dir
+        )
+        self.vehicles.compute_initial_values(
+            timeline,
+            climate_policy_scenario_dir=self.climate_policy_scenario_dir
+        )
         
         # TODO: find a better way to do this
         # Extract dimensions from the VehicleStocks submodel if not already set
         if not hasattr(self, 'Region') or self.Region is None:
-            self.Region = vehicles.Region
+            self.Region = self.vehicles.Region
         if not hasattr(self, 'Type') or self.Type is None:
-            self.Type = vehicles.Type
+            self.Type = self.vehicles.Type
         if not hasattr(self, 'Time') or self.Time is None:
-            self.Time = vehicles.Time
+            self.Time = self.vehicles.Time
         
         # Set compute_args for the submodel (empty for now, as VehicleStocks doesn't need dynamic inputs yet)
-        vehicles.compute_args = {}
-            
-        self.submodels = [vehicles]
+        self.vehicles.compute_args = {}
+        self._submodels = [self.vehicles]
 
 
     def compute_values(
@@ -58,6 +68,9 @@ class TIMERMaterials(prism.Model):
         #passengerkms: prism.Array[Region, Type, "km"],  # TODO: check unit
         #tonkms: prism.Array[Region, Type, "Tkm"]  # TODO: check unit
     ):
+        if not hasattr(self, "_submodels") or not self._submodels:
+            self.init_submodels(self.complete_timeline)
+
         if not self.historic_tail_computed:
         # TODO: make a cache for the historic tail calculation
             for historic_time in self.complete_timeline:
@@ -72,7 +85,7 @@ class TIMERMaterials(prism.Model):
         
     def _compute_one_timestep(self, time: prism.Time):
         print(f"{time.t}", end="\r")
-        for model in self.submodels:
+        for model in self._submodels:
             model.compute_values(time, **model.compute_args)
 
         # Interact with Stock model and Materials model from here

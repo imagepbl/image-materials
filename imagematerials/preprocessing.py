@@ -83,6 +83,19 @@ def _get_vehicles_sector(prep_data):
     sec_vhc = Sector("vehicles", new_prep_data)
     return sec_vhc
 
+def _get_vehicles_sector_integration(prep_data):
+    output_coords_type = list(prep_data["weights"].Type.values)
+    knowledge_graph = prep_data["knowledge_graph"]
+    new_prep_data = rebroadcast_prep_data(prep_data, knowledge_graph, dim="Type",
+                                          output_coords=output_coords_type)
+    # region_coords = np.sort(prep_data["stocks"].coords["Region"].values.astype(int)).astype(str)
+    region_coords = IMAGE_REGIONS
+    new_prep_data = rebroadcast_prep_data(new_prep_data, knowledge_graph, dim="Region",
+                                          output_coords=region_coords)
+
+    sec_vhc = Sector("vehicles", new_prep_data)
+    return sec_vhc
+
 
 def _get_electricity_sector(prep_data):
 
@@ -114,7 +127,7 @@ def get_preprocessing_data(
         circular_economy_scenario_dirs: Optional[dict[str, Union[Path, str]]] = None,
         scenario_name=None,
         cache: Union[bool, Path, str] = False,
-        standard_scenario: str = "SSP2",
+        standard_scenario: str = "SSP2_baseline",
         year_start: int = 1971,
         year_end: int = 2100,
         year_out: int = 2100,
@@ -203,8 +216,10 @@ def get_preprocessing_data(
     else:
         prep_data = import_from_netcdf(cache)
 
-    if sector == "vehicles":
+    if sector == "vehicles" and integration_preprocessing == False:
         return _get_vehicles_sector(prep_data)
+    elif sector == "vehicles" and integration_preprocessing == True:
+        return _get_vehicles_sector_integration(prep_data)
     elif sector == "buildings":
         return _get_buildings_sector(prep_data)
     elif sector == "electricity":
