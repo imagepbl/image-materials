@@ -38,3 +38,12 @@ def elc_prep_data(elc_sector):
         sector.name: sector.prep_data
         for sector in elc_sector
     }
+
+@pytest.fixture(scope="session")
+def infra_sector():
+    return get_preprocessing_data("infrastructure", Path("data", "raw"),
+                                  climate_policy_scenario_dir=path_test_scenario)
+
+@pytest.fixture(scope="session")
+def infra_prep_data(infra_sector):
+    return infra_sector.prep_data

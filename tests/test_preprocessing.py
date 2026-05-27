@@ -13,11 +13,15 @@ from imagematerials.util import export_to_netcdf, import_from_netcdf, summarize_
 def _get_new_compare(data, key_list):
     all_compares = []
     for name, cur_data in data.items():
-        if "dims" in cur_data:
+        if cur_data is None:
+            all_compares.append([key_list + [name], cur_data])
+        elif "dims" in cur_data:
             all_compares.append([key_list + [name], cur_data])
         # elif isinstance(cur_data, str):
         #     all_compares.append([[name], cur_data])
         elif isinstance(cur_data, str):
+            all_compares.append([key_list + [name], cur_data])
+        elif isinstance(cur_data, list):
             all_compares.append([key_list + [name], cur_data])
         else:
             all_compares.extend(_get_new_compare(cur_data, key_list + [name]))
@@ -40,6 +44,11 @@ def bld_summary(bld_prep_data):
 @pytest.fixture(scope="module")
 def elc_summary(elc_prep_data):
     return summarize_prep_data(elc_prep_data)
+
+@pytest.fixture(scope="module")
+def infra_summary(infra_prep_data):
+    return summarize_prep_data(infra_prep_data)
+
 
 @mark.parametrize("key_list,expected",
                   find_data_items(Path("tests", "data", "vehicles_summary.json")))
@@ -65,6 +74,25 @@ def test_vehicles_prep(vhc_summary, key_list, expected):
                   find_data_items(Path("tests", "data", "buildings_summary.json")))
 def test_buildings_prep(bld_summary, key_list, expected):
     data = bld_summary
+    # Key list contains the name of the dataset, i.e. ["stocks", "Region"] is
+    # concerns the stocks summed over all dimensions except Region.
+    key_list_copy = [k for k in key_list]
+    while len(key_list_copy) > 0:
+        data = data[key_list_copy[0]]
+        key_list_copy.pop(0)
+
+    if data != expected:
+        assert data["name"] == expected["name"]
+        assert data["dims"] == expected["dims"]
+        assert data["attrs"] == expected["attrs"]
+        assert data["coords"] == expected["coords"]
+        assert  np.allclose(data["data"], expected["data"]), (
+            f"Name: {data['name']}, New: {np.sum(data['data'])}, Old: {np.sum(expected['data'])}")
+
+@mark.parametrize("key_list,expected",
+                  find_data_items(Path("tests", "data", "infrastructure_summary.json")))
+def test_infra_prep(infra_summary, key_list, expected):
+    data = infra_summary
     # Key list contains the name of the dataset, i.e. ["stocks", "Region"] is
     # concerns the stocks summed over all dimensions except Region.
     key_list_copy = [k for k in key_list]
