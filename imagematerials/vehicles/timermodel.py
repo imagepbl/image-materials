@@ -1,6 +1,9 @@
 import prism
+import numpy as np
 
-from imagematerials.constants import START_YEAR_HISTORIC
+from imagematerials.constants import START_YEAR_HISTORIC_integration
+from imagematerials.util import read_climate_policy_config
+from imagematerials.vehicles.preprocessing.util import get_passengerkms, get_tonkms
 from imagematerials.vehicles.stocks_prism import VehicleStocks
 from pathlib import Path
 
@@ -34,14 +37,15 @@ class TIMERMaterials(prism.Model):
         # Handle historic tail
         self.historic_tail_computed = False
 
-        self.complete_timeline = prism.Timeline(START_YEAR_HISTORIC, timeline.end, timeline.stepsize)
+        timeline_start = getattr(getattr(self, "timeline", None), "start", START_YEAR_HISTORIC_integration)
+        self.complete_timeline = prism.Timeline(timeline_start, timeline.end, timeline.stepsize)
         # Initialize submodels eagerly so inspection in notebooks works after setup.
         self._submodels = []
         self.init_submodels(timeline)
 
     def init_submodels(self, timeline: prism.Timeline):
         if self._submodels is None:
-            self._submodels = {}
+            self._submodels = []
 
         self.vehicles = VehicleStocks(
             timeline,
@@ -63,18 +67,67 @@ class TIMERMaterials(prism.Model):
         
         # Set compute_args for the submodel (empty for now, as VehicleStocks doesn't need dynamic inputs yet)
         self.vehicles.compute_args = {}
-        self._submodels['vehicles'] = self.vehicles
+        self._submodels = [self.vehicles]
+        self._initialize_default_transport_inputs()
+
+    @staticmethod
+    def _year_value(time_value):
+        magnitude = getattr(time_value, "magnitude", None)
+        if magnitude is None:
+            magnitude = getattr(time_value, "m", None)
+        if magnitude is None:
+            magnitude = time_value
+
+        magnitude_array = np.asarray(magnitude)
+        if magnitude_array.size == 1:
+            magnitude = magnitude_array.item()
+
+        try:
+            return int(magnitude)
+        except (TypeError, ValueError):
+            return magnitude
+
+    def _set_vehicle_input_for_time(self, time_value, passenger_kms=None, tonkms=None):
+        year_key = self._year_value(time_value)
+
+        if not hasattr(self.vehicles, "passengerkms") or self.vehicles.passengerkms is None:
+            self.vehicles.passengerkms = {}
+        if not hasattr(self.vehicles, "tonekms") or self.vehicles.tonekms is None:
+            self.vehicles.tonekms = {}
+
+        if passenger_kms is not None:
+            self.vehicles.passengerkms[year_key] = passenger_kms
+
+        if tonkms is not None:
+            self.vehicles.tonekms[year_key] = tonkms
+
+    def _initialize_default_transport_inputs(self):
+        if getattr(self.vehicles, "passengerkms", None) and getattr(self.vehicles, "tonekms", None):
+            return
+
+        scenario_dir = self.climate_policy_scenario_dir or Path("data", "raw", "image", "SSP2_baseline")
+        climate_policy_config = read_climate_policy_config(scenario_dir)
+        passenger_kms_all = get_passengerkms(scenario_dir, climate_policy_config)
+        tonkms_all = get_tonkms(scenario_dir, climate_policy_config)
+
+        for year in passenger_kms_all.index.get_level_values("time").unique():
+            self._set_vehicle_input_for_time(
+                year,
+                passenger_kms=passenger_kms_all.loc[year],
+                tonkms=tonkms_all.loc[year],
+            )
 
 
     def compute_values(
         self,
-        time: prism.Time#,
-        #passengerkms: prism.Array[Region, Type, "km"],  # TODO: check unit
-        #tonkms: prism.Array[Region, Type, "Tkm"]  # TODO: check unit
+        time: prism.Time,
+        passenger_kms=None,
+        tonkms=None,
     ):
         if not hasattr(self, "complete_timeline"):
+            timeline_start = getattr(getattr(self, "timeline", None), "start", START_YEAR_HISTORIC_integration)
             self.complete_timeline = prism.Timeline(
-                START_YEAR_HISTORIC,
+                timeline_start,
                 self.timeline.end,
                 self.timeline.stepsize,
             )
@@ -84,6 +137,9 @@ class TIMERMaterials(prism.Model):
 
         if self._submodels is None or not self._submodels:
             self.init_submodels(self.complete_timeline)
+
+        if passenger_kms is not None or tonkms is not None:
+            self._set_vehicle_input_for_time(time.t, passenger_kms=passenger_kms, tonkms=tonkms)
 
         if not self.historic_tail_computed:
         # TODO: make a cache for the historic tail calculation
@@ -99,7 +155,7 @@ class TIMERMaterials(prism.Model):
         
     def _compute_one_timestep(self, time: prism.Time):
         print(f"{time.t}", end="\r")
-        for model in self._submodels.values():
+        for model in self._submodels:
             model.compute_values(time, **model.compute_args)
 
         # Interact with Stock model and Materials model from here

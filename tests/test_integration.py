@@ -69,32 +69,13 @@ def test_timer_interface(tmpdir):
     # Get the raw data that otherwise would come from TIMER
     path_test_scenario = Path("data", "raw", "image", "SSP2_baseline")
     climate_policy_config = read_climate_policy_config(path_test_scenario)
-    # Use own functions to retrieve data ...
-    # passenger_kms = get_passengerkms(path_test_scenario, climate_policy_config)
-    # tonkms = get_tonkms(path_test_scenario, climate_policy_config)
-    # TODO: turn into TimeVariables
-    # ...or use Prism built-in functionality:
-    # TODO: check this
-    passenger_kms = prism.TimeVariable(
-        timeline=simulation_timeline,
-        dims=(Region, Type),
-        unit="km",
-        file=path_test_scenario.joinpath(
-            climate_policy_config['data_files']['transport']['passenger']['kilometers']
-        )
-    )
-    tonkms = prism.TimeVariable(
-        timeline=simulation_timeline,
-        dims=(Region, Type),
-        unit="km",
-        file=path_test_scenario.joinpath(
-            climate_policy_config['data_files']['transport']['freight']['Tkm']
-        )
-    )
+    # Retrieve TIMER transport activity inputs from preprocessing helpers.
+    passenger_kms = get_passengerkms(path_test_scenario, climate_policy_config)
+    tonkms = get_tonkms(path_test_scenario, climate_policy_config)
     def timer_input(t):
         return {
-            "passenger_kms": passenger_kms[t],
-            "tonkms": tonkms[t]
+            "passenger_kms": passenger_kms.loc[t],
+            "tonkms": tonkms.loc[t]
         }
 
     timer_vehicle_model = TIMERMaterials(complete_timeline) # TODO: fix signature

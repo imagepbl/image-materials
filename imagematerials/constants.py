@@ -9,6 +9,7 @@ from pathlib import Path
 base_directory = Path("..", "data", "raw")
 base_directory_integration = Path("data", "raw")
 START_YEAR_HISTORIC = Q_(1721, 'year')
+START_YEAR_HISTORIC_integration = Q_(1971, 'year')
 
 
 
