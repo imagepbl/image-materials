@@ -17,6 +17,7 @@ class TIMERMaterials(prism.Model):
     """
 
     climate_policy_scenario_dir: Path | None = None
+    _submodels: list | None = None
 
     # Dimensions - derived dynamically from VehicleStocks submodel
     # TODO ensure this follows the way of defining coordinates as desired by prism
@@ -39,6 +40,9 @@ class TIMERMaterials(prism.Model):
         self.init_submodels(timeline)
 
     def init_submodels(self, timeline: prism.Timeline):
+        if self._submodels is None:
+            self._submodels = []
+
         self.vehicles = VehicleStocks(
             timeline,
             climate_policy_scenario_dir=self.climate_policy_scenario_dir
@@ -59,7 +63,7 @@ class TIMERMaterials(prism.Model):
         
         # Set compute_args for the submodel (empty for now, as VehicleStocks doesn't need dynamic inputs yet)
         self.vehicles.compute_args = {}
-        self._submodels = [self.vehicles]
+        self._submodels.append(self.vehicles)
 
 
     def compute_values(
@@ -68,7 +72,17 @@ class TIMERMaterials(prism.Model):
         #passengerkms: prism.Array[Region, Type, "km"],  # TODO: check unit
         #tonkms: prism.Array[Region, Type, "Tkm"]  # TODO: check unit
     ):
-        if not hasattr(self, "_submodels") or not self._submodels:
+        if not hasattr(self, "complete_timeline"):
+            self.complete_timeline = prism.Timeline(
+                START_YEAR_HISTORIC,
+                self.timeline.end,
+                self.timeline.stepsize,
+            )
+
+        if not hasattr(self, "historic_tail_computed"):
+            self.historic_tail_computed = False
+
+        if self._submodels is None or not self._submodels:
             self.init_submodels(self.complete_timeline)
 
         if not self.historic_tail_computed:
