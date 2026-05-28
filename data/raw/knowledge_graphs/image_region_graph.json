@@ -1,0 +1,330 @@
+{
+  "regions": [
+    {"id": "region_1",  "synonyms": ["CAN", "Canada region"],
+      "countries": [
+        {"iso": "124", "synonyms": ["Canada"]}
+      ]
+    },
+    {"id": "region_2",  "synonyms": ["USA", "US region"],
+      "countries": [
+        {"iso": "666", "synonyms": ["St. Pierre and Miquelon"]},
+        {"iso": "840", "synonyms": ["United States", "US"]}
+      ]
+    },
+    {"id": "region_3",  "synonyms": ["MEX", "Mexico region"],
+      "countries": [
+        {"iso": "484", "synonyms": ["Mexico"]}
+      ]
+    },
+    {"id": "region_4",  "synonyms": ["RCAM", "Rest of Central America", "Rest C.Am."],
+      "countries": [
+        {"iso": "44",  "synonyms": ["Bahamas, The", "Bahamas", "The Bahamas"]},
+        {"iso": "52",  "synonyms": ["Barbados"]},
+        {"iso": "60",  "synonyms": ["Bermuda"]},
+        {"iso": "84",  "synonyms": ["Belize"]},
+        {"iso": "92",  "synonyms": ["Virgin Islands (British)", "Virgin Isl. (Br.)"]},
+        {"iso": "136", "synonyms": ["Cayman Islands"]},
+        {"iso": "188", "synonyms": ["Costa Rica"]},
+        {"iso": "212", "synonyms": ["Dominica"]},
+        {"iso": "214", "synonyms": ["Dominican Republic"]},
+        {"iso": "222", "synonyms": ["El Salvador"]},
+        {"iso": "308", "synonyms": ["Grenada"]},
+        {"iso": "312", "synonyms": ["Guadeloupe"]},
+        {"iso": "320", "synonyms": ["Guatemala"]},
+        {"iso": "332", "synonyms": ["Haiti"]},
+        {"iso": "340", "synonyms": ["Honduras"]},
+        {"iso": "388", "synonyms": ["Jamaica"]},
+        {"iso": "474", "synonyms": ["Martinique"]},
+        {"iso": "500", "synonyms": ["Montserrat"]},
+        {"iso": "533", "synonyms": ["Aruba"]},
+        {"iso": "530", "synonyms": ["Netherlands Antilles"]},
+        {"iso": "558", "synonyms": ["Nicaragua"]},
+        {"iso": "591", "synonyms": ["Panama"]},
+        {"iso": "630", "synonyms": ["Puerto Rico"]},
+        {"iso": "659", "synonyms": ["St. Kitts and Nevis"]},
+        {"iso": "660", "synonyms": ["Anguilla"]},
+        {"iso": "662", "synonyms": ["St. Lucia"]},
+        {"iso": "670", "synonyms": ["St. Vincent and the Grenadines"]},
+        {"iso": "780", "synonyms": ["Trinidad and Tobago"]},
+        {"iso": "796", "synonyms": ["Turks and Caicos Islands", "Turks and Caicos Isl."]},
+        {"iso": "850", "synonyms": ["Virgin Islands (U.S.)"]}
+      ]
+    },
+    {"id": "region_5",  "synonyms": ["BRA", "Brazil region"],
+      "countries": [
+        {"iso": "76", "synonyms": ["Brazil"]}
+      ]
+    },
+    {"id": "region_6",  "synonyms": ["RSAM", "Rest of South America", "Rest S.Am."],
+      "countries": [
+        {"iso": "32",  "synonyms": ["Argentina"]},
+        {"iso": "68",  "synonyms": ["Bolivia"]},
+        {"iso": "152", "synonyms": ["Chile"]},
+        {"iso": "170", "synonyms": ["Colombia"]},
+        {"iso": "218", "synonyms": ["Ecuador"]},
+        {"iso": "238", "synonyms": ["Falkland Islands", "Falklands Isl."]},
+        {"iso": "254", "synonyms": ["French Guiana", "French Guyana"]},
+        {"iso": "328", "synonyms": ["Guyana"]},
+        {"iso": "600", "synonyms": ["Paraguay"]},
+        {"iso": "604", "synonyms": ["Peru"]},
+        {"iso": "740", "synonyms": ["Suriname"]},
+        {"iso": "858", "synonyms": ["Uruguay"]},
+        {"iso": "862", "synonyms": ["Venezuela", "Bolivarian Republic of Venezuela", "Venezuela, RB"]}
+      ]
+    },
+    {"id": "region_7",  "synonyms": ["NAF", "Northern Africa", "N.Africa"],
+      "countries": [
+        {"iso": "12",  "synonyms": ["Algeria"]},
+        {"iso": "434", "synonyms": ["Libya"]},
+        {"iso": "504", "synonyms": ["Morocco"]},
+        {"iso": "732", "synonyms": ["Western Sahara"]},
+        {"iso": "788", "synonyms": ["Tunisia"]},
+        {"iso": "818", "synonyms": ["Egypt", "Egypt, Arab Rep.", "Arab Republic of Egypt"]}
+      ]
+    },
+    {"id": "region_8",  "synonyms": ["WAF", "Western Africa", "W.Africa"],
+      "countries": [
+        {"iso": "120", "synonyms": ["Cameroon"]},
+        {"iso": "132", "synonyms": ["Cape Verde"]},
+        {"iso": "140", "synonyms": ["Central African Republic"]},
+        {"iso": "148", "synonyms": ["Chad"]},
+        {"iso": "178", "synonyms": ["Congo", "Congo, Rep.", "Republic of the Congo", "Congo Republic"]},
+        {"iso": "180", "synonyms": ["Congo (Democratic Republic)", "Congo, Dem. Rep.", "Democratic Republic of Congo", "DRC", "D.R.C."]},
+        {"iso": "204", "synonyms": ["Benin"]},
+        {"iso": "226", "synonyms": ["Equatorial Guinea"]},
+        {"iso": "266", "synonyms": ["Gabon"]},
+        {"iso": "270", "synonyms": ["Gambia, The", "Gambia"]},
+        {"iso": "288", "synonyms": ["Ghana"]},
+        {"iso": "324", "synonyms": ["Guinea"]},
+        {"iso": "384", "synonyms": ["Cote d'Ivoire", "Ivory Coast"]},
+        {"iso": "430", "synonyms": ["Liberia"]},
+        {"iso": "466", "synonyms": ["Mali"]},
+        {"iso": "478", "synonyms": ["Mauritania"]},
+        {"iso": "562", "synonyms": ["Niger"]},
+        {"iso": "566", "synonyms": ["Nigeria"]},
+        {"iso": "624", "synonyms": ["Guinea-Bissau"]},
+        {"iso": "654", "synonyms": ["St. Helena"]},
+        {"iso": "678", "synonyms": ["Sao Tome and Principe"]},
+        {"iso": "686", "synonyms": ["Senegal"]},
+        {"iso": "694", "synonyms": ["Sierra Leone"]},
+        {"iso": "768", "synonyms": ["Togo"]},
+        {"iso": "854", "synonyms": ["Burkina Faso"]}
+      ]
+    },
+    {"id": "region_9",  "synonyms": ["EAF", "Eastern Africa", "E.Africa"],
+      "countries": [
+        {"iso": "108", "synonyms": ["Burundi"]},
+        {"iso": "174", "synonyms": ["Comoros"]},
+        {"iso": "231", "synonyms": ["Ethiopia"]},
+        {"iso": "232", "synonyms": ["Eritrea"]},
+        {"iso": "262", "synonyms": ["Djibouti"]},
+        {"iso": "404", "synonyms": ["Kenya"]},
+        {"iso": "450", "synonyms": ["Madagascar"]},
+        {"iso": "480", "synonyms": ["Mauritius"]},
+        {"iso": "638", "synonyms": ["Reunion", "Réunion"]},
+        {"iso": "646", "synonyms": ["Rwanda"]},
+        {"iso": "690", "synonyms": ["Seychelles"]},
+        {"iso": "706", "synonyms": ["Somalia"]},
+        {"iso": "736", "synonyms": ["Sudan"]},
+        {"iso": "800", "synonyms": ["Uganda"]}
+      ]
+    },
+    {"id": "region_10", "synonyms": ["SAF", "South Africa region"],
+      "countries": [
+        {"iso": "710", "synonyms": ["South Africa", "Republic of South Africa"]}
+      ]
+    },
+    {"id": "region_11", "synonyms": ["WEU", "Western Europe", "W.Europe"],
+      "countries": [
+        {"iso": "20",  "synonyms": ["Andorra"]},
+        {"iso": "40",  "synonyms": ["Austria"]},
+        {"iso": "56",  "synonyms": ["Belgium"]},
+        {"iso": "208", "synonyms": ["Denmark"]},
+        {"iso": "234", "synonyms": ["Faroe Islands"]},
+        {"iso": "246", "synonyms": ["Finland"]},
+        {"iso": "250", "synonyms": ["France"]},
+        {"iso": "276", "synonyms": ["Germany"]},
+        {"iso": "292", "synonyms": ["Gibraltar"]},
+        {"iso": "300", "synonyms": ["Greece"]},
+        {"iso": "336", "synonyms": ["Vatican City", "Vatican City State"]},
+        {"iso": "352", "synonyms": ["Iceland"]},
+        {"iso": "372", "synonyms": ["Ireland"]},
+        {"iso": "380", "synonyms": ["Italy"]},
+        {"iso": "438", "synonyms": ["Liechtenstein"]},
+        {"iso": "442", "synonyms": ["Luxembourg"]},
+        {"iso": "470", "synonyms": ["Malta"]},
+        {"iso": "492", "synonyms": ["Monaco"]},
+        {"iso": "528", "synonyms": ["Netherlands", "The Netherlands"]},
+        {"iso": "578", "synonyms": ["Norway"]},
+        {"iso": "620", "synonyms": ["Portugal"]},
+        {"iso": "674", "synonyms": ["San Marino"]},
+        {"iso": "724", "synonyms": ["Spain"]},
+        {"iso": "752", "synonyms": ["Sweden"]},
+        {"iso": "756", "synonyms": ["Switzerland"]},
+        {"iso": "826", "synonyms": ["United Kingdom", "UK"]}
+      ]
+    },
+    {"id": "region_12", "synonyms": ["CEU", "Central Europe", "C.Europe"],
+      "countries": [
+        {"iso": "8",   "synonyms": ["Albania"]},
+        {"iso": "70",  "synonyms": ["Bosnia and Herzegovina"]},
+        {"iso": "100", "synonyms": ["Bulgaria"]},
+        {"iso": "191", "synonyms": ["Croatia"]},
+        {"iso": "196", "synonyms": ["Cyprus"]},
+        {"iso": "203", "synonyms": ["Czech Republic"]},
+        {"iso": "233", "synonyms": ["Estonia"]},
+        {"iso": "348", "synonyms": ["Hungary"]},
+        {"iso": "428", "synonyms": ["Latvia"]},
+        {"iso": "440", "synonyms": ["Lithuania"]},
+        {"iso": "616", "synonyms": ["Poland"]},
+        {"iso": "642", "synonyms": ["Romania"]},
+        {"iso": "703", "synonyms": ["Slovakia", "Slovak Republic"]},
+        {"iso": "705", "synonyms": ["Slovenia"]},
+        {"iso": "807", "synonyms": ["North Macedonia"]},
+        {"iso": "891", "synonyms": ["Serbia and Montenegro"]}
+      ]
+    },
+    {"id": "region_13", "synonyms": ["TUR", "Turkey region"],
+      "countries": [
+        {"iso": "792", "synonyms": ["Turkey", "Türkiye", "Republic of Türkiye"]}
+      ]
+    },
+    {"id": "region_14", "synonyms": ["UKR", "Ukraine region", "Ukraine +"],
+      "countries": [
+        {"iso": "112", "synonyms": ["Belarus"]},
+        {"iso": "498", "synonyms": ["Moldova"]},
+        {"iso": "804", "synonyms": ["Ukraine"]}
+      ]
+    },
+    {"id": "region_15", "synonyms": ["STAN", "Asian-Stan", "Central Asia"],
+      "countries": [
+        {"iso": "398", "synonyms": ["Kazakhstan"]},
+        {"iso": "417", "synonyms": ["Kyrgyz Republic", "Kyrgyzstan"]},
+        {"iso": "762", "synonyms": ["Tajikistan"]},
+        {"iso": "795", "synonyms": ["Turkmenistan"]},
+        {"iso": "860", "synonyms": ["Uzbekistan"]}
+      ]
+    },
+    {"id": "region_16", "synonyms": ["RUS", "Russia +", "Russia region"],
+      "countries": [
+        {"iso": "31",  "synonyms": ["Azerbaijan"]},
+        {"iso": "51",  "synonyms": ["Armenia"]},
+        {"iso": "268", "synonyms": ["Georgia"]},
+        {"iso": "643", "synonyms": ["Russia", "Russian Federation"]}
+      ]
+    },
+    {"id": "region_17", "synonyms": ["ME", "Middle East", "M.East"],
+      "countries": [
+        {"iso": "48",  "synonyms": ["Bahrain"]},
+        {"iso": "364", "synonyms": ["Iran", "Iran, Islamic Rep.", "Islamic Republic of Iran"]},
+        {"iso": "368", "synonyms": ["Iraq"]},
+        {"iso": "376", "synonyms": ["Israel"]},
+        {"iso": "400", "synonyms": ["Jordan"]},
+        {"iso": "414", "synonyms": ["Kuwait"]},
+        {"iso": "422", "synonyms": ["Lebanon"]},
+        {"iso": "512", "synonyms": ["Oman"]},
+        {"iso": "634", "synonyms": ["Qatar"]},
+        {"iso": "682", "synonyms": ["Saudi Arabia"]},
+        {"iso": "760", "synonyms": ["Syria", "Syrian Arab Republic"]},
+        {"iso": "784", "synonyms": ["United Arab Emirates", "UAE"]},
+        {"iso": "887", "synonyms": ["Yemen", "Yemen, Rep.", "Republic of Yemen"]}
+      ]
+    },
+    {"id": "region_18", "synonyms": ["INDIA", "India +", "India region"],
+      "countries": [
+        {"iso": "356", "synonyms": ["India"]}
+      ]
+    },
+    {"id": "region_19", "synonyms": ["KOR", "Korea region"],
+      "countries": [
+        {"iso": "408", "synonyms": ["North Korea", "Korea, Dem. Rep.", "Democratic People's Republic of Korea", "DPRK"]},
+        {"iso": "410", "synonyms": ["South Korea", "Republic of Korea", "Korea, Rep."]}
+      ]
+    },
+    {"id": "region_20", "synonyms": ["CHN", "China +", "China region"],
+      "countries": [
+        {"iso": "156", "synonyms": ["China"]},
+        {"iso": "158", "synonyms": ["Taiwan"]},
+        {"iso": "344", "synonyms": ["Hong Kong"]},
+        {"iso": "446", "synonyms": ["Macao"]},
+        {"iso": "496", "synonyms": ["Mongolia"]}
+      ]
+    },
+    {"id": "region_21", "synonyms": ["SEAS", "Southeastern Asia", "SE.Asia"],
+      "countries": [
+        {"iso": "96",  "synonyms": ["Brunei"]},
+        {"iso": "104", "synonyms": ["Myanmar"]},
+        {"iso": "116", "synonyms": ["Cambodia"]},
+        {"iso": "418", "synonyms": ["Laos", "Lao PDR", "Lao People's Democratic Republic"]},
+        {"iso": "458", "synonyms": ["Malaysia"]},
+        {"iso": "608", "synonyms": ["Philippines"]},
+        {"iso": "702", "synonyms": ["Singapore"]},
+        {"iso": "704", "synonyms": ["Vietnam", "Viet Nam"]},
+        {"iso": "764", "synonyms": ["Thailand"]}
+      ]
+    },
+    {"id": "region_22", "synonyms": ["INDO", "Indonesia +", "Indonesia region"],
+      "countries": [
+        {"iso": "360", "synonyms": ["Indonesia"]},
+        {"iso": "598", "synonyms": ["Papua New Guinea"]},
+        {"iso": "626", "synonyms": ["Timor-Leste", "East Timor", "Democratic Republic of Timor-Leste"]}
+      ]
+    },
+    {"id": "region_23", "synonyms": ["JAP", "Japan region"],
+      "countries": [
+        {"iso": "392", "synonyms": ["Japan"]}
+      ]
+    },
+    {"id": "region_24", "synonyms": ["OCE", "Oceania"],
+      "countries": [
+        {"iso": "16",  "synonyms": ["American Samoa"]},
+        {"iso": "36",  "synonyms": ["Australia"]},
+        {"iso": "90",  "synonyms": ["Solomon Islands"]},
+        {"iso": "184", "synonyms": ["Cook Islands", "Cook Isl."]},
+        {"iso": "242", "synonyms": ["Fiji"]},
+        {"iso": "258", "synonyms": ["French Polynesia"]},
+        {"iso": "296", "synonyms": ["Kiribati"]},
+        {"iso": "520", "synonyms": ["Nauru"]},
+        {"iso": "540", "synonyms": ["New Caledonia"]},
+        {"iso": "548", "synonyms": ["Vanuatu"]},
+        {"iso": "554", "synonyms": ["New Zealand"]},
+        {"iso": "570", "synonyms": ["Niue"]},
+        {"iso": "580", "synonyms": ["Northern Mariana Islands"]},
+        {"iso": "583", "synonyms": ["Micronesia", "Micronesia, Fed. Sts.", "Federated States of Micronesia"]},
+        {"iso": "584", "synonyms": ["Marshall Islands"]},
+        {"iso": "585", "synonyms": ["Palau"]},
+        {"iso": "612", "synonyms": ["Pitcairn"]},
+        {"iso": "772", "synonyms": ["Tokelau"]},
+        {"iso": "776", "synonyms": ["Tonga"]},
+        {"iso": "798", "synonyms": ["Tuvalu"]},
+        {"iso": "876", "synonyms": ["Wallis and Futuna", "Territory of the Wallis and Futuna Islands"]},
+        {"iso": "882", "synonyms": ["Samoa"]}
+      ]
+    },
+    {"id": "region_25", "synonyms": ["RSAS", "Rest of South Asia", "Rest S.Asia"],
+      "countries": [
+        {"iso": "4",   "synonyms": ["Afghanistan"]},
+        {"iso": "50",  "synonyms": ["Bangladesh"]},
+        {"iso": "64",  "synonyms": ["Bhutan"]},
+        {"iso": "144", "synonyms": ["Sri Lanka"]},
+        {"iso": "462", "synonyms": ["Maldives"]},
+        {"iso": "524", "synonyms": ["Nepal"]},
+        {"iso": "586", "synonyms": ["Pakistan"]}
+      ]
+    },
+    {"id": "region_26", "synonyms": ["RSAF", "Rest of Southern Africa", "Rest S.Africa"],
+      "countries": [
+        {"iso": "24",  "synonyms": ["Angola"]},
+        {"iso": "72",  "synonyms": ["Botswana"]},
+        {"iso": "426", "synonyms": ["Lesotho"]},
+        {"iso": "454", "synonyms": ["Malawi"]},
+        {"iso": "508", "synonyms": ["Mozambique"]},
+        {"iso": "516", "synonyms": ["Namibia"]},
+        {"iso": "716", "synonyms": ["Zimbabwe"]},
+        {"iso": "748", "synonyms": ["Eswatini", "Swaziland"]},
+        {"iso": "834", "synonyms": ["Tanzania"]},
+        {"iso": "894", "synonyms": ["Zambia"]}
+      ]
+    }
+  ]
+}
