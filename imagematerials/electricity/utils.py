@@ -10,7 +10,6 @@ import prism
 import xarray as xr
 from pint.errors import UnitStrippedWarning
 
-
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
 from imagematerials.concepts import create_electricity_graph, create_image_region_graph
 from imagematerials.constants import (
@@ -35,16 +34,6 @@ idx = pd.IndexSlice
 #####################################################################################################
 # General functions for electricity materials model
 #####################################################################################################
-
-# In order to calculate inflow & outflow smoothly (without peaks for the initial years), we calculate a historic tail to the stock, 
-# by adding a 0 value for first year of operation (=1926), then interpolate values towards 1971
-def stock_tail(stock, YEAR_OUT):
-    zero_value = [0 for i in range(0,REGIONS)]
-    stock_used = pd.DataFrame(stock).reindex_like(stock)
-    stock_used.loc[YEAR_FIRST_GRID] = zero_value  # set all regions to 0 in the year of initial operation
-    stock_new  = stock_used.reindex(list(range(YEAR_FIRST_GRID,YEAR_OUT+1))).interpolate() # only interpolates missing values, so existing values (from 1971 onwards) are kept
-    return stock_new
-
 
 def add_historic_stock(da_stock, year_start=1920, interp_method="linear"):
     """Calculate historic (pre TIMER simulation time = before 1971) stock values.
@@ -104,8 +93,8 @@ def add_historic_stock(da_stock, year_start=1920, interp_method="linear"):
     return da_stock_extended
 
 def _extrap_to_zero(times, first_value, method='linear'):
-    """ Generate values ramping from 0 at times[0] to first_value at times[-1].
-    
+    """Generate values ramping from 0 at times[0] to first_value at times[-1].
+
     Parameters
     ----------
     times : np.ndarray
@@ -116,6 +105,7 @@ def _extrap_to_zero(times, first_value, method='linear'):
         'linear'      : straight line
         'exponential' : exponential growth, slow start then accelerating
         'logistic'    : S-curve, slow start, fast middle, slow end
+
     """
     n = len(times)
     if n == 0:
@@ -366,7 +356,6 @@ def create_prep_data(results_dict, conversion_table, unit_mapping):
     # prep_data["shares"] = None
 
     return prep_data
-
 
 # for testing, move later to a plotting utils file in analysis repository
 def flexible_plot_1panel(
@@ -771,6 +760,7 @@ def _build_status_timeseries_phs_data(df: pd.DataFrame,
     xr.DataArray
         A (Time × Region) DataArray representing the interpolated and
         regionally rebroadcast time series for the given status.
+
     """
     if status not in ["under construction", "planned regulator approved", "planned pending approval",
                        "announced"]:
@@ -807,7 +797,7 @@ def derive_phs_installed_capacity(data: list,
                                   factor_phs_growth_rel_demand: float = 0.5,
                                   mean_discharge_duration: float = 10,
                                   flag_phs: str = "phs_low"):
-    """ Derive installed pumped hydro storage (PHS) power and energy capacity across IMAGE regions
+    """Derive installed pumped hydro storage (PHS) power and energy capacity across IMAGE regions
     from historical data, pipeline projects, and demand-linked growth assumptions.
 
     The function performs the following steps:
@@ -892,6 +882,7 @@ def derive_phs_installed_capacity(data: list,
     - The capacity is only allowed to grow after 2060 (``phs_high``) when the
       previous year's PHS capacity is at most 80 % of the corresponding storage
       energy demand.
+
     """
     df_data1 = data[0]
     df_data2 = data[1]
@@ -1081,7 +1072,7 @@ def derive_phs_installed_capacity(data: list,
 
 
 def calculate_remaining_storage_demand(storage_energy_da, phs_energy):
-    """ Calculate remaining storage demand after subtracting pumped hydro storage (PHS),
+    """Calculate remaining storage demand after subtracting pumped hydro storage (PHS),
     with a time-varying minimum floor applied after 2000.
 
     The floor ensures that remaining storage never falls below a fraction of total
@@ -1110,8 +1101,8 @@ def calculate_remaining_storage_demand(storage_energy_da, phs_energy):
         - 2017-2025   : linearly interpolated from 0.04 to 0.1
         - 2025-2030   : linearly interpolated from 0.1 to 0.2
         - after 2030  : capped at 0.2
-    """
 
+    """
     storage_energy_remaining = (storage_energy_da - phs_energy).clip(min=0)
 
     floor_fraction = xr.zeros_like(storage_energy_remaining)
@@ -1142,11 +1133,11 @@ def calculate_remaining_storage_demand(storage_energy_da, phs_energy):
 def derive_btm_installed_capacity(gcap_xr_interp: xr.DataArray,
                                   ratio_btm_deployment_data: pd.DataFrame,
                                   ratio_btm_to_solar: float = 2) -> xr.DataArray:
-    """ Derive behind-the-meter (BTM) battery storage installed energy capacity from
-    solar PV capacity and BTM deployment ratios.
+    """Derive behind-the-meter (BTM) battery storage installed energy capacity from solar PV 
+    capacity and BTM deployment ratios.
 
     The BTM energy capacity is estimated as:
-        BTM [MWh] = btm_deployment_ratio [–] × solar_PV_capacity [MW] × ratio_btm_to_solar [MWh/MW]
+        BTM [MWh] = btm_deployment_ratio [-] x solar_PV_capacity [MW] x ratio_btm_to_solar [MWh/MW]
 
     where the BTM deployment ratio represents the fraction of solar PV installations
     that are paired with a BTM battery, and ratio_btm_to_solar defines the energy
@@ -1160,7 +1151,7 @@ def derive_btm_installed_capacity(gcap_xr_interp: xr.DataArray,
         the Type dimension (rooftop solar PV).
     ratio_btm_deployment_data : pd.DataFrame
         Raw BTM deployment ratio data with columns ["Region", "Time", "Value"],
-        where Value is expressed as a fraction (0–1) representing the share
+        where Value is expressed as a fraction (0-1) representing the share
         of solar PV capacity paired with BTM storage.
     ratio_btm_to_solar : int, optional
         Energy capacity of BTM battery storage per unit of paired solar PV power
@@ -1171,9 +1162,9 @@ def derive_btm_installed_capacity(gcap_xr_interp: xr.DataArray,
     -------
     xr.DataArray
         BTM installed energy capacity with dimensions (Time, Region) and units
-        in MWh, interpolated over the period 2000–2100.
+        in MWh, interpolated over the period 2000-2100.
+
     """
-    
     ratio_btm_to_solar = prism.Q_(ratio_btm_to_solar, "MWh/MW")
 
     ratio_btm_deployment = ratio_btm_deployment_data.groupby(["Region", "Time"])[["Value"]].sum()
@@ -1247,7 +1238,8 @@ def calculate_storage_market_shares(
     t_start = storage_costs.Cohort.values[0]
     t_end   = storage_costs.Cohort.values[-1]
 
-    # interpolate from first to last vailable year within the data, then extend to  YEAR_START and 2050 (keep values constant before first and after last year)
+    # interpolate from first to last vailable year within the data, then extend to YEAR_START and 
+    # 2050 (keep values constant before first and after last year)
     storage_costs      = interpolate_xr(storage_costs, t_start_interpolation, t_end_interpolation)
     costs_correction   = interpolate_xr(costs_correction, t_start_interpolation, t_end_interpolation)
 
@@ -1290,14 +1282,16 @@ def calculate_storage_market_shares(
 
     # market shares ---
     # use the storage price development in the logit model to get market shares
-    storage_market_share = MNLogit(storage_costs_cor, mnlogit_param, dim_type=dim_type) #assumes input of an ordered dataframe with rows as years and columns as technologies, values as prices. Logitpar is the calibrated Logit parameter (usually a nagetive number between 0 and 1)
+    storage_market_share = MNLogit(storage_costs_cor, mnlogit_param, dim_type=dim_type) 
+    #assumes input of an ordered dataframe with rows as years and columns as technologies, values as 
+    # prices. Logitpar is the calibrated Logit parameter (usually a negative number between 0 and 1)
 
     return storage_market_share
 
 
-def normalize_selected_techs(market_share: xr.DataArray | pd.DataFrame, 
-                             techs: list[str], 
-                             dim_type: str | None = None
+def normalize_selected_techs(market_share: xr.DataArray | pd.DataFrame,
+                             techs: list[str],
+                             dim_type: str | None = None,
                              ) -> xr.DataArray | pd.DataFrame:
     """Select technologies and renormalize their market shares to sum to 1 per year.
 
@@ -1485,7 +1479,7 @@ def apply_ce_measures_to_elc(arr: xr.DataArray, base_year: int, target_year: int
                         result.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] = (
                             arr.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] * (1 + increase / 100.0)
                         )
-                else: 
+                else:
                     raise ValueError(f"Unknown implementation method: '{implementation_rate}'. "
                                     "Supported methods are 'immediate', 'linear', and 's-curve'.")
             else:
