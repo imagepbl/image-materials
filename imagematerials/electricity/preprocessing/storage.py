@@ -235,6 +235,7 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
         .rename({"sub_technology": "Type", "Time": "Cohort"})
     )
     material_intensities_da = prism.Q_(material_intensities_da, "kg/kWh")
+    material_intensities_da.name = "StorageMaterialIntensities"
 
     # market shares (%) --------------------------------------------------------------------------------
     market_shares_da = (
@@ -243,6 +244,7 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
         .rename({"sub_technology": "Type", "Time": "Cohort"})
     )
     market_shares_da = prism.Q_(market_shares_da, "dimensionless")
+    market_shares_da.name = "StorageMarketShares"
 
     # lifetimes (yr) -----------------------------------------------------------------------------------
     lifetimes_da = (
@@ -251,6 +253,7 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
         .rename({"sub_technology": "Type", "Time": "Cohort"})
     )
     lifetimes_da = lifetimes_da.expand_dims({"DistributionParams": ["mean", "stdev"]})
+    lifetimes_da.name = "StorageLifetime"
 
 
     ####################################################################################################
