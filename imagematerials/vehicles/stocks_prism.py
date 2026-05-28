@@ -15,6 +15,7 @@ from pathlib import Path
 from imagematerials.concepts import KnowledgeGraph, create_region_graph
 from imagematerials.constants import IMAGE_REGIONS, base_directory
 from imagematerials.preprocessing import get_preprocessing_data
+from imagematerials.util import read_climate_policy_config
 from imagematerials.vehicles.constants import (
     END_YEAR,
     LIGHT_COMMERCIAL_VEHICLE_SHARE,
@@ -96,6 +97,17 @@ class VehicleStocks(prism.Model):
 
     climate_policy_scenario_dir: Path | None = None
 
+    @staticmethod
+    def _normalize_year_key(year_value):
+        year_key = getattr(year_value, "m", getattr(year_value, "magnitude", year_value))
+        if isinstance(year_key, np.ndarray) and year_key.size == 1:
+            year_key = year_key.item()
+        if isinstance(year_key, (float, np.floating)) and year_key.is_integer():
+            year_key = int(year_key)
+        if isinstance(year_key, (np.integer, int)):
+            return int(year_key)
+        return year_key
+
     def compute_initial_values(self, 
                                time: prism.Timeline, 
                                climate_policy_scenario_dir: Path | None = None):
@@ -155,6 +167,19 @@ class VehicleStocks(prism.Model):
         self.market_share = vehicle_data["market_share"]
         self.weights = vehicle_data["weights"]
 
+        # Vehicle shares may be absent in integration preprocessing; compute them on demand.
+        if "vehicle_shares" in vehicle_data:
+            self.vehicle_shares = vehicle_data["vehicle_shares"]
+        elif "shares" in vehicle_data:
+            self.vehicle_shares = vehicle_data["shares"]
+        else:
+            climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
+            self.vehicle_shares = get_vehicle_shares_prism(
+                climate_policy_scenario_dir,
+                climate_policy_config,
+                self.knowledge_graph,
+            )
+
         # dimension check?
         # compute historic tail
     
@@ -170,17 +195,40 @@ class VehicleStocks(prism.Model):
             Current simulation time step
         """
         t = time.t
+        year_key = self._normalize_year_key(t)
         unit = str(self.set_unit_flexible)
-        
-        # Get the km data for this year
-        pkms_year = self.passengerkms[t].values if hasattr(self.passengerkms[t], 'values') else self.passengerkms[t]
-        tkms_year = self.tonekms[t].values if hasattr(self.tonekms[t], 'values') else self.tonekms[t]
+
+        # Get the km data for this year and keep xarray coordinates intact.
+        pkms_year = self.passenger_kms[t]
+        if hasattr(pkms_year, "m"):
+            pkms_year = pkms_year.m
+        elif hasattr(pkms_year, "magnitude"):
+            pkms_year = pkms_year.magnitude
+
+        tkm_source = getattr(self, "tone_kms", None)
+        if tkm_source is None:
+            tkm_source = getattr(self, "tonkms", None)
+        if tkm_source is None:
+            raise AttributeError("VehicleStocks requires `tone_kms` or `tonkms` input")
+
+        tkms_year = tkm_source[t]
+        if hasattr(tkms_year, "m"):
+            tkms_year = tkms_year.m
+        elif hasattr(tkms_year, "magnitude"):
+            tkms_year = tkms_year.magnitude
         
         # Calculate total vehicles for simple types and aggregated freight
-        total_vehicles = self._calculate_vehicle_stocks(pkms_year, tkms_year, t)
+        total_vehicles = self._calculate_vehicle_stocks(pkms_year, tkms_year, year_key)
         
-        # Store result in stocks TimeVariable
-        self.stocks[t].loc[:] = prism.Q_(total_vehicles, unit)
+        # Align coordinates to the stocks variable to avoid coordinate-order conflicts.
+        total_vehicles = total_vehicles.reindex(
+            Type=self.stocks.coords["Type"].values,
+            Region=self.stocks.coords["Region"].values,
+            fill_value=0.0,
+        )
+
+        # Store result using label-based Time indexing (calendar year, not positional index).
+        self.stocks.loc[dict(Time=year_key)] = prism.Q_(total_vehicles, unit)
     
     def _calculate_vehicle_stocks(self, pkms_year, tkms_year, year):
         """Calculate vehicle stocks from yearly km demands.
@@ -403,23 +451,30 @@ class VehicleStocks(prism.Model):
         xr.DataArray
             Vehicles by type/subtype and region with dimensions (Type, Region)
         """
-        # Get shares for the current year from TimeVariable
-        year_shares = self.vehicle_shares[year]
-        
-        # Initialize result structure for subtypes
-        # Determine available subtypes from shares
-        if hasattr(year_shares, 'coords') and 'Type' in year_shares.coords:
-            subtypes = year_shares.coords['Type'].values
-            regions = year_shares.coords.get('Region', self.Region.values).values
+        # Get shares for the current year using label-based Time selection.
+        year_key = self._normalize_year_key(year)
+
+        if hasattr(self.vehicle_shares, "dims") and "Time" in self.vehicle_shares.dims:
+            try:
+                year_shares = self.vehicle_shares.sel(Time=year_key)
+            except Exception:
+                year_shares = self.vehicle_shares.sel(Time=year_key, method="nearest")
         else:
-            # Fallback if structure differs
-            subtypes = self.Type.values
-            regions = self.Region.values
+            year_shares = self.vehicle_shares[year_key]
+        
+        # Build output coordinates from model dimensions (fallback to share coords).
+        subtypes = np.asarray(getattr(self, "Type", []))
+        if subtypes.size == 0 and hasattr(year_shares, 'coords') and 'Type' in year_shares.coords:
+            subtypes = year_shares.coords['Type'].values
+
+        regions = np.asarray(getattr(self, "Region", []))
+        if regions.size == 0 and hasattr(year_shares, 'coords') and 'Region' in year_shares.coords:
+            regions = year_shares.coords['Region'].values
         
         # Create result dataframe with subtype structure
         subtype_vehicles = pd.DataFrame(
             0.0,
-            index=[year],
+            index=[year_key],
             columns=pd.MultiIndex.from_product([subtypes, regions],
                                                names=["Type", "Region"])
         )
@@ -427,8 +482,8 @@ class VehicleStocks(prism.Model):
         # Allocate total vehicles to subtypes based on shares
         # Iterate over main vehicle types in total_vehicles
         for vehicle_type in total_vehicles.columns.get_level_values(0).unique():
-            # Get count for this vehicle type across regions
-            type_totals = total_vehicles[vehicle_type]
+            # Get count for this vehicle type across regions as a 1D row vector.
+            type_totals = np.asarray(total_vehicles.loc[year_key, vehicle_type]).reshape(-1)
             
             # Get shares for this vehicle type if available
             if vehicle_type in year_shares.coords.get('Type', []):
@@ -437,26 +492,43 @@ class VehicleStocks(prism.Model):
                 # Allocate to each subtype based on share
                 # type_shares should have dimensions (SubType, Region)
                 if 'SubType' in type_shares.coords:
-                    for region in regions:
-                        region_total = type_totals.get(region, 0.0)
+                    for region_idx, region in enumerate(regions):
+                        if region_idx >= type_totals.size:
+                            break
+                        region_total = float(type_totals[region_idx])
                         if region_total > 0:
-                            region_shares = type_shares.sel(Region=region)
+                            if 'Region' in type_shares.coords and region in type_shares.coords['Region'].values:
+                                region_shares = type_shares.sel(Region=region)
+                            else:
+                                region_shares = type_shares.isel(Region=region_idx)
                             # Allocate total vehicles by fuel/technology share
                             for subtype, share_value in zip(region_shares.coords['SubType'].values, 
                                                             region_shares.values):
                                 subtype_key = f"{vehicle_type} - {subtype}"
-                                if subtype_key in subtype_vehicles.columns:
-                                    subtype_vehicles.loc[year, (subtype_key, region)] = region_total * float(share_value)
+                                target_col = (subtype_key, region)
+                                if target_col in subtype_vehicles.columns:
+                                    subtype_vehicles.loc[year_key, target_col] = region_total * float(share_value)
             else:
-                # If no shares available for this type, keep it as is
-                subtype_vehicles.loc[year, vehicle_type] = total_vehicles.loc[year, vehicle_type].values
+                # If no shares are available, pass totals through to matching type/region columns.
+                for region_idx, region in enumerate(regions):
+                    if region_idx >= type_totals.size:
+                        break
+                    target_col = (vehicle_type, region)
+                    if target_col in subtype_vehicles.columns:
+                        subtype_vehicles.loc[year_key, target_col] = float(type_totals[region_idx])
         
-        # Convert to xarray
+        # Convert one-year row with MultiIndex columns to a proper 2D Type x Region matrix.
+        row_series = subtype_vehicles.loc[year_key]
+        full_index = pd.MultiIndex.from_product([subtypes, regions], names=["Type", "Region"])
+        row_series = row_series.reindex(full_index, fill_value=0.0)
+        matrix = row_series.unstack("Region")
+        matrix = matrix.reindex(index=subtypes, columns=regions, fill_value=0.0)
+
         return xr.DataArray(
-            subtype_vehicles.values,
+            matrix.to_numpy(dtype=float),
             dims=("Type", "Region"),
             coords={
-                "Type": subtype_vehicles.columns.get_level_values(0).unique(),
-                "Region": subtype_vehicles.columns.get_level_values(1).unique()
-            }
+                "Type": matrix.index.to_numpy(),
+                "Region": matrix.columns.to_numpy(),
+            },
         )

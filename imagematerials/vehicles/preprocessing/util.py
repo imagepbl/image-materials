@@ -23,6 +23,22 @@ from imagematerials.vehicles.modelling_functions import (
 )
 
 
+def normalize_year_value(time_value):
+    """Normalize Prism/NumPy time values to a stable integer year key."""
+    year = getattr(time_value, "magnitude", getattr(time_value, "m", time_value))
+
+    if isinstance(year, np.ndarray) and year.size == 1:
+        year = year.item()
+
+    if isinstance(year, (int, np.integer)):
+        return int(year)
+
+    if isinstance(year, (float, np.floating)) and year.is_integer():
+        return int(year)
+
+    return year
+
+
 def xarray_conversion(df: pd.DataFrame, dimensions):
     """Temporary function. Should be removed once pandas has fully been
     replaced by xarray"""

@@ -2,6 +2,10 @@ person = [population] = persons = people
 
 meter = [length] = m
 
+pkm = person * kilometer = passenger_kilometer
+
+tkm = t * kilometer = ton_kilometer
+
 share = 1 = ratio = fraction
 
 US_Dollar = [currency] = USD
