@@ -53,7 +53,7 @@ IMAGE_REGIONS = [
     "RSAF"  # Rest of Southern Africa
 ]
 Region = prism.Dimension('region', IMAGE_REGIONS + ["World"])  # World regions
-ExtendedRegion = prism.Dimension('region', Region.coords + ["World2"])
+ExtendedRegion = prism.Dimension('region', IMAGE_REGIONS + ["World", "World2"])
 ImportRegion = prism.Dimension("import_region", Region.coords)
 ExportRegion = prism.Dimension("export_region", Region.coords)
 ReducedRegion = prism.Dimension("region", IMAGE_REGIONS)

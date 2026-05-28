@@ -17,6 +17,7 @@ REGION = prism.Dimension("Region")
 STOCK_TYPE = prism.Dimension("Type")
 STOCK_SUPERTYPE = prism.Dimension("SuperType")
 COHORT = prism.Dimension("Cohort")
+QUINTILE = prism.Dimension("Quintile")
 TIME = prism.Dimension("Time")
 MATERIAL_TYPE = prism.Dimension("material")
 BATTERY_TYPE = prism.Dimension("BatteryType")
@@ -134,6 +135,123 @@ class GenericStocks(prism.Model):
             self.outflow_by_cohort[t].loc[:, :, :t-1] = self.stock_by_cohort.loc[t-1, :t-1] - self.stock_by_cohort.loc[t, :t-1]
             # for current cohort: calculate outflow by inflow * (1-survival matrix) as stock at t-1 is not existent
             self.outflow_by_cohort[t].loc[:, :, t] = self.inflow[t] * (1-self.survival_matrix[t, t])
+
+
+@prism.interface
+class StocksQuintiles(prism.Model):
+    """Stock class that can be used for different products.
+    A model class for managing stocks and their inflows and outflows over time, 
+    including the computation of initial and dynamic stock values based on input data.
+    Accounting also for income quintiles
+
+    Attributes
+    ----------
+    Region : prism.Coords[REGION]
+        Defines the regions for the stock.
+    Type : prism.Coords[STOCK_TYPE]
+        Defines the stock types (e.g., vehicle types, buildings).
+    Cohort : prism.Coords[COHORT]
+        Defines the cohorts (e.g., different age groups of stock).
+    Time : prism.Coords[TIME]
+        Defines the time steps for the stock simulation.
+    Quintile : prism.Coords[QUINTILE]
+        Defines the income quintiles.
+    lifetimes : xr.DataArray
+        Expected lifetimes for each stock type.
+    stocks : xr.DataArray
+        Initial stock values.
+    shares : Optional[xr.DataArray]
+        Optional share data for the stock subtypes.
+    input_data : tuple of str
+        Tuple of input data variable names.
+    output_data : tuple of str
+        Tuple of output data variable names.
+    """
+     
+    # Dimensions
+    Region: prism.Coords[REGION]
+    Type: prism.Coords[STOCK_TYPE]
+    Cohort: prism.Coords[COHORT]
+    Time: prism.Coords[TIME]
+    Quintile: prism.Coords[QUINTILE]
+
+    # Inputs
+    lifetimes: xr.DataArray
+    stocks: xr.DataArray #TODO check how to have property that can be both input and output within prism
+    # stock_function: Callable    # defines the stock function to use e.g. stock or inflow driven
+    knowledge_graph: KnowledgeGraph
+    # set a flexible unit that can be changed depending on type of stock - is passed by preprocessing
+    set_unit_flexible: prism.VarUnit[UnitFlexibleStock]
+
+    # For module dependency, ignored by prism
+    input_data: tuple[str] = ("stocks", "lifetimes", "knowledge_graph", "set_unit_flexible")
+    output_data: tuple[str] = ("outflow_by_cohort", "inflow", "stock_by_cohort")
+
+    # stock_by_cohort: prism.TimeVariable[Region, Mode, Cohort, "count"] = prism.export(initial_value = prism.Array[Region, Mode, Cohort, 'count'](0.0))
+    inflow: prism.TimeVariable[REGION, STOCK_TYPE, QUINTILE, UnitFlexibleStock] = prism.export()
+    outflow_by_cohort: prism.TimeVariable[REGION, STOCK_TYPE, QUINTILE, COHORT, UnitFlexibleStock] = prism.export()
+
+    def compute_initial_values(self, time: prism.Timeline):
+        """Compute the initial values for stocks and the survival matrix.
+        Note:
+        stock_by_cohort is defined here instead of together with the other output data (inflow, outflow_by_cohort) to increase 
+        computational efficiency, might need to change when coupling to TIMER (should be prism.TimeVariable as well then)
+       
+        Parameters
+        ----------
+        time : prism.Timeline
+            The simulation timeline.
+        """
+  
+        survival = ScipySurvival(self.lifetimes, self.stocks.coords["Type"],
+                                 knowledge_graph=self.knowledge_graph)
+        self.survival_matrix = SurvivalMatrix(survival)
+        self.stock_by_cohort = xr.DataArray(
+            0.0,
+            dims=("Time", "Cohort", "Region", "Type", "Quintile"),
+            coords={"Time": self.Time,
+                    "Cohort": self.Cohort,
+                    "Region": self.Region,
+                    "Type": self.Type,
+                    "Quintile": self.Quintile})
+        self.stock_by_cohort = prism.Q_(self.stock_by_cohort, self.set_unit_flexible) # pass unit from stocks: set_unit_flexible should contain stocks unit
+
+    def compute_values(self, time: prism.Time):
+        """
+        Computes the stock values at each time step, including inflow and outflow by cohort.
+        
+        Parameters
+        ----------
+        time : prism.Time
+            The current simulation time step.
+        """
+        
+        t, dt = time.t, time.dt
+        self.inflow[t].loc[:] = prism.Q_(0.0, self.set_unit_flexible)
+        self.outflow_by_cohort[t].loc[:] = prism.Q_(0.0, self.set_unit_flexible)
+
+        # copy only for readability
+        stock_demand = self.stocks
+        # calculate missing stock to fulfill demand (input stock)
+        stock_diff = stock_demand.loc[t] - self.stock_by_cohort.loc[t].sum("Cohort")
+        # stock_diff cannot be negative (no negative inflow); when positive, divide by survival matrix in case there is a loss in the first year (inflow needs to be larger than input stock)
+        stock_diff = xr.where(stock_diff>0, stock_diff/self.survival_matrix[t, t].drop("Cohort"), 0)
+
+        self.inflow[t] = stock_diff
+        # calculate future development of the current cohort (inflow at time t; t: = time from current time onwards, t = cohort of time t)
+        self.stock_by_cohort.loc[t:, t] = self.inflow[t] * self.survival_matrix[t:, t]
+        # for t_future in stock_by_cohort[t].coords["Cohort"].loc[t_str:]:
+            # t_future = int(t_future)
+            # stock_by_cohort[t_future].loc[{"Cohort": t_str}] = inflow[t]*survival[t_future, t]
+
+        # Prevent out of bounds error, assume first outflow to be 0.
+        if t-1 < time.start:
+            self.outflow_by_cohort[t] = prism.Q_(0.0, self.set_unit_flexible)
+        else:
+            # for previous cohorts: calculate outflow by subtracting stocks of previous - current year
+            self.outflow_by_cohort[t].loc[:, :, :, :t-1] = self.stock_by_cohort.loc[t-1, :t-1] - self.stock_by_cohort.loc[t, :t-1]
+            # for current cohort: calculate outflow by inflow * (1-survival matrix) as stock at t-1 is not existent
+            self.outflow_by_cohort[t].loc[:, :, :, t] = self.inflow[t] * (1-self.survival_matrix[t, t])
 
 
 @prism.interface
@@ -358,7 +476,6 @@ class GenericMaterials(prism.Model):
         self.stock_by_cohort_materials.loc[t] = (stock_by_cohort.loc[t]*self.material_fractions*self.weights).sum("Cohort")
 
 
-
 @prism.interface
 class MaterialIntensities(prism.Model):
     """
@@ -423,6 +540,104 @@ class MaterialIntensities(prism.Model):
                     # "Cohort": coordinates["Time"].values,
                     "Region": self.Region,
                     "Type": self.Type,
+                    "material": self.material})
+        self.stock_by_cohort_materials = prism.Q_(self.stock_by_cohort_materials, "kg") 
+
+    def compute_values(self, time: prism.Time, inflow, stock_by_cohort, outflow_by_cohort):
+        """
+        Computes the material inflows, outflows, and stock usage by cohort for the current time step.
+        
+        At time `t`, computes:
+        - material inflows from stock `inflow` and cohort-specific material intensities,
+        - material outflows by cohort aggregated across cohorts,
+        - material stocks by cohort aggregated across cohorts.
+        
+        Parameters
+        ----------
+        time : prism.Time
+            The current simulation time step.
+        inflow : xr.DataArray
+            Inflow data for the stocks.
+        stock_by_cohort : xr.DataArray
+            Stock-by-cohort data.
+        outflow_by_cohort : xr.DataArray
+            Outflow data of the stock given by cohort.
+        """
+
+        t, dt = time.t, time.dt
+        self.inflow_materials[t] = inflow[t]*self.material_intensities.sel(Cohort=t).drop_vars("Cohort")
+        self.outflow_by_cohort_materials[t] = (outflow_by_cohort[t]*self.material_intensities).sum("Cohort")
+        self.stock_by_cohort_materials.loc[t] = (stock_by_cohort.loc[t]*self.material_intensities).sum("Cohort")
+
+
+@prism.interface
+class MaterialIntensitiesQuintiles(prism.Model):
+    """
+    A model class for managing materials used in stock cohorts, including 
+    inflows and outflows of materials. This version uses material intensities
+    (material per unit of stock) instead of weights and material fractions.
+
+    Attributes
+    ----------
+    material_intensities : xr.DataArray
+        Material intenisities applied to the inflow (kg steel/unit of stock), varying by cohort.
+    Region : prism.Coords[REGION]
+        The region where material use is calculated.
+    Type : prism.Coords[STOCK_TYPE]
+        The type of stock (e.g., Cars - ICE).
+    Cohort : prism.Coords[COHORT]
+        Cohort groups within the stock (e.g., yearly age groups).
+    Quintile : prism.Coords[QUINTILE]
+        Material demand per income quintiles 
+    material : prism.Coords[MATERIAL_TYPE]
+        The material types used in the model.
+    input_data : tuple of str
+        Tuple of input data variable names.
+    output_data : tuple of str
+        Tuple of output data variable names.
+    """
+    # Input data
+    material_intensities: xr.DataArray
+
+    # Dimensions
+    Region: prism.Coords[REGION]
+    Type: prism.Coords[STOCK_TYPE]
+    Cohort: prism.Coords[COHORT]
+    Quintile: prism.Coords[QUINTILE]
+    Time: prism.Coords[TIME]
+    material: prism.Coords[MATERIAL_TYPE]
+
+    # Data dependencies
+    input_data: tuple[str] = ("material_intensities", "inflow",
+                              "stock_by_cohort", "outflow_by_cohort")
+    output_data: tuple[str] = ("stock_by_cohort_materials", "inflow_materials",
+                               "outflow_by_cohort_materials")
+    # stock_by_cohort_materials & outflow_by_cohort_materials is NOT by cohort as it currently requires too much memory
+
+    # Output data
+    inflow_materials: prism.TimeVariable[REGION, STOCK_TYPE, QUINTILE, MATERIAL_TYPE, "kg"] = prism.export()
+    outflow_by_cohort_materials: prism.TimeVariable[REGION, STOCK_TYPE, QUINTILE, MATERIAL_TYPE, "kg"] = prism.export()
+
+    def compute_initial_values(self, time: prism.Timeline):
+        """
+        Create and initialize the `stock_by_cohort_materials` data array.
+
+        The array is constructed with dimensions (Time, Region, Type, material),
+        filled with zeros, and assigned units of kilograms.
+        
+        Parameters
+        ----------
+        time : prism.Timeline
+            The simulation timeline.
+        """
+        
+        self.stock_by_cohort_materials = xr.DataArray(
+            0.0, dims=("Time", "Region", "Type", "Quintile", "material"),
+            coords={"Time": self.Time,
+                    # "Cohort": coordinates["Time"].values,
+                    "Region": self.Region,
+                    "Type": self.Type,
+                    "Quintile": self.Quintile,
                     "material": self.material})
         self.stock_by_cohort_materials = prism.Q_(self.stock_by_cohort_materials, "kg") 
 

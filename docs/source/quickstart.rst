@@ -13,12 +13,12 @@ In this quick start guide, we will cover the following steps:
 
 **Note**
 
-A more elaborate version of this page is also available as an interactive tutorial available on the :doc:`/tutorials` page.
+A more elaborate version of this page is also available as an interactive tutorial available on the :doc:`tutorials` page.
 
 
 1. Importing libraries
 ----------------------
-First, we need to import the necessary libraries. Make sure you have everything installed as per the :doc:`/installation` instructions.
+First, we need to import the necessary libraries. Make sure you have everything installed as per the :doc:`installation` instructions.
 Libraries specific to this model are imagematerials and prism.
 
 .. code-block:: python

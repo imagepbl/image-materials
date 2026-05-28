@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 import xarray as xr
 
-from imagematerials.buildings.constants import ALL_YEARS, SCENARIO_SELECT
+from imagematerials.buildings.constants import ALL_YEARS
 from imagematerials.util import dataset_to_array, merge_dims
 
 
@@ -36,7 +36,7 @@ def compute_lifetimes(base_directory: Path,
         scenario = "SSP2_2D_RE"
         print("implemented 'slow' for Buildings")
     else:
-        scenario = SCENARIO_SELECT
+        scenario = "SSP2_CP"
 
     # Weibull parameter database for commercial buildings (shape & scale parameters given by region,
     # area & building-type)
