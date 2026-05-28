@@ -157,7 +157,7 @@ def interpolate_xr(data_array: xr.DataArray,
                    interp_method: str='linear',
                    extrap_before: str='constant',
                    extrap_before_method: str='linear'):
-    """ Interpolate an xarray.DataArray over a continuous time range and
+    """Interpolate an xarray.DataArray over a continuous time range and
     extend its boundary values beyond the available data to span t_start - t_end.
     The function performs (linear) interpolation between all existing time
     coordinates in the input DataArray and fills values outside the
@@ -275,61 +275,6 @@ def interpolate_xr(data_array: xr.DataArray,
         da_interp = prism.Q_(da_interp, unit)
 
     return da_interp
-
-# def interpolate_xr(data_array, t_start, t_end, interp_method = 'linear'):
-#     """ Interpolate an xarray.DataArray over a continuous time range and 
-#     extend its boundary values beyond the available data to span t_start - t_end.
-
-#     The function performs (linear) interpolation between all existing time 
-#     coordinates in the input DataArray and fills values outside the 
-#     original time range with the first and last available data, respectively.
-
-#     Parameters
-#     ----------
-#     data_array : xarray.DataArray
-#         Input DataArray with a 'Time' coordinate containing numeric values (e.g. 2020, 2050).
-#     t_start : int or float
-#         Start year for the interpolation range.,
-#     t_end : int or float
-#         End year for the interpolation range.
-#     interp_method : str, optional
-#         Interpolation method to use (default is 'linear'). See xarray documentation for available methods.
-
-#     Returns
-#     -------
-#     xarray.DataArray
-#         DataArray interpolated across the full range from `t_start` to `t_end`
-    
-#     Note:
-#     Units are temporarily stripped during interpolation but are reattached
-#     before returning the result. The corresponding warning is suppressed.
-#     """
-
-#     # Determine which dimension to use
-#     dim = 'Time' if 'Time' in data_array.dims else 'Cohort'
-
-#     # The interpolations strips the unit, so save it here and reattach later
-#     unit = prism.U_(data_array)
-    
-#     # Get the coordinate values along that dimension
-#     coord_values = data_array[dim].values
-#     # Define new full range
-#     new_range = np.arange(t_start, t_end + 1)
-
-#     # Interpolate linearly
-#     with warnings.catch_warnings(): # suppress warning
-#         warnings.simplefilter("ignore", UnitStrippedWarning)
-#         da_interp = data_array.interp({dim: new_range}, method = interp_method)
-
-#     # Fill values outside original range
-#     da_interp.loc[{dim: slice(None, coord_values.min())}] = da_interp.sel({dim: coord_values.min()})
-#     da_interp.loc[{dim: slice(coord_values.max(), None)}] = da_interp.sel({dim: coord_values.max()})
-
-#     # Reattach the unit if it existed
-#     if unit != prism.Unit('dimensionless'):
-#         da_interp = prism.Q_(da_interp, unit)
-
-#     return da_interp
 
 
 def MNLogit(data: xr.DataArray | pd.DataFrame, 
