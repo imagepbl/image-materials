@@ -27,11 +27,7 @@ from imagematerials.electricity.constants import (
 def get_preprocessing_data_evbattery(
     path_base: str,
     climate_policy_config: dict,
-    circular_economy_config: dict,
-    scenario: str,
-    year_start: int,
-    year_end: int,
-    year_out: int
+    circular_economy_config: dict
 ):
     """ Load, process, and transform input data required for the electric vehicle (EV) battery module.
 
@@ -51,14 +47,6 @@ def get_preprocessing_data_evbattery(
         Configuration dictionary specifying climate policy assumptions (currently not used directly).
     circular_economy_config : dict
         Configuration dictionary specifying circular economy assumptions (currently not used directly).
-    scenario : str
-        Scenario identifier used for selecting or organizing input data (not explicitly used here).
-    year_start : int
-        First year for interpolation of market shares and other time-dependent variables.
-    year_end : int
-        Last year of the simulation horizon (currently not explicitly used in this function).
-    year_out : int
-        Output year.
 
     Returns
     -------
@@ -100,6 +88,8 @@ def get_preprocessing_data_evbattery(
     prism.unit_registry.load_definitions(units_file)
     # prism.unit_registry.load_definitions(path_base / "imagematerials" / "units.txt")
 
+    year_start = YEAR_FIRST_GRID
+    year_end = 2100
 
     ###########################################################################################################
     # Read in files #
@@ -283,7 +273,7 @@ def get_preprocessing_data_evbattery(
     x = ev_fraction_v2g_data.reindex(range(ev_fraction_v2g_data.index[0],ev_fraction_v2g_data.index[-1]+1)).interpolate(method="linear")
     y = logistic(x, L=x.iloc[-1].values)
     # y = quadratic(x)
-    ev_fraction_v2g = ev_fraction_v2g_data.reindex(range(YEAR_FIRST_GRID,year_out+1)).interpolate(method="linear") # create dataframe with full index; values before first data points will be Nans, between data points interpolated linearly, after last data point will be last known value
+    ev_fraction_v2g = ev_fraction_v2g_data.reindex(range(year_start,year_end+1)).interpolate(method="linear") # create dataframe with full index; values before first data points will be Nans, between data points interpolated linearly, after last data point will be last known value
     ev_fraction_v2g.loc[:ev_fraction_v2g_data.index[0]] = 0 # set values before first data point to 0
     ev_fraction_v2g.loc[ev_fraction_v2g_data.index[0]:ev_fraction_v2g_data.index[1]] = y # set values between (originally) first and last data point to quadratic/logistic interpolation
     # Build xarray DataArray
@@ -337,7 +327,7 @@ def get_preprocessing_data_evbattery(
     )
 
     # fix the market share of storage technologies before year_start and after 2050
-    storage_market_share_interp = interpolate_xr(storage_market_share, YEAR_FIRST_GRID, year_out)
+    storage_market_share_interp = interpolate_xr(storage_market_share, year_start, year_end)
     # Select only those technologies from the storage technologies that are suitable for EV & mobile applications
     # normalize the selection of EV battery technologies, so that total market share is 1 again (taking the relative share in the selected battery techs)
     market_share_EVs = normalize_selected_techs(storage_market_share_interp, EV_BATTERIES, dim_type="BatteryType") # TODO: this should be done differently as market shares of EV batteries probably differ from their market shares in total storage market
@@ -345,13 +335,13 @@ def get_preprocessing_data_evbattery(
     market_share_EVs.loc[dict(Type=vehicle_list_non_ev)] = 0 # set non-EV vehicle types to zero
 
     # 2. Battery Weights ----------------------------------------------------------------
-    xr_battery_weights_interp = interpolate_xr(xr_battery_weights, YEAR_FIRST_GRID, year_out)
+    xr_battery_weights_interp = interpolate_xr(xr_battery_weights, year_start, year_end)
 
     # 3. Material Intensities ----------------------------------------------------------------
-    xr_battery_materials_interp = interpolate_xr(xr_battery_materials, YEAR_FIRST_GRID, year_out)
+    xr_battery_materials_interp = interpolate_xr(xr_battery_materials, year_start, year_end)
 
     #  4. Energy Density ----------------------------------------------------------------
-    xr_energy_density_interp = interpolate_xr(xr_energy_density, YEAR_FIRST_GRID, year_out)
+    xr_energy_density_interp = interpolate_xr(xr_energy_density, year_start, year_end)
 
 
     ###########################################################################################################

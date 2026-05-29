@@ -10,12 +10,17 @@ import prism
 import xarray as xr
 from pint.errors import UnitStrippedWarning
 
-from imagematerials.concepts import create_electricity_graph
+from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
+from imagematerials.concepts import create_electricity_graph, create_image_region_graph
 from imagematerials.constants import (
     IMAGE_REGIONS,
 )
 from imagematerials.electricity.constants import (
     EPG_TECHNOLOGIES_VRE,
+    STD_LIFETIMES_ELECTR,
+    IHA_REGIONS,
+    iha_region_map,
+    create_iha_region_graph,
     REGIONS,
     YEAR_FIRST_GRID,
 )
@@ -29,16 +34,6 @@ idx = pd.IndexSlice
 #####################################################################################################
 # General functions for electricity materials model
 #####################################################################################################
-
-# In order to calculate inflow & outflow smoothly (without peaks for the initial years), we calculate a historic tail to the stock, 
-# by adding a 0 value for first year of operation (=1926), then interpolate values towards 1971
-def stock_tail(stock, YEAR_OUT):
-    zero_value = [0 for i in range(0,REGIONS)]
-    stock_used = pd.DataFrame(stock).reindex_like(stock)
-    stock_used.loc[YEAR_FIRST_GRID] = zero_value  # set all regions to 0 in the year of initial operation
-    stock_new  = stock_used.reindex(list(range(YEAR_FIRST_GRID,YEAR_OUT+1))).interpolate() # only interpolates missing values, so existing values (from 1971 onwards) are kept
-    return stock_new
-
 
 def add_historic_stock(da_stock, year_start=1920, interp_method="linear"):
     """Calculate historic (pre TIMER simulation time = before 1971) stock values.
@@ -69,12 +64,13 @@ def add_historic_stock(da_stock, year_start=1920, interp_method="linear"):
         return da_stock
 
     unit = prism.U_(da_stock)
-
     t_hist = np.arange(year_start, t_first)
     n_hist = len(t_hist)
 
     # Interpolate from 0 to first existing value - use this approach as it is faster than using xr.interp()
-    first_values = da_stock.sel(Time=t_first).values.astype(float)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UnitStrippedWarning)
+        first_values = da_stock.sel(Time=t_first).values.astype(float)
     if interp_method == "linear":
         stock_hist = np.linspace(0, 1, n_hist)[:, None, None] * first_values[None, :, :]
     elif interp_method == "quadratic":
@@ -96,27 +92,89 @@ def add_historic_stock(da_stock, year_start=1920, interp_method="linear"):
 
     return da_stock_extended
 
+def _extrap_to_zero(times, first_value, method='linear'):
+    """Generate values ramping from 0 at times[0] to first_value at times[-1].
 
+    Parameters
+    ----------
+    times : np.ndarray
+        Array of time steps for the ramp.
+    first_value : float
+        Target value at the end of the ramp.
+    method : str
+        'linear'      : straight line
+        'exponential' : exponential growth, slow start then accelerating
+        'logistic'    : S-curve, slow start, fast middle, slow end
 
-def interpolate_xr(data_array, t_start, t_end, interp_method = 'linear'):
-    """Interpolate an xarray.DataArray over a continuous time range.
+    """
+    n = len(times)
+    if n == 0:
+        return np.array([])
+    if n == 1:
+        return np.array([first_value])  # only one point, just return the target value
 
-    And extend its boundary values beyond the available data to span t_start - t_end.
+    # normalized x from 0 to 1
+    x = np.linspace(0, 1, n)
 
-    The function performs (linear) interpolation between all existing time 
-    coordinates in the input DataArray and fills values outside the 
-    original time range with the first and last available data, respectively.
+    if method == 'linear':
+        return first_value * x
+
+    elif method == 'exponential':
+        # exponential: y = first_value * (e^(kx) - 1) / (e^k - 1)
+        # k controls steepness; higher k = more convex (slower start)
+        k = 5
+        return first_value * (np.exp(k * x) - 1) / (np.exp(k) - 1)
+
+    elif method == 'logistic':
+        # S-curve centered at midpoint, scaled to pass through (0,0) and (1, first_value)
+        k = 10  # steepness
+        x0 = 0.5  # midpoint
+        s = 1 / (1 + np.exp(-k * (x - x0)))
+        # rescale so it passes exactly through 0 and first_value
+        s = (s - s[0]) / (s[-1] - s[0])
+        return first_value * s
+
+    else:
+        raise ValueError(f"Unknown method '{method}'. Choose 'linear', 'exponential', or 'logistic'.")
+
+def interpolate_xr(data_array: xr.DataArray, 
+                   t_start: int | float | dict,
+                   t_end: int | float,
+                   interp_method: str='linear',
+                   extrap_before: str='constant',
+                   extrap_before_method: str='linear'):
+    """Interpolate a DataArray and extend its boundary values beyond available data to span t_start - t_end.
+
+    The function performs (linear) interpolation between all existing time
+    coordinates in the input DataArray and fills values outside the
+    original time range with either the first and last available data, respectively,
+    or performs an extrapolation to 0 at t_start.
+    If t_start is a dict, different start years can be specified per Region,
+    with values linearly interpolated to 0 at the region-specific start year,
+    and zero-filled between the global t_start and the region-specific start year.
 
     Parameters
     ----------
     data_array : xarray.DataArray
         Input DataArray with a 'Time' coordinate containing numeric values (e.g. 2020, 2050).
-    t_start : int or float
-        Start year for the interpolation range.,
+    t_start : int, float, or dict
+        Start year for the interpolation range. If a dict, keys are Region names
+        and values are the year at which that region's data reaches 0. Regions not
+        in the dict fall back to the minimum of the dict values.
     t_end : int or float
         End year for the interpolation range.
     interp_method : str, optional
-        Interpolation method to use (default is 'linear'). See xarray documentation for available methods.
+        Interpolation method to use (default is 'linear'). See xarray documentation
+        for available methods.
+    extrap_before : str, optional
+        How to handle values before the first available data point.
+        - 'constant' : fill with the first available value (default)
+        - 'zero'     : linearly ramp down to 0 at t_start (or region-specific start if t_start is a dict)
+    extrap_before_method : str, optional
+        If extrap_before is 'zero', this controls the shape of the ramp:
+        - 'linear'      : straight line (default)
+        - 'exponential' : exponential growth, slow start then accelerating
+        - 'logistic'    : S-curve, slow start, fast middle, slow end
 
     Returns
     -------
@@ -137,19 +195,74 @@ def interpolate_xr(data_array, t_start, t_end, interp_method = 'linear'):
 
     # Get the coordinate values along that dimension
     coord_values = data_array[dim].values
-    # Define new full range
-    new_range = np.arange(t_start, t_end + 1)
 
-    # Interpolate linearly
-    with warnings.catch_warnings(): # suppress warning
+    # --- Determine global t_start ---
+    if isinstance(t_start, dict):
+        global_t_start = min(t_start.values())
+    else:
+        global_t_start = t_start
+
+    new_range = np.arange(global_t_start, t_end + 1)
+
+    # --- Interpolate over full time range ---
+    with warnings.catch_warnings():
         warnings.simplefilter("ignore", UnitStrippedWarning)
-        da_interp = data_array.interp({dim: new_range}, method = interp_method)
+        da_interp = data_array.interp({dim: new_range}, method=interp_method)
 
-    # Fill values outside original range
-    da_interp.loc[{dim: slice(None, coord_values.min())}] = da_interp.sel({dim: coord_values.min()})
+    # --- Fill beyond last data point (always constant) ---
     da_interp.loc[{dim: slice(coord_values.max(), None)}] = da_interp.sel({dim: coord_values.max()})
 
-    # Reattach the unit if it existed
+    # --- Handle extrapolation before first data point ---
+    if isinstance(t_start, dict) and 'Region' in data_array.dims:
+        # Region-specific start years — must iterate over regions
+        regions = data_array.Region.values
+        fallback_year = global_t_start #if not isinstance(t_start, dict) else min(t_start.values())
+
+        for region in regions:
+            region_start = t_start.get(region, fallback_year) if isinstance(t_start, dict) else t_start
+            first_value = float(da_interp.sel(Region=region, **{dim: coord_values.min()}).values)
+
+            if extrap_before == 'zero':
+                # ramp from 0 at region_start to first_value at coord_values.min()
+                ramp_times = np.arange(region_start, coord_values.min() + 1)
+                # ramp_values = np.linspace(0, first_value, len(ramp_times))
+                ramp_values = _extrap_to_zero(ramp_times, first_value, method=extrap_before_method)
+                da_interp.loc[{dim: ramp_times, 'Region': region}] = ramp_values
+
+                # zero-fill between global_t_start and region_start if there's a gap
+                if region_start > global_t_start:
+                    zero_times = np.arange(global_t_start, region_start)
+                    da_interp.loc[{dim: zero_times, 'Region': region}] = 0.0
+
+            else:  # 'constant'
+                da_interp.loc[{dim: slice(None, coord_values.min()), 'Region': region}] = first_value
+
+    elif isinstance(t_start, dict):
+        raise ValueError("t_start is a dict but 'Region' is not a dimension in the DataArray.")
+    
+    else:
+        # Uniform t_start — broadcast directly, no need to loop over regions       
+        first_slice = da_interp.sel({dim: coord_values.min()})
+        last_slice = da_interp.sel({dim: coord_values.max()})
+        
+        if extrap_before == 'zero':
+            ramp_times = np.arange(global_t_start, coord_values.min() + 1)
+            # Compute ramp for each element, then reassemble into the right shape
+            # first_slice has shape (2, 34) — apply _extrap_to_zero per scalar value
+            ramp_values = xr.apply_ufunc(
+                lambda val: _extrap_to_zero(ramp_times, val, method=extrap_before_method),
+                first_slice,
+                vectorize=True,
+                output_core_dims=[[dim]],
+                dask='parallelized',
+            )
+            ramp_values[dim] = ramp_times
+            da_interp.loc[{dim: ramp_times}] = ramp_values.transpose(*da_interp.dims)
+        else:  # 'constant'
+            da_interp.loc[{dim: slice(None, coord_values.min())}] = first_slice
+            da_interp.loc[{dim: slice(coord_values.max(), None)}] = last_slice
+
+    # --- Reattach unit ---
     if unit != prism.Unit('dimensionless'):
         da_interp = prism.Q_(da_interp, unit)
 
@@ -244,7 +357,6 @@ def create_prep_data(results_dict, conversion_table, unit_mapping):
 
     return prep_data
 
-
 # for testing, move later to a plotting utils file in analysis repository
 def flexible_plot_1panel(
     da: xr.DataArray,
@@ -253,7 +365,7 @@ def flexible_plot_1panel(
     fixed: dict = None,
     figsize=(8, 5),
     plot_type = 'line' # 'line' or 'scatter'
-):
+    ):
     """Plot panel in flexible plot.
 
     Parameters
@@ -605,6 +717,464 @@ def calculate_fraction_underground(grid_lines, gdp_pc, ratio_underground):
 # Storage preprocessing functions
 ##########################################################################################
 
+def _build_status_timeseries_phs_data(df: pd.DataFrame, 
+                                      status: str, 
+                                      t_start: int, 
+                                      t_end: int, 
+                                      shares: xr.DataArray, 
+                                      unit: str) -> xr.DataArray:
+    """ Build a region-level time series DataArray for a given PHS planning status.
+
+    This function extracts values for a specific planning status from a dataframe, and constructs a 
+    time-expanded xarray DataArray. The values are initialized at the start and end time points,
+    interpolated over the full time range, and finally rebroadcast to a target
+    regional classification using a region graph and weighting shares.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input dataframe containing at least the columns:
+        - "status" (str): project status category
+        - "Region" (str): region identifier (IHA region names)
+        - "value" (numeric): associated value for each region-status pair
+
+    status : str
+        Status category to filter the dataframe ("under construction", "planned regulator approved",
+        "planned pending approval" or "announced").
+
+    t_start : int
+        Start year of the time dimension.
+
+    t_end : int
+        End year of the time dimension.
+
+    shares : xr.DataArray
+        Regional share weights used for rebroadcasting values across the
+        target regional classification (IMAGE_REGIONS).
+
+    unit : str
+        Unit of the values in the dataframe.
+
+    Returns
+    -------
+    xr.DataArray
+        A (Time × Region) DataArray representing the interpolated and
+        regionally rebroadcast time series for the given status.
+
+    """
+    if status not in ["under construction", "planned regulator approved", "planned pending approval",
+                       "announced"]:
+        raise ValueError(f"Invalid status: {status}. Must be one of 'under construction', 'planned regulator approved', 'planned pending approval' or 'announced'.")
+    
+    # select the relevant row based on status
+    df_status = df[df["status"] == status]
+    values = (
+        df_status.set_index("Region")
+            .reindex(IHA_REGIONS)["value"]
+            .fillna(0)
+            .values
+    )
+    
+    # create a new DataArray with Time dimension from t_start to t_end
+    xr_status = xr.DataArray(
+        data=np.vstack([np.zeros(len(IHA_REGIONS)), values]),
+        coords={
+            "Time": [t_start, t_end],
+            "Region": IHA_REGIONS
+        },
+        dims=["Time", "Region"],
+    )
+    xr_status = interpolate_xr(xr_status, t_start, t_end)
+
+    region_graph = create_iha_region_graph()
+    xr_status = region_graph.rebroadcast_xarray(xr_status, output_coords=IMAGE_REGIONS, dim="Region", shares=shares)
+    
+    xr_status = prism.Q_(xr_status, unit)
+
+    return xr_status
+
+def derive_phs_installed_capacity(data: list,
+                                  factor_phs_growth_rel_demand: float = 0.5,
+                                  mean_discharge_duration: float = 10,
+                                  flag_phs: str = "phs_low"):
+    """Derive installed pumped hydro storage (PHS) power and energy capacity across IMAGE regions
+    from historical data, pipeline projects, and demand-linked growth assumptions.
+
+    The function performs the following steps:
+      1. Preprocesses three input datasets and aggregates them to IMAGE regions.
+      2. Interpolates/extrapolates historical PHS capacity data from each region's
+         first recorded cohort year up to 2060.
+      3. Distributes superregional totals to individual regions using shares derived
+         from 2024 data, optionally adjusted by literature-based overrides for 2030.
+      4. Adds pipeline capacity (under construction, planned, announced) depending on
+         the selected scenario flag.
+      5. Extends the time series to 2100: constant capacity for ``phs_low``, or
+         demand-linked growth for ``phs_high``.
+      6. Converts power capacity (MW) to energy capacity (MWh) using the mean
+         discharge duration.
+
+    Parameters
+    ----------
+    data : list
+        A list of five input objects in the following order:
+
+        - **data[0]** (*pd.DataFrame*): Plant-level PHS dataset with columns
+          ``'Operational Status'``, ``'Country'``, ``'Commisioning Year'``,
+          ``'Generating Capacity'``, and ``'Energy stored (GWh)'``.
+          Only rows with ``Operational Status == 'Operational'`` are used.
+
+        - **data[1]** (*pd.DataFrame*): Historical PHS capacity time series by country
+          with columns ``'Region'``, ``'Time'``, ``'value'``, and ``'unit'``.
+
+        - **data[2]** (*pd.DataFrame*): PHS pipeline data (future projects) with columns
+          including ``'Region'``, ``'value'``, ``'unit'``, and an operational status
+          category column. Expected status strings: ``'under construction'``,
+          ``'planned regulator approved'``, ``'planned pending approval'``,
+          ``'announced'``.
+
+        - **data[3]** (*pd.DataFrame*): Region-level share adjustment overrides for 2030,
+          with columns ``'Region'``, ``'time'``, and ``'value'``.
+
+        - **data[4]** (*xr.DataArray*): Storage energy demand time series (from IMAGE-energy) with dimensions
+          ``('Time', 'Region')``, used only in the ``phs_high`` scenario for
+          post-2060 growth.
+
+    factor_phs_growth_rel_demand : float, optional
+        Scaling factor that controls how strongly PHS capacity growth tracks storage
+        energy demand growth after 2060 (``phs_high`` only). A value of ``0.5`` means
+        PHS grows at half the rate of demand growth in years where the condition
+        ``PHS <= 0.8 * demand`` is satisfied. Default is ``0.5``.
+
+    mean_discharge_duration : int or float, optional
+        Assumed mean discharge duration in hours, used to convert power capacity (MW)
+        to energy capacity (MWh). Default is ``10``.
+
+    flag_phs : {'phs_low', 'phs_high'}, optional
+        Scenario selector:
+
+        - ``'phs_low'``: Adds only *under construction* and *planned regulator approved*
+          projects; capacity is held constant after 2060.
+        - ``'phs_high'``: Adds all pipeline categories (including *pending approval* and
+          *announced*); capacity grows after 2060 proportional to storage energy demand.
+
+        Default is ``'phs_low'``.
+
+    Returns
+    -------
+    phs_power : xr.DataArray
+        Installed PHS power capacity in MW with dimensions ``('Time', 'Region')``,
+        covering the full modelling horizon from the earliest recorded cohort year
+        to 2100.
+
+    phs_energy : xr.DataArray
+        Installed PHS energy capacity in MWh, computed as
+        ``phs_power * mean_discharge_duration``, with the same dimensions and
+        time horizon as ``phs_power``.
+
+    Notes
+    -----
+    - Regions with no recorded capacity in ``data[0]`` are assigned a start year
+      of 2024 for extrapolation purposes.
+    - Share normalisation is performed within IHA superregions; shares are held
+      constant after 2024 unless overridden by ``data[3]``.
+    - Negative demand growth rates are clipped to zero before computing post-2060
+      PHS growth to prevent capacity from shrinking.
+    - The capacity is only allowed to grow after 2060 (``phs_high``) when the
+      previous year's PHS capacity is at most 80 % of the corresponding storage
+      energy demand.
+
+    """
+    df_data1 = data[0]
+    df_data2 = data[1]
+    df_data3 = data[2]
+    df_shares_adjustment_2030 = data[3]
+    storage_energy_xr = data[4]
+
+    ################################################################################################
+    # Pretreat data 
+    
+    df_data1 = df_data1.loc[df_data1["Operational Status"] == "Operational"]
+    df_data1 = df_data1.rename(columns={'Country': 'Region', 'Commisioning Year': 'Cohort'})
+    df_data1["Cohort"] = pd.to_numeric(df_data1["Cohort"], errors="coerce").astype("Int64")
+    df_data1_country = df_data1.groupby(["Region", "Cohort"])[
+        ["Generating Capacity", "Energy stored (GWh)"]
+    ].sum() # rows with NaN in Region or Cohort are dropped during this step
+    ds_data1_country = df_data1_country.to_xarray()
+
+    unit_data2 = df_data2["unit"].iloc[0] # extract unit from the file (assumes it's the same for all rows)
+    df_data2 = df_data2.drop(columns="unit")
+    df_data2_country = df_data2.groupby(["Region", "Time"])[["value"]].sum()
+    da_data2_country = xr.DataArray.from_series(df_data2_country["value"]).rename("PumpedHydropowerStorageCapacity") # create Dataarray
+    da_data2_country = prism.Q_(da_data2_country, unit_data2)
+    
+    unit_data3 = df_data3["unit"].iloc[0] # extract unit from the file (assumes it's the same for all rows)
+    df_data3 = df_data3.drop(columns="unit")
+
+    mean_discharge_duration = prism.Q_(mean_discharge_duration, "hour")
+    
+    ################################################################################################
+    # Aggregate to IMAGE regions
+
+    knowledge_graph_region = create_image_region_graph()
+    
+    ds_data1_image_region = ds_data1_country.copy()
+    ds_data1_image_region = knowledge_graph_region.aggregate_sum(ds_data1_image_region, output_coords=IMAGE_REGIONS, dim="Region", require_relation=False)
+
+    da_data2_image_region = da_data2_country.copy()
+    da_data2_image_region = knowledge_graph_region.aggregate_sum(da_data2_image_region, output_coords=IMAGE_REGIONS, dim="Region", require_relation=False)
+
+    ################################################################################################
+    # Find starting year per region
+
+    # Mask where Generating Capacity != 0, then find the first True along Cohort axis
+    mask = ds_data1_image_region["Generating Capacity"] != 0  # shape: (Region, Cohort)
+    # Get index position of first nonzero per region (-1 if none found)
+    first_idx = mask.argmax(dim="Cohort")
+    # Map index positions back to actual Cohort coordinate values
+    earliest_cohort = ds_data1_image_region.Cohort.isel(Cohort=first_idx).astype(float)
+    # For regions where ALL values are 0, argmax returns 0 (misleading) — mask those out
+    has_nonzero = mask.any(dim="Cohort")
+    earliest_cohort = earliest_cohort.where(has_nonzero)
+    # As a dict
+    dict_regional_start_years = {
+        region.item(): int(val.item()) if not np.isnan(val.item()) else 2024
+        for region, val in zip(earliest_cohort.Region, earliest_cohort)
+    }
+
+    ####################################################################################################
+    # intra and extrapolate phs data
+
+    #---------------------------------------------------------------------------------------------------
+    # extrapolating historic data (+ constant extrapolation after last known data point (2024) until 2060, overwritten later)
+    phs = interpolate_xr(da_data2_image_region, dict_regional_start_years, 2060, interp_method='linear', extrap_before='zero', extrap_before_method='logistic')
+
+    #---------------------------------------------------------------------------------------------------
+    # calculate region shares
+
+    # select time
+    da = phs.sel(Time=[2024])
+    # mapping
+    # create a coordinate for superregions
+    superregion = xr.DataArray(
+        [iha_region_map[r] for r in da.Region.values],
+        coords={"Region": da.Region},
+        dims="Region"
+    )
+    # attach it
+    da = da.assign_coords(Superregion=superregion)
+    # compute shares within each superregion
+    shares = da.groupby("Superregion").map(lambda x: x / x.sum())
+    shares = shares.pint.dequantify()
+    shares = shares.reindex(Time=np.arange(2024, 2061), method="ffill") # forward fill shares to future years (assumes shares remain constant after 2024)
+
+    # Adjust shares based on literature insights
+    override_regions = df_shares_adjustment_2030["Region"].values
+    time_override = 2030
+    da_override = xr.full_like(
+        shares.sel(Time=[2024, 2030]),
+        fill_value=np.nan
+    )
+    for r in override_regions:
+        da_override.loc[dict(Region=r, Time=time_override)] = df_shares_adjustment_2030.loc[(df_shares_adjustment_2030["time"] == time_override) & (df_shares_adjustment_2030["Region"] == r), "value"].values[0] #override_2030[r]
+        da_override.loc[dict(Region=r, Time=2024)] = shares.sel(Time=2024, Region=r).values
+    # Interpolate shares (linearly between 2024–2030, constant after 2030)
+    da_override = interpolate_xr(da_override, t_start=2024, t_end=2060, interp_method="linear")
+
+    # update shares
+    shares.loc[dict(Time=slice(2024, None), Region=override_regions)] = da_override.sel(Time=slice(2024, None), Region=override_regions)
+
+    #---------------------------------------------------------------------------------------------------
+    # extrapolating future data (2024-2060)
+
+    # build time series for each operational status category
+    xr_under_construction = _build_status_timeseries_phs_data(df_data3, "under construction", 2024, 2035, shares, unit_data3)
+    xr_planned_regulator_approved = _build_status_timeseries_phs_data(df_data3, "planned regulator approved", 2035, 2060, shares, unit_data3)
+    xr_planned_pending_approval = _build_status_timeseries_phs_data(df_data3, "planned pending approval", 2035, 2060, shares, unit_data3)
+    xr_announced = _build_status_timeseries_phs_data(df_data3, "announced", 2035, 2060, shares, unit_data3)
+
+    time = np.arange(phs.Time.min().item(), 2061)
+    if flag_phs == "phs_low":
+        uc = xr_under_construction.reindex(Time=time, method="ffill").fillna(0)
+        pra = xr_planned_regulator_approved.reindex(Time=time).fillna(0)
+        phs_2060 = phs + uc + pra
+    elif flag_phs == "phs_high":
+        uc = xr_under_construction.reindex(Time=time, method="ffill").fillna(0)
+        pra = xr_planned_regulator_approved.reindex(Time=time).fillna(0)
+        ppa = xr_planned_pending_approval.reindex(Time=time).fillna(0)
+        ann = xr_announced.reindex(Time=time).fillna(0)
+        phs_2060 = phs + uc + pra + ppa + ann
+
+    #---------------------------------------------------------------------------------------------------
+    # extrapolating future data (2060-2100)
+
+    if flag_phs == "phs_low":
+        # for the low PHS scenario, we assume that after 2060, the capacity remains constant at the 2060 
+        # level (i.e., no further growth after 2060)
+        phs_power = phs_2060.reindex(Time=np.arange(phs.Time.min().item(), 2101), method="ffill").fillna(0)
+    elif flag_phs == "phs_high":
+        # --- select relevant time range ---
+        # this factor determines how strongly the growth of PHS capacity is linked to the growth of storage 
+        # energy demand; a value of 0.5 means that if the storage energy demand grows by 10% from one year 
+        # to the next, the PHS capacity will grow by 5% in that year, if the condition below is met. This is 
+        # a simplifying assumption and can be adjusted based on literature insights or sensitivity analysis. 
+        phs_temporary = phs_2060.sel(Time=[2060]).reindex(Time=np.arange(2060, 2101), method="ffill") # forward fill from 2060 to 2100 with constant values (will be updated with growth assumption in the next steps)
+        demand = storage_energy_xr.sel(Time=slice(2060, 2100))
+        # align sequence of dimensions
+        phs_temporary = phs_temporary.transpose("Time", "Region")
+        demand = demand.transpose("Time", "Region")
+
+        # --- compute base growth rates (NumPy) ---
+        # growth rate = f(t+1)/f(t) - 1, by rolling -1 values for year 2061 are now saved under year 2060, 
+        # so when we divide by demand_vals which are still aligned with the original years, we get the 
+        # growth rate from t to t+1 aligned with year t. 
+        demand_vals = demand.pint.magnitude # get values without attached unit
+        growth_rate = (np.roll(demand_vals, -1, axis=0) / demand_vals) - 1 
+        # last timestep has no forward value → set to 0
+        growth_rate[-1, ...] = 0
+        # clip negative growth
+        growth_rate = np.clip(growth_rate, 0, None)
+        # shift to align with t+1
+        # growth_rate = np.roll(growth_rate, 1, axis=0)
+        growth_rate[0, ...] = 0  # first year has no previous growth
+
+        # --- initialize result array ---
+        phs_vals = phs_temporary.pint.magnitude.copy() # get values without attached unit
+
+        # --- recursive loop over time ---
+        for t in range(1, phs_vals.shape[0]):
+            prev = phs_vals[t - 1]
+            gr = growth_rate[t - 1]
+            # condition: grow only if previous PHS <= 0.8 * demand at t-1
+            mask = prev <= 0.8 * demand_vals[t - 1]
+            # apply growth selectively
+            phs_vals[t] = np.where(mask, prev * (1 + factor_phs_growth_rel_demand * gr), prev)
+
+        # --- convert back to xarray ---
+        phs_updated = xr.DataArray(
+            phs_vals,
+            coords=phs_temporary.coords,
+            dims=phs_temporary.dims,
+            name=phs_temporary.name
+        )
+        phs_updated = prism.Q_(phs_updated, "MW")
+        # --- merge with original before 2060 ---
+        phs_power = xr.concat(
+            [phs_2060.sel(Time=slice(None, 2059)), phs_updated],
+            dim="Time"
+        )
+
+    #---------------------------------------------------------------------------------------------------
+    # convert power capacity (MW) to energy capacity (MWh)
+
+    phs_energy = phs_power * mean_discharge_duration
+
+    return phs_power, phs_energy
+
+
+def calculate_remaining_storage_demand(storage_energy_da, phs_energy):
+    """Calculate remaining storage demand after subtracting pumped hydro storage (PHS),
+    with a time-varying minimum floor applied after 2000.
+
+    The floor ensures that remaining storage never falls below a fraction of total
+    storage demand, ramping linearly from 5% (2010) to 20% (2020), then held at 20%.
+
+    Parameters
+    ----------
+    storage_energy_da : xr.DataArray
+        Total storage energy capacity demand with dimensions (Time, Region).
+    phs_energy : xr.DataArray
+        Pumped hydro storage energy capacity with dimension (Time, Region).
+
+    Returns
+    -------
+    xr.DataArray
+        Remaining storage demand after PHS subtraction and floor enforcement,
+        with the same dimensions as storage_energy_da. Never negative.
+
+    Notes
+    -----
+    IRENA (2017): 4508 GWh PHS in 2017 out of 4670 GWh total storage = ~96% share. Projects for 2030
+    45-51% share of PHS.
+    Floor fractions by period:
+        - before 2010 : no floor (but > 0)
+        - 2010-2017   : linearly interpolated from 0 to 0.04
+        - 2017-2025   : linearly interpolated from 0.04 to 0.1
+        - 2025-2030   : linearly interpolated from 0.1 to 0.2
+        - after 2030  : capped at 0.2
+
+    """
+    storage_energy_remaining = (storage_energy_da - phs_energy).clip(min=0)
+
+    floor_fraction = xr.zeros_like(storage_energy_remaining)
+
+    # Linearly interpolate floor fraction: 0.04 (2017) -> 0.1 (2025) -> 0.2 (2030), capped at 0.2 after
+    floor_fraction = xr.where(storage_energy_remaining.Time >= 2010,
+                        0 + (0.04 - 0) * (storage_energy_remaining.Time - 2010) / (2017 - 2010),
+                        floor_fraction)
+    floor_fraction = xr.where(storage_energy_remaining.Time >= 2017,
+                        0.04 + (0.1 - 0.04) * (storage_energy_remaining.Time - 2017) / (2025 - 2017),
+                        floor_fraction)
+    floor_fraction = xr.where(storage_energy_remaining.Time >= 2025,
+                        0.1 + (0.2 - 0.1) * (storage_energy_remaining.Time - 2025) / (2030 - 2025),
+                        floor_fraction)
+    floor_fraction = xr.where(storage_energy_remaining.Time >= 2030, 0.2, floor_fraction)
+
+    # Apply floor
+    min_value = floor_fraction * storage_energy_da
+    storage_energy_remaining = xr.where(
+        (storage_energy_remaining.Time >= 2000) & (storage_energy_remaining < min_value),
+        min_value,
+        storage_energy_remaining
+    )
+
+    return storage_energy_remaining
+
+
+def derive_btm_installed_capacity(gcap_xr_interp: xr.DataArray,
+                                  ratio_btm_deployment_data: pd.DataFrame,
+                                  ratio_btm_to_solar: float = 2) -> xr.DataArray:
+    """Derive behind-the-meter (BTM) battery storage installed energy capacity from solar PV 
+    capacity and BTM deployment ratios.
+
+    The BTM energy capacity is estimated as:
+        BTM [MWh] = btm_deployment_ratio [-] x solar_PV_capacity [MW] x ratio_btm_to_solar [MWh/MW]
+
+    where the BTM deployment ratio represents the fraction of solar PV installations
+    that are paired with a BTM battery, and ratio_btm_to_solar defines the energy
+    capacity of that battery per unit of solar PV power capacity.
+
+    Parameters
+    ----------
+    gcap_xr_interp : xr.DataArray
+        Interpolated installed power capacity by technology type, with dimensions
+        (Time, Region, Type) and units in MW. Must contain a "SPVR" entry along
+        the Type dimension (rooftop solar PV).
+    ratio_btm_deployment_data : pd.DataFrame
+        Raw BTM deployment ratio data with columns ["Region", "Time", "Value"],
+        where Value is expressed as a fraction (0-1) representing the share
+        of solar PV capacity paired with BTM storage.
+    ratio_btm_to_solar : int, optional
+        Energy capacity of BTM battery storage per unit of paired solar PV power
+        capacity, in MWh/MW. Default is 2, meaning a 1 MW solar installation is
+        paired with a 2 MWh battery.
+
+    Returns
+    -------
+    xr.DataArray
+        BTM installed energy capacity with dimensions (Time, Region) and units
+        in MWh, interpolated over the period 2000-2100.
+
+    """
+    ratio_btm_to_solar = prism.Q_(ratio_btm_to_solar, "MWh/MW")
+
+    ratio_btm_deployment = ratio_btm_deployment_data.groupby(["Region", "Time"])[["Value"]].sum()
+    ratio_btm_deployment = xr.DataArray.from_series(ratio_btm_deployment["Value"])
+    ratio_btm_deployment = prism.Q_(ratio_btm_deployment, "dimensionless")
+    ratio_btm_deployment_xr_interp = interpolate_xr(ratio_btm_deployment, t_start = 2000, t_end = 2100)
+
+    btm = ratio_btm_deployment_xr_interp * gcap_xr_interp.sel(Type="SPVR").drop_vars("Type") * ratio_btm_to_solar
+
+    return btm
 
 def calculate_storage_market_shares(
     storage_costs: xr.DataArray,
@@ -668,7 +1238,8 @@ def calculate_storage_market_shares(
     t_start = storage_costs.Cohort.values[0]
     t_end   = storage_costs.Cohort.values[-1]
 
-    # interpolate from first to last vailable year within the data, then extend to  YEAR_START and 2050 (keep values constant before first and after last year)
+    # interpolate from first to last vailable year within the data, then extend to YEAR_START and 
+    # 2050 (keep values constant before first and after last year)
     storage_costs      = interpolate_xr(storage_costs, t_start_interpolation, t_end_interpolation)
     costs_correction   = interpolate_xr(costs_correction, t_start_interpolation, t_end_interpolation)
 
@@ -711,14 +1282,16 @@ def calculate_storage_market_shares(
 
     # market shares ---
     # use the storage price development in the logit model to get market shares
-    storage_market_share = MNLogit(storage_costs_cor, mnlogit_param, dim_type=dim_type) #assumes input of an ordered dataframe with rows as years and columns as technologies, values as prices. Logitpar is the calibrated Logit parameter (usually a nagetive number between 0 and 1)
+    storage_market_share = MNLogit(storage_costs_cor, mnlogit_param, dim_type=dim_type) 
+    #assumes input of an ordered dataframe with rows as years and columns as technologies, values as 
+    # prices. Logitpar is the calibrated Logit parameter (usually a negative number between 0 and 1)
 
     return storage_market_share
 
 
-def normalize_selected_techs(market_share: xr.DataArray | pd.DataFrame, 
-                             techs: list[str], 
-                             dim_type: str | None = None
+def normalize_selected_techs(market_share: xr.DataArray | pd.DataFrame,
+                             techs: list[str],
+                             dim_type: str | None = None,
                              ) -> xr.DataArray | pd.DataFrame:
     """Select technologies and renormalize their market shares to sum to 1 per year.
 
@@ -906,7 +1479,7 @@ def apply_ce_measures_to_elc(arr: xr.DataArray, base_year: int, target_year: int
                         result.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] = (
                             arr.loc[{time_dim: slice(target_year + 1, None), type_dim: type_stock}] * (1 + increase / 100.0)
                         )
-                else: 
+                else:
                     raise ValueError(f"Unknown implementation method: '{implementation_rate}'. "
                                     "Supported methods are 'immediate', 'linear', and 's-curve'.")
             else:

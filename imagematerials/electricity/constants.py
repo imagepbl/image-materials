@@ -4,6 +4,7 @@ import os
 import pint
 import itertools
 import matplotlib.pyplot as plt
+from imagematerials.concepts import KnowledgeGraph, Node
 
 ureg = pint.UnitRegistry(force_ndarray_like=True)
 
@@ -30,8 +31,8 @@ MEGA_TO_TERA = 1_000_000  # 1 Tera = 1,000,000 Mega
 PKMS_TO_VKMS = 1_000_000_000_000
 TONNES_TO_KGS = 1000
 
-
-# General constants ---------------------------------------------
+####################################################################################################
+# General constants
 
 STD_LIFETIMES_ELECTR = 0.214  # standard deviation as a fraction of the mean lifetime applicable to energy equipment (Asset Management for Infrastructure Systems: Energy and Water, Balzer & Schorn 2015)
 # TODO: different std for lines, transformers, generation, storage, etc.? scenario dependent?
@@ -50,36 +51,57 @@ unit_mapping = {
     'MWh': ureg.megawatthour, #added
 }
 
-#  #regions in the file kilometrage.csv are like this:
-region_list_old  = [
-    'Canada',
-    'US',
-    'Mexico',
-    'Rest C.Am.',
-    'Brazil',
-    'Rest S.Am.',
-    'N.Africa',
-    'W.Africa',
-    'E.Africa',
-    'South Africa',
-    'W.Europe',
-    'C.Europe',
-    'Turkey',
-    'Ukraine',
-    'Stan',
-    'Russia',
-    'M.East',
-    'India',
-    'Korea',
-    'China',
-    'SE.Asia',
-    'Indonesia',
-    'Japan',
-    'Oceania',
-    'Rest S.Asia',
-    'Rest S.Africa']
+IHA_REGIONS = ["North & Central America", "South America", "East Asia & Pacific", "South & Central Asia", "Europe", "Africa"]
 
-# Electricity Generation related constants ---------------------------------------------
+iha_region_map = {
+    # North & Central America
+    "CAN": "North & Central America", "USA": "North & Central America", "MEX": "North & Central America", "RCAM": "North & Central America",
+    # South America
+    "BRA": "South America", "RSAM": "South America",
+    # East Asia & Pacific
+    "INDO": "East Asia & Pacific", "CHN": "East Asia & Pacific", "KOR": "East Asia & Pacific", "JAP": "East Asia & Pacific", "SEAS": "East Asia & Pacific", "OCE": "East Asia & Pacific",
+    # South & Central Asia
+    "ME": "South & Central Asia", "RUS": "South & Central Asia", "STAN": "South & Central Asia", "INDIA": "South & Central Asia", "RSAS": "South & Central Asia",
+    # Europe
+    "WEU": "Europe", "CEU": "Europe", "TUR": "Europe", "UKR": "Europe",
+    # Africa
+    "NAF": "Africa", "WAF": "Africa", "SAF": "Africa", "RSAF": "Africa", "EAF": "Africa",
+}
+
+def create_iha_region_graph():
+    """Construct and return a knowledge graph representing a mapping betweenIHA regions and their
+        associated IMAGE regions.
+
+        The graph consists of two hierarchical layers:
+        1. Superregion nodes ("North & Central America") from the International Hydropower 
+        Association (IHA) dataset.
+        2. IMAGE regions, each linked to a parent superregion via the `inherits_from` attribute.
+
+        Returns:
+        -------
+            KnowledgeGraph: A populated knowledge graph containing:
+        """
+    iha_region_knowledge_graph = KnowledgeGraph()
+
+    for super_region in ["North & Central America", "South America", "East Asia & Pacific", "South & Central Asia", "Europe", "Africa"]:
+        iha_region_knowledge_graph.add(Node(super_region, inherits_from=None))
+    for region in ["CAN", "USA", "MEX", "RCAM"]:
+        iha_region_knowledge_graph.add(Node(region, inherits_from="North & Central America"))
+    for region in ["BRA", "RSAM"]:
+        iha_region_knowledge_graph.add(Node(region, inherits_from="South America"))
+    for region in ["INDO", "CHN", "KOR", "JAP", "SEAS", "OCE"]:
+        iha_region_knowledge_graph.add(Node(region, inherits_from="East Asia & Pacific"))
+    for region in ["ME", "RUS", "STAN", "INDIA", "RSAS"]:
+        iha_region_knowledge_graph.add(Node(region, inherits_from="South & Central Asia"))
+    for region in ["WEU", "CEU", "TUR", "UKR"]:
+        iha_region_knowledge_graph.add(Node(region, inherits_from="Europe"))
+    for region in ["NAF", "WAF", "SAF", "RSAF", "EAF"]:
+        iha_region_knowledge_graph.add(Node(region, inherits_from="Africa"))
+
+    return iha_region_knowledge_graph
+
+####################################################################################################
+# Generation related constants 
 
 TECH_GEN = 34   # number of electricity generation technologies -> 33 technologies + 1 empty row
 
@@ -189,11 +211,36 @@ PHEV_CAPACITY_CURRENT = 11.2    #kWh current battery capacity of plugin electric
 
 EV_BATTERIES = ['NiMH', 'LMO', 'NMC', 'NCA', 'LFP', 'Lithium Sulfur', 'Lithium Ceramic', 'Lithium-air']
 
-# Storage related constants ---------------------------------------------
 
-# TECH_STORAGE = ?
+####################################################################################################
+# Storage related constants 
+
+# Pumped Hydropower Storage (PHS) related constants ------------------------------------------------
+# growth factor for PHS capacity relative to growth in storage energy demand after 2060 in the high 
+# PHS scenario (phs_high); a value of 0.5 means that if the storage energy demand grows by 10% from 
+# one year to the next, the PHS capacity will grow by 5% in that year.
+factor_phs_growth_rel_demand = 0.5 
+# Assumption on average discharge duration of PHS plants in hours. The discharge duration can vary 
+# widely in reality, typically ranging 6-24 h. This simplifying assumption is needed due to the lack
+# of data on installed storage energy capacity of PHS plants (MWh). Since the stock model is done in 
+# terms of energy capacity, we need to convert the available power capacity data (MW) to energy capacity.
+# Note: important for us is not the total energy produced by the PHS plant/energy cycled in a year, 
+# but the energy capacity of the reservoir, which determines how much energy can be stored at a given 
+# time as well as the materials needed for the reservoir construction (size of the reservoir).
+mean_discharge_duration = 12
+flag_phs_scenario = "phs_low" # "phs_low" or "phs_high"
 
 PHS_KG_PERKWH = 26.8   # kg per kWh storage capacity (as weight addition to existing hydro plants to make them pumped) 
+
+# Behind-the-meter storage related constants -------------------------------------------------------
+# ratio_btm_to_solar = 0.5 #0.5 MW power capacity per 1 MW Solar PV
+ratio_btm_to_solar = 2 #2 MWh energy capacity per 1 MW Solar PV
+
+TECH_STATIONARY_STORAGE = ["LFP", "NMC333", "NMC532", "NMC622", "NMC811", "NMC955", "Na-ion", 
+                                "flow-ZnBr", "flow-vanadium", "lead-acid"]
+
+TECH_STATIONARY_STORAGE_ALL = ["LFP", "NMC333", "NMC532", "NMC622", "NMC811", "NMC955", "Na-ion", 
+                                "flow-ZnBr", "flow-vanadium", "lead-acid", "PHS"]
 
 dict_storage_tech_to_groups  = {
     "nickel battery":           ["NiMH"],
@@ -207,7 +254,16 @@ dict_storage_tech_to_groups  = {
 }
 
 
-# Visualization related ---------------------------------------------
+####################################################################################################
+# Visualization related 
+
+# IMAGE regions
+# Generate 26 distinct colors by combining named color sets
+tab20 = plt.cm.tab20.colors          # 20 colors
+tab20b = plt.cm.tab20b.colors        # 20 more, pick 6
+extra = tab20b[::3][:6]              # pick every 3rd to maximize difference
+COLORS_IMAGE_REGIONS = list(tab20) + list(extra)   # 26 colors total
+
 
 # Generation technologies
 technologies = [

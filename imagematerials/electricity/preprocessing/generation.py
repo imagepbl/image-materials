@@ -8,20 +8,11 @@ from importlib.resources import files
 
 import prism
 from imagematerials.read_mym import read_mym_df
-from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
+from imagematerials.util import convert_lifetime
 from imagematerials.concepts import create_electricity_graph, create_region_graph
 from imagematerials.electricity.utils import (
-    MNLogit, 
-    stock_tail, 
-    create_prep_data, 
-    logistic, 
-    quadratic,
     interpolate_xr, 
-    add_historic_stock, 
-    calculate_grid_growth, 
-    calculate_fraction_underground,  
-    normalize_selected_techs,
-    calculate_storage_market_shares
+    add_historic_stock,
 )
 from imagematerials.electricity.preprocessing.circular_economy_measures import (
     apply_ce_measures_to_elc_generation
@@ -32,11 +23,8 @@ from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.electricity.constants import (
     STANDARD_SCEN_EXTERNAL_DATA,
     YEAR_FIRST_GRID,
-    SENS_ANALYSIS,
     EPG_TECHNOLOGIES,
     STD_LIFETIMES_ELECTR,
-    EV_BATTERIES,
-    unit_mapping
 )
 
 # for ttesting, remove later:
@@ -48,7 +36,7 @@ INTERMEDIATE_YEAR = 2080
 #############################################################################################################
 
 
-def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circular_economy_config: dict):
     """ Prepare preprocessing input data for the electricity generation sub-module.
 
     This function reads scenario-dependent power generation data from a combination of IMAGE/TIMER 
@@ -65,18 +53,10 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
     circular_economy_config : dict or None
         Configuration for circular economy measures. If provided, material
         intensities and lifetimes are adjusted accordingly.
-    scenario : str
-        Name of the electricity data scenario; falls back to the standard
-        scenario if not available. While the climate_policy_config directs to the IMAGE/TIMER
-        scenario files used, this parameter specifies which set of external data files are 
-        used. The scenarios used here should be consistent with those used in climate_policy_config.
-        #TODO: come up with a better way to ensure consistency between the two scenario specifications.
     year_start : int
         First simulation year.
     year_end : int
         Last simulation year.
-    year_out : int
-        Last year that is transmitted to the stock model (year_out <= year_end). 
 
     Returns
     -------
@@ -89,12 +69,15 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
         - "set_unit_flexible": unit placeholder used internally by the model
     """
 
-    path_external_data_scenario = Path(path_base, "electricity", scenario)
+    scen = Path(climate_policy_config["config_file_path"]).name
+    path_external_data_standard = Path(path_base, "electricity", "standard_data")
+    path_external_data_scenario = Path(path_base, "electricity", scen) #test
     # test if path_external_data_scenario exists and if not set to standard scenario
     if not path_external_data_scenario.exists():
         path_external_data_scenario = Path(path_base, "electricity", STANDARD_SCEN_EXTERNAL_DATA)
 
-    # assert path_external_data_scenario.is_dir()
+    year_start = YEAR_FIRST_GRID
+    year_end = 2100
 
     ###########################################################################################################
     # Read in files #
@@ -184,7 +167,7 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
             'Region': [str(r) for r in regions],
             'Type': [str(r) for r in techs]
         },
-        name='GCap'
+        name='GenerationCapacity'
     )
     gcap_xr = prism.Q_(gcap_xr, "MW")
     gcap_xr = knowledge_graph_region.rebroadcast_xarray(gcap_xr, output_coords=IMAGE_REGIONS, dim="Region") 
@@ -196,12 +179,12 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
 
     # interpolate_xr: The lifetimes & material intensities are only given for specific years (2020 and 2050), so we linearly interpolate to get values for the years 2020-2050.
     # The values before 2020 are kept constant at the 2020 level, and the values after 2050 are kept constant at the 2050 level.
-    gcap_lifetime_xr_interp = interpolate_xr(gcap_lifetime_xr, YEAR_FIRST_GRID, year_out)
+    gcap_lifetime_xr_interp = interpolate_xr(gcap_lifetime_xr, year_start, year_end)
     gcap_lifetime_xr_interp.loc[dict(DistributionParams="stdev")] = gcap_lifetime_xr_interp.loc[dict(DistributionParams="mean")] * STD_LIFETIMES_ELECTR
-    gcap_materials_xr_interp = interpolate_xr(gcap_materials_xr, YEAR_FIRST_GRID, year_out)
+    gcap_materials_xr_interp = interpolate_xr(gcap_materials_xr, year_start, year_end)
 
     # TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
-    gcap_xr_interp = add_historic_stock(gcap_xr, YEAR_FIRST_GRID)
+    gcap_xr_interp = add_historic_stock(gcap_xr, year_start)
 
 
     ###########################################################################################################
@@ -226,9 +209,6 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
     prep_data["stocks"] = gcap_xr_interp
     prep_data["material_intensities"] = gcap_materials_xr_interp
     prep_data["knowledge_graph"] = create_electricity_graph()
-    # add units
-    prep_data["stocks"] = prism.Q_(prep_data["stocks"], "MW")
-    prep_data["material_intensities"] = prism.Q_(prep_data["material_intensities"], "g/MW")
     prep_data["set_unit_flexible"] = str(prism.U_(prep_data["stocks"])) # prism.U_ gives the unit back
     # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
 
