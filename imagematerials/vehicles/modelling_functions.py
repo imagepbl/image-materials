@@ -135,7 +135,7 @@ def tkms_conversion_factor(mileage, load, loadfactor):
         Factor to convert tera_tkms to nr_of_vehicles
     """
     # Conversion factor: 10^12 (tera) / (load * loadfactor * mileage)
-    conversion_factor = 1000000000000 / (load * loadfactor)
+    conversion_factor = 1e12 / (load * loadfactor)
     conversion_factor = conversion_factor.div(mileage, axis=0)
     return conversion_factor
 

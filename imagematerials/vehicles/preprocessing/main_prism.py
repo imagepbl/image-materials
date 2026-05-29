@@ -37,9 +37,9 @@ def vehicles_preprocessing_integration(base_directory: str, climate_policy_confi
     knowledge_graph_vehicle = create_vehicle_graph()
 
     # Get stock preprocessing info (conversion factors, first year, market share)
-    conversion_factor_tkms, first_year_vehicle, market_share = get_vehicle_stock_info(
-        scenario_data_directory, general_data_directory, circular_economy_config
-    )
+    load, loadfactor, first_year_vehicle, market_share, mileages = get_vehicle_stock_info(scenario_data_directory, 
+                                                                                general_data_directory, 
+                                                                                circular_economy_config)
 
     # Collect results
     return {
@@ -51,9 +51,11 @@ def vehicles_preprocessing_integration(base_directory: str, climate_policy_confi
         "maintenance_material_fractions": get_maintenance_materials(general_data_directory),
         "material_fractions": get_material_fractions(scenario_data_directory),
         # Stock-related preprocessing outputs
-        "conversion_factor_tkms": conversion_factor_tkms,
+        "load": load,
+        "loadfactor": loadfactor,
         "first_year_vehicle": first_year_vehicle,
         "market_share": market_share,
+        "mileages": mileages,
         "weights": get_weights(scenario_data_directory, general_data_directory,
                                circular_economy_config),
         "set_unit_flexible": "count"

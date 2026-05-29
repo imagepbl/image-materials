@@ -38,7 +38,6 @@ from imagematerials.vehicles.preprocessing.util import (
 def get_vehicle_stock_info(data_path: str, standard_data_path,
                            circular_economy_config):
 
-    # TODO: add description again here!
     load: pd.DataFrame = pd.read_csv(
         standard_data_path.joinpath("load_pass_and_tonnes.csv")
     )
@@ -54,7 +53,6 @@ def get_vehicle_stock_info(data_path: str, standard_data_path,
     )
 
     # first year of operation per vehicle-type
-    # 1807 was originally in the dataframe
     first_year_vehicle: pd.DataFrame = pd.read_csv(
         standard_data_path.joinpath("first_year_vehicle.csv")
     )
@@ -86,13 +84,11 @@ def get_vehicle_stock_info(data_path: str, standard_data_path,
         
         logging.debug(f"implemented '{ce_scen}' for Vehicles (mileage/kilometrage increase)")
 
-    conversion_tkm_to_vehicles  = tkms_conversion_factor(mileages, load, loadfactor)
-
     # reformatting lifetime data (because input is not yet region-specific)
 
     first_year_vehicle_regionalized = pd.DataFrame(
         0, index=first_year_vehicle.index, columns=IMAGE_REGIONS
     )
 
-    return (conversion_tkm_to_vehicles, first_year_vehicle_regionalized, market_share)
+    return (load, loadfactor, first_year_vehicle_regionalized, market_share, mileages)
 
