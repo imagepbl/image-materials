@@ -52,17 +52,17 @@ class FakeTimerTransport(prism.Model):
                                      .rename_axis(index={"time": "Time", "region": "Region"}, columns="PassengerType")
                                      .stack()
                                      .rename("passenger_kms")
-                                     .to_xarray())
+                                     .to_xarray())*1e12 # from tera to base unit (pkm)
 
-        self.passenger_kms_all_xr = prism.Q_(self.passenger_kms_all_xr, "terapkm") #TODO: check if this is right
+        self.passenger_kms_all_xr = prism.Q_(self.passenger_kms_all_xr, "person*km") #TODO: check if this is right
 
         self.tonne_kms_all_xr = (tonne_kms_all.drop(index=[27, 28], level= "region") # drop empty and global 
                                  .rename_axis(index={"time": "Time", "region": "Region"}, columns="FreightType")
                                  .stack()
                                  .rename("tonne_kms")
-                                 .to_xarray())
+                                 .to_xarray())*1e12 # from tera to base unit (tkm)
 
-        self.tonne_kms_all_xr = prism.Q_(self.tonne_kms_all_xr, "teratkm") # TODO: check if this is right
+        self.tonne_kms_all_xr = prism.Q_(self.tonne_kms_all_xr, "tonne*km") # TODO: check if this is right
         
         # assign Region short names
         self.passenger_kms_all_xr = self.passenger_kms_all_xr.assign_coords(Region=IMAGE_REGIONS)

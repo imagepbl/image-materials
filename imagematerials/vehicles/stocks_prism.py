@@ -194,7 +194,7 @@ class VehicleStocks(prism.Model):
         # Directly transfer TIMER transport activity values into the vehicles stock model.
         self.passenger_kms = self.timer_model.passenger_kms
         self.tonne_kms = self.timer_model.tonne_kms
-        self.total_vehicles: prism.Array[REGION, MODE, "count"] = prism.export()
+        # self.total_vehicles: prism.Array[REGION, MODE, "count"] = prism.export()
 
         self.total_vehicles = self._calculate_total_vehicles_by_type(t)
         
@@ -213,16 +213,15 @@ class VehicleStocks(prism.Model):
         """
         # initiate xra.DataArray to hold total vehicles by type and region
         # convert unit from terra to base unit (pkm or tkm)
-        self.passenger_kms = self.passenger_kms.pint.to("pkm")
-        self.tonne_kms = self.tonne_kms.pint.to("tkm")
+        self.passenger_kms = self.passenger_kms.pint.to("person*km")
+        self.tonne_kms = self.tonne_kms.pint.to("tonne*km")
 
         # 1. Simple vehicle types ["Passenger Planes", "Trains", "High Speed Trains", "Bikes"]
         simple_types = ["Passenger Planes", "Trains", "High Speed Trains", "Bikes"]
         # unit handling maybe not the nicest way, but works for now, otherwise all need to be loaded as xr instead of pd
-        # TODO: check if units are correct 
-        vehicle_kms = self.passenger_kms.sel(PassengerType=simple_types) / (prism.Q_(self.load[simple_types].values, "persons/vehicle") * 
+        vehicle_kms = self.passenger_kms.sel(PassengerType=simple_types) / (prism.Q_(self.load[simple_types].values, "persons/count") * 
                                                                             prism.Q_(self.loadfactor[simple_types].values, "dimensionless"))
-        nr_vehicles_simple = vehicle_kms / prism.Q_(self.mileages[simple_types].loc[int(prism.M_(time))].values, "km/vehicle")
+        nr_vehicles_simple = vehicle_kms / prism.Q_(self.mileages[simple_types].loc[int(prism.M_(time))].values, "km")
         # self.total_vehicles.loc[dict(Mode=simple_types)] = nr_vehicles_simple
         # TODO: find out how to combine the results within one time step
         return nr_vehicles_simple
