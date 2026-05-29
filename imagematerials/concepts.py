@@ -1366,14 +1366,31 @@ def create_electricity_graph():
 
     # # Sub-Technologies ---------------------------------------------------------------------------
 
+    subtech_to_tech = {
+        "WON_GB-DFIG": ["WON"],
+        "WON_GB-PMSG": ["WON"],
+        "WON_DD-PMSG": ["WON"],
+        "WON_DD-EESG": ["WON"],
+        "WOFF_GB-DFIG": ["WOFF"],
+        "WOFF_GB-PMSG": ["WOFF"],
+        "WOFF_DD-PMSG": ["WOFF"],
+        "WOFF_DD-EESG": ["WOFF"],
+        "parabolic trough": ["CSP"],
+        "solar tower": ["CSP"],
+    }
+
+    for subtech in subtech_to_tech.keys():
+        parent = subtech_to_tech.get(subtech)
+        electricity_knowledge_graph.add(Node(subtech, inherits_from=parent))
+
     # for subtype in ["c-Si", "a-Si", "CIGS", "CdTe", "Perovskite"]:
     #     electricity_knowledge_graph.add(Node(subtype, inherits_from="Solar PV"))
     #     electricity_knowledge_graph.add(Node(subtype, inherits_from="Solar PV residential")) # is this possible?
 
-    # for subtype in ["Fresnel Reflector", "Central Receiver", "Parabolic Trough", "Parabolic Dish"]:
+    # for subtype in ["parabolic trough", "solar tower"]:
     #     electricity_knowledge_graph.add(Node(subtype, inherits_from="CSP"))
 
-    # for subtype in ["Geared - High Speed", "Geared - Medium speed", "Direct Drive"]:
+    # for subtype in ["WON_GB-DFIG", "WON_GB-PMSG", "Direct Drive"]:
     #     electricity_knowledge_graph.add(Node(subtype, inherits_from="Wind onshore"))
     #     electricity_knowledge_graph.add(Node(subtype, inherits_from="Wind offshore"))
 

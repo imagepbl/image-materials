@@ -260,7 +260,7 @@ class SharesInflowStocks(prism.Model):
     present for which the market shares are known for the INFLOW.
     A model class for managing stocks and their inflows and outflows over time, 
     including the computation of initial and dynamic stock values based on input data.
-    
+
     Attributes
     ----------
     Region : prism.Coords[REGION]
@@ -268,7 +268,7 @@ class SharesInflowStocks(prism.Model):
     SuperType : prism.Coords[STOCK_SUPERTYPE]
         Defines the stock super types (e.g., electricity storage type ("Other storage")).
     Type : prism.Coords[STOCK_TYPE]
-        Defines the stock sub types (e.g., different storage sub types (NIMH, Hydrogen, Lithium Sulfur etc.)).
+        Defines the stock sub types (e.g., different storage sub types (NMC, LFP etc.)).
     Cohort : prism.Coords[COHORT]
         Defines the cohorts (e.g., different age groups of stock).
     Time : prism.Coords[TIME]
@@ -276,15 +276,17 @@ class SharesInflowStocks(prism.Model):
     lifetimes : xr.DataArray
         Expected lifetimes for each stock type.
     stocks : xr.DataArray
-        Prescribed stock values of supertype (e.g. how many MWh "Other storage" capacity per year is needed).
+        Prescribed stock values of supertype (e.g. how many MWh "Other storage" capacity per year is 
+        needed).
     shares : xr.DataArray
-        Percentage shares of the INFLOW subtypes (e.g. shares of NIMH, Hydrogen, Lithium Sulfur etc. of "Other storage" technologies).
+        Percentage shares of the INFLOW subtypes (e.g. shares of NMC, LFP etc. of "Other storage" 
+        technologies).
     input_data : tuple of str
         Tuple of input data variable names.
     output_data : tuple of str
         Tuple of output data variable names.
+
     """
-     
     # Dimensions
     Region:     prism.Coords[REGION]
     SuperType:  prism.Coords[STOCK_SUPERTYPE]
@@ -312,19 +314,18 @@ class SharesInflowStocks(prism.Model):
     outflow_by_cohort:  prism.TimeVariable[REGION, STOCK_TYPE, COHORT, UnitFlexibleStock] = prism.export()
 
     def compute_initial_values(self, time: prism.Timeline):
-        """
-        Initializes stocks and the survival matrix.
+        """Initializes stocks and the survival matrix.
 
         Creates the survival matrix from lifetime distributions and type shares,
         and initializes the stock-by-cohort array with zeros (carrying the units
         from `self.stocks`).
-        
+
         Parameters
         ----------
         time : prism.Timeline
             The simulation timeline.
+
         """
-        
         survival = ScipySurvival(self.lifetimes, self.shares.coords["Type"],
                                  knowledge_graph=self.knowledge_graph)
         self.survival_matrix = SurvivalMatrix(survival)
@@ -339,20 +340,20 @@ class SharesInflowStocks(prism.Model):
 
 
     def compute_values(self, time: prism.Time):
-        """
-        Computes stocks, inflows by cohort, and outflows by cohort for the current time step.
+        """Computes stocks, inflows by cohort, and outflows by cohort for the current time step.
 
         At time `t`, this method:
         - Computes the inflow required to meet the target stock, distributed across sub-technologies 
         according to shares in the inflow.
-        - Calculates future stock development of the current cohort `t` (= inflow in year t) based on 
-        the survival matrix.
+        - Calculates future stock development of the current cohort `t` (= inflow in year t) based 
+        on the survival matrix.
         - Computes outflow by cohort in year t
-        
+
         Parameters
         ----------
         time : prism.Time
             The current simulation time step.
+
         """
         # pass unit from stocks
         t, dt = time.t, time.dt
