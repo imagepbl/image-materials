@@ -13,8 +13,8 @@ from imagematerials.vehicles.timertransport import FakeTimerTransport
 
 REGION = prism.Dimension("Region", IMAGE_REGIONS)
 STOCK_TYPE = prism.Dimension("Type")
-PASSENGER_TYPE = prism.Dimension("PassengerType", pkms_label)
-FREIGHT_TYPE = prism.Dimension("FreightType", tkms_label)
+PASSENGER_TYPE = prism.Dimension("Type", pkms_label)
+FREIGHT_TYPE = prism.Dimension("Type", tkms_label)
 COHORT = prism.Dimension("Cohort")
 TIME = prism.Dimension("Time")
 MATERIAL_TYPE = prism.Dimension("material")
@@ -42,8 +42,7 @@ class TIMERMaterials(prism.Model):
         
         vehicles = VehicleStocks(timeline, 
                                  climate_policy_scenario_dir)
-        vehicles.compute_initial_values(timeline, 
-                                        climate_policy_scenario_dir)
+        vehicles.compute_initial_values(timeline)
         
         # Extract dimensions from the VehicleStocks submodel if not already set
         if not hasattr(self, 'Region') or self.Region is None:

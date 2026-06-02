@@ -11,6 +11,7 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
+import prism
 import xarray as xr
 
 from imagematerials.vehicles.constants import END_YEAR, FIRST_YEAR, REGIONS
@@ -112,32 +113,46 @@ def tkms_to_nr_of_vehicles_fixed(tera_tkms, mileage, load, loadfactor):
     nr_of_vehicles = vkms.div(mileage, axis=0)
     return nr_of_vehicles
 
-def tkms_conversion_factor(mileage, load, loadfactor):
+def convert_from_tkpm_or_pkm_to_nr_vehicles(tkm_or_pkm: xr.DataArray, types: list[str], load, 
+                                            loadfactor, mileage, type:str, time: int):
     """
-    Returns a conversion factor that translates ton kilometers to nr of vehicles using fixed indicators 
-    on mileage, load capacity and load factor.
-    
-    The returned factor can be multiplied with tera_tkms to get nr_of_vehicles:
-    nr_of_vehicles = tera_tkms * conversion_factor
-    
-    Parameters:
-    -----------
-    mileage : pd.DataFrame or pd.Series
-        Vehicle mileage (km/year)
-    load : pd.DataFrame or pd.Series
-        Load capacity (tonnes)
-    loadfactor : pd.DataFrame or pd.Series
-        Load factor (utilization rate)
-    
-    Returns:
-    --------
-    conversion_factor : pd.DataFrame or pd.Series
-        Factor to convert tera_tkms to nr_of_vehicles
+    Replaces the tkms_to_nr_of_vehicles_fixed function
     """
-    # Conversion factor: 10^12 (tera) / (load * loadfactor * mileage)
-    conversion_factor = 1e12 / (load * loadfactor)
-    conversion_factor = conversion_factor.div(mileage, axis=0)
-    return conversion_factor
+    # differentiate type to be correct with unit
+    if type == "passenger":
+        load_unit = "persons/count"
+        loadfactor_unit = "dimensionless"
+        mileage_unit = "km"
+    elif type == "freight":
+        load_unit = "tonne/count"
+        loadfactor_unit = "dimensionless"
+        mileage_unit = "km"
+    else: 
+        raise ValueError(f"Unknown type {type} in convert_from_tkpm_pkm_to_nr_vehicles, expected 'passenger' or 'freight'")
+    # Keep the conversion factors aligned on Type so xarray can broadcast safely
+    load_by_type = xr.DataArray(load.loc[load.index[0], types].to_numpy(),
+                                coords={"Type": types},
+                                dims=("Type"))
+    loadfactor_by_type = xr.DataArray(
+        loadfactor.loc[loadfactor.index[0], types].to_numpy(),
+        coords={"Type": types},
+        dims=("Type"))
+    
+    mileage_by_type = xr.DataArray(
+        mileage.loc[int(prism.M_(time)), types].to_numpy(),
+        coords={"Type": types},
+        dims=("Type"))
+
+    # first convert to nr of vehicles
+    vehicle_kms = tkm_or_pkm.sel(Type=types) / (
+        prism.Q_(load_by_type.to_numpy(), load_unit)
+        * prism.Q_(loadfactor_by_type.to_numpy(), loadfactor_unit)
+    )
+    # then convert to nr of vehicles using mileage data
+    nr_vehicles = vehicle_kms / prism.Q_(mileage_by_type.to_numpy(), mileage_unit)
+
+    return nr_vehicles
+    
 
 def scenario_change(df, base_year, target_year, change, implementation_rate, data_type = None, steepness=0.5):
     """

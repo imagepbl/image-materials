@@ -25,7 +25,6 @@ from imagematerials.vehicles.modelling_functions import (
     apply_change_per_region,
     interpolate,
     scenario_change,
-    tkms_conversion_factor
 )
 from imagematerials.vehicles.preprocessing.shares import get_vehicle_shares
 from imagematerials.vehicles.preprocessing.util import (

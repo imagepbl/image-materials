@@ -16,8 +16,8 @@ from imagematerials.vehicles.stocks_prism import VehicleStocks
 
 REGION = prism.Dimension("Region", IMAGE_REGIONS)
 STOCK_TYPE = prism.Dimension("Type")
-PASSENGER_TYPE = prism.Dimension("PassengerType", pkms_label)
-FREIGHT_TYPE = prism.Dimension("FreightType", tkms_label)
+PASSENGER_TYPE = prism.Dimension("Type", pkms_label)
+FREIGHT_TYPE = prism.Dimension("Type", tkms_label)
 COHORT = prism.Dimension("Cohort")
 TIME = prism.Dimension("Time")
 MATERIAL_TYPE = prism.Dimension("material")
@@ -49,7 +49,7 @@ class FakeTimerTransport(prism.Model):
 
         # convert the loaded data into xarray DataArrays for easier access during compute_values
         self.passenger_kms_all_xr = (passenger_kms_all.drop(index=[27, 28], level= "region") # drop empty and global 
-                                     .rename_axis(index={"time": "Time", "region": "Region"}, columns="PassengerType")
+                                     .rename_axis(index={"time": "Time", "region": "Region"}, columns="Type")
                                      .stack()
                                      .rename("passenger_kms")
                                      .to_xarray())*1e12 # from tera to base unit (pkm)
@@ -57,10 +57,10 @@ class FakeTimerTransport(prism.Model):
         self.passenger_kms_all_xr = prism.Q_(self.passenger_kms_all_xr, "person*km") #TODO: check if this is right
 
         self.tonne_kms_all_xr = (tonne_kms_all.drop(index=[27, 28], level= "region") # drop empty and global 
-                                 .rename_axis(index={"time": "Time", "region": "Region"}, columns="FreightType")
+                                 .rename_axis(index={"time": "Time", "region": "Region"}, columns="Type")
                                  .stack()
                                  .rename("tonne_kms")
-                                 .to_xarray())*1e12 # from tera to base unit (tkm)
+                                 .to_xarray())*1e6 # from millions to base unit (tkm)
 
         self.tonne_kms_all_xr = prism.Q_(self.tonne_kms_all_xr, "tonne*km") # TODO: check if this is right
         
