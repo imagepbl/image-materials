@@ -87,3 +87,11 @@ def test_timer_interface(tmpdir):
     vehicles_model.vehicles.get("inflow_materials")
     timer_vehicle_model.get("inflow_materials")
 
+def compare_total_vehicles_stocks_to_original(self, total, time):
+    for vehicle in total.coords["Type"].values:
+        # skip these for now as they are still need to be split up in suptypes in the new calculation
+        # compare to 1e-6 to account for small discrepancies in data handling
+        if vehicle not in ["Light Commercial Vehicles", "Cars", "Medium Freight Trucks", "Heavy Freight Trucks", "Regular Buses", "Midi Buses"]:
+            compare_new = self.stocks_original.sel(Type = vehicle).loc[int(prism.M_(time))].sum()
+            compare_old = total.sel(Type=vehicle).sum()
+            assert abs(compare_new - compare_old) < 1e-6, f"Discrepancy in {vehicle} calculation for time {time}: original total {self.stocks_original.sel(Type = vehicle).loc[int(prism.M_(time))].sum().values}, new total {total.sel(Type=vehicle).sum().values}"

@@ -37,9 +37,11 @@ def vehicles_preprocessing_integration(base_directory: str, climate_policy_confi
     knowledge_graph_vehicle = create_vehicle_graph()
 
     # Get stock preprocessing info (conversion factors, first year, market share)
-    load, loadfactor, first_year_vehicle, market_share, mileages = get_vehicle_stock_info(scenario_data_directory, 
-                                                                                general_data_directory, 
-                                                                                circular_economy_config)
+    (load, loadfactor, first_year_vehicle, 
+     market_share, mileages, kilometrage_cars, 
+     kilometrage_midi_bus, kilometrage_bus) = get_vehicle_stock_info(scenario_data_directory, 
+                                                                     general_data_directory, 
+                                                                     circular_economy_config)
 
     # Collect results
     return {
@@ -56,6 +58,9 @@ def vehicles_preprocessing_integration(base_directory: str, climate_policy_confi
         "first_year_vehicle": first_year_vehicle,
         "market_share": market_share,
         "mileages": mileages,
+        "kilometrage_cars": kilometrage_cars,
+        "kilometrage_midi_bus": kilometrage_midi_bus,
+        "kilometrage_bus": kilometrage_bus,
         "weights": get_weights(scenario_data_directory, general_data_directory,
                                circular_economy_config),
         "set_unit_flexible": "count"

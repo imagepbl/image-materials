@@ -25,6 +25,6 @@ vehicle_stocks = VehicleStocks(complete_timeline, path_climate_data)
 vehicle_stocks.simulate(simulation_timeline)
 vehicle_stocks
 
-timer_vehicle_model = TIMERMaterials(complete_timeline, path_climate_data)
-timer_vehicle_model.simulate(simulation_timeline)
-timer_vehicle_model
+# timer_vehicle_model = TIMERMaterials(complete_timeline, path_climate_data)
+# timer_vehicle_model.simulate(simulation_timeline)
+# timer_vehicle_model

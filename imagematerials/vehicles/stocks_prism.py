@@ -5,12 +5,16 @@ passenger and tonne kilometer demands, using the shares and conversion factors
 determined during preprocessing.
 """
 
+from imagematerials.factory import ModelFactory
+
 import logging
+import warnings
 import xarray as xr
 import numpy as np
 import pandas as pd
 import prism
 from pathlib import Path
+from pint.errors import UnitStrippedWarning
 
 from imagematerials.concepts import KnowledgeGraph, create_region_graph
 from imagematerials.constants import IMAGE_REGIONS, base_directory, base_directory_integration
@@ -23,7 +27,8 @@ from imagematerials.vehicles.constants import (
     PKMS_TO_VKMS,
     REGIONS,
     START_YEAR,
-    all_modes
+    all_modes, 
+    LOAD_FACTOR
 )
 #from imagematerials.vehicles.preprocessing.main_prism import vehicles_preprocessing_integration
 from imagematerials.vehicles.shares_prism import get_vehicle_shares_prism
@@ -38,6 +43,14 @@ STOCK_TYPE = prism.Dimension("Type")
 MODE = prism.Dimension("Mode", all_modes)
 TIME = prism.Dimension("Time")
 UnitFlexibleStock = prism.DynamicUnit("my_unit_stock")
+
+# inconvert_from_tkpm_or_pkm_to_nr_vehicles we downcast xarray to numpy 
+# however we assign a unit in the same step to make it a prism array - therefore supress warning
+warnings.filterwarnings(
+    "ignore",
+    message="The unit of the quantity is stripped when downcasting to ndarray.",
+    category=UnitStrippedWarning,
+)
 
 
 @prism.interface
@@ -79,9 +92,7 @@ class VehicleStocks(prism.Model):
         Number of vehicles by type and region for each year
     """
     climate_policy_scenario_dir: Path
-    total_vehicles: prism.Array[REGION, MODE] = prism.export() # exported for debugging and testing
-    stocks: prism.TimeVariable = prism.export()
-
+    # total_vehicles: prism.Array[REGION, MODE] = prism.export() # exported for debugging and testing
     stocks: prism.TimeVariable = prism.export()
     
     input_data: tuple[str] = (
@@ -146,7 +157,6 @@ class VehicleStocks(prism.Model):
         )
 
         self.stocks = prism.Q_(self.stocks, unit)
-
         # Note: add flag to set settings 
         vehicle_data = vehicle_preprocessing.all_data
         self.knowledge_graph = vehicle_data["knowledge_graph"]
@@ -160,6 +170,9 @@ class VehicleStocks(prism.Model):
         self.load = vehicle_data["load"]
         self.loadfactor = vehicle_data["loadfactor"]
         self.mileages = vehicle_data["mileages"]
+        self.kilometrage_cars = vehicle_data["kilometrage_cars"]
+        self.kilometrage_midi_bus = vehicle_data["kilometrage_midi_bus"]
+        self.kilometrage_bus = vehicle_data["kilometrage_bus"]
 
         # Vehicle shares may be absent in integration preprocessing; compute them on demand.
         if "vehicle_shares" in vehicle_data:
@@ -176,6 +189,8 @@ class VehicleStocks(prism.Model):
 
         # dimension check?
         # compute historic tail
+        vhc_originl = ModelFactory.load_pkl("examples/model_results/test.pkl")
+        self.stocks_original = vhc_originl.vehicles.get("stocks")
     
     def compute_values(self, time: prism.Time):
         """Calculate vehicle stocks for the current timestep.
@@ -189,6 +204,7 @@ class VehicleStocks(prism.Model):
             Current simulation time step
         """
         t = time.t
+        print("Current time step:", t)
         # unit = str(self.set_unit_flexible)
 
         # run the "timer model" to get the latest passengerkms and tonekms data for this time step
@@ -196,6 +212,7 @@ class VehicleStocks(prism.Model):
         # Directly transfer TIMER transport activity values into the vehicles stock model.
         self.passenger_kms = self.timer_model.passenger_kms
         self.tonne_kms = self.timer_model.tonne_kms
+        self.load_car = self.timer_model.load_car
         # self.total_vehicles: prism.Array[REGION, MODE, "count"] = prism.export()
 
         self.total_vehicles = self._calculate_total_vehicles_by_type(t)
@@ -211,6 +228,8 @@ class VehicleStocks(prism.Model):
         """
         Calculate total number of vehicles by type for a given year, based on passenger and tonne kilometers.
         """
+        # load pkl model to assert
+        
         # initiate xra.DataArray to hold total vehicles by type and region
         # convert unit from terra to base unit (pkm or tkm)
         self.passenger_kms = self.passenger_kms.pint.to("person*km")
@@ -226,7 +245,8 @@ class VehicleStocks(prism.Model):
                                                                      self.mileages, 
                                                                      "passenger", 
                                                                      time)
-
+        # test to assert that the calculation of simple vehicle types matches the original model for this time step (within a reasonable tolerance)
+        assert self.stocks_original.sel(Type = simple_types).loc[int(prism.M_(time))].sum() == nr_vehicles_simple.sum(), f"Discrepancy in simple vehicle types calculation for time {time.t}: original total {self.stocks_original.sel(Type = simple_types, Time = time.t).sum().values}, new total {nr_vehicles_simple.sum().values}"
         
         # # 2 (trucks) & 3 (freight planes) & 4. (freight trains & inland ships) Freight vehicles with special handling
         # 2 Trucks are calculated differently because the IMAGE model does not account for LCV trucks
@@ -257,37 +277,48 @@ class VehicleStocks(prism.Model):
                                 air_freight_tkms.assign_coords(Type="Freight Planes").expand_dims("Type"),
                                 freight_trains_ships_tkms], 
                                 dim="Type")
-
+        
         freight_vehicles_special_vehicles = convert_from_tkpm_or_pkm_to_nr_vehicles(freight_vehicles_special_tkm, 
                                                                                     freight_vehicles_special_types,
                                                                                     self.load, 
                                                                                     self.loadfactor, 
                                                                                     self.mileages,
                                                                                     "freight", 
-                                                                                    time)      
+                                                                                    time) 
+        # 5. Cars and buses (region-specific), cars in brackets to not drop the dimension
+        cars_pkms = self.passenger_kms.sel(Type=["Cars"])
+         
+        cars_vehicles = convert_from_tkpm_or_pkm_to_nr_vehicles(cars_pkms,
+                                                            ["Cars"], 
+                                                            self.load_car, 
+                                                            LOAD_FACTOR, 
+                                                            self.kilometrage_cars, 
+                                                            "passenger", 
+                                                            time)
         
-        total = xr.concat([nr_vehicles_simple, freight_vehicles_special_vehicles], dim="Type")
+        total = xr.concat([nr_vehicles_simple, freight_vehicles_special_vehicles, cars_vehicles], dim="Type")
+        ####
+        # Test, delete later
+        for vehicle in total.coords["Type"].values:
+            # skip these for now as they are still need to be split up in suptypes in the new calculation
+            # compare to 1e-6 to account for small discrepancies in data handling
+            if vehicle not in ["Light Commercial Vehicles", "Cars", "Medium Freight Trucks", "Heavy Freight Trucks", "Regular Buses", "Midi Buses"]:
+                compare_old = self.stocks_original.sel(Type = vehicle).loc[int(prism.M_(time))].sum()
+                compare_new = total.sel(Type=vehicle).sum()
+                assert abs(compare_new - compare_old) < 1e-6, f"Discrepancy in {vehicle} calculation for time {time}: original total {self.stocks_original.sel(Type = vehicle).loc[int(prism.M_(time))].sum().values}, new total {total.sel(Type=vehicle).sum().values}"
+            if vehicle in ["Cars"]:
+                # there are some minor differences, so for cars assert if higher than 100 cars
+                sub_types = ['Cars - BEV','Cars - FCV', 'Cars - HEV', 'Cars - ICE', 'Cars - PHEV','Cars - Trolley']
+                compare_old = self.stocks_original.sel(Type = sub_types).loc[int(prism.M_(time))].sum(["Type", "Region"])
+                compare_new = total.sel(Type="Cars").sum()
+                print("Discrepancy in Cars calculation for time {}: original total {}, new total {}".format(time, compare_new.values, compare_old.values))
+                assert abs(compare_new - compare_old) < 100, f"Discrepancy in {vehicle} calculation for time {time}: original total {self.stocks_original.sel(Type = sub_types).loc[int(prism.M_(time))].sum(["Type", "Region"]).values}, new total {total.sel(Type="Cars").sum().values}"
 
         return total
 
         
-        # # Freight planes - reduced by 50% (cargo on passenger planes)
-        # if "Freight Planes" in tkms_year.coords.get("Type", []):
-        #     freight_vehicles_special
-        #     self.total_vehicles.loc[dict(Mode="Freight Planes")] = (self.conversion_factor_tkms["Freight Planes"].values / MEGA_TO_TERA * 
-        #                                             air_freight_tkms.values)
         
-        # # Other freight types needing conversion from Mega to Tera
-        # for vehicle_type in ["Freight Trains", "Inland Ships"]:
-        #     if vehicle_type in tkms_year.coords.get("Type", []):
-        #         self.total_vehicles.loc[dict(Mode=vehicle_type)] = (self.conversion_factor_tkms[vehicle_type].values / MEGA_TO_TERA * 
-        #                                             tkms_year.sel(Type=vehicle_type).values)
-        
-        # # 5. Cars and buses (region-specific)
-        # if "Cars" in pkms_year.coords.get("Type", []) or "Regular Buses" in pkms_year.coords.get("Type", []):
-        #     cars_buses = self._calculate_cars_buses(pkms_year, year)
-        #     for vehicle_type, values in cars_buses.items():
-        #         self.total_vehicles.loc[dict(Mode=vehicle_type)] = values
+
         
         # # 6. Ships (special handling)
         # if "international shipping" in tkms_year.coords.get("Type", []):

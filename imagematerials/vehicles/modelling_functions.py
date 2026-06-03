@@ -129,27 +129,47 @@ def convert_from_tkpm_or_pkm_to_nr_vehicles(tkm_or_pkm: xr.DataArray, types: lis
         mileage_unit = "km"
     else: 
         raise ValueError(f"Unknown type {type} in convert_from_tkpm_pkm_to_nr_vehicles, expected 'passenger' or 'freight'")
-    # Keep the conversion factors aligned on Type so xarray can broadcast safely
-    load_by_type = xr.DataArray(load.loc[load.index[0], types].to_numpy(),
-                                coords={"Type": types},
-                                dims=("Type"))
-    loadfactor_by_type = xr.DataArray(
-        loadfactor.loc[loadfactor.index[0], types].to_numpy(),
-        coords={"Type": types},
-        dims=("Type"))
+    # Keep conversion factors as xarray DataArrays so broadcasting follows named dims.
+    # check what type of input we have, because for cars we have TIMER input (which is already in xarray format))
+    # TODO: move the formatting to xarray for all to preprocessing to make it more efficient
+    if isinstance(load, pd.DataFrame):
+        load_by_type = xr.DataArray(
+            prism.Q_(load.loc[load.index[0], types].to_numpy(), load_unit),
+            coords={"Type": types},
+            dims=("Type",))
+    if isinstance(load, xr.DataArray):
+        load_by_type = load
+        if "Type" not in load_by_type.dims:
+            load_by_type = load_by_type.expand_dims("Type").assign_coords(Type=types)
     
-    mileage_by_type = xr.DataArray(
-        mileage.loc[int(prism.M_(time)), types].to_numpy(),
-        coords={"Type": types},
-        dims=("Type"))
+    if isinstance(loadfactor, pd.DataFrame):
+        loadfactor_by_type = xr.DataArray(
+            prism.Q_(loadfactor.loc[loadfactor.index[0], types].to_numpy(), loadfactor_unit),
+            coords={"Type": types},
+            dims=("Type",))
+        # for cars this comes as constant value
+    if isinstance(loadfactor, int) or isinstance(loadfactor, float):
+        loadfactor_by_type = loadfactor
 
-    # first convert to nr of vehicles
-    vehicle_kms = tkm_or_pkm.sel(Type=types) / (
-        prism.Q_(load_by_type.to_numpy(), load_unit)
-        * prism.Q_(loadfactor_by_type.to_numpy(), loadfactor_unit)
-    )
-    # then convert to nr of vehicles using mileage data
-    nr_vehicles = vehicle_kms / prism.Q_(mileage_by_type.to_numpy(), mileage_unit)
+    # for cars & buses kilometrage, and also Region dependent, already passed as xarray, so no need to convert from pd.DataFrame
+    if isinstance(mileage, pd.DataFrame):
+        mileage_by_type = xr.DataArray(
+            prism.Q_(mileage.loc[int(prism.M_(time)), types].to_numpy(), mileage_unit),
+            coords={"Type": types},
+            dims=("Type",))
+    if isinstance(mileage, xr.DataArray):
+        mileage_by_type = mileage.loc[int(prism.M_(time))]
+        # check if Type is a dimension, if not expand dims to Type and assign the correct coordinates i.e. for Cars
+        if "Type" not in mileage_by_type.dims:
+            mileage_by_type = mileage_by_type.expand_dims("Type").assign_coords(Type=types)
+        prism.Q_(mileage_by_type, mileage_unit)
+    # Calculation steps:
+    # 1) first convert to nr of vehicles
+    # TODO: at the moment does not check for cars if (load_by_type * loadfactor_by_type) > 1, is this needed? maybe not, TIMER data should be right
+    load_by_type_factor = (load_by_type * loadfactor_by_type)
+    vehicle_kms = tkm_or_pkm.sel(Type=types) / load_by_type_factor
+    # 2) then convert to nr of vehicles using mileage data
+    nr_vehicles = vehicle_kms / mileage_by_type
 
     return nr_vehicles
     

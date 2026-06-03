@@ -23,7 +23,7 @@ OUT_YEAR = END_YEAR
 REGIONS = 26
 # reference loadfactor of cars in TIMER (the trp_trvl_Load.out file is
 # relative to this BASE loadfcator (persons/car))
-LOAD_FACTOR = 1.6
+LOAD_FACTOR = 1.6 # for cars
 
 LIGHT_COMMERCIAL_VEHICLE_SHARE = 0.04 
 # 0.04 is the fraction of the tkms driven by light commercial vehicles according to the IEA
