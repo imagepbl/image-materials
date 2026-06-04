@@ -28,7 +28,30 @@ The sampled DataFrame can be written back to CSV with:
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 
+from imagematerials.concepts import (
+    create_electricity_graph, 
+    create_region_graph, 
+    create_vehicle_graph_2,
+    create_building_graph
+)
+from imagematerials.electricity.utils import (
+    logistic, 
+    quadratic,
+    interpolate_xr,
+)
+from imagematerials.vehicles.constants import maintenance_modes
+
+dict_knowledge_graph = {
+    "vehicles": create_vehicle_graph_2(),
+    "electricity": create_electricity_graph(),
+    "buildings": create_building_graph(),
+}
+
+dict_sector_types = {
+    "vehicles": maintenance_modes,
+}
 
 # ---------------------------------------------------------------------------
 # Sampling distributions
@@ -62,21 +85,42 @@ DISTRIBUTIONS = {
 # ---------------------------------------------------------------------------
 
 def load_ranges(filepath: str) -> pd.DataFrame:
-    """
-    Load the ranges CSV.
+    """Load the ranges CSV.
 
     Expected columns: year, material, technology, min, max
     Optional columns: mode  (needed for triangular distribution)
                       distribution  (defaults to 'uniform')
 
     Returns the raw long-form DataFrame; pass it directly to sample_intensities.
+
     """
     df = pd.read_csv(filepath)
 
-    required = {"year", "material", "technology", "min", "max"}
-    missing = required - set(df.columns)
-    if missing:
-        raise ValueError(f"Ranges file is missing columns: {missing}")
+    aliases = {
+        "Cohort": ["time", "Time", "year", "years", "Year", "cohort", "Cohort"],
+        "Type": ["technology", "Technology", "type", "Type"],
+        "material": ["material", "Material"],
+    }
+
+    rename_map = {}
+
+    for target, candidates in aliases.items():
+        found = [c for c in candidates if c in df.columns]
+
+        if not found:
+            raise ValueError(
+                f"Missing required column for '{target}'. "
+                f"Expected one of: {candidates}"
+            )
+
+        rename_map[found[0]] = target
+
+    df = df.rename(columns=rename_map)
+
+    # required = {"time", "material", "technology", "min", "max"}
+    # missing = required - set(df.columns)
+    # if missing:
+    #     raise ValueError(f"Ranges file is missing columns: {missing}")
 
     if "distribution" not in df.columns:
         df["distribution"] = "uniform"
@@ -85,12 +129,14 @@ def load_ranges(filepath: str) -> pd.DataFrame:
 
 
 def sample_intensities(
-    ranges: pd.DataFrame,
-    rng: np.random.Generator | None = None,
-    seed: int | None = None,
-) -> pd.DataFrame:
-    """
-    Draw one random sample from each (year, material, technology) range.
+        sector: str,
+        ranges: pd.DataFrame,
+        rng: np.random.Generator | None = None,
+        seed: int | None = None,
+        year_start: int | None = 1971,
+        year_end: int | None = 2100
+    ) -> xr.DataArray:
+    """Sample material intensities by drawing one random sample from each (Time, material, Type) range.
 
     Parameters
     ----------
@@ -103,13 +149,8 @@ def sample_intensities(
 
     Returns
     -------
-    pd.DataFrame
-        Wide-format DataFrame identical in structure to the original
-        material intensities file:
-            - first two index levels: year, material
-            - columns: technologies
-        The DataFrame is NOT indexed (year and material are plain columns),
-        matching the original CSV layout.
+    xr.DataArray
+
     """
     if rng is None:
         rng = np.random.default_rng(seed)
@@ -124,39 +165,27 @@ def sample_intensities(
                 f"Available: {list(DISTRIBUTIONS)}"
             )
         value = sampler(rng, row)
-        rows.append({"year": row["year"], "material": row["material"],
-                     "technology": row["technology"], "value": value})
+        rows.append({"Cohort": row["Cohort"], "material": row["material"],
+                     "Type": row["Type"], "value": value})
 
     long_df = pd.DataFrame(rows)
 
-    # Pivot to wide format: rows = (year, material), columns = technology
-    wide_df = long_df.pivot_table(
-        index=["year", "material"],
-        columns="technology",
-        values="value",
-        aggfunc="first",
-    ).reset_index()
+    da = long_df.set_index(["Cohort", "Type", "material"])["value"].to_xarray()
+    da_interp = interpolate_xr(da, year_start, year_end)
+    kg = dict_knowledge_graph[sector]
+    da_interp = kg.rebroadcast_xarray(da_interp, output_coords=dict_sector_types[sector])
 
-    wide_df.columns.name = None  # remove the pivot artefact name
-    return wide_df
+    return da_interp
 
+# def sample_lifetimes(
+#         sector: str,
+#         ranges: pd.DataFrame,
+#         rng: np.random.Generator | None = None,
+#         seed: int | None = None,
+#         year_start: int | None = 1971,
+#         year_end: int | None = 2100
+#     ) -> dict:
 
-# ---------------------------------------------------------------------------
-# Example / quick test
-# ---------------------------------------------------------------------------
+#     #...
 
-if __name__ == "__main__":
-    import sys
-
-    ranges_file = sys.argv[1] if len(sys.argv) > 1 else "material_intensities_ranges.csv"
-    n = int(sys.argv[2]) if len(sys.argv) > 2 else 5
-
-    ranges = load_ranges(ranges_file)
-    rng = np.random.default_rng(42)
-
-    print(f"Running {n} Monte Carlo iterations ...\n")
-    for i in range(n):
-        mi = sample_intensities(ranges, rng=rng)
-        print(f"--- Iteration {i + 1} ---")
-        print(mi.to_string(index=False))
-        print()
+#     return

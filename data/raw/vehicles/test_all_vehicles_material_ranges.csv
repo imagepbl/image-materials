@@ -1,4 +1,4 @@
-year,category,technology,material,min,max
+time,category,technology,material,min,max
 2020,transport,air_freight,aluminium,0.612,0.748
 2020,transport,air_freight,cobalt,0.0,0.0
 2020,transport,air_freight,copper,0.0,0.0
@@ -475,6 +475,20 @@ year,category,technology,material,min,max
 2020,vehicles,car - PHEV,steel,0.4299834933,0.5255353807
 2020,vehicles,car - PHEV,titanium,0.0,0.0
 2020,vehicles,car - PHEV,wood,0.0067062303,0.0081965037
+2020,vehicles,car - Trolley,aluminium,0.0,0.0
+2020,vehicles,car - Trolley,cobalt,0.0,0.0
+2020,vehicles,car - Trolley,copper,0.0,0.0
+2020,vehicles,car - Trolley,glass,0.0,0.0
+2020,vehicles,car - Trolley,lead,0.0,0.0
+2020,vehicles,car - Trolley,lithium,0.0,0.0
+2020,vehicles,car - Trolley,manganese,0.0,0.0
+2020,vehicles,car - Trolley,neodymium,0.0,0.0
+2020,vehicles,car - Trolley,nickel,0.0,0.0
+2020,vehicles,car - Trolley,plastics,0.0,0.0
+2020,vehicles,car - Trolley,rubber,0.0,0.0
+2020,vehicles,car - Trolley,steel,0.0,0.0
+2020,vehicles,car - Trolley,titanium,0.0,0.0
+2020,vehicles,car - Trolley,wood,0.0,0.0
 2020,vehicles,midi_bus - BEV,aluminium,0.32868,0.40172
 2020,vehicles,midi_bus - BEV,cobalt,0.0,0.0
 2020,vehicles,midi_bus - BEV,copper,0.00225,0.00275
