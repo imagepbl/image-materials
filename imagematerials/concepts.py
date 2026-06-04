@@ -520,6 +520,155 @@ def create_vehicle_graph():
     return vehicle_knowledge_graph
 
 
+def create_vehicle_graph_2():
+    """Create the knowledge graph for the vehicle/transport sector (including type synonyms)."""
+    vehicle_knowledge_graph = KnowledgeGraph(Node("Vehicles"))
+
+    # Bikes
+    vehicle_knowledge_graph.add(Node("Bikes", synonyms=["bikes", "bicycle"], inherits_from="Vehicles"))
+
+    # Airplanes
+    vehicle_knowledge_graph.add(Node("Airplanes", synonyms=["airplanes"], inherits_from="Vehicles"))
+    for subtype, synonyms in {
+        "Freight Planes": ["freight planes", "air_freight"],
+        "Passenger Planes": ["passenger planes", "air_pas"]
+    }.items():
+        vehicle_knowledge_graph.add(Node(subtype, synonyms=synonyms, inherits_from="Airplanes"))
+
+    # Ships
+    vehicle_knowledge_graph.add(Node("Ships", inherits_from="Vehicles"))
+    for subtype, synonyms in {
+        "Small Ships": ["small ships", "sea_shipping_small"],
+        "Medium Ships": ["medium ships", "sea_shipping_med"],
+        "Large Ships": ["large ships", "sea_shipping_large"],
+        "Very Large Ships": ["very large ships", "sea_shipping_vl"],
+        "Inland Ships": ["inland ships", "inland_shipping"]
+    }.items():
+        vehicle_knowledge_graph.add(Node(subtype, synonyms=synonyms, inherits_from="Ships"))
+
+    # Trains
+    vehicle_knowledge_graph.add(Node("Railway", inherits_from="Vehicles"))
+    for subtype, synonyms in {
+        "Freight Trains": ["freight trains", "rail_freight"],
+        "Trains": ["rail_reg", "Regular Trains"], #
+        "High Speed Trains": ["high speed trains", "rail_hst"]
+    }.items():
+        vehicle_knowledge_graph.add(Node(subtype, synonyms=synonyms, inherits_from="Railway"))
+        # vehicle_knowledge_graph.add(Node(subtype, synonyms=synonyms, inherits_from="Vehicles"))
+
+    # Trucks
+    vehicle_knowledge_graph.add(Node("Trucks", inherits_from="Vehicles"))
+    for super_type, synonyms in {
+        "Heavy Freight Trucks": ["heavy freight trucks", "HFT"],
+        "Light Commercial Vehicles": ["light commercial vehicles", "LCV"],
+        "Medium Freight Trucks": ["medium freight trucks", "MFT"]
+    }.items():
+        vehicle_knowledge_graph.add(Node(name=super_type, synonyms=synonyms, inherits_from="Trucks"))
+
+    # Buses
+    vehicle_knowledge_graph.add(Node("Buses", inherits_from="Vehicles"))
+    for super_type, synonyms in {
+        "Regular Buses": ["regular buses", "reg_bus"],
+        "Midi Buses": ["midi buses", "midi_bus"]
+    }.items():
+        vehicle_knowledge_graph.add(Node(name=super_type, synonyms=synonyms, inherits_from="Buses"))
+
+    # Cars
+    vehicle_knowledge_graph.add(Node("Cars", inherits_from="Vehicles"))
+
+    # Engines
+    for engine, synonyms in {
+        "BEV": ["battery electric vehicles"],
+        "FCV": ["fuel cell vehicle"],
+        "HEV": ["hybrid electric vehicle"],
+        "ICE": ["internal combustion engine"],
+        "PHEV": ["plug-in hybrid electric vehicle"],
+        "Trolley": []
+        }.items():
+        vehicle_knowledge_graph.add(Node(name=engine, synonyms=synonyms, inherits_from="Vehicles"))
+
+    road_vehicles = {
+        "HFT - BEV": ["Heavy Freight Trucks - BEV"],
+        "HFT - FCV": ["Heavy Freight Trucks - FCV"],
+        "HFT - HEV": ["Heavy Freight Trucks - HEV"],
+        "HFT - ICE": ["Heavy Freight Trucks - ICE"],
+        "HFT - PHEV": ["Heavy Freight Trucks - PHEV"],
+        "HFT - Trolley": ["Heavy Freight Trucks - Trolley"],
+        "LCV - BEV": ["Light Commercial Vehicles - BEV"],
+        "LCV - FCV": ["Light Commercial Vehicles - FCV"],
+        "LCV - HEV": ["Light Commercial Vehicles - HEV"],
+        "LCV - ICE": ["Light Commercial Vehicles - ICE"],
+        "LCV - PHEV": ["Light Commercial Vehicles - PHEV"],
+        "LCV - Trolley": ["Light Commercial Vehicles - Trolley"],
+        "MFT - BEV": ["Medium Freight Trucks - BEV"],
+        "MFT - FCV": ["Medium Freight Trucks - FCV"],
+        "MFT - HEV": ["Medium Freight Trucks - HEV"],
+        "MFT - ICE": ["Medium Freight Trucks - ICE"],
+        "MFT - PHEV": ["Medium Freight Trucks - PHEV"],
+        "MFT - Trolley": ["Medium Freight Trucks - Trolley"],
+        "car - BEV": ["Cars - BEV"],
+        "car - FCV": ["Cars - FCV"],
+        "car - HEV": ["Cars - HEV"],
+        "car - ICE": ["Cars - ICE"],
+        "car - PHEV": ["Cars - PHEV"],
+        "car - Trolley": ["Cars - Trolley"],
+        "midi_bus - BEV": ["Midi Buses - BEV"],
+        "midi_bus - FCV": ["Midi Buses - FCV"],
+        "midi_bus - HEV": ["Midi Buses - HEV"],
+        "midi_bus - ICE": ["Midi Buses - ICE"],
+        "midi_bus - PHEV": ["Midi Buses - PHEV"],
+        "midi_bus - Trolley": ["Midi Buses - Trolley"],
+        "reg_bus - BEV": ["Regular Buses - BEV"],
+        "reg_bus - FCV": ["Regular Buses - FCV"],
+        "reg_bus - HEV": ["Regular Buses - HEV"],
+        "reg_bus - ICE": ["Regular Buses - ICE"],
+        "reg_bus - PHEV": ["Regular Buses - PHEV"],
+        "reg_bus - Trolley": ["Regular Buses - Trolley"],
+    }
+    engine_mapping = {
+        "HFT - BEV": ["Heavy Freight Trucks", "BEV"],
+        "HFT - FCV": ["Heavy Freight Trucks", "FCV"],
+        "HFT - HEV": ["Heavy Freight Trucks", "HEV"],
+        "HFT - ICE": ["Heavy Freight Trucks", "ICE"],
+        "HFT - PHEV": ["Heavy Freight Trucks", "PHEV"],
+        "HFT - Trolley": ["Heavy Freight Trucks", "Trolley"],
+        "LCV - BEV": ["Light Commercial Vehicles", "BEV"],
+        "LCV - FCV": ["Light Commercial Vehicles", "FCV"],
+        "LCV - HEV": ["Light Commercial Vehicles", "HEV"],
+        "LCV - ICE": ["Light Commercial Vehicles", "ICE"],
+        "LCV - PHEV": ["Light Commercial Vehicles", "PHEV"],
+        "LCV - Trolley": ["Light Commercial Vehicles", "Trolley"],
+        "MFT - BEV": ["Medium Freight Trucks", "BEV"],
+        "MFT - FCV": ["Medium Freight Trucks", "FCV"],
+        "MFT - HEV": ["Medium Freight Trucks", "HEV"],
+        "MFT - ICE": ["Medium Freight Trucks", "ICE"],
+        "MFT - PHEV": ["Medium Freight Trucks", "PHEV"],
+        "MFT - Trolley": ["Medium Freight Trucks", "Trolley"],
+        "car - BEV": ["Cars", "BEV"],
+        "car - FCV": ["Cars", "FCV"],
+        "car - HEV": ["Cars", "HEV"],
+        "car - ICE": ["Cars", "ICE"],
+        "car - PHEV": ["Cars", "PHEV"],
+        "car - Trolley": ["Cars", "Trolley"],
+        "midi_bus - BEV": ["Midi Buses", "BEV"],
+        "midi_bus - FCV": ["Midi Buses", "FCV"],
+        "midi_bus - HEV": ["Midi Buses", "HEV"],
+        "midi_bus - ICE": ["Midi Buses", "ICE"],
+        "midi_bus - PHEV": ["Midi Buses", "PHEV"],
+        "midi_bus - Trolley": ["Midi Buses", "Trolley"],
+        "reg_bus - BEV": ["Regular Buses", "BEV"],
+        "reg_bus - FCV": ["Regular Buses", "FCV"],
+        "reg_bus - HEV": ["Regular Buses", "HEV"],
+        "reg_bus - ICE": ["Regular Buses", "ICE"],
+        "reg_bus - PHEV": ["Regular Buses", "PHEV"],
+        "reg_bus - Trolley": ["Regular Buses", "Trolley"],
+    }
+    for sub_type, synonyms in road_vehicles.items():
+        vehicle_knowledge_graph.add(Node(name=sub_type, synonyms=synonyms, inherits_from=engine_mapping[sub_type]))
+
+    return vehicle_knowledge_graph
+
+
 def create_building_graph():
     """Create the knowledge graph for the buildings sector."""
     building_nodes = [
