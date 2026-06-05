@@ -35,7 +35,10 @@ idx = pd.IndexSlice
 # General functions for electricity materials model
 #####################################################################################################
 
-def add_historic_stock(da_stock, year_start=1920, interp_method="linear"):
+def add_historic_stock(da_stock: xr.DataArray,
+                       year_start: int = 1920,
+                       interp_method: str = "linear",
+                       dim: str | None = None):
     """Calculate historic (pre TIMER simulation time = before 1971) stock values.
 
     In year_start the stock is 0, then it (linearly) increases to the first existing year in da.
@@ -59,6 +62,15 @@ def add_historic_stock(da_stock, year_start=1920, interp_method="linear"):
         interpolated according to `interp_method` up to the first year in `da`
 
     """
+    if dim is not None:
+        type_dim = dim
+    elif "Type" in da_stock.dims:
+        type_dim = "Type"
+    elif "SuperType" in da_stock.dims:
+        type_dim = "SuperType"
+    else:
+        raise ValueError(f"Could not find a type dimension. Please specify with `dim=`.")
+
     t_first = int(da_stock.Time.min())
     if year_start >= t_first:
         return da_stock
@@ -81,8 +93,8 @@ def add_historic_stock(da_stock, year_start=1920, interp_method="linear"):
     # Build historic DataArray
     da_stock_hist = xr.DataArray(
         stock_hist,
-        coords={"Time": t_hist, "Region": da_stock.Region, "Type": da_stock.Type},
-        dims=("Time", "Region", "Type")
+        coords={"Time": t_hist, "Region": da_stock.Region, type_dim: da_stock[type_dim]},
+        dims=("Time", "Region", type_dim)
     )
 
     da_stock_hist = prism.Q_(da_stock_hist, unit)
