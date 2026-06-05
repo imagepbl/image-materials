@@ -150,6 +150,50 @@ EPG_TECHNOLOGIES = [
     "H2CHP"
 ]
 
+EPG_SUB_TECHNOLOGIES = [
+    "SPV",
+    "SPVR",
+    "parabolic trough",
+    "solar tower",
+    "WON_GB-DFIG",
+    "WON_GB-PMSG",
+    "WON_DD-PMSG",
+    "WON_DD-EESG",
+    "WOFF_GB-DFIG",
+    "WOFF_GB-PMSG",
+    "WOFF_DD-PMSG",
+    "WOFF_DD-EESG",
+    "WAVE",
+    "HYD",
+    "OREN",
+    "GEO",
+    "H2P",
+    "NUC",
+    "FREE12",
+    "ClST",
+    "OlST",
+    "NGOT",
+    "BioST",
+    "IGCC",
+    "OlCC",
+    "NGCC",
+    "BioCC",
+    "ClCS",
+    "OlCS",
+    "NGCS",
+    "BioCS",
+    "ClCHP",
+    "OlCHP",
+    "NGCHP",
+    "BioCHP",
+    "ClCHPCS",
+    "OlCHPCS",
+    "NGCHPCS",
+    "BioCHPCS",
+    "GeoCHP",
+    "H2CHP"
+]
+
 EPG_TECHNOLOGIES_VRE = [
     "SPV",
     # "SPVR", #?

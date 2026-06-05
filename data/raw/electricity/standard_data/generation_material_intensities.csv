@@ -1,5 +1,5 @@
 Time,type_data,unit,Region,category,technology,sub_technology,material,value,min,max
-
+#
 2020,inflow,kg/MW,World,generation,WON,WON_GB-DFIG,steel,121376,,
 2020,inflow,kg/MW,World,generation,WON,WON_GB-DFIG,aluminium,1141,,
 2020,inflow,kg/MW,World,generation,WON,WON_GB-DFIG,concrete,433953,,
@@ -15,7 +15,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,WON,WON_GB-DFIG,dysprosium,2,,
 2020,inflow,kg/MW,World,generation,WON,WON_GB-DFIG,praseodymium,0,,
 2020,inflow,kg/MW,World,generation,WON,WON_GB-DFIG,terbium,0,,
-
+#
 2020,inflow,kg/MW,World,generation,WON,WON_GB-PMSG,steel,121376,,
 2020,inflow,kg/MW,World,generation,WON,WON_GB-PMSG,aluminium,1141,,
 2020,inflow,kg/MW,World,generation,WON,WON_GB-PMSG,concrete,433953,,
@@ -31,7 +31,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,WON,WON_GB-PMSG,dysprosium,6,,
 2020,inflow,kg/MW,World,generation,WON,WON_GB-PMSG,praseodymium,4,,
 2020,inflow,kg/MW,World,generation,WON,WON_GB-PMSG,terbium,1,,
-
+#
 2020,inflow,kg/MW,World,generation,WON,WON_DD-PMSG,steel,121376,,
 2020,inflow,kg/MW,World,generation,WON,WON_DD-PMSG,aluminium,823,,
 2020,inflow,kg/MW,World,generation,WON,WON_DD-PMSG,concrete,433953,,
@@ -47,7 +47,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,WON,WON_DD-PMSG,dysprosium,17,,
 2020,inflow,kg/MW,World,generation,WON,WON_DD-PMSG,praseodymium,35,,
 2020,inflow,kg/MW,World,generation,WON,WON_DD-PMSG,terbium,7,,
-
+#
 2020,inflow,kg/MW,World,generation,WON,WON_DD-EESG,steel,121376,,
 2020,inflow,kg/MW,World,generation,WON,WON_DD-EESG,aluminium,823,,
 2020,inflow,kg/MW,World,generation,WON,WON_DD-EESG,concrete,433953,,
@@ -63,7 +63,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,WON,WON_DD-EESG,dysprosium,6,,
 2020,inflow,kg/MW,World,generation,WON,WON_DD-EESG,praseodymium,9,,
 2020,inflow,kg/MW,World,generation,WON,WON_DD-EESG,terbium,1,,
--------------
+#
 2020,inflow,kg/MW,World,generation,WOFF,WOFF_GB-DFIG,steel,121376,,
 2020,inflow,kg/MW,World,generation,WOFF,WOFF_GB-DFIG,aluminium,1141,,
 2020,inflow,kg/MW,World,generation,WOFF,WOFF_GB-DFIG,concrete,433953,,
@@ -79,7 +79,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,WOFF,WOFF_GB-DFIG,dysprosium,2,,
 2020,inflow,kg/MW,World,generation,WOFF,WOFF_GB-DFIG,praseodymium,0,,
 2020,inflow,kg/MW,World,generation,WOFF,WOFF_GB-DFIG,terbium,0,,
-
+#
 2020,inflow,kg/MW,World,generation,WOFF,WOFF_GB-PMSG,steel,121376,,
 2020,inflow,kg/MW,World,generation,WOFF,WOFF_GB-PMSG,aluminium,1141,,
 2020,inflow,kg/MW,World,generation,WOFF,WOFF_GB-PMSG,concrete,433953,,
@@ -95,7 +95,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,WOFF,WOFF_GB-PMSG,dysprosium,6,,
 2020,inflow,kg/MW,World,generation,WOFF,WOFF_GB-PMSG,praseodymium,4,,
 2020,inflow,kg/MW,World,generation,WOFF,WOFF_GB-PMSG,terbium,1,,
-
+#
 2020,inflow,kg/MW,World,generation,WOFF,WOFF_DD-PMSG,steel,121376,,
 2020,inflow,kg/MW,World,generation,WOFF,WOFF_DD-PMSG,aluminium,823,,
 2020,inflow,kg/MW,World,generation,WOFF,WOFF_DD-PMSG,concrete,433953,,
@@ -111,7 +111,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,WOFF,WOFF_DD-PMSG,dysprosium,17,,
 2020,inflow,kg/MW,World,generation,WOFF,WOFF_DD-PMSG,praseodymium,35,,
 2020,inflow,kg/MW,World,generation,WOFF,WOFF_DD-PMSG,terbium,7,,
-
+#
 2020,inflow,kg/MW,World,generation,WOFF,WOFF_DD-EESG,steel,121376,,
 2020,inflow,kg/MW,World,generation,WOFF,WOFF_DD-EESG,aluminium,823,,
 2020,inflow,kg/MW,World,generation,WOFF,WOFF_DD-EESG,concrete,433953,,
@@ -127,7 +127,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,WOFF,WOFF_DD-EESG,dysprosium,6,,
 2020,inflow,kg/MW,World,generation,WOFF,WOFF_DD-EESG,praseodymium,9,,
 2020,inflow,kg/MW,World,generation,WOFF,WOFF_DD-EESG,terbium,1,,
-
+#
 2020,inflow,kg/MW,World,generation,CSP,solar tower,steel,576235,,
 2020,inflow,kg/MW,World,generation,CSP,solar tower,aluminium,33000,,
 2020,inflow,kg/MW,World,generation,CSP,solar tower,concrete,1351812,,
@@ -140,7 +140,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,CSP,solar tower,lead,0.0,,
 2020,inflow,kg/MW,World,generation,CSP,solar tower,manganese,4685.0,,
 2020,inflow,kg/MW,World,generation,CSP,solar tower,nickel,1570.0,,
-
+#
 2020,inflow,kg/MW,World,generation,CSP,parabolic trough,steel,576235,,
 2020,inflow,kg/MW,World,generation,CSP,parabolic trough,aluminium,740,,
 2020,inflow,kg/MW,World,generation,CSP,parabolic trough,concrete,1351812,,
@@ -153,7 +153,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,CSP,parabolic trough,lead,0.0,,
 2020,inflow,kg/MW,World,generation,CSP,parabolic trough,manganese,2775.0,,
 2020,inflow,kg/MW,World,generation,CSP,parabolic trough,nickel,1135.0,,
-
+#
 2020,inflow,kg/MW,World,generation,Solar PV,,steel,150000.0,,
 2020,inflow,kg/MW,World,generation,Solar PV,,aluminium,10176.0,,
 2020,inflow,kg/MW,World,generation,Solar PV,,concrete,0.0,,
@@ -166,7 +166,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,Solar PV,,lead,121.643,,
 2020,inflow,kg/MW,World,generation,Solar PV,,manganese,0.0,,
 2020,inflow,kg/MW,World,generation,Solar PV,,nickel,1.2,,
-
+#
 2020,inflow,kg/MW,World,generation,Solar PV residential,,steel,150000.0,,
 2020,inflow,kg/MW,World,generation,Solar PV residential,,aluminium,10176.0,,
 2020,inflow,kg/MW,World,generation,Solar PV residential,,concrete,0.0,,
@@ -179,7 +179,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,Solar PV residential,,lead,121.643,,
 2020,inflow,kg/MW,World,generation,Solar PV residential,,manganese,0.0,,
 2020,inflow,kg/MW,World,generation,Solar PV residential,,nickel,1.2,,
-
+#
 2020,inflow,kg/MW,World,generation,Wave,,steel,999819.0409,,
 2020,inflow,kg/MW,World,generation,Wave,,aluminium,1319.135915,,
 2020,inflow,kg/MW,World,generation,Wave,,concrete,3146317.537,,
@@ -192,7 +192,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,Wave,,lead,0.0,,
 2020,inflow,kg/MW,World,generation,Wave,,manganese,0.0,,
 2020,inflow,kg/MW,World,generation,Wave,,nickel,0.0,,
-
+#
 2020,inflow,kg/MW,World,generation,Hydro,,steel,70693.9388,,
 2020,inflow,kg/MW,World,generation,Hydro,,aluminium,0.0,,
 2020,inflow,kg/MW,World,generation,Hydro,,concrete,2832619.03,,
@@ -205,7 +205,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,Hydro,,lead,5.36,,
 2020,inflow,kg/MW,World,generation,Hydro,,manganese,1.7,,
 2020,inflow,kg/MW,World,generation,Hydro,,nickel,31.0,,
-
+#
 2020,inflow,kg/MW,World,generation,Other Renewables,,steel,215682.9625,,
 2020,inflow,kg/MW,World,generation,Other Renewables,,aluminium,3596.539049,,
 2020,inflow,kg/MW,World,generation,Other Renewables,,concrete,1025503.555,,
@@ -218,7 +218,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,Other Renewables,,lead,25.401,,
 2020,inflow,kg/MW,World,generation,Other Renewables,,manganese,793.04,,
 2020,inflow,kg/MW,World,generation,Other Renewables,,nickel,457.973,,
-
+#
 2020,inflow,kg/MW,World,generation,Geothermal,,steel,153329.5748,,
 2020,inflow,kg/MW,World,generation,Geothermal,,aluminium,5072.383578,,
 2020,inflow,kg/MW,World,generation,Geothermal,,concrete,867160.6581,,
@@ -231,7 +231,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,Geothermal,,lead,0.0,,
 2020,inflow,kg/MW,World,generation,Geothermal,,manganese,0.0,,
 2020,inflow,kg/MW,World,generation,Geothermal,,nickel,0.0,,
-
+#
 2020,inflow,kg/MW,World,generation,Hydrogen power,,steel,151660.09430000003,,
 2020,inflow,kg/MW,World,generation,Hydrogen power,,aluminium,5241.283019,,
 2020,inflow,kg/MW,World,generation,Hydrogen power,,concrete,0.0,,
@@ -244,7 +244,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,Hydrogen power,,lead,758.1132075,,
 2020,inflow,kg/MW,World,generation,Hydrogen power,,manganese,0.0,,
 2020,inflow,kg/MW,World,generation,Hydrogen power,,nickel,0.0,,
-
+#
 2020,inflow,kg/MW,World,generation,Nuclear,,steel,43456.66667,,
 2020,inflow,kg/MW,World,generation,Nuclear,,aluminium,78.666667,,
 2020,inflow,kg/MW,World,generation,Nuclear,,concrete,235233.3333,,
@@ -257,7 +257,20 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,Nuclear,,lead,33.767,,
 2020,inflow,kg/MW,World,generation,Nuclear,,manganese,438.5,,
 2020,inflow,kg/MW,World,generation,Nuclear,,nickel,406.5,,
-
+#
+2020,inflow,kg/MW,World,generation,FREE12,,steel,0,,
+2020,inflow,kg/MW,World,generation,FREE12,,aluminium,0,,
+2020,inflow,kg/MW,World,generation,FREE12,,concrete,0,,
+2020,inflow,kg/MW,World,generation,FREE12,,plastics,0.0,,
+2020,inflow,kg/MW,World,generation,FREE12,,glass,0.0,,
+2020,inflow,kg/MW,World,generation,FREE12,,copper,0,,
+2020,inflow,kg/MW,World,generation,FREE12,,neodymium,0.0,,
+2020,inflow,kg/MW,World,generation,FREE12,,tantalum,0.0,,
+2020,inflow,kg/MW,World,generation,FREE12,,cobalt,0.0,,
+2020,inflow,kg/MW,World,generation,FREE12,,lead,0,,
+2020,inflow,kg/MW,World,generation,FREE12,,manganese,0,,
+2020,inflow,kg/MW,World,generation,FREE12,,nickel,0,,
+#
 2020,inflow,kg/MW,World,generation,Conv. Coal,,steel,84600.0,,
 2020,inflow,kg/MW,World,generation,Conv. Coal,,aluminium,504.252236,,
 2020,inflow,kg/MW,World,generation,Conv. Coal,,concrete,352800.0,,
@@ -270,7 +283,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,Conv. Coal,,lead,0.0,,
 2020,inflow,kg/MW,World,generation,Conv. Coal,,manganese,3.795,,
 2020,inflow,kg/MW,World,generation,Conv. Coal,,nickel,835.815,,
-
+#
 2020,inflow,kg/MW,World,generation,Conv. Oil,,steel,72900.0,,
 2020,inflow,kg/MW,World,generation,Conv. Oil,,aluminium,600.0,,
 2020,inflow,kg/MW,World,generation,Conv. Oil,,concrete,213360.0,,
@@ -283,7 +296,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,Conv. Oil,,lead,0.0,,
 2020,inflow,kg/MW,World,generation,Conv. Oil,,manganese,0.0,,
 2020,inflow,kg/MW,World,generation,Conv. Oil,,nickel,425.782,,
-
+#
 2020,inflow,kg/MW,World,generation,Conv. Natural Gas,,steel,4035.483871,,
 2020,inflow,kg/MW,World,generation,Conv. Natural Gas,,aluminium,376.451613,,
 2020,inflow,kg/MW,World,generation,Conv. Natural Gas,,concrete,43029.35484,,
@@ -296,7 +309,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,Conv. Natural Gas,,lead,0.0,,
 2020,inflow,kg/MW,World,generation,Conv. Natural Gas,,manganese,27.419,,
 2020,inflow,kg/MW,World,generation,Conv. Natural Gas,,nickel,425.782,,
-
+#
 2020,inflow,kg/MW,World,generation,Waste,,steel,72900.0,,
 2020,inflow,kg/MW,World,generation,Waste,,aluminium,600.0,,
 2020,inflow,kg/MW,World,generation,Waste,,concrete,213360.0,,
@@ -309,7 +322,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,Waste,,lead,0.0,,
 2020,inflow,kg/MW,World,generation,Waste,,manganese,0.0,,
 2020,inflow,kg/MW,World,generation,Waste,,nickel,425.782,,
-
+#
 2020,inflow,kg/MW,World,generation,IGCC,,steel,34900.0,,
 2020,inflow,kg/MW,World,generation,IGCC,,aluminium,504.252236,,
 2020,inflow,kg/MW,World,generation,IGCC,,concrete,165000.0,,
@@ -322,7 +335,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,IGCC,,lead,0.0,,
 2020,inflow,kg/MW,World,generation,IGCC,,manganese,3.795,,
 2020,inflow,kg/MW,World,generation,IGCC,,nickel,835.815,,
-
+#
 2020,inflow,kg/MW,World,generation,OGCC,,steel,72900.0,,
 2020,inflow,kg/MW,World,generation,OGCC,,aluminium,600.0,,
 2020,inflow,kg/MW,World,generation,OGCC,,concrete,213360.0,,
@@ -335,7 +348,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,OGCC,,lead,0.0,,
 2020,inflow,kg/MW,World,generation,OGCC,,manganese,0.0,,
 2020,inflow,kg/MW,World,generation,OGCC,,nickel,425.782,,
-
+#
 2020,inflow,kg/MW,World,generation,NG CC,,steel,28969.0,,
 2020,inflow,kg/MW,World,generation,NG CC,,aluminium,652.0,,
 2020,inflow,kg/MW,World,generation,NG CC,,concrete,64624.5,,
@@ -348,7 +361,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,NG CC,,lead,0.0,,
 2020,inflow,kg/MW,World,generation,NG CC,,manganese,27.419,,
 2020,inflow,kg/MW,World,generation,NG CC,,nickel,15.75,,
-
+#
 2020,inflow,kg/MW,World,generation,Biomass CC,,steel,33420.5,,
 2020,inflow,kg/MW,World,generation,Biomass CC,,aluminium,262.5,,
 2020,inflow,kg/MW,World,generation,Biomass CC,,concrete,89183.5,,
@@ -361,7 +374,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,Biomass CC,,lead,0.0,,
 2020,inflow,kg/MW,World,generation,Biomass CC,,manganese,0.0,,
 2020,inflow,kg/MW,World,generation,Biomass CC,,nickel,0.0,,
-
+#
 2020,inflow,kg/MW,World,generation,Coal + CCS,,steel,109200.0,,
 2020,inflow,kg/MW,World,generation,Coal + CCS,,aluminium,504.252236,,
 2020,inflow,kg/MW,World,generation,Coal + CCS,,concrete,352800.0,,
@@ -374,7 +387,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,Coal + CCS,,lead,0.0,,
 2020,inflow,kg/MW,World,generation,Coal + CCS,,manganese,3764.795,,
 2020,inflow,kg/MW,World,generation,Coal + CCS,,nickel,1980.815,,
-
+#
 2020,inflow,kg/MW,World,generation,Oil/Coal + CCS,,steel,94097.87234,,
 2020,inflow,kg/MW,World,generation,Oil/Coal + CCS,,aluminium,600.0,,
 2020,inflow,kg/MW,World,generation,Oil/Coal + CCS,,concrete,213360.0,,
@@ -387,7 +400,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,Oil/Coal + CCS,,lead,0.0,,
 2020,inflow,kg/MW,World,generation,Oil/Coal + CCS,,manganese,3761.0,,
 2020,inflow,kg/MW,World,generation,Oil/Coal + CCS,,nickel,425.782,,
-
+#
 2020,inflow,kg/MW,World,generation,Natural Gas + CCS,,steel,5208.922443,,
 2020,inflow,kg/MW,World,generation,Natural Gas + CCS,,aluminium,376.451613,,
 2020,inflow,kg/MW,World,generation,Natural Gas + CCS,,concrete,43029.35484,,
@@ -400,7 +413,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,Natural Gas + CCS,,lead,0.0,,
 2020,inflow,kg/MW,World,generation,Natural Gas + CCS,,manganese,3788.419,,
 2020,inflow,kg/MW,World,generation,Natural Gas + CCS,,nickel,425.782,,
-
+#
 2020,inflow,kg/MW,World,generation,Biomass + CCS,,steel,43138.51773,,
 2020,inflow,kg/MW,World,generation,Biomass + CCS,,aluminium,262.5,,
 2020,inflow,kg/MW,World,generation,Biomass + CCS,,concrete,89183.5,,
@@ -413,7 +426,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,Biomass + CCS,,lead,0.0,,
 2020,inflow,kg/MW,World,generation,Biomass + CCS,,manganese,3761.0,,
 2020,inflow,kg/MW,World,generation,Biomass + CCS,,nickel,0.0,,
-
+#
 2020,inflow,kg/MW,World,generation,CHP Coal,,steel,84600.0,,
 2020,inflow,kg/MW,World,generation,CHP Coal,,aluminium,504.252236,,
 2020,inflow,kg/MW,World,generation,CHP Coal,,concrete,352800.0,,
@@ -426,7 +439,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,CHP Coal,,lead,0.0,,
 2020,inflow,kg/MW,World,generation,CHP Coal,,manganese,14.595,,
 2020,inflow,kg/MW,World,generation,CHP Coal,,nickel,835.815,,
-
+#
 2020,inflow,kg/MW,World,generation,CHP Oil,,steel,72900.0,,
 2020,inflow,kg/MW,World,generation,CHP Oil,,aluminium,600.0,,
 2020,inflow,kg/MW,World,generation,CHP Oil,,concrete,213360.0,,
@@ -439,7 +452,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,CHP Oil,,lead,0.0,,
 2020,inflow,kg/MW,World,generation,CHP Oil,,manganese,10.8,,
 2020,inflow,kg/MW,World,generation,CHP Oil,,nickel,425.782,,
-
+#
 2020,inflow,kg/MW,World,generation,CHP Natural Gas,,steel,4035.483871,,
 2020,inflow,kg/MW,World,generation,CHP Natural Gas,,aluminium,376.451613,,
 2020,inflow,kg/MW,World,generation,CHP Natural Gas,,concrete,43029.35484,,
@@ -452,7 +465,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,CHP Natural Gas,,lead,0.0,,
 2020,inflow,kg/MW,World,generation,CHP Natural Gas,,manganese,38.219,,
 2020,inflow,kg/MW,World,generation,CHP Natural Gas,,nickel,425.782,,
-
+#
 2020,inflow,kg/MW,World,generation,CHP Biomass,,steel,6181.25,,
 2020,inflow,kg/MW,World,generation,CHP Biomass,,aluminium,50.0,,
 2020,inflow,kg/MW,World,generation,CHP Biomass,,concrete,243796.875,,
@@ -465,7 +478,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,CHP Biomass,,lead,0.0,,
 2020,inflow,kg/MW,World,generation,CHP Biomass,,manganese,10.8,,
 2020,inflow,kg/MW,World,generation,CHP Biomass,,nickel,0.0,,
-
+#
 2020,inflow,kg/MW,World,generation,CHP Coal + CCS,,steel,109200.0,,
 2020,inflow,kg/MW,World,generation,CHP Coal + CCS,,aluminium,504.252236,,
 2020,inflow,kg/MW,World,generation,CHP Coal + CCS,,concrete,352800.0,,
@@ -478,7 +491,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,CHP Coal + CCS,,lead,0.0,,
 2020,inflow,kg/MW,World,generation,CHP Coal + CCS,,manganese,3775.595,,
 2020,inflow,kg/MW,World,generation,CHP Coal + CCS,,nickel,1980.815,,
-
+#
 2020,inflow,kg/MW,World,generation,CHP Oil + CCS,,steel,94097.87234,,
 2020,inflow,kg/MW,World,generation,CHP Oil + CCS,,aluminium,600.0,,
 2020,inflow,kg/MW,World,generation,CHP Oil + CCS,,concrete,213360.0,,
@@ -491,7 +504,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,CHP Oil + CCS,,lead,0.0,,
 2020,inflow,kg/MW,World,generation,CHP Oil + CCS,,manganese,3771.8,,
 2020,inflow,kg/MW,World,generation,CHP Oil + CCS,,nickel,425.782,,
-
+#
 2020,inflow,kg/MW,World,generation,CHP Natural Gas + CCS,,steel,5208.922443,,
 2020,inflow,kg/MW,World,generation,CHP Natural Gas + CCS,,aluminium,376.451613,,
 2020,inflow,kg/MW,World,generation,CHP Natural Gas + CCS,,concrete,43029.35484,,
@@ -504,7 +517,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,CHP Natural Gas + CCS,,lead,0.0,,
 2020,inflow,kg/MW,World,generation,CHP Natural Gas + CCS,,manganese,3799.219,,
 2020,inflow,kg/MW,World,generation,CHP Natural Gas + CCS,,nickel,425.782,,
-
+#
 2020,inflow,kg/MW,World,generation,CHP Biomass + CCS,,steel,43138.51773,,
 2020,inflow,kg/MW,World,generation,CHP Biomass + CCS,,aluminium,262.5,,
 2020,inflow,kg/MW,World,generation,CHP Biomass + CCS,,concrete,243796.875,,
@@ -517,7 +530,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,CHP Biomass + CCS,,lead,0.0,,
 2020,inflow,kg/MW,World,generation,CHP Biomass + CCS,,manganese,3771.8,,
 2020,inflow,kg/MW,World,generation,CHP Biomass + CCS,,nickel,0.0,,
-
+#
 2020,inflow,kg/MW,World,generation,CHP Geothermal,,steel,162376.01969999998,,
 2020,inflow,kg/MW,World,generation,CHP Geothermal,,aluminium,5371.65421,,
 2020,inflow,kg/MW,World,generation,CHP Geothermal,,concrete,918323.1368999999,,
@@ -530,7 +543,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,CHP Geothermal,,lead,0.0,,
 2020,inflow,kg/MW,World,generation,CHP Geothermal,,manganese,0.0,,
 2020,inflow,kg/MW,World,generation,CHP Geothermal,,nickel,0.0,,
-
+#
 2020,inflow,kg/MW,World,generation,CHP Hydrogen,,steel,160608.0399,,
 2020,inflow,kg/MW,World,generation,CHP Hydrogen,,aluminium,5550.518717,,
 2020,inflow,kg/MW,World,generation,CHP Hydrogen,,concrete,0.0,,
@@ -543,7 +556,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2020,inflow,kg/MW,World,generation,CHP Hydrogen,,lead,802.8418868,,
 2020,inflow,kg/MW,World,generation,CHP Hydrogen,,manganese,0.0,,
 2020,inflow,kg/MW,World,generation,CHP Hydrogen,,nickel,0.0,,
-
+#
 2050,inflow,kg/MW,World,generation,wind,GB-DFIG,steel,121376,121376,157942
 2050,inflow,kg/MW,World,generation,wind,GB-DFIG,aluminium,1141,868,2210
 2050,inflow,kg/MW,World,generation,wind,GB-DFIG,concrete,433953,433953,509133
@@ -559,7 +572,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,wind,GB-DFIG,dysprosium,1.4,0,6
 2050,inflow,kg/MW,World,generation,wind,GB-DFIG,praseodymium,0,0,9
 2050,inflow,kg/MW,World,generation,wind,GB-DFIG,terbium,0,0,1
-
+#
 2050,inflow,kg/MW,World,generation,wind,GB-PMSG,steel,121376,121376,157942
 2050,inflow,kg/MW,World,generation,wind,GB-PMSG,aluminium,1141,868,2210
 2050,inflow,kg/MW,World,generation,wind,GB-PMSG,concrete,433953,433953,509133
@@ -575,7 +588,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,wind,GB-PMSG,dysprosium,4.2,0,6
 2050,inflow,kg/MW,World,generation,wind,GB-PMSG,praseodymium,4,0,9
 2050,inflow,kg/MW,World,generation,wind,GB-PMSG,terbium,1,0,1
-
+#
 2050,inflow,kg/MW,World,generation,wind,DD-PMSG,steel,121376,121376,157942
 2050,inflow,kg/MW,World,generation,wind,DD-PMSG,aluminium,823,500,1438
 2050,inflow,kg/MW,World,generation,wind,DD-PMSG,concrete,433953,433953,509133
@@ -586,12 +599,12 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,wind,DD-PMSG,cobalt,0,0,0
 2050,inflow,kg/MW,World,generation,wind,DD-PMSG,lead,6720,6720,6720
 2050,inflow,kg/MW,World,generation,wind,DD-PMSG,manganese,155,56.5,790
-2050,inflow,kg/MW,World,generation,wind,GB-PMSG,nickel,409,111,610
+2050,inflow,kg/MW,World,generation,wind,DD-PMSG,nickel,409,111,610
 2050,inflow,kg/MW,World,generation,wind,DD-PMSG,neodymium,126,116,217
 2050,inflow,kg/MW,World,generation,wind,DD-PMSG,dysprosium,14,12,42
 2050,inflow,kg/MW,World,generation,wind,DD-PMSG,praseodymium,24.5,12,51
 2050,inflow,kg/MW,World,generation,wind,DD-PMSG,terbium,7,0.54,7
-
+#
 2050,inflow,kg/MW,World,generation,wind,DD-EESG,steel,121376,121376,157942
 2050,inflow,kg/MW,World,generation,wind,DD-EESG,aluminium,823,500,1438
 2050,inflow,kg/MW,World,generation,wind,DD-EESG,concrete,433953,433953,509133
@@ -602,12 +615,12 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,wind,DD-EESG,cobalt,0,0,0
 2050,inflow,kg/MW,World,generation,wind,DD-EESG,lead,6720,6720,6720
 2050,inflow,kg/MW,World,generation,wind,DD-EESG,manganese,155,56.5,790
-2050,inflow,kg/MW,World,generation,wind,GB-EESG,nickel,409,111,610
+2050,inflow,kg/MW,World,generation,wind,DD-EESG,nickel,409,111,610
 2050,inflow,kg/MW,World,generation,wind,DD-EESG,neodymium,19.6,19.6,217
 2050,inflow,kg/MW,World,generation,wind,DD-EESG,dysprosium,4.2,4.2,42
 2050,inflow,kg/MW,World,generation,wind,DD-EESG,praseodymium,9,9,51
 2050,inflow,kg/MW,World,generation,wind,DD-EESG,terbium,1,0.54,7
-
+#
 2050,inflow,kg/MW,World,generation,CSP,solar tower,steel,576235,576235,576235
 2050,inflow,kg/MW,World,generation,CSP,solar tower,aluminium,33000,33000,33000
 2050,inflow,kg/MW,World,generation,CSP,solar tower,concrete,1351812,1351812,1351812
@@ -620,7 +633,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,CSP,solar tower,lead,0.0,0,0
 2050,inflow,kg/MW,World,generation,CSP,solar tower,manganese,4685.0,3850,5700
 2050,inflow,kg/MW,World,generation,CSP,solar tower,nickel,1570.0,1370,1800
-
+#
 2050,inflow,kg/MW,World,generation,CSP,parabolic trough,steel,576235,576235,576235
 2050,inflow,kg/MW,World,generation,CSP,parabolic trough,aluminium,740,740,5500
 2050,inflow,kg/MW,World,generation,CSP,parabolic trough,concrete,1351812,1351812,1351812
@@ -633,7 +646,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,CSP,parabolic trough,lead,0.0,0,0
 2050,inflow,kg/MW,World,generation,CSP,parabolic trough,manganese,2775.0,2000,3850
 2050,inflow,kg/MW,World,generation,CSP,parabolic trough,nickel,1135.0,940,1370
-
+#
 2050,inflow,kg/MW,World,generation,Solar PV,,steel,150000.0,,
 2050,inflow,kg/MW,World,generation,Solar PV,,aluminium,10176.0,,
 2050,inflow,kg/MW,World,generation,Solar PV,,concrete,0.0,,
@@ -646,7 +659,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,Solar PV,,lead,121.643,,
 2050,inflow,kg/MW,World,generation,Solar PV,,manganese,0.0,,
 2050,inflow,kg/MW,World,generation,Solar PV,,nickel,1.2,,
-
+#
 2050,inflow,kg/MW,World,generation,Solar PV residential,,steel,150000.0,,
 2050,inflow,kg/MW,World,generation,Solar PV residential,,aluminium,10176.0,,
 2050,inflow,kg/MW,World,generation,Solar PV residential,,concrete,0.0,,
@@ -659,7 +672,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,Solar PV residential,,lead,121.643,,
 2050,inflow,kg/MW,World,generation,Solar PV residential,,manganese,0.0,,
 2050,inflow,kg/MW,World,generation,Solar PV residential,,nickel,1.2,,
-
+#
 2050,inflow,kg/MW,World,generation,Wave,,steel,999819.0409,,
 2050,inflow,kg/MW,World,generation,Wave,,aluminium,1319.135915,,
 2050,inflow,kg/MW,World,generation,Wave,,concrete,3146317.537,,
@@ -672,7 +685,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,Wave,,lead,0.0,,
 2050,inflow,kg/MW,World,generation,Wave,,manganese,0.0,,
 2050,inflow,kg/MW,World,generation,Wave,,nickel,0.0,,
-
+#
 2050,inflow,kg/MW,World,generation,Hydro,,steel,70693.9388,,
 2050,inflow,kg/MW,World,generation,Hydro,,aluminium,0.0,,
 2050,inflow,kg/MW,World,generation,Hydro,,concrete,2832619.03,,
@@ -685,7 +698,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,Hydro,,lead,5.36,,
 2050,inflow,kg/MW,World,generation,Hydro,,manganese,1.7,,
 2050,inflow,kg/MW,World,generation,Hydro,,nickel,31.0,,
-
+#
 2050,inflow,kg/MW,World,generation,Other Renewables,,steel,215682.9625,,
 2050,inflow,kg/MW,World,generation,Other Renewables,,aluminium,3596.539049,,
 2050,inflow,kg/MW,World,generation,Other Renewables,,concrete,1025503.555,,
@@ -698,7 +711,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,Other Renewables,,lead,25.401,,
 2050,inflow,kg/MW,World,generation,Other Renewables,,manganese,793.04,,
 2050,inflow,kg/MW,World,generation,Other Renewables,,nickel,457.973,,
-
+#
 2050,inflow,kg/MW,World,generation,Geothermal,,steel,153329.5748,,
 2050,inflow,kg/MW,World,generation,Geothermal,,aluminium,5072.383578,,
 2050,inflow,kg/MW,World,generation,Geothermal,,concrete,867160.6581,,
@@ -711,7 +724,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,Geothermal,,lead,0.0,,
 2050,inflow,kg/MW,World,generation,Geothermal,,manganese,0.0,,
 2050,inflow,kg/MW,World,generation,Geothermal,,nickel,0.0,,
-
+#
 2050,inflow,kg/MW,World,generation,Hydrogen power,,steel,151660.09430000003,,
 2050,inflow,kg/MW,World,generation,Hydrogen power,,aluminium,5241.283019,,
 2050,inflow,kg/MW,World,generation,Hydrogen power,,concrete,0.0,,
@@ -724,7 +737,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,Hydrogen power,,lead,758.1132075,,
 2050,inflow,kg/MW,World,generation,Hydrogen power,,manganese,0.0,,
 2050,inflow,kg/MW,World,generation,Hydrogen power,,nickel,0.0,,
-
+#
 2050,inflow,kg/MW,World,generation,Nuclear,,steel,43456.66667,,
 2050,inflow,kg/MW,World,generation,Nuclear,,aluminium,78.666667,,
 2050,inflow,kg/MW,World,generation,Nuclear,,concrete,235233.3333,,
@@ -737,7 +750,20 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,Nuclear,,lead,33.767,,
 2050,inflow,kg/MW,World,generation,Nuclear,,manganese,438.5,,
 2050,inflow,kg/MW,World,generation,Nuclear,,nickel,406.5,,
-
+#
+2050,inflow,kg/MW,World,generation,FREE12,,steel,0,,
+2050,inflow,kg/MW,World,generation,FREE12,,aluminium,0,,
+2050,inflow,kg/MW,World,generation,FREE12,,concrete,0,,
+2050,inflow,kg/MW,World,generation,FREE12,,plastics,0.0,,
+2050,inflow,kg/MW,World,generation,FREE12,,glass,0.0,,
+2050,inflow,kg/MW,World,generation,FREE12,,copper,0,,
+2050,inflow,kg/MW,World,generation,FREE12,,neodymium,0.0,,
+2050,inflow,kg/MW,World,generation,FREE12,,tantalum,0.0,,
+2050,inflow,kg/MW,World,generation,FREE12,,cobalt,0.0,,
+2050,inflow,kg/MW,World,generation,FREE12,,lead,0,,
+2050,inflow,kg/MW,World,generation,FREE12,,manganese,0,,
+2050,inflow,kg/MW,World,generation,FREE12,,nickel,0,,
+#
 2050,inflow,kg/MW,World,generation,Conv. Coal,,steel,84600.0,,
 2050,inflow,kg/MW,World,generation,Conv. Coal,,aluminium,504.252236,,
 2050,inflow,kg/MW,World,generation,Conv. Coal,,concrete,352800.0,,
@@ -750,7 +776,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,Conv. Coal,,lead,0.0,,
 2050,inflow,kg/MW,World,generation,Conv. Coal,,manganese,3.795,,
 2050,inflow,kg/MW,World,generation,Conv. Coal,,nickel,835.815,,
-
+#
 2050,inflow,kg/MW,World,generation,Conv. Oil,,steel,72900.0,,
 2050,inflow,kg/MW,World,generation,Conv. Oil,,aluminium,600.0,,
 2050,inflow,kg/MW,World,generation,Conv. Oil,,concrete,213360.0,,
@@ -763,7 +789,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,Conv. Oil,,lead,0.0,,
 2050,inflow,kg/MW,World,generation,Conv. Oil,,manganese,0.0,,
 2050,inflow,kg/MW,World,generation,Conv. Oil,,nickel,425.782,,
-
+#
 2050,inflow,kg/MW,World,generation,Conv. Natural Gas,,steel,4035.483871,,
 2050,inflow,kg/MW,World,generation,Conv. Natural Gas,,aluminium,376.451613,,
 2050,inflow,kg/MW,World,generation,Conv. Natural Gas,,concrete,43029.35484,,
@@ -776,7 +802,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,Conv. Natural Gas,,lead,0.0,,
 2050,inflow,kg/MW,World,generation,Conv. Natural Gas,,manganese,27.419,,
 2050,inflow,kg/MW,World,generation,Conv. Natural Gas,,nickel,425.782,,
-
+#
 2050,inflow,kg/MW,World,generation,Waste,,steel,72900.0,,
 2050,inflow,kg/MW,World,generation,Waste,,aluminium,600.0,,
 2050,inflow,kg/MW,World,generation,Waste,,concrete,213360.0,,
@@ -789,7 +815,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,Waste,,lead,0.0,,
 2050,inflow,kg/MW,World,generation,Waste,,manganese,0.0,,
 2050,inflow,kg/MW,World,generation,Waste,,nickel,425.782,,
-
+#
 2050,inflow,kg/MW,World,generation,IGCC,,steel,34900.0,,
 2050,inflow,kg/MW,World,generation,IGCC,,aluminium,504.252236,,
 2050,inflow,kg/MW,World,generation,IGCC,,concrete,165000.0,,
@@ -802,7 +828,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,IGCC,,lead,0.0,,
 2050,inflow,kg/MW,World,generation,IGCC,,manganese,3.795,,
 2050,inflow,kg/MW,World,generation,IGCC,,nickel,835.815,,
-
+#
 2050,inflow,kg/MW,World,generation,OGCC,,steel,72900.0,,
 2050,inflow,kg/MW,World,generation,OGCC,,aluminium,600.0,,
 2050,inflow,kg/MW,World,generation,OGCC,,concrete,213360.0,,
@@ -815,7 +841,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,OGCC,,lead,0.0,,
 2050,inflow,kg/MW,World,generation,OGCC,,manganese,0.0,,
 2050,inflow,kg/MW,World,generation,OGCC,,nickel,425.782,,
-
+#
 2050,inflow,kg/MW,World,generation,NG CC,,steel,28969.0,,
 2050,inflow,kg/MW,World,generation,NG CC,,aluminium,652.0,,
 2050,inflow,kg/MW,World,generation,NG CC,,concrete,64624.5,,
@@ -828,7 +854,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,NG CC,,lead,0.0,,
 2050,inflow,kg/MW,World,generation,NG CC,,manganese,27.419,,
 2050,inflow,kg/MW,World,generation,NG CC,,nickel,15.75,,
-
+#
 2050,inflow,kg/MW,World,generation,Biomass CC,,steel,33420.5,,
 2050,inflow,kg/MW,World,generation,Biomass CC,,aluminium,262.5,,
 2050,inflow,kg/MW,World,generation,Biomass CC,,concrete,89183.5,,
@@ -841,7 +867,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,Biomass CC,,lead,0.0,,
 2050,inflow,kg/MW,World,generation,Biomass CC,,manganese,0.0,,
 2050,inflow,kg/MW,World,generation,Biomass CC,,nickel,0.0,,
-
+#
 2050,inflow,kg/MW,World,generation,Coal + CCS,,steel,109200.0,,
 2050,inflow,kg/MW,World,generation,Coal + CCS,,aluminium,504.252236,,
 2050,inflow,kg/MW,World,generation,Coal + CCS,,concrete,352800.0,,
@@ -854,7 +880,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,Coal + CCS,,lead,0.0,,
 2050,inflow,kg/MW,World,generation,Coal + CCS,,manganese,3764.795,,
 2050,inflow,kg/MW,World,generation,Coal + CCS,,nickel,1980.815,,
-
+#
 2050,inflow,kg/MW,World,generation,Oil/Coal + CCS,,steel,94097.87234,,
 2050,inflow,kg/MW,World,generation,Oil/Coal + CCS,,aluminium,600.0,,
 2050,inflow,kg/MW,World,generation,Oil/Coal + CCS,,concrete,213360.0,,
@@ -867,7 +893,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,Oil/Coal + CCS,,lead,0.0,,
 2050,inflow,kg/MW,World,generation,Oil/Coal + CCS,,manganese,3761.0,,
 2050,inflow,kg/MW,World,generation,Oil/Coal + CCS,,nickel,425.782,,
-
+#
 2050,inflow,kg/MW,World,generation,Natural Gas + CCS,,steel,5208.922443,,
 2050,inflow,kg/MW,World,generation,Natural Gas + CCS,,aluminium,376.451613,,
 2050,inflow,kg/MW,World,generation,Natural Gas + CCS,,concrete,43029.35484,,
@@ -880,7 +906,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,Natural Gas + CCS,,lead,0.0,,
 2050,inflow,kg/MW,World,generation,Natural Gas + CCS,,manganese,3788.419,,
 2050,inflow,kg/MW,World,generation,Natural Gas + CCS,,nickel,425.782,,
-
+#
 2050,inflow,kg/MW,World,generation,Biomass + CCS,,steel,43138.51773,,
 2050,inflow,kg/MW,World,generation,Biomass + CCS,,aluminium,262.5,,
 2050,inflow,kg/MW,World,generation,Biomass + CCS,,concrete,89183.5,,
@@ -893,7 +919,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,Biomass + CCS,,lead,0.0,,
 2050,inflow,kg/MW,World,generation,Biomass + CCS,,manganese,3761.0,,
 2050,inflow,kg/MW,World,generation,Biomass + CCS,,nickel,0.0,,
-
+#
 2050,inflow,kg/MW,World,generation,CHP Coal,,steel,84600.0,,
 2050,inflow,kg/MW,World,generation,CHP Coal,,aluminium,504.252236,,
 2050,inflow,kg/MW,World,generation,CHP Coal,,concrete,352800.0,,
@@ -906,7 +932,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,CHP Coal,,lead,0.0,,
 2050,inflow,kg/MW,World,generation,CHP Coal,,manganese,14.595,,
 2050,inflow,kg/MW,World,generation,CHP Coal,,nickel,835.815,,
-
+#
 2050,inflow,kg/MW,World,generation,CHP Oil,,steel,72900.0,,
 2050,inflow,kg/MW,World,generation,CHP Oil,,aluminium,600.0,,
 2050,inflow,kg/MW,World,generation,CHP Oil,,concrete,213360.0,,
@@ -919,7 +945,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,CHP Oil,,lead,0.0,,
 2050,inflow,kg/MW,World,generation,CHP Oil,,manganese,10.8,,
 2050,inflow,kg/MW,World,generation,CHP Oil,,nickel,425.782,,
-
+#
 2050,inflow,kg/MW,World,generation,CHP Natural Gas,,steel,4035.483871,,
 2050,inflow,kg/MW,World,generation,CHP Natural Gas,,aluminium,376.451613,,
 2050,inflow,kg/MW,World,generation,CHP Natural Gas,,concrete,43029.35484,,
@@ -932,7 +958,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,CHP Natural Gas,,lead,0.0,,
 2050,inflow,kg/MW,World,generation,CHP Natural Gas,,manganese,38.219,,
 2050,inflow,kg/MW,World,generation,CHP Natural Gas,,nickel,425.782,,
-
+#
 2050,inflow,kg/MW,World,generation,CHP Biomass,,steel,6181.25,,
 2050,inflow,kg/MW,World,generation,CHP Biomass,,aluminium,50.0,,
 2050,inflow,kg/MW,World,generation,CHP Biomass,,concrete,243796.875,,
@@ -945,7 +971,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,CHP Biomass,,lead,0.0,,
 2050,inflow,kg/MW,World,generation,CHP Biomass,,manganese,10.8,,
 2050,inflow,kg/MW,World,generation,CHP Biomass,,nickel,0.0,,
-
+#
 2050,inflow,kg/MW,World,generation,CHP Coal + CCS,,steel,109200.0,,
 2050,inflow,kg/MW,World,generation,CHP Coal + CCS,,aluminium,504.252236,,
 2050,inflow,kg/MW,World,generation,CHP Coal + CCS,,concrete,352800.0,,
@@ -958,7 +984,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,CHP Coal + CCS,,lead,0.0,,
 2050,inflow,kg/MW,World,generation,CHP Coal + CCS,,manganese,3775.595,,
 2050,inflow,kg/MW,World,generation,CHP Coal + CCS,,nickel,1980.815,,
-
+#
 2050,inflow,kg/MW,World,generation,CHP Oil + CCS,,steel,94097.87234,,
 2050,inflow,kg/MW,World,generation,CHP Oil + CCS,,aluminium,600.0,,
 2050,inflow,kg/MW,World,generation,CHP Oil + CCS,,concrete,213360.0,,
@@ -971,7 +997,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,CHP Oil + CCS,,lead,0.0,,
 2050,inflow,kg/MW,World,generation,CHP Oil + CCS,,manganese,3771.8,,
 2050,inflow,kg/MW,World,generation,CHP Oil + CCS,,nickel,425.782,,
-
+#
 2050,inflow,kg/MW,World,generation,CHP Natural Gas + CCS,,steel,5208.922443,,
 2050,inflow,kg/MW,World,generation,CHP Natural Gas + CCS,,aluminium,376.451613,,
 2050,inflow,kg/MW,World,generation,CHP Natural Gas + CCS,,concrete,43029.35484,,
@@ -984,7 +1010,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,CHP Natural Gas + CCS,,lead,0.0,,
 2050,inflow,kg/MW,World,generation,CHP Natural Gas + CCS,,manganese,3799.219,,
 2050,inflow,kg/MW,World,generation,CHP Natural Gas + CCS,,nickel,425.782,,
-
+#
 2050,inflow,kg/MW,World,generation,CHP Biomass + CCS,,steel,43138.51773,,
 2050,inflow,kg/MW,World,generation,CHP Biomass + CCS,,aluminium,262.5,,
 2050,inflow,kg/MW,World,generation,CHP Biomass + CCS,,concrete,243796.875,,
@@ -997,7 +1023,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,CHP Biomass + CCS,,lead,0.0,,
 2050,inflow,kg/MW,World,generation,CHP Biomass + CCS,,manganese,3771.8,,
 2050,inflow,kg/MW,World,generation,CHP Biomass + CCS,,nickel,0.0,,
-
+#
 2050,inflow,kg/MW,World,generation,CHP Geothermal,,steel,162376.01969999998,,
 2050,inflow,kg/MW,World,generation,CHP Geothermal,,aluminium,5371.65421,,
 2050,inflow,kg/MW,World,generation,CHP Geothermal,,concrete,918323.1368999999,,
@@ -1010,7 +1036,7 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,CHP Geothermal,,lead,0.0,,
 2050,inflow,kg/MW,World,generation,CHP Geothermal,,manganese,0.0,,
 2050,inflow,kg/MW,World,generation,CHP Geothermal,,nickel,0.0,,
-
+#
 2050,inflow,kg/MW,World,generation,CHP Hydrogen,,steel,160608.0399,,
 2050,inflow,kg/MW,World,generation,CHP Hydrogen,,aluminium,5550.518717,,
 2050,inflow,kg/MW,World,generation,CHP Hydrogen,,concrete,0.0,,
@@ -1023,6 +1049,3 @@ Time,type_data,unit,Region,category,technology,sub_technology,material,value,min
 2050,inflow,kg/MW,World,generation,CHP Hydrogen,,lead,802.8418868,,
 2050,inflow,kg/MW,World,generation,CHP Hydrogen,,manganese,0.0,,
 2050,inflow,kg/MW,World,generation,CHP Hydrogen,,nickel,0.0,,
-
-
-
