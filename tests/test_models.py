@@ -260,9 +260,11 @@ def test_electric_vehicle_batteries(coordinates, timelines):
 
     model.simulate(complete_timeline, inputs=get_inputs)
 
-    for var_name in model.output_data:
-        assert hasattr(model, var_name), f"Output variable {var_name} not found"
-
+    
+    expected_outputs = ['stock_battery_kWh_v2g', 'inflow_battery_kWh', 'stock_battery_kWh', 'outflow_battery_kWh', 'inflow_battery_materials', 'stock_battery_materials', 'outflow_battery_materials']
+    for var_name in expected_outputs:
+        assert hasattr(model, var_name), f"Expected output {var_name} not found on model"
+    
     t = time_coords[0]  # 2000
     n_types = len(road_vehicle_types)
     n_battery_types = len(battery_types)
