@@ -28,6 +28,50 @@ from imagematerials.electricity.constants import (
     STD_LIFETIMES_ELECTR,
 )
 
+EPG_SUB_TECHNOLOGIES_TEST = [
+    "SPV_tech1",
+    "SPVR_tech1",
+    "parabolic trough",
+    "solar tower",
+    "WON_GB-DFIG",
+    "WON_GB-PMSG",
+    "WON_DD-PMSG",
+    "WON_DD-EESG",
+    "WOFF_GB-DFIG",
+    "WOFF_GB-PMSG",
+    "WOFF_DD-PMSG",
+    "WOFF_DD-EESG",
+    "WAVE_tech1",
+    "HYD_tech1",
+    "OREN_tech1",
+    "GEO_tech1",
+    "H2P_tech1",
+    "NUC_tech1",
+    "FREE12_tech1",
+    "ClST_tech1",
+    "OlST_tech1",
+    "NGOT_tech1",
+    "BioST_tech1",
+    "IGCC_tech1",
+    "OlCC_tech1",
+    "NGCC_tech1",
+    "BioCC_tech1",
+    "ClCS_tech1",
+    "OlCS_tech1",
+    "NGCS_tech1",
+    "BioCS_tech1",
+    "ClCHP_tech1",
+    "OlCHP_tech1",
+    "NGCHP_tech1",
+    "BioCHP_tech1",
+    "ClCHPCS_tech1",
+    "OlCHPCS_tech1",
+    "NGCHPCS_tech1",
+    "BioCHPCS_tech1",
+    "GeoCHP_tech1",
+    "H2CHP_tech1"
+]
+
 
 def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circular_economy_config: dict):
 
@@ -47,15 +91,15 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
     # 1. External Data --------------------------------------------- 
 
     # lifetimes of Gcap tech (original data according to van Vuuren 2006, PhD Thesis)
-    lifetimes = pd.read_csv(path_external_data_standard / "generation_lifetimes.csv",
+    lifetimes = pd.read_csv(path_external_data_standard / "generation_lifetimes - Kopie.csv",
                             usecols=["Time","technology","sub_technology","value"])        
 
     # material compositions of electricity generation tecnologies (kg/MW)
-    material_intensities = pd.read_csv(path_external_data_standard / "generation_material_intensities.csv",
+    material_intensities = pd.read_csv(path_external_data_standard / "generation_material_intensities - Kopie.csv",
                             usecols=["Time","technology","sub_technology","material","value"], comment="#")#.transpose()
 
     # market shares
-    market_shares = pd.read_csv(path_external_data_standard / "generation_subtechnologies_market_shares.csv",
+    market_shares = pd.read_csv(path_external_data_standard / "generation_subtechnologies_market_shares - Kopie.csv",
                             usecols=["Time","sub_technology","value"]) #"technology",
 
     # 2. IMAGE/TIMER files -----------------------------------------
@@ -108,7 +152,7 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
     )
     material_intensities_da = prism.Q_(material_intensities_da, "kg/MW")
     material_intensities_da.name = "GenerationMaterialIntensities"
-    material_intensities_da = knowledge_graph_electr.rebroadcast_xarray(material_intensities_da, output_coords=EPG_SUB_TECHNOLOGIES, dim="Type")
+    material_intensities_da = knowledge_graph_electr.rebroadcast_xarray(material_intensities_da, output_coords=EPG_SUB_TECHNOLOGIES_TEST, dim="Type")
 
     # market shares (%) --------------------------------------------------------------------------------
     market_shares_da = (
