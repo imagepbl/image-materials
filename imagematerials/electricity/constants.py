@@ -151,8 +151,16 @@ EPG_TECHNOLOGIES = [
 ]
 
 EPG_SUB_TECHNOLOGIES = [
-    "SPV_tech1",
-    "SPVR_tech1",
+    "SPV_c-Si",
+    "SPV_AsGa",
+    "SPV_CdTe",
+    "SPV_CIGS",
+    "SPV_a-Si",
+    "SPVR_c-Si",
+    "SPVR_AsGa",
+    "SPVR_CdTe",
+    "SPVR_CIGS",
+    "SPVR_a-Si",
     "parabolic trough",
     "solar tower",
     "WON_GB-DFIG",
@@ -195,8 +203,16 @@ EPG_SUB_TECHNOLOGIES = [
 ]
 
 EPG_TECHNOLOGIES_FINAL = [
-    "SPV",
-    "SPVR",
+    "SPV_c-Si",
+    "SPV_AsGa",
+    "SPV_CdTe",
+    "SPV_CIGS",
+    "SPV_a-Si",
+    "SPVR_c-Si",
+    "SPVR_AsGa",
+    "SPVR_CdTe",
+    "SPVR_CIGS",
+    "SPVR_a-Si",
     "parabolic trough",
     "solar tower",
     "WON_GB-DFIG",

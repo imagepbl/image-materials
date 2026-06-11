@@ -1,10 +1,34 @@
 Time,type_data,unit,Region,category,technology,sub_technology,value
 
-2020,inflow,years,World,generation,SPV,SPV_tech1,25
-2050,inflow,years,World,generation,SPV,SPV_tech1,25
+2020,inflow,years,World,generation,SPV,SPV_c-Si,25
+2050,inflow,years,World,generation,SPV,SPV_c-Si,25
 
-2020,inflow,years,World,generation,SPVR,SPVR_tech1,25
-2050,inflow,years,World,generation,SPVR,SPVR_tech1,25
+2020,inflow,years,World,generation,SPV,SPV_AsGa,25
+2050,inflow,years,World,generation,SPV,SPV_AsGa,25
+
+2020,inflow,years,World,generation,SPV,SPV_CdTe,25
+2050,inflow,years,World,generation,SPV,SPV_CdTe,25
+
+2020,inflow,years,World,generation,SPV,SPV_CIGS,25
+2050,inflow,years,World,generation,SPV,SPV_CIGS,25
+
+2020,inflow,years,World,generation,SPV,SPV_a-Si,25
+2050,inflow,years,World,generation,SPV,SPV_a-Si,25
+
+2020,inflow,years,World,generation,SPVR,SPVR_c-Si,25
+2050,inflow,years,World,generation,SPVR,SPVR_c-Si,25
+
+2020,inflow,years,World,generation,SPVR,SPVR_AsGa,25
+2050,inflow,years,World,generation,SPVR,SPVR_AsGa,25
+
+2020,inflow,years,World,generation,SPVR,SPVR_CdTe,25
+2050,inflow,years,World,generation,SPVR,SPVR_CdTe,25
+
+2020,inflow,years,World,generation,SPVR,SPVR_CIGS,25
+2050,inflow,years,World,generation,SPVR,SPVR_CIGS,25
+
+2020,inflow,years,World,generation,SPVR,SPVR_a-Si,25
+2050,inflow,years,World,generation,SPVR,SPVR_a-Si,25
 
 2020,inflow,years,World,generation,CSP,parabolic trough,25
 2050,inflow,years,World,generation,CSP,parabolic trough,25

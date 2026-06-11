@@ -11,7 +11,7 @@ import xarray as xr
 from pint.errors import UnitStrippedWarning
 
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
-from imagematerials.concepts import create_electricity_graph, create_image_region_graph
+from imagematerials.concepts import create_electricity_graph, create_image_region_graph, KnowledgeGraph
 from imagematerials.constants import (
     IMAGE_REGIONS,
 )
