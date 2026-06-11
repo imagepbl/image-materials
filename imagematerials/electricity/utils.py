@@ -216,6 +216,10 @@ def interpolate_xr(data_array: xr.DataArray,
 
     new_range = np.arange(global_t_start, t_end + 1)
 
+    # --- In case NaNs exist, fill them first ---
+
+    data_array = data_array.interpolate_na(dim=dim)
+
     # --- Interpolate over full time range ---
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UnitStrippedWarning)
