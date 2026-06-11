@@ -284,6 +284,32 @@ def interpolate_xr(data_array: xr.DataArray,
 
     return da_interp
 
+def rebroadcast_type_dims(
+        model_dict: dict[str, xr.DataArray],
+        knowledge_graph: KnowledgeGraph,
+        output_coords: list[str]
+    ) -> None:
+    """For all DataArrays in the model dict that contain a 'Type' dimension,
+    rebroadcast them in-place using the given output_coords.
+
+    Parameters
+    ----------
+    model_dict : dict
+        Dictionary of {name: DataArray}, e.g. model.elc_gen.
+    knowledge_graph : object
+        Knowledge graph object with a rebroadcast_xarray method.
+    output_coords : list
+        Output coordinates to rebroadcast to.
+
+    """
+    for attr_name, var in model_dict.items():
+        if isinstance(var, xr.DataArray) and 'Type' in var.dims:
+            model_dict[attr_name] = knowledge_graph.rebroadcast_xarray(
+                var,
+                output_coords=output_coords,
+                dim="Type"
+            )
+
 def MNLogit(data: xr.DataArray | pd.DataFrame,
             logitpar: float,
             dim_type: str | None =None

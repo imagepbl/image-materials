@@ -1,10 +1,10 @@
 Time,type_data,unit,Region,category,technology,sub_technology,value
 
-2020,inflow,years,World,generation,SPV,,25
-2050,inflow,years,World,generation,SPV,,25
+2020,inflow,years,World,generation,SPV,SPV_tech1,25
+2050,inflow,years,World,generation,SPV,SPV_tech1,25
 
-2020,inflow,years,World,generation,SPVR,,25
-2050,inflow,years,World,generation,SPVR,,25
+2020,inflow,years,World,generation,SPVR,SPVR_tech1,25
+2050,inflow,years,World,generation,SPVR,SPVR_tech1,25
 
 2020,inflow,years,World,generation,CSP,parabolic trough,25
 2050,inflow,years,World,generation,CSP,parabolic trough,25
@@ -36,89 +36,89 @@ Time,type_data,unit,Region,category,technology,sub_technology,value
 2020,inflow,years,World,generation,WOFF,WOFF_DD-EESG,25
 2050,inflow,years,World,generation,WOFF,WOFF_DD-EESG,25
 
-2020,inflow,years,World,generation,WAVE,,25
-2050,inflow,years,World,generation,WAVE,,25
+2020,inflow,years,World,generation,WAVE,WAVE_tech1,25
+2050,inflow,years,World,generation,WAVE,WAVE_tech1,25
 
-2020,inflow,years,World,generation,HYD,,80
-2050,inflow,years,World,generation,HYD,,80
+2020,inflow,years,World,generation,HYD,HYD_tech1,80
+2050,inflow,years,World,generation,HYD,HYD_tech1,80
 
-2020,inflow,years,World,generation,OREN,,40
-2050,inflow,years,World,generation,OREN,,40
+2020,inflow,years,World,generation,OREN,OREN_tech1,40
+2050,inflow,years,World,generation,OREN,OREN_tech1,40
 
-2020,inflow,years,World,generation,GEO,,40
-2050,inflow,years,World,generation,GEO,,40
+2020,inflow,years,World,generation,GEO,GEO_tech1,40
+2050,inflow,years,World,generation,GEO,GEO_tech1,40
 
-2020,inflow,years,World,generation,H2P,,40
-2050,inflow,years,World,generation,H2P,,40
+2020,inflow,years,World,generation,H2P,H2P_tech1,40
+2050,inflow,years,World,generation,H2P,H2P_tech1,40
 
-2020,inflow,years,World,generation,NUC,,60
-2050,inflow,years,World,generation,NUC,,60
+2020,inflow,years,World,generation,NUC,NUC_tech1,60
+2050,inflow,years,World,generation,NUC,NUC_tech1,60
 
-2020,inflow,years,World,generation,FREE12,,40
-2050,inflow,years,World,generation,FREE12,,40
+2020,inflow,years,World,generation,FREE12,FREE12_tech1,40
+2050,inflow,years,World,generation,FREE12,FREE12_tech1,40
 
-2020,inflow,years,World,generation,ClST,,40
-2050,inflow,years,World,generation,ClST,,40
+2020,inflow,years,World,generation,ClST,ClST_tech1,40
+2050,inflow,years,World,generation,ClST,ClST_tech1,40
 
-2020,inflow,years,World,generation,OlST,,40
-2050,inflow,years,World,generation,OlST,,40
+2020,inflow,years,World,generation,OlST,OlST_tech1,40
+2050,inflow,years,World,generation,OlST,OlST_tech1,40
 
-2020,inflow,years,World,generation,NGOT,,40
-2050,inflow,years,World,generation,NGOT,,40
+2020,inflow,years,World,generation,NGOT,NGOT_tech1,40
+2050,inflow,years,World,generation,NGOT,NGOT_tech1,40
 
-2020,inflow,years,World,generation,BioST,,40
-2050,inflow,years,World,generation,BioST,,40
+2020,inflow,years,World,generation,BioST,BioST_tech1,40
+2050,inflow,years,World,generation,BioST,BioST_tech1,40
 
-2020,inflow,years,World,generation,IGCC,,40
-2050,inflow,years,World,generation,IGCC,,40
+2020,inflow,years,World,generation,IGCC,IGCC_tech1,40
+2050,inflow,years,World,generation,IGCC,IGCC_tech1,40
 
-2020,inflow,years,World,generation,OlCC,,40
-2050,inflow,years,World,generation,OlCC,,40
+2020,inflow,years,World,generation,OlCC,OlCC_tech1,40
+2050,inflow,years,World,generation,OlCC,OlCC_tech1,40
 
-2020,inflow,years,World,generation,NGCC,,40
-2050,inflow,years,World,generation,NGCC,,40
+2020,inflow,years,World,generation,NGCC,NGCC_tech1,40
+2050,inflow,years,World,generation,NGCC,NGCC_tech1,40
 
-2020,inflow,years,World,generation,BioCC,,40
-2050,inflow,years,World,generation,BioCC,,40
+2020,inflow,years,World,generation,BioCC,BioCC_tech1,40
+2050,inflow,years,World,generation,BioCC,BioCC_tech1,40
 
-2020,inflow,years,World,generation,ClCS,,40
-2050,inflow,years,World,generation,ClCS,,40
+2020,inflow,years,World,generation,ClCS,ClCS_tech1,40
+2050,inflow,years,World,generation,ClCS,ClCS_tech1,40
 
-2020,inflow,years,World,generation,OlCS,,40
-2050,inflow,years,World,generation,OlCS,,40
+2020,inflow,years,World,generation,OlCS,OlCS_tech1,40
+2050,inflow,years,World,generation,OlCS,OlCS_tech1,40
 
-2020,inflow,years,World,generation,NGCS,,40
-2050,inflow,years,World,generation,NGCS,,40
+2020,inflow,years,World,generation,NGCS,NGCS_tech1,40
+2050,inflow,years,World,generation,NGCS,NGCS_tech1,40
 
-2020,inflow,years,World,generation,BioCS,,40
-2050,inflow,years,World,generation,BioCS,,40
+2020,inflow,years,World,generation,BioCS,BioCS_tech1,40
+2050,inflow,years,World,generation,BioCS,BioCS_tech1,40
 
-2020,inflow,years,World,generation,ClCHP,,40
-2050,inflow,years,World,generation,ClCHP,,40
+2020,inflow,years,World,generation,ClCHP,ClCHP_tech1,40
+2050,inflow,years,World,generation,ClCHP,ClCHP_tech1,40
 
-2020,inflow,years,World,generation,OlCHP,,40
-2050,inflow,years,World,generation,OlCHP,,40
+2020,inflow,years,World,generation,OlCHP,OlCHP_tech1,40
+2050,inflow,years,World,generation,OlCHP,OlCHP_tech1,40
 
-2020,inflow,years,World,generation,NGCHP,,40
-2050,inflow,years,World,generation,NGCHP,,40
+2020,inflow,years,World,generation,NGCHP,NGCHP_tech1,40
+2050,inflow,years,World,generation,NGCHP,NGCHP_tech1,40
 
-2020,inflow,years,World,generation,BioCHP,,40
-2050,inflow,years,World,generation,BioCHP,,40
+2020,inflow,years,World,generation,BioCHP,BioCHP_tech1,40
+2050,inflow,years,World,generation,BioCHP,BioCHP_tech1,40
 
-2020,inflow,years,World,generation,ClCHPCS,,40
-2050,inflow,years,World,generation,ClCHPCS,,40
+2020,inflow,years,World,generation,ClCHPCS,ClCHPCS_tech1,40
+2050,inflow,years,World,generation,ClCHPCS,ClCHPCS_tech1,40
 
-2020,inflow,years,World,generation,OlCHPCS,,40
-2050,inflow,years,World,generation,OlCHPCS,,40
+2020,inflow,years,World,generation,OlCHPCS,OlCHPCS_tech1,40
+2050,inflow,years,World,generation,OlCHPCS,OlCHPCS_tech1,40
 
-2020,inflow,years,World,generation,NGCHPCS,,40
-2050,inflow,years,World,generation,NGCHPCS,,40
+2020,inflow,years,World,generation,NGCHPCS,NGCHPCS_tech1,40
+2050,inflow,years,World,generation,NGCHPCS,NGCHPCS_tech1,40
 
-2020,inflow,years,World,generation,BioCHPCS,,40
-2050,inflow,years,World,generation,BioCHPCS,,40
+2020,inflow,years,World,generation,BioCHPCS,BioCHPCS_tech1,40
+2050,inflow,years,World,generation,BioCHPCS,BioCHPCS_tech1,40
 
-2020,inflow,years,World,generation,GeoCHP,,40
-2050,inflow,years,World,generation,GeoCHP,,40
+2020,inflow,years,World,generation,GeoCHP,GeoCHP_tech1,40
+2050,inflow,years,World,generation,GeoCHP,GeoCHP_tech1,40
 
-2020,inflow,years,World,generation,H2CHP,,40
-2050,inflow,years,World,generation,H2CHP,,40
+2020,inflow,years,World,generation,H2CHP,H2CHP_tech1,40
+2050,inflow,years,World,generation,H2CHP,H2CHP_tech1,40

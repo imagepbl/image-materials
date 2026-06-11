@@ -1,4 +1,4 @@
-#%% Import modules and constants
+# Import modules and constants
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -28,53 +28,60 @@ from imagematerials.electricity.constants import (
     STD_LIFETIMES_ELECTR,
 )
 
-EPG_SUB_TECHNOLOGIES_TEST = [
-    "SPV_tech1",
-    "SPVR_tech1",
-    "parabolic trough",
-    "solar tower",
-    "WON_GB-DFIG",
-    "WON_GB-PMSG",
-    "WON_DD-PMSG",
-    "WON_DD-EESG",
-    "WOFF_GB-DFIG",
-    "WOFF_GB-PMSG",
-    "WOFF_DD-PMSG",
-    "WOFF_DD-EESG",
-    "WAVE_tech1",
-    "HYD_tech1",
-    "OREN_tech1",
-    "GEO_tech1",
-    "H2P_tech1",
-    "NUC_tech1",
-    "FREE12_tech1",
-    "ClST_tech1",
-    "OlST_tech1",
-    "NGOT_tech1",
-    "BioST_tech1",
-    "IGCC_tech1",
-    "OlCC_tech1",
-    "NGCC_tech1",
-    "BioCC_tech1",
-    "ClCS_tech1",
-    "OlCS_tech1",
-    "NGCS_tech1",
-    "BioCS_tech1",
-    "ClCHP_tech1",
-    "OlCHP_tech1",
-    "NGCHP_tech1",
-    "BioCHP_tech1",
-    "ClCHPCS_tech1",
-    "OlCHPCS_tech1",
-    "NGCHPCS_tech1",
-    "BioCHPCS_tech1",
-    "GeoCHP_tech1",
-    "H2CHP_tech1"
-]
+def get_preprocessing_data_gen(path_base: str, 
+                               climate_policy_config: dict, 
+                               circular_economy_config: dict
+                               ):
+    """Prepare preprocessing input data for the electricity generation sub-module including gen. sub-technologies.
 
+    This function reads scenario-dependent power generation data from a combination of IMAGE/TIMER 
+    outputs (generation capacity) and external data files (lifetimes, material intensities). It 
+    converts them into standardized xarray structures, applies interpolation and optional circular 
+    economy (CE) measures, and returns all inputs in a unified format required by the stock model.
 
-def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circular_economy_config: dict):
+    Parameters
+    ----------
+    path_base : str
+        Base directory containing external electricity grid data.
+    climate_policy_config : dict
+        Configuration dictionary providing paths to IMAGE/TIMER input files.
+    circular_economy_config : dict or None
+        Configuration for circular economy measures. If provided, material
+        intensities and lifetimes are adjusted accordingly.
 
+    Returns
+    -------
+    prep_data : dict
+        Dictionary containing preprocessed model inputs:
+        - "lifetimes": dict of lifetime distributions per technology
+        - "market_shares": xarray.DataArray with generation sub-technologies
+        - "stocks": xarray.DataArray of generation capacity (MW)
+        - "material_intensities": xarray.DataArray (kg/MW)
+        - "knowledge_graph": electricity knowledge graph object
+        - "set_unit_flexible": unit placeholder used internally by the model
+
+    Notes
+    -----
+    Due to limitations in the SharesInflowStocks model, a workaround is required to implement
+    sub-technologies. Not all power generation technologies from TIMER (referred to here as
+    SuperTypes) have resolved sub-technologies — in fact most do not. However, the model
+    requires market shares to be defined for all SuperTypes. As a workaround, each SuperType
+    without actual sub-technologies is assigned a placeholder sub-technology
+    (e.g. SPV -> SPV_tech1).
+
+    To remap the Type coordinates back to their final names after the model run, the following
+    must be called before saving the output:
+
+    .. code-block:: python
+
+        from imagematerials.electricity.constants import EPG_TECHNOLOGIES_FINAL
+        from imagematerials.electricity.utils import rebroadcast_type_dims
+
+        model.simulate(simulation_timeline)
+        rebroadcast_type_dims(model.elc_gen, knowledge_graph_electricity, EPG_TECHNOLOGIES_FINAL)
+        all_output[scen_id] = model
+
+    """
     scen = Path(climate_policy_config["config_file_path"]).name
     path_external_data_standard = Path(path_base, "electricity", "standard_data")
     path_external_data_scenario = Path(path_base, "electricity", scen) #test
@@ -86,20 +93,20 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
     year_end = 2100
 
     ###########################################################################################################
-    #%% Read in files #
+    # Read in files #
 
     # 1. External Data --------------------------------------------- 
 
     # lifetimes of Gcap tech (original data according to van Vuuren 2006, PhD Thesis)
-    lifetimes = pd.read_csv(path_external_data_standard / "generation_lifetimes - Kopie.csv",
+    lifetimes = pd.read_csv(path_external_data_standard / "generation_lifetimes.csv",
                             usecols=["Time","technology","sub_technology","value"])        
 
     # material compositions of electricity generation tecnologies (kg/MW)
-    material_intensities = pd.read_csv(path_external_data_standard / "generation_material_intensities - Kopie.csv",
+    material_intensities = pd.read_csv(path_external_data_standard / "generation_material_intensities.csv",
                             usecols=["Time","technology","sub_technology","material","value"], comment="#")#.transpose()
 
     # market shares
-    market_shares = pd.read_csv(path_external_data_standard / "generation_subtechnologies_market_shares - Kopie.csv",
+    market_shares = pd.read_csv(path_external_data_standard / "generation_market_shares.csv",
                             usecols=["Time","sub_technology","value"]) #"technology",
 
     # 2. IMAGE/TIMER files -----------------------------------------
@@ -110,9 +117,8 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
         climate_policy_config["data_files"]['GCap']
     )
 
-
     ###########################################################################################################
-    #%% Transform to xarray #
+    # Transform to xarray #
     knowledge_graph_region = create_region_graph()
     knowledge_graph_electr = create_electricity_graph()
 
@@ -126,7 +132,7 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
     # Convert to 3D array: (Year, Region, Tech)
     data_array = gcap_data[techs].to_numpy().reshape(len(years), len(regions), len(techs))
     # Build xarray DataArray
-    gcap_xr = xr.DataArray(
+    gcap_da = xr.DataArray(
         data_array,
         dims=('Time', 'Region', 'SuperType'),
         coords={
@@ -134,15 +140,13 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
             'Region': [str(r) for r in regions],
             'SuperType': [str(r) for r in techs]
         },
-        name='GCap'
+        name='GenerationCapacity'
     )
-    gcap_xr = prism.Q_(gcap_xr, "MW")
-    gcap_xr = knowledge_graph_region.rebroadcast_xarray(gcap_xr, output_coords=IMAGE_REGIONS, dim="Region") 
-    gcap_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_xr, output_coords=EPG_TECHNOLOGIES, dim="SuperType")
-    # gcap_xr = gcap_xr.assign_coords(Type=np.array(gcap_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
+    gcap_da = prism.Q_(gcap_da, "MW")
+    gcap_da = knowledge_graph_region.rebroadcast_xarray(gcap_da, output_coords=IMAGE_REGIONS, dim="Region")
+    gcap_da = knowledge_graph_electr.rebroadcast_xarray(gcap_da, output_coords=EPG_TECHNOLOGIES, dim="SuperType")
 
-
-    # material intensities (kg/MW) ---------------------------------------------------------------------
+    # material intensities (kg/MW) -----------------------------------------------------------------
     # create new column with sub-technology name if available, otherwise technology name
     material_intensities["Type"] = material_intensities["sub_technology"].fillna(material_intensities["technology"])
     material_intensities_da = (
@@ -152,9 +156,9 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
     )
     material_intensities_da = prism.Q_(material_intensities_da, "kg/MW")
     material_intensities_da.name = "GenerationMaterialIntensities"
-    material_intensities_da = knowledge_graph_electr.rebroadcast_xarray(material_intensities_da, output_coords=EPG_SUB_TECHNOLOGIES_TEST, dim="Type")
+    material_intensities_da = knowledge_graph_electr.rebroadcast_xarray(material_intensities_da, output_coords=EPG_SUB_TECHNOLOGIES, dim="Type")
 
-    # market shares (%) --------------------------------------------------------------------------------
+    # market shares (%) ----------------------------------------------------------------------------
     market_shares_da = (
         market_shares.set_index(["Time", "sub_technology"])["value"]
         .to_xarray()
@@ -163,7 +167,7 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
     market_shares_da = prism.Q_(market_shares_da, "dimensionless")
     market_shares_da.name = "GenerationMarketShares"
 
-    # lifetimes (yr) -----------------------------------------------------------------------------------
+    # lifetimes (yr) -------------------------------------------------------------------------------
     # create new column with sub-technology name if available, otherwise technology name
     lifetimes["Type"] = lifetimes["sub_technology"].fillna(lifetimes["technology"])
     lifetimes_da = (
@@ -172,11 +176,11 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
         .rename({"Time": "Cohort"})
     )
     lifetimes_da = lifetimes_da.expand_dims({"DistributionParams": ["mean", "stdev"]})
-    lifetimes_da.name = "StorageLifetime"
+    lifetimes_da.name = "GenerationLifetime"
 
 
     ###########################################################################################################
-    #%% Interpolate #
+    # Interpolate #
 
     # interpolate_xr: The lifetimes & material intensities are only given for specific years (2020 and 2050), so we linearly interpolate to get values for the years 2020-2050.
     # The values before 2020 are kept constant at the 2020 level, and the values after 2050 are kept constant at the 2050 level.
@@ -186,8 +190,7 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
     market_shares_da_interp = interpolate_xr(market_shares_da, year_start, year_end)
 
     # TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
-    gcap_xr_interp = add_historic_stock(gcap_xr, year_start)
-
+    gcap_da_interp = add_historic_stock(gcap_da, year_start)
 
     ###########################################################################################################
     # CE measures #
@@ -206,7 +209,7 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
 
     # bring preprocessing data into a generic format for the model
     prep_data = {}
-    prep_data["stocks"] = gcap_xr_interp
+    prep_data["stocks"] = gcap_da_interp
     prep_data["lifetimes"] = lifetimes_da_interp
     prep_data["shares"] = market_shares_da_interp
     prep_data["material_intensities"] = material_intensities_da_interp
@@ -216,189 +219,183 @@ def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circ
     return prep_data
 
 
-
-
-
-
-
 #############################################################################################################
 #############################################################################################################
 
 
-# def get_preprocessing_data_gen(path_base: str, climate_policy_config: dict, circular_economy_config: dict):
-#     """ Prepare preprocessing input data for the electricity generation sub-module.
+def get_preprocessing_data_gen_supertype(path_base: str, climate_policy_config: dict, circular_economy_config: dict):
+    """ Prepare preprocessing input data for the electricity generation sub-module for SuperTypes only.
 
-#     This function reads scenario-dependent power generation data from a combination of IMAGE/TIMER 
-#     outputs (generation capacity) and external data files (lifetimes, material intensities). It 
-#     converts them into standardized xarray structures, applies interpolation and optional circular 
-#     economy (CE) measures, and returns all inputs in a unified format required by the stock model.
+    This function reads scenario-dependent power generation data from a combination of IMAGE/TIMER 
+    outputs (generation capacity) and external data files (lifetimes, material intensities). It 
+    converts them into standardized xarray structures, applies interpolation and optional circular 
+    economy (CE) measures, and returns all inputs in a unified format required by the stock model.
 
-#     Parameters
-#     ----------
-#     path_base : str
-#         Base directory containing external electricity grid data.
-#     climate_policy_config : dict
-#         Configuration dictionary providing paths to IMAGE/TIMER input files.
-#     circular_economy_config : dict or None
-#         Configuration for circular economy measures. If provided, material
-#         intensities and lifetimes are adjusted accordingly.
-#     year_start : int
-#         First simulation year.
-#     year_end : int
-#         Last simulation year.
+    Parameters
+    ----------
+    path_base : str
+        Base directory containing external electricity grid data.
+    climate_policy_config : dict
+        Configuration dictionary providing paths to IMAGE/TIMER input files.
+    circular_economy_config : dict or None
+        Configuration for circular economy measures. If provided, material
+        intensities and lifetimes are adjusted accordingly.
+    year_start : int
+        First simulation year.
+    year_end : int
+        Last simulation year.
 
-#     Returns
-#     -------
-#     prep_data : dict
-#         Dictionary containing preprocessed model inputs:
-#         - "lifetimes": dict of lifetime distributions per technology
-#         - "stocks": xarray.DataArray of generation capacity (MW)
-#         - "material_intensities": xarray.DataArray (g/MW)
-#         - "knowledge_graph": electricity knowledge graph object
-#         - "set_unit_flexible": unit placeholder used internally by the model
-#     """
+    Returns
+    -------
+    prep_data : dict
+        Dictionary containing preprocessed model inputs:
+        - "lifetimes": dict of lifetime distributions per technology
+        - "stocks": xarray.DataArray of generation capacity (MW)
+        - "material_intensities": xarray.DataArray (g/MW)
+        - "knowledge_graph": electricity knowledge graph object
+        - "set_unit_flexible": unit placeholder used internally by the model
 
-#     scen = Path(climate_policy_config["config_file_path"]).name
-#     path_external_data_standard = Path(path_base, "electricity", "standard_data")
-#     path_external_data_scenario = Path(path_base, "electricity", scen) #test
-#     # test if path_external_data_scenario exists and if not set to standard scenario
-#     if not path_external_data_scenario.exists():
-#         path_external_data_scenario = Path(path_base, "electricity", STANDARD_SCEN_EXTERNAL_DATA)
+    """
+    scen = Path(climate_policy_config["config_file_path"]).name
+    path_external_data_standard = Path(path_base, "electricity", "standard_data")
+    path_external_data_scenario = Path(path_base, "electricity", scen) #test
+    # test if path_external_data_scenario exists and if not set to standard scenario
+    if not path_external_data_scenario.exists():
+        path_external_data_scenario = Path(path_base, "electricity", STANDARD_SCEN_EXTERNAL_DATA)
 
-#     year_start = YEAR_FIRST_GRID
-#     year_end = 2100
+    year_start = YEAR_FIRST_GRID
+    year_end = 2100
 
-#     ###########################################################################################################
-#     # Read in files #
+    ###########################################################################################################
+    # Read in files #
 
-#     # 1. External Data --------------------------------------------- 
+    # 1. External Data --------------------------------------------- 
 
-#     # lifetimes of Gcap tech (original data according to van Vuuren 2006, PhD Thesis)
-#     gcap_lifetime_data = pd.read_csv(path_external_data_scenario / 'LTTechnical_dynamic.csv', index_col=['Year','DIM_1'])        
+    # lifetimes of Gcap tech (original data according to van Vuuren 2006, PhD Thesis)
+    gcap_lifetime_data = pd.read_csv(path_external_data_scenario / 'LTTechnical_dynamic.csv', index_col=['Year','DIM_1'])        
     
-#     # material compositions of electricity generation tecnologies (g/MW)
-#     gcap_materials_data = pd.read_csv(path_external_data_scenario / 'composition_generation.csv',index_col=[0,1]).transpose()
+    # material compositions of electricity generation tecnologies (g/MW)
+    gcap_materials_data = pd.read_csv(path_external_data_scenario / 'composition_generation.csv',index_col=[0,1]).transpose()
 
-#     # 2. IMAGE/TIMER files -----------------------------------------
-#     # Generation capacity (stock demand per generation technology) in MW peak capacity
-#     gcap_data = read_mym_df(
-#         climate_policy_config["config_file_path"] /
-#         climate_policy_config["data_files"]['GCap']
-#     )
-#     ###########################################################################################################
-#     # Transform to xarray #
-#     knowledge_graph_region = create_region_graph()
-#     knowledge_graph_electr = create_electricity_graph()
+    # 2. IMAGE/TIMER files -----------------------------------------
+    # Generation capacity (stock demand per generation technology) in MW peak capacity
+    gcap_data = read_mym_df(
+        climate_policy_config["config_file_path"] /
+        climate_policy_config["data_files"]['GCap']
+    )
+    ###########################################################################################################
+    # Transform to xarray #
+    knowledge_graph_region = create_region_graph()
+    knowledge_graph_electr = create_electricity_graph()
+
+
+    # Lifetimes -------
+    values = gcap_lifetime_data["TechnicalLT"].unstack().to_numpy(dtype=float)
+    # Create coordinates
+    times = gcap_lifetime_data.index.levels[0].to_numpy()
+    types = gcap_lifetime_data.index.levels[1].to_numpy()
+    scipy_params = ["mean", "stdev"]
+    # Build full array: shape (ScipyParam, Time, Type)
+    data_array = np.stack([values, np.full_like(values, np.nan)], axis=0)
+    # Create DataArray
+    gcap_lifetime_xr = xr.DataArray(
+        data_array,
+        dims=["DistributionParams", "Cohort", "Type"],
+        coords={
+            "DistributionParams": scipy_params,
+            "Cohort": times,
+            "Type": [str(r) for r in types]
+        },
+        name="GenerationLifetime"
+    )
+    gcap_lifetime_xr = prism.Q_(gcap_lifetime_xr, "year")
+    gcap_lifetime_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_lifetime_xr, output_coords=EPG_TECHNOLOGIES, dim="Type") # convert technology names to the standard names from TIMER
+    gcap_lifetime_xr = gcap_lifetime_xr.assign_coords(Type=np.array(gcap_lifetime_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
+
+
+    # Material Intensities -------
+    # Extract coordinate labels
+    gcap_materials_data.columns = gcap_materials_data.columns.rename([None, None]) # remove column MultiIndex name "g/MW" as it causes issues when converting to xarray
+    years = sorted(gcap_materials_data.columns.get_level_values(0).unique())
+    techs = gcap_materials_data.columns.get_level_values(1).unique()
+    materials = gcap_materials_data.index
+    # Convert to 3D array: (Material, Year, Tech)
+    data_array = gcap_materials_data.to_numpy().reshape(len(materials),len(years), len(techs))
+    # Build xarray DataArray
+    gcap_materials_xr = xr.DataArray(
+        data_array,
+        dims=('material', 'Cohort', 'Type'),
+        coords={
+            'material': materials,
+            'Cohort': years,
+            'Type': techs,
+        },
+        name='GenerationMaterialIntensities'
+    )
+    gcap_materials_xr = prism.Q_(gcap_materials_xr, "g/MW")
+    gcap_materials_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_materials_xr, output_coords=EPG_TECHNOLOGIES, dim="Type")
+    gcap_materials_xr = gcap_materials_xr.assign_coords(Type=np.array(gcap_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
+
+    # Gcap ------
+    gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
+    gcap_data = gcap_data.loc[gcap_data['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', *range(1, len(EPG_TECHNOLOGIES) + 1)]]  # only keep relevant years and technology columns
+    # Extract coordinate labels
+    years = sorted(gcap_data['time'].unique())
+    regions = sorted(gcap_data['DIM_1'].unique())
+    techs = list(range(1, len(EPG_TECHNOLOGIES)+1))
+    # Convert to 3D array: (Year, Region, Tech)
+    data_array = gcap_data[techs].to_numpy().reshape(len(years), len(regions), len(techs))
+    # Build xarray DataArray
+    gcap_da = xr.DataArray(
+        data_array,
+        dims=('Time', 'Region', 'Type'),
+        coords={
+            'Time': years,
+            'Region': [str(r) for r in regions],
+            'Type': [str(r) for r in techs]
+        },
+        name='GenerationCapacity'
+    )
+    gcap_da = prism.Q_(gcap_da, "MW")
+    gcap_da = knowledge_graph_region.rebroadcast_xarray(gcap_da, output_coords=IMAGE_REGIONS, dim="Region") 
+    gcap_da = knowledge_graph_electr.rebroadcast_xarray(gcap_da, output_coords=EPG_TECHNOLOGIES, dim="Type")
+    gcap_da = gcap_da.assign_coords(Type=np.array(gcap_da.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
+
+    ################################################################################################
+    # Interpolate #
+
+    # interpolate_xr: The lifetimes & material intensities are only given for specific years (2020 and 2050), so we linearly interpolate to get values for the years 2020-2050.
+    # The values before 2020 are kept constant at the 2020 level, and the values after 2050 are kept constant at the 2050 level.
+    gcap_lifetime_xr_interp = interpolate_xr(gcap_lifetime_xr, year_start, year_end)
+    gcap_lifetime_xr_interp.loc[dict(DistributionParams="stdev")] = gcap_lifetime_xr_interp.loc[dict(DistributionParams="mean")] * STD_LIFETIMES_ELECTR
+    gcap_materials_xr_interp = interpolate_xr(gcap_materials_xr, year_start, year_end)
+
+    # TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
+    gcap_da_interp = add_historic_stock(gcap_da, year_start)
+
+
+    ################################################################################################
+    # CE measures #
+
+    # Depending on circular economy scenario, apply different measures
+    if circular_economy_config is not None:
+        gcap_materials_xr_interp, gcap_lifetime_xr_interp = apply_ce_measures_to_elc_generation(gcap_materials_xr_interp,
+                                                                                                gcap_lifetime_xr_interp,
+                                                                                                circular_economy_config)
+
+    ################################################################################################
+    # Prep_data File #
+
+    # The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
+    gcap_lifetime_xr_interp = convert_lifetime(gcap_lifetime_xr_interp)
     
+    # bring preprocessing data into a generic format for the model
+    prep_data = {}
+    prep_data["lifetimes"] = gcap_lifetime_xr_interp
+    prep_data["stocks"] = gcap_da_interp
+    prep_data["material_intensities"] = gcap_materials_xr_interp
+    prep_data["knowledge_graph"] = create_electricity_graph()
+    prep_data["set_unit_flexible"] = str(prism.U_(prep_data["stocks"])) # prism.U_ gives the unit back
+    # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
 
-#     # Lifetimes -------
-#     values = gcap_lifetime_data["TechnicalLT"].unstack().to_numpy(dtype=float)
-#     # Create coordinates
-#     times = gcap_lifetime_data.index.levels[0].to_numpy()
-#     types = gcap_lifetime_data.index.levels[1].to_numpy()
-#     scipy_params = ["mean", "stdev"]
-#     # Build full array: shape (ScipyParam, Time, Type)
-#     data_array = np.stack([values, np.full_like(values, np.nan)], axis=0)
-#     # Create DataArray
-#     gcap_lifetime_xr = xr.DataArray(
-#         data_array,
-#         dims=["DistributionParams", "Cohort", "Type"],
-#         coords={
-#             "DistributionParams": scipy_params,
-#             "Cohort": times,
-#             "Type": [str(r) for r in types]
-#         },
-#         name="GenerationLifetime"
-#     )
-#     gcap_lifetime_xr = prism.Q_(gcap_lifetime_xr, "year")
-#     gcap_lifetime_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_lifetime_xr, output_coords=EPG_TECHNOLOGIES, dim="Type") # convert technology names to the standard names from TIMER
-#     gcap_lifetime_xr = gcap_lifetime_xr.assign_coords(Type=np.array(gcap_lifetime_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
-
-
-#     # Material Intensities -------
-#     # Extract coordinate labels
-#     gcap_materials_data.columns = gcap_materials_data.columns.rename([None, None]) # remove column MultiIndex name "g/MW" as it causes issues when converting to xarray
-#     years = sorted(gcap_materials_data.columns.get_level_values(0).unique())
-#     techs = gcap_materials_data.columns.get_level_values(1).unique()
-#     materials = gcap_materials_data.index
-#     # Convert to 3D array: (Material, Year, Tech)
-#     data_array = gcap_materials_data.to_numpy().reshape(len(materials),len(years), len(techs))
-#     # Build xarray DataArray
-#     gcap_materials_xr = xr.DataArray(
-#         data_array,
-#         dims=('material', 'Cohort', 'Type'),
-#         coords={
-#             'material': materials,
-#             'Cohort': years,
-#             'Type': techs,
-#         },
-#         name='GenerationMaterialIntensities'
-#     )
-#     gcap_materials_xr = prism.Q_(gcap_materials_xr, "g/MW")
-#     gcap_materials_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_materials_xr, output_coords=EPG_TECHNOLOGIES, dim="Type")
-#     gcap_materials_xr = gcap_materials_xr.assign_coords(Type=np.array(gcap_materials_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
-
-#     # Gcap ------
-#     gcap_data = gcap_data.loc[~gcap_data['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
-#     gcap_data = gcap_data.loc[gcap_data['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', *range(1, len(EPG_TECHNOLOGIES) + 1)]]  # only keep relevant years and technology columns
-#     # Extract coordinate labels
-#     years = sorted(gcap_data['time'].unique())
-#     regions = sorted(gcap_data['DIM_1'].unique())
-#     techs = list(range(1, len(EPG_TECHNOLOGIES)+1))
-#     # Convert to 3D array: (Year, Region, Tech)
-#     data_array = gcap_data[techs].to_numpy().reshape(len(years), len(regions), len(techs))
-#     # Build xarray DataArray
-#     gcap_xr = xr.DataArray(
-#         data_array,
-#         dims=('Time', 'Region', 'Type'),
-#         coords={
-#             'Time': years,
-#             'Region': [str(r) for r in regions],
-#             'Type': [str(r) for r in techs]
-#         },
-#         name='GenerationCapacity'
-#     )
-#     gcap_xr = prism.Q_(gcap_xr, "MW")
-#     gcap_xr = knowledge_graph_region.rebroadcast_xarray(gcap_xr, output_coords=IMAGE_REGIONS, dim="Region") 
-#     gcap_xr = knowledge_graph_electr.rebroadcast_xarray(gcap_xr, output_coords=EPG_TECHNOLOGIES, dim="Type")
-#     gcap_xr = gcap_xr.assign_coords(Type=np.array(gcap_xr.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
-
-#     ###########################################################################################################
-#     # Interpolate #
-
-#     # interpolate_xr: The lifetimes & material intensities are only given for specific years (2020 and 2050), so we linearly interpolate to get values for the years 2020-2050.
-#     # The values before 2020 are kept constant at the 2020 level, and the values after 2050 are kept constant at the 2050 level.
-#     gcap_lifetime_xr_interp = interpolate_xr(gcap_lifetime_xr, year_start, year_end)
-#     gcap_lifetime_xr_interp.loc[dict(DistributionParams="stdev")] = gcap_lifetime_xr_interp.loc[dict(DistributionParams="mean")] * STD_LIFETIMES_ELECTR
-#     gcap_materials_xr_interp = interpolate_xr(gcap_materials_xr, year_start, year_end)
-
-#     # TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
-#     gcap_xr_interp = add_historic_stock(gcap_xr, year_start)
-
-
-#     ###########################################################################################################
-#     # CE measures #
-
-#     # Depending on circular economy scenario, apply different measures
-#     if circular_economy_config is not None:
-#         gcap_materials_xr_interp, gcap_lifetime_xr_interp = apply_ce_measures_to_elc_generation(gcap_materials_xr_interp,
-#                                                                                                 gcap_lifetime_xr_interp,
-#                                                                                                 circular_economy_config)
-        
-
-#     ###########################################################################################################
-#     # Prep_data File #
-
-#     # The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
-#     gcap_lifetime_xr_interp = convert_lifetime(gcap_lifetime_xr_interp)
-    
-#     # bring preprocessing data into a generic format for the model
-#     prep_data = {}
-#     prep_data["lifetimes"] = gcap_lifetime_xr_interp
-#     prep_data["stocks"] = gcap_xr_interp
-#     prep_data["material_intensities"] = gcap_materials_xr_interp
-#     prep_data["knowledge_graph"] = create_electricity_graph()
-#     prep_data["set_unit_flexible"] = str(prism.U_(prep_data["stocks"])) # prism.U_ gives the unit back
-#     # set_unit_flexible is needed by the model to deal with the fact the in the beginning of the model it doesn't know th data yet and needs to work with a placeholder/flexible unit (see model.py) 
-
-#     return prep_data
+    return prep_data
