@@ -900,8 +900,6 @@ def create_electricity_graph():
     }
     electricity_knowledge_graph = KnowledgeGraph(Node("Electricity"))
     electricity_knowledge_graph.add(Node("Generation", inherits_from="Electricity"))
-    # for number, synonyms in numeric_generation_map.items():
-    #     electricity_knowledge_graph.add(Node(number, synonyms=synonyms, inherits_from="Generation"))
 
     # Technology categories ------------------------------------------------------------------------
     for cat in ["chp_all", "ccs_all", "combined_cycle", "steam_turbine", "open_cycle", 
@@ -981,18 +979,6 @@ def create_electricity_graph():
     for subtech in subtech_to_tech.keys():
         parent = subtech_to_tech.get(subtech)
         electricity_knowledge_graph.add(Node(subtech, inherits_from=parent))
-
-    # for subtype in ["c-Si", "a-Si", "CIGS", "CdTe", "Perovskite"]:
-    #     electricity_knowledge_graph.add(Node(subtype, inherits_from="Solar PV"))
-    #     electricity_knowledge_graph.add(Node(subtype, inherits_from="Solar PV residential")) # is this possible?
-
-    # for subtype in ["parabolic trough", "solar tower"]:
-    #     electricity_knowledge_graph.add(Node(subtype, inherits_from="CSP"))
-
-    # for subtype in ["WON_GB-DFIG", "WON_GB-PMSG", "Direct Drive"]:
-    #     electricity_knowledge_graph.add(Node(subtype, inherits_from="Wind onshore"))
-    #     electricity_knowledge_graph.add(Node(subtype, inherits_from="Wind offshore"))
-
 
     # Transmission Grid ============================================================================
     transmission_types = ["HV", "MV", "LV"]
