@@ -86,7 +86,8 @@ def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray,
 
 
 def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataArray,
-                                                 circular_economy_config: dict) -> xr.DataArray:
+                                                 circular_economy_config: dict,
+                                                 circular_economy_flags: dict) -> xr.DataArray:
     """Implement circular economy measures for commercial floorspace.
 
     Parameters
@@ -95,6 +96,8 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
         Total commercial floorspace.
     circular_economy_config:
         Configuration file of the circular economy measures.
+    circular_economy_flags:
+        Flags indicating which circular economy measures are enabled.
 
     Returns
     -------
@@ -110,8 +113,9 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
     # floorspace_commercial in m^2/cap
 
     # Base scenario
-    if 'base' in circular_economy_config.keys():
-        buildings_config = circular_economy_config["base"]["buildings"]
+    if circular_economy_flags.get("buildings").get("base_floorspace_adaptation") == True:
+        print("implemented 'base' for Commercial Buildings")
+        buildings_config = circular_economy_config["buildings"]
 
         base_year = buildings_config["base_year"]
         target_year = buildings_config["target_year"]
@@ -137,25 +141,15 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
         floorspace_commercial.loc[{"Region": regions_mapped}] *= scaling_factors
         logging.debug("implemented 'base' for Commercial Buildings")
 
-    ce_scen = None  # INITIALIZE ce_scen
-
-    # Right after ce_scen is set
-    print(f"ce_scen = {ce_scen}")
-
-    if "narrow" in circular_economy_config.keys():
-        ce_scen = "narrow"
-    if "narrow_activity" in circular_economy_config.keys():
-        ce_scen = "narrow_activity"
-    # narrow_activity scenario
-    if ce_scen in circular_economy_config.keys():
-        commercial_ce_mode = circular_economy_config[ce_scen]["buildings"].get(
+    if circular_economy_flags.get("buildings").get("narrow_floorspace_adaptation") == True:
+        commercial_ce_mode = circular_economy_config["buildings"].get(
             "commercial_ce_mode", "relative")
-        implementation_rate = circular_economy_config[ce_scen]['buildings']['implementation_rate']
-        base_year = circular_economy_config[ce_scen]["buildings"]["base_year"]
-        target_year = circular_economy_config[ce_scen]["buildings"]["target_year"]
+        implementation_rate = circular_economy_config['buildings']['implementation_rate']
+        base_year = circular_economy_config["buildings"]["base_year"]
+        target_year = circular_economy_config["buildings"]["target_year"]
 
         # --- Build the region-mapped relative-change array (shared by both modes) ---
-        commercial_scenario_settings = circular_economy_config[ce_scen]["buildings"]\
+        commercial_scenario_settings = circular_economy_config["buildings"]\
             ['commercial']['m2_change_pc']
 
         print(f"mode = {commercial_ce_mode}")
@@ -183,18 +177,14 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
                 floorspace_commercial, base_year, target_year,
                 commercial_scenario_settings_xr_mapped, implementation_rate)
 
-            logging.debug(f"implemented '{ce_scen}' for Commercial Buildings (relative only)")
-            print(f"implemented '{ce_scen}' for Commercial Buildings (relative only)")
-
         elif commercial_ce_mode == "convergence":
-            print(f"implemented '{ce_scen}' for Commercial Buildings (convergence)")
             print(f"Called with ce keys: {list(circular_economy_config.keys())}")
             # ── Relative reductions + three-category convergence toward cap ──
-            convergence_cap = float(circular_economy_config[ce_scen]["buildings"].get(
+            convergence_cap = float(circular_economy_config["buildings"].get(
                 "convergence_cap", 14.0))
-            convergence_year_end = int(circular_economy_config[ce_scen]["buildings"].get(
+            convergence_year_end = int(circular_economy_config["buildings"].get(
                 "convergence_year_end", 2100))
-            low_threshold = float(circular_economy_config[ce_scen]["buildings"].get(
+            low_threshold = float(circular_economy_config["buildings"].get(
                 "low_threshold", 5.0))
 
             # Dequantify to plain floats upfront — .loc item-assignment strips pint units,
@@ -345,9 +335,6 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
                 floorspace_commercial.values, baseline.values
             )
 
-            logging.debug(
-                f"implemented '{ce_scen}' for Commercial Buildings (relative + convergence)")
-
         else:
             raise ValueError(
                 f"Invalid commercial_ce_mode: '{commercial_ce_mode}'. "
@@ -385,16 +372,11 @@ def circular_economy_measures_material_intensities_residential(
     if "Cohort" in xr_mat_res_intensities.dims:
         xr_mat_res_intensities = xr_mat_res_intensities.rename({"Cohort": "Time"})
 
-    ce_scen = None  # INITIALIZE ce_scen
-
-    if "narrow_product" in circular_economy_config.keys():
-        ce_scen = "narrow_product"
-
     # import parameters from config file
-    target_year = circular_economy_config[ce_scen]['buildings']['target_year']
-    base_year = circular_economy_config[ce_scen]['buildings']['base_year']
-    implementation_rate = circular_economy_config[ce_scen]['buildings']['implementation_rate']
-    mat_changes = circular_economy_config[ce_scen]['buildings']['material_intensity_change']
+    target_year = circular_economy_config['buildings']['target_year']
+    base_year = circular_economy_config['buildings']['base_year']
+    implementation_rate = circular_economy_config['buildings']['implementation_rate']
+    mat_changes = circular_economy_config['buildings']['material_intensity_change']
 
     region_knowledge_graph = create_region_graph()
     model_regions = list(xr_mat_res_intensities.coords["Region"].values) # regions in model
@@ -431,7 +413,6 @@ def circular_economy_measures_material_intensities_residential(
     if "Time" in xr_mat_res_intensities.dims:
         xr_mat_res_intensities = xr_mat_res_intensities.rename({"Time": "Cohort"})
 
-    logging.debug(f"implemented '{ce_scen}' for Residential Buildings (lightweighting)")
     return xr_mat_res_intensities
 
 
@@ -459,16 +440,10 @@ def circular_economy_measures_material_intensities_commercial(xr_mat_comm_intens
     xr_mat_comm_intensities = (xr_mat_comm_intensities.rename({"Cohort": "Time"})
               if "Cohort" in xr_mat_comm_intensities.dims else xr_mat_comm_intensities)
     
-    ce_scen = None  # INITIALIZE ce_scen
-    if "narrow" in circular_economy_config.keys():
-        ce_scen = "narrow"
-    if "narrow_product" in circular_economy_config.keys():
-        ce_scen = "narrow_product"
-
-    base_year = circular_economy_config[ce_scen]['buildings']['base_year']
-    target_year = circular_economy_config[ce_scen]['buildings']['target_year']
-    implementation_rate = circular_economy_config[ce_scen]['buildings']['implementation_rate']
-    mat_changes = circular_economy_config[ce_scen]['buildings']['material_intensity_change']
+    base_year = circular_economy_config['buildings']['base_year']
+    target_year = circular_economy_config['buildings']['target_year']
+    implementation_rate = circular_economy_config['buildings']['implementation_rate']
+    mat_changes = circular_economy_config['buildings']['material_intensity_change']
 
     region_graph = create_region_graph()
     materials_all = list(xr_mat_comm_intensities.coords["material"].values) #

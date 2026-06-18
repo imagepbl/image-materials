@@ -273,23 +273,26 @@ def read_climate_policy_config(scenario_folder) -> dict:
 
 
 def read_circular_economy_config(scenario_folders: dict) -> dict:
-    """Extract data from multiple .toml-files and joins it together.
+    scenario_folder = next(iter(scenario_folders.values()))
+    config_file = Path(scenario_folder) / "config.toml"
 
-    Parameters
-    ----------
-    scenario_folders
-        Dictionary with labelled paths to the files that must be read.
+    with open(config_file, "rb") as f:
+        config = tomllib.load(f)
 
-    Returns
-    -------
-        Dictionary containing the contents of all toml-file, accessible
-        under the specified labels.
+    # If your TOML uses a wrapper table:
+    # [circular_economy_config]
+    # [circular_economy_config.buildings]
+    return config
 
-    """
-    config_dict = {}
-    for key, scenario_folder in scenario_folders.items():
-        config_dict[key] = _read_config(scenario_folder)
-    return config_dict
+
+def read_ce_flags(scenario_folders: dict) -> dict:
+    scenario_folder = next(iter(scenario_folders.values()))
+    flags_file = Path(scenario_folder) / "flags.toml"
+
+    with open(flags_file, "rb") as f:
+        flags = tomllib.load(f)
+
+    return flags.get("circular_economy_flags", {})
 
 
 def _read_config(scenario_folder) -> dict:

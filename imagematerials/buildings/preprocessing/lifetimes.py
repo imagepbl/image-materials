@@ -11,6 +11,7 @@ from imagematerials.util import dataset_to_array, merge_dims
 def compute_lifetimes(base_directory: Path,
                       commercial_types: list[str],
                       circular_economy_config: dict,
+                      circular_economy_flags: dict,
                       distribution_type="weibull") -> xr.DataArray:
     """Compute the residential and commercial lifetimes.
 
@@ -31,7 +32,7 @@ def compute_lifetimes(base_directory: Path,
         Array that contains the scipy parameters to generate the lifetime distributions.
 
     """
-    if 'slow' in circular_economy_config.keys():
+    if circular_economy_flags.get("buildings").get("lifetime_extension") == True:
         # TODO make this dynamic in the long run, for now simple solution chosen
         scenario = "SSP2_2D_RE"
         print("implemented 'slow' for Buildings")

@@ -18,6 +18,7 @@ from imagematerials.factory import Sector
 from imagematerials.util import (
     export_to_netcdf,
     import_from_netcdf,
+    read_ce_flags,
     read_circular_economy_config,
     read_climate_policy_config,
     rebroadcast_prep_data,
@@ -67,7 +68,8 @@ def _get_electricity_prep_data(base_dir, climate_policy_scenario_dir, circular_e
 def _get_buildings_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_scenario_dirs):
     climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
     circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
-    prep_data = prep_bld(base_dir, climate_policy_config, circular_economy_config)
+    circular_economy_flags = read_ce_flags(circular_economy_scenario_dirs)
+    prep_data = prep_bld(base_dir, climate_policy_config, circular_economy_config, circular_economy_flags)
     return prep_data
 
 

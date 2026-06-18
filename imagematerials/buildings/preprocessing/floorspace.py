@@ -202,6 +202,7 @@ def extrapolate_floorspace(floorspace_image: xr.DataArray,
         floor_1820_1970 = floor_1820_1970.sel(Time=floor_1820_1970.coords["Time"] != 1970)
     # combine historic with IMAGE data here
     floorspace = xr.concat((floor_1721_1820, floor_1820_1970, floorspace_image), dim="Time")
+    
     return floorspace.transpose(*floorspace_image.dims)
 
 
@@ -494,7 +495,8 @@ def compute_housing_residential(population: xr.DataArray,
                                 average_m2_capita: xr.DataArray,
                                 housing_type: xr.DataArray,
                                 floorspace_rururb: xr.DataArray,
-                                circular_economy_config: dict) -> xr.DataArray:
+                                circular_economy_config: dict,
+                                circular_economy_flags: dict) -> xr.DataArray:
     """Compute the total residential floorspace.
 
     Parameters
@@ -509,6 +511,8 @@ def compute_housing_residential(population: xr.DataArray,
         Residential subdivided over rural and urban regions.
     circular_economy_config:
         Circular economy configuration for base scenario.
+    circular_economy_flags:
+        Flags indicating which circular economy measures are enabled.
 
     Returns
     -------
@@ -524,7 +528,7 @@ def compute_housing_residential(population: xr.DataArray,
     total_m2_housing_per_cap = prism.Q_(total_m2_housing_per_cap, "m^2/person")
 
     # Implement circular economy measures if configuration is provided
-    if "base" in circular_economy_config:
+    if circular_economy_flags.get("buildings").get("base_floorspace_adaptation") == True:
         total_m2_housing_per_cap = ce_measures_residential_housing(total_m2_housing_per_cap,
                                                                    circular_economy_config)
 

@@ -25,8 +25,10 @@ from imagematerials.concepts import create_building_graph, create_region_graph
 from imagematerials.constants import IMAGE_REGIONS
 
 
-def buildings_preprocessing(base_directory: Path, climate_policy_config: dict,
+def buildings_preprocessing(base_directory: Path, 
+                            climate_policy_config: dict,
                             circular_economy_config: dict,
+                            circular_economy_flags: dict,
                             image_scenario:str = "SSP2_CP") -> xr.DataArray:
     """Preprocess the buildings data from start to finish.
 
@@ -37,7 +39,9 @@ def buildings_preprocessing(base_directory: Path, climate_policy_config: dict,
     climate_policy_config:
         Climate policy configuration for which the preprocessing will be done.
     circular_economy_config:
-        Climate economy configuration for which the preprocessing will be done.
+        Circular economy configuration for which the preprocessing will be done.
+    circular_economy_flags:
+        Flags indicating which circular economy measures are enabled.
     image_scenario:
         Image scenario, such as SSP2. The scenario selected should have the input
         data available.
@@ -67,11 +71,12 @@ def buildings_preprocessing(base_directory: Path, climate_policy_config: dict,
     floorspace_commercial_capita = extrapolate_floorspace(floorspace_image_commercial, minimum_comm)
 
     # Commercial floorspace [Time, Region, Type]
-    
-    if "base" or "narrow_activity" or "narrow" in circular_economy_config.keys():
+    if circular_economy_flags.get("buildings").get("lifetime_extension") == True:
         # Implement circular economy for commercial floorspace
         # This is only done for the base and narrow_activity scenarios, as the other scenarios do not have a circular economy component
-        floorspace_commercial_capita = apply_circular_economy_commercial_floorspace(floorspace_commercial_capita, circular_economy_config)
+        floorspace_commercial_capita = apply_circular_economy_commercial_floorspace(floorspace_commercial_capita, 
+                                                                                    circular_economy_config,
+                                                                                    circular_economy_flags)
         
     # Calculate population ("Total", "Rural", "Urban")
     population = compute_population(image_directory)
@@ -84,7 +89,8 @@ def buildings_preprocessing(base_directory: Path, climate_policy_config: dict,
                                                          average_m2_capita,
                                                          housing_type, 
                                                          floorspace_residential_capita,
-                                                         circular_economy_config)
+                                                         circular_economy_config,
+                                                         circular_economy_flags)
 
     # Commercial floorspace also needs to be multiplied by population & drop Area dimension
     floorspace_commercial_total = floorspace_commercial_capita * population.sel(Area=['Urban', 'Rural']).sum("Area")
@@ -95,12 +101,14 @@ def buildings_preprocessing(base_directory: Path, climate_policy_config: dict,
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         lifetimes = compute_lifetimes(base_directory, floorspace_commercial_total.coords["Type"].values,
-                                      circular_economy_config)
+                                      circular_economy_config, circular_economy_flags)
 
     mat_intensities_comm = compute_mat_intensities_commercial(database_directory,
-                                                              circular_economy_config)
+                                                              circular_economy_config, 
+                                                              circular_economy_flags)
     mat_intensities_res = compute_mat_intensities_residential(database_directory,
-                                                              circular_economy_config)
+                                                              circular_economy_config, 
+                                                              circular_economy_flags)
     mat_intensities = xr.concat((mat_intensities_res, mat_intensities_comm), dim="Type")
     knowledge_graph_buildings = create_building_graph()
     mat_intensities = knowledge_graph_buildings.rebroadcast_xarray(

@@ -1,0 +1,7 @@
+#BUILDINGS
+[circular_economy_flags.buildings]
+base_floorspace_adaptation = false
+narrow_floorspace_adaptation = false
+lifetime_extension = true
+lightweighting = false
+
