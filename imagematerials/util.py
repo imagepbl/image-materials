@@ -279,9 +279,6 @@ def read_circular_economy_config(scenario_folders: dict) -> dict:
     with open(config_file, "rb") as f:
         config = tomllib.load(f)
 
-    # If your TOML uses a wrapper table:
-    # [circular_economy_config]
-    # [circular_economy_config.buildings]
     return config
 
 
