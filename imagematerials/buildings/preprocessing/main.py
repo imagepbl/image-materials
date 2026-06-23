@@ -53,6 +53,9 @@ def buildings_preprocessing(base_directory: Path, climate_policy_config: dict,
     database_directory = base_directory / "buildings" / image_scenario
 
     image_directory = Path(climate_policy_config["config_file_path"])
+    print("image_directory: ", image_directory)
+    print("base_directory: ", base_directory)
+
     assert database_directory.is_dir(), database_directory
     assert image_directory.is_dir(), image_directory
 
@@ -74,7 +77,7 @@ def buildings_preprocessing(base_directory: Path, climate_policy_config: dict,
         floorspace_commercial_capita = apply_circular_economy_commercial_floorspace(floorspace_commercial_capita, circular_economy_config)
         
     # Calculate population ("Total", "Rural", "Urban")
-    population = compute_population(image_directory)
+    population = compute_population(image_directory, base_directory)
 
     average_m2_capita = compute_average_m2_capita(base_directory)
 
