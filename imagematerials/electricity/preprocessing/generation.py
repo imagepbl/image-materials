@@ -359,8 +359,7 @@ def get_preprocessing_data_gen_supertype(path_base: str, climate_policy_config: 
     gcap_da = prism.Q_(gcap_da, "MW")
     gcap_da = knowledge_graph_region.rebroadcast_xarray(gcap_da, output_coords=IMAGE_REGIONS, dim="Region") 
     gcap_da = knowledge_graph_electr.rebroadcast_xarray(gcap_da, output_coords=EPG_TECHNOLOGIES, dim="Type")
-    gcap_da = gcap_da.assign_coords(Type=np.array(gcap_da.Type.values, dtype=object)) # rebroadcast_xarray changes the type of the coordinates to numpy strings (np.str_), so convert back to python strings (str)
-
+    
     ################################################################################################
     # Interpolate #
 

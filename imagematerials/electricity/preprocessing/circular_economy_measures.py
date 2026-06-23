@@ -36,7 +36,6 @@ def apply_ce_measures_to_elc_generation(materials_array: xr.DataArray,
         base_year           = circular_economy_config[ce_scen]['electricity']['base_year']
         implementation_rate = circular_economy_config[ce_scen]['electricity']['implementation_rate']
         weight_change_pc    = circular_economy_config[ce_scen]['electricity']['generation']['weight_change_pc']
-        print(weight_change_pc)
 
         materials_array = apply_ce_measures_to_elc(
             materials_array,
@@ -53,7 +52,6 @@ def apply_ce_measures_to_elc_generation(materials_array: xr.DataArray,
         base_year           = circular_economy_config[ce_scen]['electricity']['base_year']
         implementation_rate = circular_economy_config[ce_scen]['electricity']['implementation_rate']
         lifetime_change_pc  = circular_economy_config[ce_scen]['electricity']['generation']['lifetime_increase_percent']
-        print(lifetime_change_pc)
 
         lifetime_array = apply_ce_measures_to_elc(
             lifetime_array,
