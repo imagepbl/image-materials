@@ -44,7 +44,6 @@ def eol_preprocessing(base_dir, circular_economy_scenario_dirs=None):
     # Only read config if dirs are provided
     if circular_economy_scenario_dirs is not None:
         circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
-        print("CE config:", list(circular_economy_config.keys()))
     else:
         circular_economy_config = {}
 

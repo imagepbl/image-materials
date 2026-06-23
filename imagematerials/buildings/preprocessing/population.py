@@ -97,6 +97,7 @@ def _get_pop_q_xr(
 
 def _build_total_population(
         image_directory: Path,
+        raw_data_directory: Path,
         pop_q_data: xr.DataArray,
         base_population: xr.DataArray,
         regions: list[str],
@@ -124,7 +125,7 @@ def _build_total_population(
         - ``time_all`` is the full annual timeline used for reindexing.
     """
     base_directory = image_directory.parent.parent
-    historic_path = base_directory / "buildings" / "standard_data" / "historic_population.csv"
+    historic_path = raw_data_directory / "buildings" / "standard_data" / "historic_population.csv"
 
     historic_population = pd.read_csv(historic_path)
     historic_population = (
@@ -361,6 +362,7 @@ def _equalize_quintiles(
 
 def compute_population(
     image_directory: Path,
+    raw_data_directory: Path,
     region_range: range = REGIONS_RANGE,
     urban_q_areas: list[str] = urban_q_areas,
     rural_q_areas: list[str] = rural_q_areas) -> xr.DataArray:
@@ -390,6 +392,7 @@ def compute_population(
 
     total_population_xr, time_all = _build_total_population(
         image_directory=image_directory,
+        raw_data_directory=raw_data_directory,
         pop_q_data=pop_q_data,
         base_population=population,
         regions=regions_all,
