@@ -47,7 +47,6 @@ def eol_preprocessing(base_dir, circular_economy_scenario_dirs=None):
     else:
         circular_economy_config = {}
 
-    print("base_dir EOL:", base_dir)
     collection_in = pd.read_csv(Path(base_dir, "end_of_life","SSP2_2D_RE", "collection.csv"))
     reuse_in = pd.read_csv(Path(base_dir, "end_of_life", "SSP2_CP", "reuse.csv"))
     recycling_in = pd.read_csv(Path(base_dir, "end_of_life","SSP2_CP","recycling.csv"))
