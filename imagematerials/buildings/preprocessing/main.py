@@ -53,8 +53,6 @@ def buildings_preprocessing(base_directory: Path, climate_policy_config: dict,
     database_directory = base_directory / "buildings" / image_scenario
 
     image_directory = Path(climate_policy_config["config_file_path"])
-    print("image_directory: ", image_directory)
-    print("base_directory: ", base_directory)
 
     assert database_directory.is_dir(), database_directory
     assert image_directory.is_dir(), image_directory
