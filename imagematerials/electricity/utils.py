@@ -11,16 +11,21 @@ import xarray as xr
 from pint.errors import UnitStrippedWarning
 
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
-from imagematerials.concepts import create_electricity_graph, create_image_region_graph, KnowledgeGraph
+from imagematerials.concepts import (
+    KnowledgeGraph,
+    create_electricity_graph, 
+    create_image_region_graph, 
+    create_iha_region_graph,
+)
 from imagematerials.constants import (
     IMAGE_REGIONS,
 )
 from imagematerials.electricity.constants import (
     EPG_TECHNOLOGIES_VRE,
+    EPG_SUBTECH_TO_TECH,
     STD_LIFETIMES_ELECTR,
     IHA_REGIONS,
     iha_region_map,
-    create_iha_region_graph,
     REGIONS,
     YEAR_FIRST_GRID,
 )
@@ -1376,8 +1381,15 @@ def normalize_selected_techs(market_share: xr.DataArray | pd.DataFrame,
 #####################################################################################################
 
 
-def apply_ce_measures_to_elc(arr: xr.DataArray, base_year: int, target_year: int, change: dict,
-                    implementation_rate: str, data_sector: Optional[str]=None, data_type: Optional[str]=None, steepness: float=0.5) -> xr.DataArray:
+def apply_ce_measures_to_elc(arr: xr.DataArray, 
+                             base_year: int, 
+                             target_year: int, 
+                             change: dict,
+                             implementation_rate: str, 
+                             data_sector: Optional[str]=None, 
+                             data_type: Optional[str]=None, 
+                             steepness: float=0.5
+                             ) -> xr.DataArray:
         r"""Apply CE measures to an xarray DataArray over time for (technology) types.
 
         The function modifies values by applying a percentage change according to a chosen
@@ -1447,6 +1459,9 @@ def apply_ce_measures_to_elc(arr: xr.DataArray, base_year: int, target_year: int
             change = expand_change_dict_for_grid_items(change)
         elif data_sector is not None:
             raise ValueError(f"Unknown data_sector: '{data_sector}'. Supported types are 'electricity grid' or None.")
+
+        # map parent-tech changes onto subtechs actually present
+        change = expand_change_dict_for_subtech(change, result[type_dim].values)
 
         # If data_type is 'lifetime', we need to determine which distribution parameter to modify
         if data_type == "lifetime":
@@ -1536,6 +1551,81 @@ def apply_ce_measures_to_elc(arr: xr.DataArray, base_year: int, target_year: int
             )
 
         return result
+
+def expand_change_dict_for_subtech(change: dict, 
+                                   available_types: np.ndarray, 
+                                   subtech_to_tech: dict | None = None, 
+                                   data_sector: str|None = None
+                                   ) -> dict:
+    """Map parent-technology changes onto the subtechnologies present in a DataArray.
+
+    Circular-economy measures (e.g. lifetime extensions) are specified at the
+    parent-technology level (e.g. ``"WON"``), but the DataArray may contain only
+    subtechnologies (e.g. ``"WON_GB-DFIG"``). This expands the ``change`` dict so a
+    parent's value is copied onto each of its subtechs that actually appears in the
+    DataArray. Per key:
+
+    - key is already a coordinate in the DataArray -> keep it as-is
+    - key is a known parent technology            -> copy its value to each of its
+                                                     subtechs found in the DataArray
+    - otherwise                                   -> keep it; the caller's membership
+                                                     check skips it harmlessly
+
+    Parameters
+    ----------
+    change : dict
+        Mapping of (parent) technology -> percentage change, e.g. ``{"WON": 20}``.
+    available_types : np.ndarray
+        The coordinate labels present in the DataArray's type dimension
+        (typically ``result[type_dim].values``).
+    subtech_to_tech : dict, optional
+        Mapping of subtech -> list of parent tech(s). If None, it is resolved from
+        ``data_sector`` (falling back to ``EPG_SUBTECH_TO_TECH``).
+    data_sector : str, optional
+        Sector key used to look up the appropriate subtech mapping when
+        ``subtech_to_tech`` is not supplied.
+
+    Returns
+    -------
+    dict
+        A new change dict keyed by the technology/subtechnology labels to modify.
+
+    """
+    # Registry of per-sector subtech->parent mappings. Extend as new sectors are added.
+    sector_subtech = {
+        "electricity generation": EPG_SUBTECH_TO_TECH,
+        # expand if relevant
+    }
+
+    # Resolve the mapping to use: explicit arg wins, else look up by sector, else default.
+    if subtech_to_tech is None:
+        if data_sector in sector_subtech:
+            subtech_to_tech = sector_subtech[data_sector]
+        else:
+            subtech_to_tech = EPG_SUBTECH_TO_TECH
+
+    # Invert subtech->parent into parent->[subtechs] so we can expand a parent's value.
+    tech_to_subtech = {}
+    for sub, parents in subtech_to_tech.items():
+        for p in parents:
+            tech_to_subtech.setdefault(p, []).append(sub)
+
+    available = set(available_types)
+    expanded = {}
+    for key, value in change.items():
+        if key in available:
+            # Already a concrete coordinate; pass through unchanged.
+            expanded[key] = value
+        elif key in tech_to_subtech:
+            # Key is not a coordinate, but a parent tech: copy its value onto each subtech present 
+            # in the DataArray.
+            for sub in tech_to_subtech[key]:
+                if sub in available:
+                    expanded[sub] = value
+        else:
+            # Unknown key: keep it.
+            expanded[key] = value
+    return expanded
 
 def expand_change_dict_for_grid_items(dict_change: dict) -> dict:
     """Expand generic grid component categories into voltage-specific categories.

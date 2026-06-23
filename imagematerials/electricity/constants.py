@@ -4,7 +4,6 @@ import os
 import pint
 import itertools
 import matplotlib.pyplot as plt
-from imagematerials.concepts import KnowledgeGraph, Node
 
 ureg = pint.UnitRegistry(force_ndarray_like=True)
 
@@ -67,38 +66,6 @@ iha_region_map = {
     # Africa
     "NAF": "Africa", "WAF": "Africa", "SAF": "Africa", "RSAF": "Africa", "EAF": "Africa",
 }
-
-def create_iha_region_graph():
-    """Construct and return a knowledge graph representing a mapping betweenIHA regions and their
-        associated IMAGE regions.
-
-        The graph consists of two hierarchical layers:
-        1. Superregion nodes ("North & Central America") from the International Hydropower 
-        Association (IHA) dataset.
-        2. IMAGE regions, each linked to a parent superregion via the `inherits_from` attribute.
-
-        Returns:
-        -------
-            KnowledgeGraph: A populated knowledge graph containing:
-        """
-    iha_region_knowledge_graph = KnowledgeGraph()
-
-    for super_region in ["North & Central America", "South America", "East Asia & Pacific", "South & Central Asia", "Europe", "Africa"]:
-        iha_region_knowledge_graph.add(Node(super_region, inherits_from=None))
-    for region in ["CAN", "USA", "MEX", "RCAM"]:
-        iha_region_knowledge_graph.add(Node(region, inherits_from="North & Central America"))
-    for region in ["BRA", "RSAM"]:
-        iha_region_knowledge_graph.add(Node(region, inherits_from="South America"))
-    for region in ["INDO", "CHN", "KOR", "JAP", "SEAS", "OCE"]:
-        iha_region_knowledge_graph.add(Node(region, inherits_from="East Asia & Pacific"))
-    for region in ["ME", "RUS", "STAN", "INDIA", "RSAS"]:
-        iha_region_knowledge_graph.add(Node(region, inherits_from="South & Central Asia"))
-    for region in ["WEU", "CEU", "TUR", "UKR"]:
-        iha_region_knowledge_graph.add(Node(region, inherits_from="Europe"))
-    for region in ["NAF", "WAF", "SAF", "RSAF", "EAF"]:
-        iha_region_knowledge_graph.add(Node(region, inherits_from="Africa"))
-
-    return iha_region_knowledge_graph
 
 ####################################################################################################
 # Generation related constants 
@@ -253,6 +220,58 @@ EPG_TECHNOLOGIES_FINAL = [
     "GeoCHP",
     "H2CHP"
 ]
+
+EPG_SUBTECH_TO_TECH = {
+    "WON_GB-DFIG": ["WON"],
+    "WON_GB-PMSG": ["WON"],
+    "WON_DD-PMSG": ["WON"],
+    "WON_DD-EESG": ["WON"],
+    "WOFF_GB-DFIG": ["WOFF"],
+    "WOFF_GB-PMSG": ["WOFF"],
+    "WOFF_DD-PMSG": ["WOFF"],
+    "WOFF_DD-EESG": ["WOFF"],
+    "parabolic trough": ["CSP"],
+    "solar tower": ["CSP"],
+    "SPV_c-Si": ["SPV"],
+    "SPV_AsGa": ["SPV"],
+    "SPV_CdTe": ["SPV"],
+    "SPV_CIGS": ["SPV"],
+    "SPV_a-Si": ["SPV"],
+    "SPVR_c-Si": ["SPVR"],
+    "SPVR_AsGa": ["SPVR"],
+    "SPVR_CdTe": ["SPVR"],
+    "SPVR_CIGS": ["SPVR"],
+    "SPVR_a-Si": ["SPVR"],
+    "WAVE_tech1": ["WAVE"],
+    "HYD_tech1": ["HYD"],
+    "OREN_tech1": ["OREN"],
+    "GEO_tech1": ["GEO"],
+    "H2P_tech1": ["H2P"],
+    "NUC_tech1": ["NUC"],
+    "FREE12_tech1": ["FREE12"],
+    "ClST_tech1": ["ClST"],
+    "OlST_tech1": ["OlST"],
+    "NGOT_tech1": ["NGOT"],
+    "BioST_tech1": ["BioST"],
+    "IGCC_tech1": ["IGCC"],
+    "OlCC_tech1": ["OlCC"],
+    "NGCC_tech1": ["NGCC"],
+    "BioCC_tech1": ["BioCC"],
+    "ClCS_tech1": ["ClCS"],
+    "OlCS_tech1": ["OlCS"],
+    "NGCS_tech1": ["NGCS"],
+    "BioCS_tech1": ["BioCS"],
+    "ClCHP_tech1": ["ClCHP"],
+    "OlCHP_tech1": ["OlCHP"],
+    "NGCHP_tech1": ["NGCHP"],
+    "BioCHP_tech1": ["BioCHP"],
+    "ClCHPCS_tech1": ["ClCHPCS"],
+    "OlCHPCS_tech1": ["OlCHPCS"],
+    "NGCHPCS_tech1": ["NGCHPCS"],
+    "BioCHPCS_tech1": ["BioCHPCS"],
+    "GeoCHP_tech1": ["GeoCHP"],
+    "H2CHP_tech1": ["H2CHP"],
+}
 
 EPG_TECHNOLOGIES_VRE = [
     "SPV",

@@ -328,7 +328,7 @@ class SharesInflowStocks(prism.Model):
         """
         types_to_model = next(iter(self.lifetimes.values())).coords["Type"].values
         survival = ScipySurvival(self.lifetimes, types_to_model,
-                                 knowledge_graph=self.knowledge_graph) #self.shares.coords["Type"]
+                                 knowledge_graph=self.knowledge_graph)
         self.survival_matrix = SurvivalMatrix(survival)
         self.stock_by_cohort = xr.DataArray(
             0.0,
@@ -336,7 +336,7 @@ class SharesInflowStocks(prism.Model):
             coords={"Time":     self.Time,
                     "Cohort":   self.Cohort,
                     "Region":   self.Region,
-                    "Type":     types_to_model}) #self.shares.coords["Type"]
+                    "Type":     types_to_model})
         self.stock_by_cohort = prism.Q_(self.stock_by_cohort, self.set_unit_flexible) # pass unit from stocks
 
 
