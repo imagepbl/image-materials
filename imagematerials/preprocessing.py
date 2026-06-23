@@ -194,6 +194,7 @@ def get_preprocessing_data(
         elif sector == "buildings":
             prep_data = _get_buildings_prep_data(base_dir, climate_policy_scenario_dir,
                                                  circular_economy_scenario_dirs)
+            
         elif sector == "electricity":
             prep_data = _get_electricity_prep_data(base_dir, climate_policy_scenario_dir,
                                                    circular_economy_scenario_dirs)

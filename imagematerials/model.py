@@ -916,6 +916,10 @@ class EndOfLife(prism.Model):
                 # calculate sum outflow by supertype 
                 sum_outflow = outflow_t.sel(Type=present).sum("Type")
 
+                # End-of-life outputs are tracked without quintiles; aggregate if present.
+                if "Quintile" in sum_outflow.dims:
+                    sum_outflow = sum_outflow.sum("Quintile")
+
                 # --- reindex to target materials ---
                 target_mats = self.sum_outflow.to_array().coords["material"]  #  defining the ordering of material coords
                 sum_outflow = sum_outflow.reindex(material=target_mats, fill_value=0)
@@ -959,6 +963,10 @@ class EndOfLife(prism.Model):
                     continue
 
                 sum_inflow = inflow_t.sel(Type=present).sum("Type")
+
+                # End-of-life outputs are tracked without quintiles; aggregate if present.
+                if "Quintile" in sum_inflow.dims:
+                    sum_inflow = sum_inflow.sum("Quintile")
 
                 # --- harmonize coordinates ---
                 sum_inflow = sum_inflow.reindex_like(collection, fill_value=0)
