@@ -159,9 +159,9 @@ def rest_of_preprocessing(base_directory, image_scenario_directory, scenario: st
     historic_diff_consumption_total = read_historic_diff_cons_data(base_directory)
     population = compute_population(image_scenario_directory, base_directory)
     # Filter population data to start from 1971 & only total population needed
-    population = population.sel(Area = 'Total').loc[1971:]
-    # drop Area coords
-    population = population.drop_vars('Area')
+    population = population.sum("Quintile").loc[1971:]
+    population = population.sel(Area = "Total").drop("Area")
+    # from nr to Region abbreviations
     knowledge_graph_region = create_region_graph()
     population = knowledge_graph_region.rebroadcast_xarray(population, output_coords=IMAGE_REGIONS, dim="Region")
 
