@@ -1,13 +1,20 @@
 import prism
+import pytest
 from pathlib import Path
 from imagematerials.model import GenericStocks, GenericMaterials, MaterialIntensities
 from imagematerials.factory import ModelFactory, Sector
 from imagematerials.vehicles.preprocessing.util import get_passengerkms, get_tonkms
 from imagematerials.util import read_climate_policy_config
-from imagematerials.vehicles.timermodel import TIMERMaterials, TIMERVehicleMaterials
+from imagematerials.vehicles.timermodel import TIMERMaterials
 
 
-def test_vehicle_stocks(vhc_prep_data, tmpdir):
+@pytest.fixture(scope="session")
+def pickle_path(tmp_path_factory):
+    temp_path = tmp_path_factory.mktemp("data")
+    return temp_path
+
+
+def test_vehicle_stocks(vhc_prep_data, pickle_path):
     time_start = 1960
     sim_end = 1980
     complete_timeline = prism.Timeline(time_start, sim_end, 1)
@@ -17,8 +24,8 @@ def test_vehicle_stocks(vhc_prep_data, tmpdir):
     factory = ModelFactory(sector, complete_timeline)
     model = factory.add(GenericStocks).add(GenericMaterials).finish()
     model.simulate(simulation_timeline)
-    model.save_pkl(tmpdir / "test.pkl")
-    model2 = ModelFactory.load_pkl(tmpdir / "test.pkl")
+    model.save_pkl(pickle_path / "test.pkl")
+    model2 = ModelFactory.load_pkl(pickle_path / "test.pkl")
     assert model.stocks.equals(model2.stocks)
 
 def test_buildings_stocks(bld_prep_data):
@@ -47,7 +54,7 @@ def test_combined_stocks(bld_prep_data, vhc_prep_data):
     assert len(model.stocks) == 2
 
 
-def test_timer_interface(tmpdir):
+def test_timer_interface(pickle_path):
     # Run simulation both in standalone and simulated TIMER-coupled mode.
     # Ensure results are the same.
     sim_end = prism.Q_(1980, 'year')
@@ -64,7 +71,7 @@ def test_timer_interface(tmpdir):
 
     # Reuse model output from earlier test
     # TODO: make this work in a more clean way
-    vehicles_model = ModelFactory.load_pkl(tmpdir / "test.pkl")
+    vehicles_model = ModelFactory.load_pkl(pickle_path / "test.pkl")
 
     # Get the raw data that otherwise would come from TIMER
     path_test_scenario = Path("data", "raw", "image", "SSP2_baseline")
