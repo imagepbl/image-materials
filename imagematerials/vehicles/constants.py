@@ -123,6 +123,7 @@ simple_modes = ["Trains", "High Speed Trains", "Freight Trains",
               "Medium Ships", "Large Ships", "Very Large Ships",
               "Inland Ships"]
 all_modes = typical_modes + simple_modes
+EV_BATTERY_TYPES = ["low-nickel", "high-nickel", "LFP", "Na-ion"]
 
 cap_adjustment  = [1, 1, 1, 1]
 mile_adjustment = [1, 1, 1, 1]
