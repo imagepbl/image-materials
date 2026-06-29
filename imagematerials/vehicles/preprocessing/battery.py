@@ -143,15 +143,15 @@ def get_preprocessing_data_evbattery(
         'Midi Buses - PHEV', 'Midi Buses - Trolley', 'Regular Buses - BEV',
         'Regular Buses - FCV', 'Regular Buses - HEV', 'Regular Buses - ICE',
         'Regular Buses - PHEV', 'Regular Buses - Trolley']
-    vehicle_list_non_ev = ['Cars - ICE', 'Cars - HEV', 'Cars - FCV', 'Cars - Trolley', 
-        'Regular Buses - ICE', 'Regular Buses - HEV', 'Regular Buses - FCV', 
-        'Regular Buses - Trolley', 'Midi Buses - ICE', 'Midi Buses - HEV',
+    vehicle_list_non_ev = ['Cars - ICE', 'Cars - FCV', 'Cars - Trolley', 
+        'Regular Buses - ICE', 'Regular Buses - FCV', 
+        'Regular Buses - Trolley', 'Midi Buses - ICE',
         'Midi Buses - FCV', 'Midi Buses - Trolley', 'Heavy Freight Trucks - ICE',
-        'Heavy Freight Trucks - HEV', 'Heavy Freight Trucks - FCV',
+        'Heavy Freight Trucks - FCV',
         'Heavy Freight Trucks - Trolley', 'Medium Freight Trucks - ICE',
-        'Medium Freight Trucks - HEV', 'Medium Freight Trucks - FCV',
+        'Medium Freight Trucks - FCV',
         'Medium Freight Trucks - Trolley', 'Light Commercial Vehicles - ICE',
-        'Light Commercial Vehicles - HEV', 'Light Commercial Vehicles - FCV',
+        'Light Commercial Vehicles - FCV',
         'Light Commercial Vehicles - Trolley']
     vhc_knowledge_graph = create_vehicle_graph()
 
