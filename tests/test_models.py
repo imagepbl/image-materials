@@ -210,18 +210,18 @@ def test_electric_vehicle_batteries(coordinates, timelines):
 
     # Energy density: kg/kWh
     energy_density = xr.DataArray(
-        10.0, dims=("BatteryType", "Type", "Cohort"),
+        0.1, dims=("BatteryType", "Type", "Cohort"),
         coords={"BatteryType": battery_types, "Type": road_vehicle_types,
                 "Cohort": cohort_coords})
-    energy_density = prism.Q_(energy_density, "kg/kWh")
+    energy_density = prism.Q_(energy_density, "kWh/kg")
 
     # Shares and material_fractions are dimensionless (fractions) — leave as plain arrays
 
-    material_fractions = xr.DataArray(
-    0.5, dims=("material", "BatteryType", "Type", "Cohort"),
+    material_intensities = xr.DataArray(
+    5, dims=("material", "BatteryType", "Type", "Cohort"),
     coords={"material": material_types, "BatteryType": battery_types,
             "Type": road_vehicle_types, "Cohort": cohort_coords})
-    material_fractions = material_fractions / material_fractions.sum("material")
+    material_intensities = prism.Q_(material_intensities, "kg/kWh")
 
     vhc_fraction_v2g = xr.DataArray(
     0.8, dims=("Type", "Time", "Cohort"),
@@ -239,7 +239,7 @@ def test_electric_vehicle_batteries(coordinates, timelines):
         complete_timeline,
         weights=weights,
         shares=shares,
-        material_fractions=material_fractions,
+        material_intensities=material_intensities,
         energy_density=energy_density,
         vhc_fraction_v2g=vhc_fraction_v2g,
         capacity_fraction_v2g=capacity_fraction_v2g,
@@ -260,20 +260,20 @@ def test_electric_vehicle_batteries(coordinates, timelines):
 
     model.simulate(complete_timeline, inputs=get_inputs)
 
-    
+
     expected_outputs = ['stock_battery_kWh_v2g', 'inflow_battery_kWh', 'stock_battery_kWh', 'outflow_battery_kWh', 'inflow_battery_materials', 'stock_battery_materials', 'outflow_battery_materials']
     for var_name in expected_outputs:
         assert hasattr(model, var_name), f"Expected output {var_name} not found on model"
-    
+
     t = time_coords[0]  # 2000
     n_types = len(road_vehicle_types)
     n_battery_types = len(battery_types)
     n_regions = len(region_coords)
 
-    # Per (BatteryType, Type, Region): mass = 100 × 0.5 × 10 = 500 kg
+    # Per (BatteryType, Type, Region): mass = 100 vehicles × 0.5 shares × 10 kg/vehicle = 500 kg
     expected_mass_per_bt_type = 100.0 * 0.5 * 10.0
-    # kWh = 500 / 10 = 50
-    expected_kwh_per_bt_type = expected_mass_per_bt_type / 10.0
+    # kWh = 500 kg * 0.1 kWh/kg = 50 kWh
+    expected_kwh_per_bt_type = expected_mass_per_bt_type * 0.1
     expected_total_inflow_kwh = expected_kwh_per_bt_type * n_battery_types * n_types * n_regions
 
     inflow_kwh_total = prism.M_(model.inflow_battery_kWh[t].sum())
