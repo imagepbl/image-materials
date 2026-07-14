@@ -27,6 +27,13 @@ def test_buildings_stocks(bld_prep_data):
     model = ModelFactory(sector, complete_timeline).add(GenericStocks).add(MaterialIntensities).finish()
     model.simulate(simulation_timeline)
 
+def test_infra_stocks(infra_sector):
+    time_start = 1960
+    sim_end = 1980
+    complete_timeline = prism.Timeline(time_start, sim_end, 1)
+    simulation_timeline = prism.Timeline(1970, sim_end, 1)
+    model = ModelFactory(infra_sector, complete_timeline).add(GenericStocks).add(MaterialIntensities).finish()
+    model.simulate(simulation_timeline)
 
 def test_combined_stocks(bld_prep_data, vhc_prep_data):
     time_start = 1960

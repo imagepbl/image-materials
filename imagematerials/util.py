@@ -222,6 +222,11 @@ def summarize_prep_data(data):
             all_summary[data_name] = array
         elif isinstance(array, str):
             all_summary[data_name] = array
+        elif isinstance(array, list):
+            if isinstance(array[0], (float, int)):
+                all_summary[data_name] = sum(array)
+            else:
+                all_summary[data_name] = array
         else:
             raise ValueError(f"Cannot compare data with name '{data_name}' with type {type(array)}")
 

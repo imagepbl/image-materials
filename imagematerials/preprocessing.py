@@ -5,16 +5,20 @@ from typing import Optional, Union
 import numpy as np
 
 from imagematerials.buildings.preprocessing.main import buildings_preprocessing as prep_bld
-from imagematerials.rest_of.preprocessing.main import rest_of_preprocessing as prep_rest
-from imagematerials.vehicles.preprocessing.main import vehicles_preprocessing as prep_vhc
+from imagematerials.constants import IMAGE_REGIONS
+from imagematerials.electricity.preprocessing.generation import (
+    get_preprocessing_data_gen as prep_elc_gen,
+)
+from imagematerials.electricity.preprocessing.grid import (
+    get_preprocessing_data_grid as prep_elc_grid,
+)
+from imagematerials.electricity.preprocessing.storage import (
+    get_preprocessing_data_stor as prep_elc_stor,
+)
 from imagematerials.eol.preprocessing import eol_preprocessing as prep_eol
-from imagematerials.electricity.preprocessing.generation import get_preprocessing_data_gen as prep_elc_gen
-from imagematerials.electricity.preprocessing.grid import get_preprocessing_data_grid as prep_elc_grid
-from imagematerials.electricity.preprocessing.storage import get_preprocessing_data_stor as prep_elc_stor
-from imagematerials.vehicles.preprocessing.battery import get_preprocessing_data_evbattery as prep_battery
-
-
 from imagematerials.factory import Sector
+from imagematerials.infrastructure.preprocessing import get_preprocessing_data_infrastructure
+from imagematerials.rest_of.preprocessing.main import rest_of_preprocessing as prep_rest
 from imagematerials.util import (
     export_to_netcdf,
     import_from_netcdf,
@@ -22,7 +26,10 @@ from imagematerials.util import (
     read_climate_policy_config,
     rebroadcast_prep_data,
 )
-from imagematerials.constants import IMAGE_REGIONS
+from imagematerials.vehicles.preprocessing.battery import (
+    get_preprocessing_data_evbattery as prep_battery,
+)
+from imagematerials.vehicles.preprocessing.main import vehicles_preprocessing as prep_vhc
 
 
 def _get_vehicles_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_scenario_dirs):
@@ -54,7 +61,7 @@ def _get_electricity_prep_data(base_dir, climate_policy_scenario_dir, circular_e
         prep_data_gen = prep_elc_gen(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
         prep_data_grid_lines, prep_data_grid_add = prep_elc_grid(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
         prep_data_stor_phs, prep_data_stor_other = prep_elc_stor(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
-        
+
         prep_data = {
             "prep_data_gen": prep_data_gen,
             "prep_data_grid_lines": prep_data_grid_lines,
@@ -201,7 +208,6 @@ def get_preprocessing_data(
                                                    year_start,
                                                    year_end,
                                                    year_out)
-            
         elif sector == "ev_battery":
             prep_data = _get_ev_battery_prep_data(base_dir, climate_policy_scenario_dir,
                                                    circular_economy_scenario_dirs,
@@ -213,8 +219,12 @@ def get_preprocessing_data(
             prep_data = _get_rest_prep_data(base_dir, climate_policy_scenario_dir,
                                             scenario_name)
 
-        elif sector == "eol": 
+        elif sector == "eol":
             prep_data = _get_end_of_life_prep_data(base_dir,circular_economy_scenario_dirs)
+        elif sector == "infrastructure":
+            prep_data = get_preprocessing_data_infrastructure(
+                base_dir, {"config_file_path": climate_policy_scenario_dir},
+                standard_scenario)
 
         else:
             raise ValueError(f"Unknown sector {sector}")
@@ -235,4 +245,6 @@ def get_preprocessing_data(
         return _get_rest_prep_data(base_dir, climate_policy_scenario_dir, scenario_name)
     elif sector == "eol":
         return _get_end_of_life_sector(prep_data)
+    elif sector == "infrastructure":
+        return Sector(sector, prep_data, check_coordinates=False)
     raise ValueError(f"Unknown sector {sector}")
