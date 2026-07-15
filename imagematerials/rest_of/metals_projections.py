@@ -17,24 +17,25 @@ from imagematerials.rest_of.const import (REGION_TO_CLASS_DICT,
 def copper_projection(scenario: str, path_input_data, path_input_data_image):
     copper = ResourceModel(resource_group = 'metals', resource = 'copper', 
                         image_mat_available = True, start_year = 1990,
-                        scenario= scenario, end_year = 2011, 
+                        scenario= scenario, end_year = 2021, 
                         path_input_data=path_input_data,
                         path_input_data_image=path_input_data_image
                         )
 
     group_1 = ["class_ 1", "class_ 24"]
     group_2 = ["class_ 11", "class_ 23"]
-    group_3 = ["class_ 3", "class_ 13", "class_ 15", "class_ 16"]
+    group_3 = ["class_ 3", "class_ 13", "class_ 8", "class_ 15", "class_ 16"]
     group_4 = ["class_ 20"]
     group_5 = ["class_ 2"]
     group_6 = ["class_ 19"]
 
     # not enough data to make a projection, exclude
-    exclude = ["class_ 4", "class_ 5", "class_ 6", "class_ 7", "class_ 8",  
-                "class_ 9", "class_ 14", "class_ 17", "class_ 25", "class_ 26"]
+    exclude = ["class_ 4", "class_ 5", 
+               "class_ 9", "class_ 14",
+               "class_ 25", "class_ 26"]
 
-    scattered = ["class_ 10", "class_ 12"] # assign global fit
-    low = ['class_ 18', "class_ 21",  "class_ 22"] # assign lowest fit
+    scattered = ["class_ 6", "class_ 10", "class_ 12"] # assign global fit
+    low = ["class_ 7", "class_ 17", 'class_ 18', "class_ 21", "class_ 22"] # assign lowest fit
 
 
     # for these models a regression will be made
@@ -100,13 +101,13 @@ def steel_projection(scenario: str, path_input_data, path_input_data_image):
                         path_input_data=path_input_data,
                         path_input_data_image=path_input_data_image)
     
-    group_2 = ['class_ 1'] 
-    group_3 = ['class_ 3', 'class_ 10', 'class_ 17']
-    group_4 = ['class_ 24']
-    group_5 = ['class_ 19', 'class_ 23']
-    group_6 = ['class_ 20']
-    group_7 = ['class_ 2', 'class_ 11' , 'class_ 13', 'class_ 12', "class_ 21"]
-    group_8 = ["class_ 5", "class_ 6", "class_ 7"]
+    group_1 = ['class_ 1'] 
+    group_2 = ['class_ 3', 'class_ 10', 'class_ 17']
+    group_3 = ['class_ 24']
+    group_4 = ['class_ 19', 'class_ 23']
+    group_5 = ['class_ 20']
+    group_6 = ['class_ 2', 'class_ 11' , 'class_ 13', 'class_ 12', "class_ 21"]
+    group_7 = ["class_ 5", "class_ 6", "class_ 7"]
 
     # trajectory not to forseen, will be fitted with global regression
     spreaded_and_global = ['class_ 14', 'class_ 15', 'class_ 16']
@@ -115,13 +116,13 @@ def steel_projection(scenario: str, path_input_data, path_input_data_image):
 
     # for these models a regression will be made
     steel_grouping = {'all_regions' : all_regions_list_class[:-1],
+                    'group_1': group_1,
                     'group_2': group_2,
                     'group_3': group_3,
                     'group_4': group_4,
                     'group_5': group_5,
                     'group_6': group_6,
-                    'group_7': group_7,
-                    'group_8': group_8
+                    'group_7': group_7
                 }
     
     steel.data_grouped_regions(regions_grouping = steel_grouping)
@@ -140,23 +141,23 @@ def steel_projection(scenario: str, path_input_data, path_input_data_image):
 
     bounds = {
     'all_regions': ([0, 0, 0], [0.5, 20, 100]),
+    'group_1': ([0, 0, 0], [0.5, 20, 100]),
     'group_2': ([0, 0, 0], [0.5, 20, 100]),
     'group_3': ([0, 0, 0], [0.5, 20, 100]),
     'group_4': ([0, 0, 0], [0.5, 20, 100]),
     'group_5': ([0, 0, 0], [0.5, 20, 100]),
     'group_6': ([0, 0, 0], [0.5, 20, 100]),
-    'group_7': ([0, 0, 0], [0.5, 20, 100]),
-    'group_8': ([0, 0, 0], [0.5, 20, 100])}
+    'group_7': ([0, 0, 0], [0.5, 20, 100])}
 
     # enforce that for all groups gompertz model is selected as best fit
     steel.fit_models(best_rmse_models={'all_regions' : 'gompertz model',
+                                    'group_1': 'gompertz model',
                                     'group_2': 'gompertz model',
                                     'group_3': 'gompertz model',
                                     'group_4': 'gompertz model',
                                     'group_5': 'gompertz model',
                                     'group_6': 'gompertz model',
-                                    'group_7': 'gompertz model',
-                                    'group_8': 'gompertz model'},
+                                    'group_7': 'gompertz model'},
                                     bounds=bounds)  
     
     steel.get_X_max_scaling_factor()
@@ -165,7 +166,7 @@ def steel_projection(scenario: str, path_input_data, path_input_data_image):
                                         model_nr=1, 
                                         overwrite_existing=True)
     steel.assign_fit_to_groups_not_fitted(low,
-                                        assign_model='group_8',
+                                        assign_model='group_7',
                                         model_nr=1,
                                         overwrite_existing=True)
     
@@ -181,100 +182,75 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
 
     # Aluminium
     aluminium = ResourceModel(resource_group = 'metals', resource = 'aluminium', 
-                        image_mat_available = True, start_year = 1998, 
-                        scenario=scenario, end_year = 2014,
+                        image_mat_available = True, start_year = 1990, 
+                        scenario=scenario, end_year = 2022,
                         path_input_data=path_input_data,
                         path_input_data_image=path_input_data_image
                         )
-
-    all_regions = ['Africa',
-            'Estimated Unreported to IAI', 
-            'Gulf Cooperation Council',
-            'North America', 
-            'Russia & Eastern Europe', 
-            'South America',
-            'Western & Central Europe',
-            'Japan',
-            'Asia (ex China)',
-            'Oceania',
-            'China (Estimated)']
-    russia = ['Russia & Eastern Europe']
-    north_america = ['North America']
-    europe = ['Western & Central Europe']
-    japan = ['Japan']
-    oceania = ['Oceania']
-    south_america = ['South America']
-
-    low = ['Africa', 'Asia (ex China)',]
-
-    # own category because fitting otherwise somehow not possible
-    china = ['China (Estimated)', 'Gulf Cooperation Council']
-
-    # will be fitted to global curve or according to IMAGE Mat with some additions
-    # rest = ['Estimated Unreported to IAI'] # not necessary, are in low
-    exclude = ['class_ 6', 'class_ 8', 'class_ 10', 'class_ 26'] 
-
-    aluminium_regions = {
-    'all_regions' : all_regions,
-    'russia' : russia,
-    'north_america' : north_america,
-    'china' : china,
-    'europe' : europe,
-    'low' : low,
-    'japan' : japan,
-    'oceania' : oceania,
-    'south_america' : south_america,
-    }
     
-    aluminium.data_grouped_regions(regions_grouping = aluminium_regions) 
+    group_1 = ["class_ 1", "class_ 24"]
+    group_2 = ["class_ 10", "class_ 16"]
+    group_3 = ["class_ 5", "class_ 6", "class_ 14", "class_ 15","class_ 26"]
+    group_4 = [ "class_ 20"]
 
-    aluminium.sum_IMAGE_drivers_regions(IAI_TO_IMAGE_CLASSES)
-    aluminium.match_MAT_data_to_regions_year(match_external_regions=True)
+
+    little_data = ["class_ 8", "class_ 11", "class_ 12", "class_ 18", "class_ 22"]
+    no_data = ["class_ 2", "class_ 3", "class_ 4", "class_ 7", "class_ 9",
+            "class_ 13", "class_ 19", "class_ 21", "class_ 23", "class_ 25"]
+    scattered = ["class_ 17"] # assign middle
+
+    aluminium_logical_groups = {
+        'all' : all_regions_list_class[:-1],
+        'group_1': group_1,
+        'group_2': group_2,
+        'group_3': group_3,
+        'group_4': group_4,
+}
+    
+    aluminium.data_grouped_regions(regions_grouping = aluminium_logical_groups)
+    aluminium.sum_IMAGE_drivers_regions(regions_dict=None)
+    aluminium.match_MAT_data_to_regions_year(match_external_regions=False)
     aluminium.calculate_historic_other_fraction()
+
+    # deal with single negative numbers by removing them from dataset
     aluminium.historic_other_fraction_consumption[aluminium.historic_other_fraction_consumption < 0] = np.nan
 
-    # Fit models
-    aluminium.calculate_regressors(aluminium.historic_other_fraction_consumption)
+    # Fit models 
 
+    # Fit models 
     best_rmse_models= {
-        'all_regions' : 'gompertz model',
-        'russia' : 'gompertz model',
-        'north_america' : 'gompertz model',
-        'china' : 'gompertz model',
-        'europe' : 'gompertz model', 
-        'low' : 'gompertz model',
-        'japan' : 'gompertz model',
-        'oceania' : 'gompertz model',
-        'south_america' : 'gompertz model',
-        'rest' : 'gompertz model'
+        'all' : 'gompertz model',
+        'group_1': 'gompertz model',
+        'group_2': 'gompertz model',
+        'group_3': 'gompertz model',
+        'group_4': 'gompertz model',
     }
 
     bounds = {
-        'all_regions' : ([0, 0, 0], [0.02, 20, 100]),
-        'russia' : ([0, 0, 0], [0.02, 20, 100]),
-        'north_america' : ([0, 0, 0], [0.02, 20, 100]),
-        'china' : ([0, 0, 0], [0.02, 20, 100]),
-        'europe' : ([0, 0, 0], [0.02, 20, 100]),
-        'low' : ([0, 0, 0], [0.02, 20, 100]),
-        'japan' : ([0, 0, 0], [0.02, 20, 100]),
-        'oceania' : ([0, 0, 0], [0.015, 20, 100]),
-        'south_america' : ([0, 0, 0], [0.003, 20, 100]),
-        'rest' : ([0, 0, 0], [0.02, 20, 100])
+        'all' :                     ([0, 0, 0], [1, 2000, 100]),
+        'group_1': ([0, 0, 0], [10, 2000, 100]),
+        'group_2': ([0, 0, 0], [10, 1000, 100]),
+        'group_3': ([0, 0, 0], [10, 1000, 100]),
+        'group_4': ([0, 0, 0], [10, 1000, 100]),
     }
 
-    aluminium.fit_models(best_rmse_models, bounds)
+    aluminium.calculate_regressors(aluminium.historic_other_fraction_consumption)
+    aluminium.fit_models(best_rmse_models=best_rmse_models, bounds=bounds)
+    aluminium.get_X_max_scaling_factor()
 
-    # add regions to regions model match that are not in there yet becaused they are fitted to the global average
-    for key in IAI_TO_IMAGE_CLASSES.keys():
-        if key not in aluminium.region_model_match:
-            aluminium.region_model_match[key] = None
+    aluminium.assign_fit_to_groups_not_fitted(little_data, 
+                                        assign_model='group_3', 
+                                        model_nr=1, 
+                                        overwrite_existing=True)
+    aluminium.assign_fit_to_groups_not_fitted(scattered,
+                                        assign_model='group_2',
+                                        model_nr=1,
+                                        overwrite_existing=True)
+    
 
-    aluminium.create_region_model_match_per_image(IAI_TO_IMAGE_CLASSES)
-    aluminium.get_X_max_scaling_factor(regions_dict=IAI_TO_IMAGE_CLASSES, 
-                                       alu_regions=aluminium_regions)
+    aluminium.remove_regions_with_no_good_fit_from_region_model_match(no_data)
+    
 
-    aluminium.remove_regions_with_no_good_fit_from_region_model_match(exclude)
-
-    return aluminium, aluminium_regions
+    return aluminium, aluminium_logical_groups
 
 

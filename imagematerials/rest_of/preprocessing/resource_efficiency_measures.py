@@ -54,18 +54,48 @@ def calcualte_resource_efficiency_measures():
     total_inflow_base = sum_inflows_for_all_sectors(baseline, 'inflow_materials', list_sum_sectors_all)
     total_inflow_eff = sum_inflows_for_all_sectors(resource_eff, 'inflow_materials', list_sum_sectors_all)
 
+    clay_brick_resource_eff_share = 0.48
+    clay_cement_resource_eff_share = 0.07
+    limestone_cement_resource_eff_share = 0.95
+    limestone_steel_resource_eff_share = 0.05
+
     for material in gompertz_original.material.values:
-        if material in ['clay', 'limestone']: 
-            # for limestone and clay take sand_gravel_crushed_rock as a proxy
-            inflow = sand_gravel_crushed_rock_equivalent(total_inflow_base, 
-                                                         include_rest_bool = False).sum('Type')
-            inflow_eff = sand_gravel_crushed_rock_equivalent(total_inflow_eff, 
-                                                             include_rest_bool=False).sum('Type')
-            inflow = inflow.assign_coords(material='sand')
-            inflow_eff = inflow_eff.assign_coords(material='sand')
-            # overwrite material name
-            inflow = inflow.assign_coords(material=material)
-            inflow_eff = inflow_eff.assign_coords(material=material)
+        resource_eff_procentual = None
+        resource_eff_procentual_year = None
+        if material in ['limestone']:
+            cement_inflow = calculate_cement_equivalent(total_inflow_base,
+                                                        include_rest_of=False).sum('Type')
+            cement_inflow_eff = calculate_cement_equivalent(total_inflow_eff,
+                                                            include_rest_of=False).sum('Type')
+            steel_inflow = total_inflow_base.sel(material="steel").sum('Type')
+            steel_inflow_eff = total_inflow_eff.sel(material="steel").sum('Type')
+
+            cement_resource_eff = ((cement_inflow / gdp) - (cement_inflow_eff / gdp)) / (cement_inflow / gdp) * 100
+            steel_resource_eff = ((steel_inflow / gdp) - (steel_inflow_eff / gdp)) / (steel_inflow / gdp) * 100
+
+            resource_eff_procentual = (
+                cement_resource_eff.assign_coords(material=material) * limestone_cement_resource_eff_share
+                + steel_resource_eff.assign_coords(material=material) * limestone_steel_resource_eff_share
+            )
+            resource_eff_procentual_year = resource_eff_procentual.diff(dim='time').fillna(0)
+
+        elif material in ["clay"]:
+            brick_inflow = total_inflow_base.sel(material="brick").sum('Type')
+            brick_inflow_eff = total_inflow_eff.sel(material="brick").sum('Type')
+            cement_inflow = calculate_cement_equivalent(total_inflow_base,
+                                                        include_rest_of=False).sum('Type')
+            cement_inflow_eff = calculate_cement_equivalent(total_inflow_eff,
+                                                            include_rest_of=False).sum('Type')
+
+            brick_resource_eff = ((brick_inflow / gdp) - (brick_inflow_eff / gdp)) / (brick_inflow / gdp) * 100
+            cement_resource_eff = ((cement_inflow / gdp) - (cement_inflow_eff / gdp)) / (cement_inflow / gdp) * 100
+
+            resource_eff_procentual = (
+                brick_resource_eff.assign_coords(material=material) * clay_brick_resource_eff_share
+                + cement_resource_eff.assign_coords(material=material) * clay_cement_resource_eff_share
+            )
+            resource_eff_procentual_year = resource_eff_procentual.diff(dim='time').fillna(0)
+        
         elif material == 'sand':
             # replace with sand_gravel_crushed_rock_equivalent
             inflow = sand_gravel_crushed_rock_equivalent(total_inflow_base, 
@@ -83,16 +113,18 @@ def calcualte_resource_efficiency_measures():
             inflow = total_inflow_base.sel(material=material).sum('Type')
             inflow_eff = total_inflow_eff.sel(material=material).sum('Type')
 
-        # Material intensities per GDP
-        material_intensity_base = inflow / gdp
-        material_intensity_eff = inflow_eff / gdp
+        if resource_eff_procentual is None:
+            # Material intensities per GDP
+            material_intensity_base = inflow / gdp
+            material_intensity_eff = inflow_eff / gdp
 
-        # calculate the percentual resource efficiency
-        resource_eff_procentual = (material_intensity_base - material_intensity_eff) / material_intensity_base * 100
-        # calculate the reduction per year
-        resource_eff_procentual_year = resource_eff_procentual.diff(dim='time').fillna(0)
+            # calculate the percentual resource efficiency
+            resource_eff_procentual = (material_intensity_base - material_intensity_eff) / material_intensity_base * 100
+            # calculate the reduction per year
+            resource_eff_procentual_year = resource_eff_procentual.diff(dim='time').fillna(0)
 
         # save all materials from material_intensity_base in a new joint xarray under the material dimension
+        # initiate with aluminium, then concat the rest of the materials
         if material == 'aluminium':
             # start to save in new xarray
             all_materials_resource_eff_procentual = resource_eff_procentual

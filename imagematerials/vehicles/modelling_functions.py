@@ -23,7 +23,8 @@ idx = pd.IndexSlice
 def interpolate(original: pd.DataFrame,
                 first_year: Optional[pd.DataFrame] = None,
                 change: str = 'no'):
-    """
+    """Interpolate dataframe.
+
     Generic linear interpolation function that interpolates between given years in the original data. With 2 additional
     functionalities:
     1) Function allows to indicate the first year of operation based on optional first_year argument (i.e. when was the
@@ -37,7 +38,7 @@ def interpolate(original: pd.DataFrame,
     Assumes: that IF a first_year is given, it is a pandas dataframe with the same multi-index columns as the original
     data, and only one index (values are the first year, for which values will be set to 0)
     Assumes: that if first_year is not given, and change='no' THEN values are assumed to remain constant at first/last
-      known levels
+    known levels
 
     Parameters
     ----------
@@ -117,6 +118,8 @@ def scenario_change(df, base_year, target_year, change, implementation_rate, dat
     Applies a time-based change to values in a DataFrame between a base and target year using a specified implementation method.
 
     Parameters:
+    -----------
+    
         df (pd.DataFrame): A time-indexed DataFrame containing mode-specific values, such as lifetime or mileage.
         base_year (int): The starting year for the change.
         target_year (int): The year by which the full change should be achieved.

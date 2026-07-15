@@ -75,5 +75,5 @@ It replaces the earlier :class:`GenericMainModel` approach with a more flexible 
 See Also
 --------
 
-- :doc:`Models Overview <models>` - How the Factory fits into the overall modeling framework
-- :doc:`API Reference <api/modules>` - Technical documentation for factory classes
+- :doc:`Models Overview <../models>` - How the Factory fits into the overall modeling framework
+- :doc:`API Reference <modules>` - Technical documentation for factory classes

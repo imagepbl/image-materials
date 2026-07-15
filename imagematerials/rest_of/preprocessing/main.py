@@ -143,7 +143,7 @@ def fit_all_materials_save_corrseponding_input_data(path_input_data, path_input_
     gompertz = make_gompertz_coefs_da(results)
     mean_historic_other_fraction_consumption_to_xr(results)
     all_historic_data_xr = historic_other_fraction_consumption_to_xr(results)
-    max_x = get_X_max_scaling_factor(results)
+    max_x = get_X_max_scaling_factor(results, save=True)
 
 
 def rest_of_preprocessing(base_directory, image_scenario_directory, scenario: str, 
@@ -159,9 +159,9 @@ def rest_of_preprocessing(base_directory, image_scenario_directory, scenario: st
     historic_diff_consumption_total = read_historic_diff_cons_data(base_directory)
     population = compute_population(image_scenario_directory, base_directory)
     # Filter population data to start from 1971 & only total population needed
-    population = population.sel(Area = 'Total').loc[1971:]
-    # drop Area coords
-    population = population.drop_vars('Area')
+    population = population.sum("Quintile").loc[1971:]
+    population = population.sel(Area = "Total").drop("Area")
+    # from nr to Region abbreviations
     knowledge_graph_region = create_region_graph()
     population = knowledge_graph_region.rebroadcast_xarray(population, output_coords=IMAGE_REGIONS, dim="Region")
 

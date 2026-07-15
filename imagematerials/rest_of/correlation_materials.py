@@ -1,27 +1,25 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Sat Feb 10 21:25:57 2024
-
-@author: Arp00003
-"""
+"""Utilities to correlate materials."""
 # This script prepares the data to calculate correlations 
 
 import pandas as pd
-from imagematerials.read_mym import read_mym_df
 
+from imagematerials.read_mym import read_mym_df
 from imagematerials.rest_of.const import path_input_data
 
 #%% Calculate consumption, GDP, and population data both real data points and projections
 
 def calculate_gdp(scenario: str, end_year_gdp_pc: int = 56, end_year_pop: int = 56, 
                   keep_global = False, path_input_data_image = path_input_data):
-    """
-    Read in gdp per capita data and population data (real & projections) from IMAGE EDITS project to calculate total and global gdp per IMAGE region.
+    """Read in gdp per capita data and population data.
+
+    Read (real & projections) from IMAGE EDITS project to calculate total and global gdp per IMAGE
+    region.
 
     Parameters
     ----------
     end_year_gdp_pc : int, optional
-        end year of gdp per capita data that is returned. 
+        end year of gdp per capita data that is returned.
         The default is 47 (2017).
     end_year_pop : int, optional
         iloc stop index for population data. The default is 56 (corresponding to 2025).
@@ -44,6 +42,7 @@ def calculate_gdp(scenario: str, end_year_gdp_pc: int = 56, end_year_pop: int = 
         gdp per capita until 2017.
     pop_100 : pd.DataFrame
         interpolated population until 2100.
+
     """
     # GDP per capita of IMAGE regions 
     gdp_pc = read_mym_df(path_input_data_image.joinpath(scenario, "Socioeconomic", "gdp_pc.scn"))
@@ -57,17 +56,17 @@ def calculate_gdp(scenario: str, end_year_gdp_pc: int = 56, end_year_pop: int = 
     pop_100 = pop_100.loc[:, :26]
     pop_100.columns = [f'class_ {i+1}' for i in range(len(pop_100.columns))]
     pop_100 = pop_100*1000_000 # convert to millions
-    
+
     # Get exact population data (no projections)
     pop = pop_100.iloc[:end_year_pop, :] # 1971 - 2017
-    
+
     if keep_global == False:
         gdp_pc_2017 = gdp_pc.iloc[:end_year_gdp_pc, 0:-1] # 1971 - 2017 & removed sum of ''region 28''
         # gdp until 2100 for projections
         gdp_pc_2100 = gdp_pc.iloc[:, 0:-1] # 1971 - 2100 & removed global 
         # pop = pop.drop(columns=['class_ 27']) #drop empty global column
         # pop_100 = pop_100.drop(columns=['class_ 27']) #drop empty global column
-    
+
     if keep_global == True:
         gdp_pc_2017 = gdp_pc.iloc[:end_year_gdp_pc, :] # 1971 - 2017 & removed sum of ''region 28''
         gdp_pc_2017 = gdp_pc_2017
@@ -106,8 +105,10 @@ def summarize_IMAGE_regions(material_to_region_dict: dict,
                             pop: pd.DataFrame,
                             pop_100: pd.DataFrame,
                             gdp_pc_100: pd.DataFrame):
-    """
-    In case provided data on material consumption is in more aggregared form than IMAGE regions this functions brings them together to new Top-regions.
+    """Summarize image regions.
+
+    in case provided data on material consumption is in more aggregared form than IMAGE regions this
+    functions brings them together to new Top-regions.
 
     Parameters
     ----------
