@@ -236,7 +236,7 @@ class VehicleStocks(prism.Model):
         self.tonne_kms = self.tonne_kms.pint.to("tonne*km")
 
         # 1. Simple vehicle types ["Passenger Planes", "Trains", "High Speed Trains", "Bikes"]
-        simple_types = ["Passenger Planes", "Trains", "High Speed Trains", "Bikes", "Stroller"]
+        simple_types = ["Passenger Planes", "Trains", "High Speed Trains", "Bikes"]
         # unit handling maybe not the nicest way, but works for now, otherwise all need to be loaded as xr instead of pd
         nr_vehicles_simple = convert_from_tkpm_or_pkm_to_nr_vehicles(self.passenger_kms, 
                                                                      simple_types, 
