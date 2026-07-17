@@ -578,10 +578,10 @@ def create_vehicle_graph_2():
 
     # Engines
     for engine, synonyms in {
-        "BEV": ["battery electric vehicles"],
+        "BEV": ["battery electric vehicle"],
         "FCV": ["fuel cell vehicle"],
         "HEV": ["hybrid electric vehicle"],
-        "ICE": ["internal combustion engine"],
+        "ICE": ["internal combustion engine vehicle"],
         "PHEV": ["plug-in hybrid electric vehicle"],
         "Trolley": []
         }.items():

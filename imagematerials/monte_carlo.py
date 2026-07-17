@@ -84,7 +84,7 @@ DISTRIBUTIONS = {
 # Public API
 # ---------------------------------------------------------------------------
 
-def load_ranges(filepath: str) -> pd.DataFrame:
+def load_ranges_materials(filepath: str) -> pd.DataFrame:
     """Load the ranges CSV.
 
     Expected columns: year, material, technology, min, max
@@ -116,11 +116,6 @@ def load_ranges(filepath: str) -> pd.DataFrame:
         rename_map[found[0]] = target
 
     df = df.rename(columns=rename_map)
-
-    # required = {"time", "material", "technology", "min", "max"}
-    # missing = required - set(df.columns)
-    # if missing:
-    #     raise ValueError(f"Ranges file is missing columns: {missing}")
 
     if "distribution" not in df.columns:
         df["distribution"] = "uniform"
@@ -176,6 +171,105 @@ def sample_intensities(
     da_interp = kg.rebroadcast_xarray(da_interp, output_coords=dict_sector_types[sector])
 
     return da_interp
+
+def load_ranges_lifetimes(filepath: str, default_distribution: str = "uniform") -> pd.DataFrame: #### NOT WORKING YET - CHECK!
+    """Load the wide lifetime-parameter matrix -> tidy long-form, one row per (Cohort, Type).
+
+    Output columns: Cohort, Type, mean, mean_min, mean_max, stdev, shape, scale, distribution.
+    `distribution` governs how the *mean* lifetime is drawn between mean_min and mean_max
+    (default uniform); it is NOT the survival distribution (that's stdev / shape / scale).
+    """
+    df = pd.read_csv(filepath)
+
+    year_aliases = ["time", "Time", "year", "years", "Year", "cohort", "Cohort"]
+    stat_aliases = ["data", "Data", "stat", "statistic", "Statistic", "parameter"]
+    year_col = next((c for c in year_aliases if c in df.columns), None)
+    stat_col = next((c for c in stat_aliases if c in df.columns), None)
+    if year_col is None:
+        raise ValueError(f"Missing year column. Expected one of: {year_aliases}")
+    if stat_col is None:
+        raise ValueError(f"Missing statistic column. Expected one of: {stat_aliases}")
+
+    tech_cols = [c for c in df.columns if c not in (year_col, stat_col)]
+    if not tech_cols:
+        raise ValueError("No technology columns found besides the id columns.")
+
+    long = df.melt(id_vars=[year_col, stat_col], value_vars=tech_cols,
+                   var_name="Type", value_name="value")
+    wide = (long.set_index([year_col, "Type", stat_col])["value"]
+                .unstack(stat_col).reset_index())
+    wide.columns.name = None
+    wide = wide.rename(columns={year_col: "Cohort"})
+
+    for c in wide.columns:                       # melt makes stats object if a string row is mixed in
+        if c not in {"Cohort", "Type", "distribution"}:
+            wide[c] = pd.to_numeric(wide[c], errors="coerce")
+
+    if "distribution" not in wide.columns:
+        wide["distribution"] = default_distribution
+    else:
+        wide["distribution"] = wide["distribution"].fillna(default_distribution)
+    return wide
+
+
+def _validate_bounds(ranges: pd.DataFrame) -> None: #### NOT WORKING YET - CHECK!
+    lo, mid, hi = ranges["mean_min"], ranges["mean"], ranges["mean_max"]
+    bad = ranges[~((lo <= mid) & (mid <= hi) & (lo <= hi))]
+    if len(bad):
+        rows = bad[["Cohort", "Type", "mean_min", "mean", "mean_max"]].to_string(index=False)
+        raise ValueError(
+            "mean_min <= mean <= mean_max is violated for these rows "
+            "(check the source file):\n" + rows
+        )
+
+
+def sample_lifetimes( #### NOT WORKING YET - CHECK!
+    ranges: pd.DataFrame,
+    rng: np.random.Generator | None = None,
+    seed: int | None = None,
+    keep_stats=("mean", "stdev", "shape", "scale"),
+    validate: bool = True,
+):
+    """Draw one mean lifetime per (Cohort, Type) from its `distribution`, then run the
+    same transformation the deterministic code uses. stdev / shape / scale pass through
+    unchanged (they parameterise the survival distribution, which the MC does not randomise).
+    """
+    if rng is None:
+        rng = np.random.default_rng(seed)
+    if validate:
+        _validate_bounds(ranges)
+
+    sampled_means = []
+    for _, row in ranges.iterrows():
+        lo, hi = row["mean_min"], row["mean_max"]
+        if lo == hi:                                     # degenerate range -> point value
+            sampled_means.append(lo)
+            continue
+        dist_name = row.get("distribution", "uniform")
+        sampler = DISTRIBUTIONS.get(dist_name)
+        if sampler is None:
+            raise ValueError(f"Unknown distribution '{dist_name}'. Available: {list(DISTRIBUTIONS)}")
+        sampled_means.append(sampler(rng, {"min": lo, "max": hi, "mode": row.get("mean")}))
+
+    sampled = ranges.copy()
+    sampled["mean"] = sampled_means
+
+    # rebuild the (year, data) x mode matrix the deterministic path starts from
+    stats = [s for s in keep_stats if s in sampled.columns]
+    tidy = sampled[["Cohort", "Type"] + stats].melt(
+        id_vars=["Cohort", "Type"], var_name="data", value_name="value")
+    matrix = tidy.pivot(index=["Cohort", "data"], columns="Type", values="value")
+    matrix.index = matrix.index.set_names(["year", "data"])
+    matrix.columns.name = "mode"
+
+    # --- identical to the original deterministic transformation ---
+    s = matrix.stack()
+    s = s[s != 0]
+    wide = s.unstack(["mode", "data"])
+    wide = interpolate(pd.DataFrame(wide))
+    data_xarray = pandas_to_xarray(wide, unit_mapping)
+    data_xarray = convert_lifetime(data_xarray)
+    return data_xarray
 
 # def sample_lifetimes(
 #         sector: str,
