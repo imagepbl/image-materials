@@ -112,23 +112,23 @@ class VehicleStocks(prism.Model):
         """
 
         # load "TIMER" model
-        from imagematerials.vehicles.timermodel import FakeTimerTransport
+        # from imagematerials.vehicles.timermodel import FakeTimerTransport
 
         # Load preprocessing of Vehicles data 
         vehicle_preprocessing = get_preprocessing_data(
             "vehicles", 
-            base_directory_integration, # when run in .py file for debugginf this should be: base_directory_integration!
+            base_directory_integration, # when run in .py file for debugginf this should be: base_directory!
             climate_policy_scenario_dir=self.climate_policy_scenario_dir,
             circular_economy_scenario_dirs=None,
             integration_preprocessing = True
         )
 
-        # initialize fake timer model to get passengerkms and tonekms data
-        self.timer_model = FakeTimerTransport(time,
-                                              self.climate_policy_scenario_dir)
+        # # initialize fake timer model to get passengerkms and tonekms data
+        # self.timer_model = FakeTimerTransport(time,
+        #                                       self.climate_policy_scenario_dir)
         
-        self.timer_model.compute_initial_values(time, 
-                                                 self.climate_policy_scenario_dir)
+        # self.timer_model.compute_initial_values(time, 
+        #                                          self.climate_policy_scenario_dir)
 
         # TODO: fix dimensions here such that they get imported from the data
         # Extract dimensions from preprocessing data if not already set
@@ -192,7 +192,10 @@ class VehicleStocks(prism.Model):
         vhc_originl = ModelFactory.load_pkl("examples/model_results/test.pkl")
         self.stocks_original = vhc_originl.vehicles.get("stocks")
     
-    def compute_values(self, time: prism.Time):
+    def compute_values(self, time: prism.Time, 
+                       passenger_kms,
+                       tonne_kms,
+                       load_car):
         """Calculate vehicle stocks for the current timestep.
         
         Computes the number of vehicles needed to satisfy the yearly passenger
@@ -208,11 +211,11 @@ class VehicleStocks(prism.Model):
         # unit = str(self.set_unit_flexible)
 
         # run the "timer model" to get the latest passengerkms and tonekms data for this time step
-        self.timer_model.compute_values(time)
+        # self.timer_model.compute_values(time)
         # Directly transfer TIMER transport activity values into the vehicles stock model.
-        self.passenger_kms = self.timer_model.passenger_kms
-        self.tonne_kms = self.timer_model.tonne_kms
-        self.load_car = self.timer_model.load_car
+        self.passenger_kms = passenger_kms
+        self.tonne_kms = tonne_kms
+        self.load_car = load_car
         # self.total_vehicles: prism.Array[REGION, MODE, "count"] = prism.export()
 
         self.total_vehicles = self._calculate_total_vehicles_by_type(t)

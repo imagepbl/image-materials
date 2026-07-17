@@ -81,6 +81,12 @@ class FakeTimerTransport(prism.Model):
         self.tonne_kms_all_xr = self.tonne_kms_all_xr.assign_coords(Region=IMAGE_REGIONS)
         self.load_car_xr = self.load_car_xr.assign_coords(Region=IMAGE_REGIONS)
 
+        # initialize vehicles model 
+        self.vehicles_model = VehicleStocks(timeline,
+                                            self.climate_policy_scenario_dir)
+        
+        self.vehicles_model.compute_initial_values(timeline)
+        
     def compute_values(self, time: prism.Time):
         t, dt = time.t, time.dt
         # convert the xarray Data to prism.Array for the current time step, this will be used in the VehicleStocks model
@@ -88,3 +94,9 @@ class FakeTimerTransport(prism.Model):
         self.passenger_kms = self.passenger_kms_all_xr.sel(Time=t)
         self.tonne_kms = self.tonne_kms_all_xr.sel(Time=t)
         self.load_car = self.load_car_xr.sel(Time=t)
+
+        # self.timer_model.compute_values(time)
+        self.vehicles_model.compute_values(time, 
+                                           passenger_kms=self.passenger_kms, 
+                                           tonne_kms=self.tonne_kms, 
+                                           load_car=self.load_car)
