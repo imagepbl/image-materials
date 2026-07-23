@@ -31,7 +31,7 @@ from imagematerials.vehicles.preprocessing.shares import get_vehicle_shares
 from imagematerials.vehicles.preprocessing.util import (
     get_passengerkms,
     get_ship_capacity,
-    get_tonkms,
+    get_tonnekms,
     xarray_conversion
 )
 
@@ -40,7 +40,7 @@ def get_vehicle_stocks(data_path: str, standard_data_path, climate_data_path, cl
                        circular_economy_config, knowledge_graph_vehicle):
     shares = get_vehicle_shares(climate_data_path, climate_policy_config,
                                 knowledge_graph_vehicle)
-    tonkms_Mtkms = get_tonkms(climate_data_path, climate_policy_config)
+    tonkms_Mtkms = get_tonnekms(climate_data_path, climate_policy_config)
     passengerkms_Tpkms = get_passengerkms(climate_data_path, climate_policy_config)
     # TODO: add description again here!
     load: pd.DataFrame = pd.read_csv(

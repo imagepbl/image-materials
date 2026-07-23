@@ -24,7 +24,7 @@ from imagematerials.vehicles.constants import (
 from imagematerials.vehicles.modelling_functions import interpolate
 from imagematerials.vehicles.preprocessing.util import (
     get_passengerkms,
-    get_tonkms,
+    get_tonnekms,
     set_column_names,
     xarray_conversion
 )
@@ -33,7 +33,7 @@ from imagematerials.vehicles.preprocessing.util import (
 def get_vehicle_shares(climate_data_path: str, climate_policy_config, knowledge_graph_vehicle):
     # The tonne kilometres of freight vehicles of the IMAGE/TIMER SSP2
     # (in Mega Tkm)
-    tonkms_Mtkms = get_tonkms(climate_data_path, climate_policy_config)
+    tonkms_Mtkms = get_tonnekms(climate_data_path, climate_policy_config)
 
     # The passenger kilometres from the IMAGE/TIMER SSP2 (in Tera Pkm)
     passengerkms_Tpkms = get_passengerkms(climate_data_path, climate_policy_config)

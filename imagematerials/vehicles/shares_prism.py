@@ -30,7 +30,7 @@ from imagematerials.vehicles.preprocessing.util import (
     set_column_names,
     xarray_conversion,
     get_passengerkms,
-    get_tonkms,
+    get_tonnekms,
 )
 
 
@@ -53,7 +53,7 @@ def get_vehicle_shares_prism(climate_data_path, climate_policy_config, knowledge
     """
     # The tonne kilometres of freight vehicles of the IMAGE/TIMER SSP2
     # (in Mega Tkm)
-    tonkms_Mtkms = get_tonkms(climate_data_path, climate_policy_config)
+    tonkms_Mtkms = get_tonnekms(climate_data_path, climate_policy_config)
 
     # The passenger kilometres from the IMAGE/TIMER SSP2 (in Tera Pkm)
     passengerkms_Tpkms = get_passengerkms(climate_data_path, climate_policy_config)

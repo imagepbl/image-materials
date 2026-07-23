@@ -30,7 +30,7 @@ from imagematerials.vehicles.preprocessing.shares import get_vehicle_shares
 from imagematerials.vehicles.preprocessing.util import (
     get_passengerkms,
     get_ship_capacity,
-    get_tonkms,
+    get_tonnekms,
     xarray_conversion
 )
 

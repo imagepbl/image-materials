@@ -60,7 +60,25 @@ def set_column_names(df: pd.DataFrame, label):
     return df
 
 
-def get_tonkms(climate_data_path: str, climate_policy_config):
+def get_tonnekms(climate_data_path: str, climate_policy_config):
+    """Get tonne kilometres of freight vehicles of the IMAGE/TIMER SSP2
+    (in Mega Tkm)
+
+    Parameters
+    ----------
+    climate_data_path
+        Path to the directory containing the data
+    climate_policy_config
+        Dictionary with config for climate policy scenario
+
+    Returns
+    -------
+        A pandas DataFrame with tonne kilometers
+
+    Notes
+    -----
+    TODO: immediately read into xarray, bypass pandas
+    """
     # The tonne kilometres of freight vehicles of the IMAGE/TIMER SSP2
     # (in Mega Tkm)
     tonkms_Mtkms: pd.DataFrame = read_mym_df(climate_data_path.joinpath(
@@ -70,6 +88,23 @@ def get_tonkms(climate_data_path: str, climate_policy_config):
 
 
 def get_passengerkms(climate_data_path: str, climate_policy_config):
+    """Get passenger kilometers from the IMAGE/TIMER SSP2 (in Tera Pkm).
+
+    Parameters
+    ----------
+    climate_data_path
+        Path to the directory containing the data
+    climate_policy_config
+        Dictionary with config for climate policy scenario
+
+    Returns
+    -------
+        A pandas DataFrame with passenger kilometers
+
+    Notes
+    -----
+    TODO: immediately read into xarray, bypass pandas
+    """
     # The passenger kilometres from the IMAGE/TIMER SSP2 (in Tera Pkm)
     passengerkms_Tpkms: pd.DataFrame = read_mym_df(climate_data_path.joinpath(
         climate_policy_config['data_files']['transport']['passenger']['kilometers']
