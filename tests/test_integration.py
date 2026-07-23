@@ -115,7 +115,7 @@ def test_timer_interface(vhc_model, complete_timeline, simulation_timeline):
     timer_vehicle_model = VehicleStocks(complete_timeline, path_test_scenario)
     # Simulate TIMER's input using the timer_input function
     timer_vehicle_model.simulate(simulation_timeline, inputs=timer_input)
-    
+
     # Compare outputs of both model runs
     compare_total_vehicles_stocks(vhc_model.stocks, timer_vehicle_model.total_vehicles, simulation_timeline)  # timer_vehicle_model.stocks
 
