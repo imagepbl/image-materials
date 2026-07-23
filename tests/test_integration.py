@@ -95,10 +95,6 @@ def test_timer_interface(vhc_model, complete_timeline, simulation_timeline):
     # Run simulation both in standalone and simulated TIMER-coupled mode.
     # Ensure results are the same.
 
-    # Reuse model output from earlier test
-    # TODO: make this work in a more clean way
-    vhc_model = vhc_model
-
     # Get the raw data that otherwise would come from TIMER
     path_test_scenario = Path("data", "raw", "image", "SSP2_baseline")
     timer_data = simulate_timer_data(path_test_scenario)
@@ -121,9 +117,7 @@ def test_timer_interface(vhc_model, complete_timeline, simulation_timeline):
     timer_vehicle_model.simulate(simulation_timeline, inputs=timer_input)
     
     # Compare outputs of both model runs
-    # TODO: decide what to compare
     compare_total_vehicles_stocks(vhc_model.stocks, timer_vehicle_model.total_vehicles, simulation_timeline)  # timer_vehicle_model.stocks
-    # assert False
 
 def compare_total_vehicles_stocks(standalone_stocks, timer_stocks, timeline):
     # Get simulation years to compare
