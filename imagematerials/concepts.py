@@ -8,6 +8,7 @@ import xarray as xr
 
 from imagematerials.electricity.constants import (
     EPG_SUBTECH_TO_TECH,
+    TECH_STATIONARY_STORAGE
 )
 
 @dataclass
@@ -979,43 +980,22 @@ def create_electricity_graph():
 
 
     # Storage ======================================================================================
-    storage_supertypes = ["PHS", "V2G-Batteries", "Other Storage"] # Pumped Hydro Storage, Vehicle-to-Grid Batteries
-    # Storage calculations follow a 3 tiered structure: Demand is filled first with PHS, then with (anyway available) V2G-Batteries, and 
-    # the residual demand with Other Storage
-    storage_subtypes_categories = ["lithium battery", "flow battery", "sodium battery", "lead acid battery"] #"mechanical storage", "molten salt battery"
-    # storage_subtypes = ["Flywheel", "Compressed Air", "Hydrogen FC", "NiMH", "Deep-cycle Lead-Acid", "LMO",
-    #                     "NMC", "NCA", "LFP", "LTO", "Zinc-Bromide", "Vanadium Redox", "Sodium-Sulfur", "ZEBRA",
-    #                     "Lithium Sulfur", "Lithium Ceramic", "Lithium-air"]
-    # TECH_STATIONARY_STORAGE_ALL = ["LFP", "NMC333", "NMC532", "NMC622", "NMC811", "NMC955", "Na-ion", 
-    #                             "flow-ZnBr", "flow-vanadium", "lead-acid", "PHS"]
+    # storage_by_storage_technology_type = ["mechanical_storage", "electrochemical_storage", "chemical_storage", "thermal_storage", "electrical_storage"]
+    storage_by_category_type = ["PHS", "V2G-Batteries", "Other Storage"] # Pumped Hydro Storage, Vehicle-to-Grid Batteries
+    # Storage calculations follow a 3 tiered structure: Demand is filled first with PHS, then with 
+    # capacity supplied by V2G-Batteries (if enabled), and the residual demand with Other Storage    
 
     electricity_knowledge_graph.add(Node("Storage", inherits_from="Electricity"))
 
-    for supertype in storage_supertypes:
-        electricity_knowledge_graph.add(Node(supertype, inherits_from="Storage"))
+    # for supertype in storage_by_storage_technology_type:
+    #     electricity_knowledge_graph.add(Node(supertype, inherits_from="Storage"))
     # TODO: V2G Batteries are also related to Vehicles + Add V2G-Batteries subtypes? Problem with that is, that these are the same sub types as for Other Storage, how to do this?
-    for subtype_category in storage_subtypes_categories:
-        electricity_knowledge_graph.add(Node(subtype_category, inherits_from="Other Storage"))
-    # for subtype in ["Flywheel", "Compressed Air"]:
-    #     electricity_knowledge_graph.add(Node(subtype, inherits_from="mechanical storage"))
-    # for subtype in ["lithium ion battery","lithium metal battery"]:
-    #     electricity_knowledge_graph.add(Node(subtype, inherits_from="lithium battery"))
-    for subtype in ["LFP", "NMC333", "NMC532", "NMC622", "NMC811", "NMC955"]:
-        electricity_knowledge_graph.add(Node(subtype, inherits_from="lithium battery"))
-    # for subtype in ["Lithium Sulfur", "Lithium Ceramic", "Lithium-air"]:
-    #     electricity_knowledge_graph.add(Node(subtype, inherits_from="lithium metal battery"))
-    for subtype in ["flow-ZnBr", "flow-vanadium"]:
-        electricity_knowledge_graph.add(Node(subtype, inherits_from="flow battery"))
-    for subtype in ["Na-ion"]:
-        electricity_knowledge_graph.add(Node(subtype, inherits_from="sodium battery"))
-    # for subtype in ["Sodium-Sulfur", "ZEBRA"]:
-    #     electricity_knowledge_graph.add(Node(subtype, inherits_from="molten salt battery"))
-    for subtype in ["lead-acid"]:
-        electricity_knowledge_graph.add(Node(subtype, inherits_from="lead acid battery"))
-    # for subtype in ["Hydrogen FC"]:
-    #     electricity_knowledge_graph.add(Node(subtype, inherits_from="fuel cell"))
-    
+    for supertype_category in storage_by_category_type:
+        electricity_knowledge_graph.add(Node(supertype_category, inherits_from="Storage"))
 
+    for subtype in TECH_STATIONARY_STORAGE:
+        electricity_knowledge_graph.add(Node(subtype, inherits_from="Other Storage"))
+    
     return electricity_knowledge_graph
 
 

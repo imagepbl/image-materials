@@ -22,6 +22,7 @@ from imagematerials.electricity.constants import (
 )
 from imagematerials.vehicles.constants import (
     EV_BATTERY_TYPES,
+    EV_VEHICLE_TYPES
 )
 
 def get_preprocessing_data_evbattery(
@@ -95,15 +96,19 @@ def get_preprocessing_data_evbattery(
     # 1. External Data ======================================================================================== 
 
     # material intensities in kg/kWh
-    material_intensities = pd.read_csv(path_external_data_standard_elc / 'storage_and_ev_battery_material_intensities.csv', 
+    material_intensities = pd.read_csv(path_external_data_standard_elc / 'storage_and_ev_battery_material_intensities_long.csv', 
                                         usecols=["Time", "sub_technology", "material", "value"])
 
     # market shares in % of total storage capacity (excluding pumped hydropower storage; values: 0-1)
-    market_shares = pd.read_csv(path_external_data_standard_vhc / 'ev_battery_market_shares.csv', 
-                                usecols=["Time", *EV_BATTERY_TYPES])
+    market_shares = pd.read_csv(path_external_data_standard_vhc / 'ev_battery_market_shares_long.csv', 
+                                usecols=["Time", "sub_technology", "value"]) ##, *EV_BATTERY_TYPES
 
     # energy density (kWh/kg)
     energy_density = pd.read_csv(path_external_data_standard_elc / "energy_density_kwh_per_kg.csv",
+                                usecols=["Time", "sub_technology", "value"])
+
+    # battery capacity per vehicle type (kWh/vehicle)
+    battery_capacity = pd.read_csv(path_external_data_standard_vhc / "ev_battery_capacity_per_vehicle_long.csv",
                                 usecols=["Time", "sub_technology", "value"])
 
     # Using the 250 Wh/kg on the kWh of the various batteries a weight (in kg) of the battery per vehicle category is determined
@@ -115,12 +120,12 @@ def get_preprocessing_data_evbattery(
     # pessimistic sensitivity variant (meaning more additional storage is needed) -> smaller fraction of the EV capacities is usable as storage compared to the normal case
     #    capacity_usable_PHEV = 0.025   # 2.5% of capacity of PHEV is usable as storage (in the pessimistic sensitivity variant)
     #    capacity_usable_BEV  = 0.05    # 5  % of capacity of BEVs is usable as storage (in the pessimistic sensitivity variant)
-        ev_capacity_fraction_v2g = pd.read_csv(path_external_data_standard_elc / "ev_battery_capacity_usable_for_v2g_variant_high_storage.csv")
+        ev_capacity_fraction_v2g = pd.read_csv(path_external_data_standard_vhc / "ev_battery_capacity_usable_for_v2g_variant_high_storage.csv")
     else:
-        ev_capacity_fraction_v2g = pd.read_csv(path_external_data_standard_elc / "ev_battery_capacity_usable_for_v2g.csv")
+        ev_capacity_fraction_v2g = pd.read_csv(path_external_data_standard_vhc / "ev_battery_capacity_usable_for_v2g.csv")
 
     # fraction of EVs available for V2G (considering that not all EVs are capable of bi-directional loading, economic incentives are still missing, and not all owners are willing to provide V2G services)
-    ev_fraction_v2g_data = pd.read_csv(path_external_data_standard_elc / "ev_fraction_available_for_v2g.csv", index_col=[0])
+    ev_fraction_v2g_data = pd.read_csv(path_external_data_standard_vhc / "ev_fraction_available_for_v2g.csv", index_col=[0])
 
 
     ###########################################################################################################
@@ -157,41 +162,56 @@ def get_preprocessing_data_evbattery(
 
     # 1. Market Shares -----------------------------------------------------------------------------
 
-    market_shares = market_shares.melt(
-        id_vars="Time",
-        var_name="Type",
-        value_name="market_shares"
-    )
     market_shares_da = (
-        market_shares.set_index(["Time", "Type"])["market_shares"]
-        .to_xarray()
-        .rename({"Time": "Cohort", "Type": "BatteryType"})
-    )
+            market_shares.set_index(["Time", "sub_technology"])["value"]
+            .to_xarray()
+            .rename({"sub_technology": "BatteryType", "Time": "Cohort"})
+        )
+    # market_shares = market_shares.melt(
+    #     id_vars="Time",
+    #     var_name="Type",
+    #     value_name="market_shares"
+    # )
+    # market_shares_da = (
+    #     market_shares.set_index(["Time", "Type"])["market_shares"]
+    #     .to_xarray()
+    #     .rename({"Time": "Cohort", "Type": "BatteryType"})
+    # )
     market_shares_da = prism.Q_(market_shares_da, "dimensionless")
     market_shares_da.name = "EVBatteryMarketShares"
 
     # 2. battery weigths -----------------------------------------------------------------------
 
-    battery_weights_da = (
-        battery_weights_data
-        .rename_axis(index={"time": "Cohort", "type": "Drivetrain"})
-        .to_xarray()                        # Convert the pandas DataFrame to xarray with dims: Cohort, Drivetrain, Vehicle
-        .to_array("Vehicle")                # Move the DataFrame columns into an explicit xarray dimension
-        .rename("BatteryWeights")
-    )
-    # Combine Vehicle and Drivetrain into a single dimension
-    battery_weights_da = battery_weights_da.stack(Type=("Vehicle", "Drivetrain"))
-    # combine Type string labels: ('Cars', 'BEV') -> 'Cars - BEV'
-    new_type = [f"{v} - {d}" for v, d in battery_weights_da.indexes["Type"]]
+    # battery_weights_da = (
+    #     battery_weights_data
+    #     .rename_axis(index={"time": "Cohort", "type": "Drivetrain"})
+    #     .to_xarray()                        # Convert the pandas DataFrame to xarray with dims: Cohort, Drivetrain, Vehicle
+    #     .to_array("Vehicle")                # Move the DataFrame columns into an explicit xarray dimension
+    #     .rename("BatteryWeights")
+    # )
+    # # Combine Vehicle and Drivetrain into a single dimension
+    # battery_weights_da = battery_weights_da.stack(Type=("Vehicle", "Drivetrain"))
+    # # combine Type string labels: ('Cars', 'BEV') -> 'Cars - BEV'
+    # new_type = [f"{v} - {d}" for v, d in battery_weights_da.indexes["Type"]]
 
-    battery_weights_da = (
-        battery_weights_da
-        .reset_index("Type", drop=True)
-        .assign_coords(Type=new_type) # Replace the stacked MultiIndex with the combined string labels
+    # battery_weights_da = (
+    #     battery_weights_da
+    #     .reset_index("Type", drop=True)
+    #     .assign_coords(Type=new_type) # Replace the stacked MultiIndex with the combined string labels
+    # )
+    # battery_weights_da = prism.Q_(battery_weights_da, "kg")
+    # # rebroadcast so that the Type coordinates have the correct sequence
+    # battery_weights_da = vhc_knowledge_graph.rebroadcast_xarray(battery_weights_da, output_coords=vehicle_list, dim="Type")
+
+    # 4. battery capacity -----------------------------------------------------------------------------
+        
+    battery_capacity_da = (
+        battery_capacity.set_index(["Time", "sub_technology"])["value"]
+        .to_xarray()
+        .rename({"sub_technology": "Type", "Time": "Cohort"})
     )
-    battery_weights_da = prism.Q_(battery_weights_da, "kg")
-    # rebroadcast so that the Type coordinates have the correct sequence
-    battery_weights_da = vhc_knowledge_graph.rebroadcast_xarray(battery_weights_da, output_coords=vehicle_list, dim="Type")
+    battery_capacity_da = prism.Q_(battery_capacity_da, "kWh/count")
+    battery_capacity_da.name = "EVBatteryCapacity"
 
 
     # 3. material intensities -----------------------------------------------------------------------
@@ -267,17 +287,20 @@ def get_preprocessing_data_evbattery(
 
     # fix the market share of storage technologies before year_start and after 2050
     market_shares_da_interp = interpolate_xr(market_shares_da, year_start, year_end)
-    market_shares_da_interp = market_shares_da_interp.expand_dims(Type=vehicle_list).copy() # add vehicle type dimension
-    market_shares_da_interp.loc[dict(Type=vehicle_list_non_ev)] = 0 # set non-EV vehicle types to zero
+    market_shares_da_interp = market_shares_da_interp.expand_dims(Type=EV_VEHICLE_TYPES).copy() # add vehicle type dimension
+    # market_shares_da_interp.loc[dict(Type=vehicle_list_non_ev)] = 0 # set non-EV vehicle types to zero
 
     # 2. Battery Weights ----------------------------------------------------------------
-    battery_weights_da_interp = interpolate_xr(battery_weights_da, year_start, year_end)
+    # battery_weights_da_interp = interpolate_xr(battery_weights_da, year_start, year_end)
+
+    # 2. Battery Capacity ----------------------------------------------------------------
+    battery_capacity_da_interp = interpolate_xr(battery_capacity_da, year_start, year_end)
 
     # 3. Material Intensities ----------------------------------------------------------------
     material_intensities_da_interp = interpolate_xr(material_intensities_da, year_start, year_end)
 
     #  4. Energy Density ----------------------------------------------------------------
-    energy_density_da_interp = interpolate_xr(energy_density_da, year_start, year_end)
+    # energy_density_da_interp = interpolate_xr(energy_density_da, year_start, year_end)
 
 
     ###########################################################################################################
@@ -286,9 +309,9 @@ def get_preprocessing_data_evbattery(
     # bring preprocessing data into a generic format for the model
     prep_data = {}
     prep_data["shares"] = market_shares_da_interp
-    prep_data["weights"] = battery_weights_da_interp
+    prep_data["battery_capacity"] = battery_capacity_da_interp
     prep_data["material_intensities"] = material_intensities_da_interp
-    prep_data["energy_density"] = energy_density_da_interp
+    # prep_data["energy_density"] = energy_density_da_interp
     prep_data["vhc_fraction_v2g"] = vhc_fraction_v2g_da
     prep_data["capacity_fraction_v2g"] = capacity_fraction_v2g_da
     prep_data["knowledge_graph_elc"] = create_electricity_graph()

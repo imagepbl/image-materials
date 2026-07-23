@@ -1,0 +1,101 @@
+Time,source,type_data,unit,Region,category,technology,sub_technology,value
+2005,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,low-nickel,0.5682451253481875
+2005,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,high-nickel,0.19189105540080365
+2005,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,LFP,0.239863819251009
+2005,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,Na-ion,0
+2006,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,low-nickel,0.5682451253481875
+2006,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,high-nickel,0.19189105540080365
+2006,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,LFP,0.2398638192510087
+2006,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,Na-ion,0
+2007,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,low-nickel,0.5682451253481875
+2007,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,high-nickel,0.19189105540080365
+2007,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,LFP,0.2398638192510087
+2007,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,Na-ion,0
+2008,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,low-nickel,0.5682451253481875
+2008,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,high-nickel,0.19189105540080365
+2008,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,LFP,0.2398638192510087
+2008,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,Na-ion,0
+2009,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,low-nickel,0.5682451253481875
+2009,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,high-nickel,0.19189105540080365
+2009,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,LFP,0.2398638192510087
+2009,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,Na-ion,0
+2010,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,low-nickel,0.7457627118644055
+2010,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,high-nickel,0.11299435028248529
+2010,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,LFP,0.14124293785310904
+2010,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,Na-ion,0
+2011,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,low-nickel,0.6542185338865847
+2011,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,high-nickel,0.16136468418625807
+2011,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,LFP,0.18441678192715721
+2011,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,Na-ion,0
+2012,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,low-nickel,0.5405513383939262
+2012,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,high-nickel,0.21973631642029548
+2012,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,LFP,0.23971234518577847
+2012,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,Na-ion,0
+2013,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,low-nickel,0.47575360419397283
+2013,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,high-nickel,0.22935779816513932
+2013,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,LFP,0.2948885976408878
+2013,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,Na-ion,0
+2014,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,low-nickel,0.4206257242178479
+2014,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,high-nickel,0.22016222479722017
+2014,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,LFP,0.359212050984932
+2014,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,Na-ion,0
+2015,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,low-nickel,0.5032366179566166
+2015,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,high-nickel,0.2178330430286402
+2015,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,LFP,0.2789303390147431
+2015,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,Na-ion,0
+2016,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,low-nickel,0.4401351134228594
+2016,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,high-nickel,0.24685181134148412
+2016,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,LFP,0.3130130752356566
+2016,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,Na-ion,0
+2017,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,low-nickel,0.45029435835820747
+2017,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,high-nickel,0.2680966743403039
+2017,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,LFP,0.2816089673014887
+2017,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,Na-ion,0
+2018,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,low-nickel,0.47600732520650446
+2018,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,high-nickel,0.29408996900442363
+2018,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,LFP,0.22990270578907193
+2018,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,Na-ion,0
+2019,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,low-nickel,0.2911253453682521
+2019,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,high-nickel,0.43298472088876394
+2019,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,LFP,0.275889933742984
+2019,Liang_2023,inflow,share,World,EV_battery_all_modes,battery,Na-ion,0
+2020,own calculation,inflow,share,World,EV_battery_all_modes,battery,low-nickel,0.2911253453682521
+2020,own calculation,inflow,share,World,EV_battery_all_modes,battery,high-nickel,0.43298472088876394
+2020,own calculation,inflow,share,World,EV_battery_all_modes,battery,LFP,0.275889933742984
+2020,own calculation,inflow,share,World,EV_battery_all_modes,battery,Na-ion,0
+2021,own calculation,inflow,share,World,EV_battery_all_modes,battery,low-nickel,0.2911253453682521
+2021,own calculation,inflow,share,World,EV_battery_all_modes,battery,high-nickel,0.43298472088876394
+2021,own calculation,inflow,share,World,EV_battery_all_modes,battery,LFP,0.3205932891619893
+2021,own calculation,inflow,share,World,EV_battery_all_modes,battery,Na-ion,0
+2022,IEA_Global_EV_Outlook_2025,inflow,share,World,EV_battery_all_modes,battery,low-nickel,0.09
+2022,IEA_Global_EV_Outlook_2025,inflow,share,World,EV_battery_all_modes,battery,high-nickel,0.54
+2022,IEA_Global_EV_Outlook_2025,inflow,share,World,EV_battery_all_modes,battery,LFP,0.38
+2022,IEA_Global_EV_Outlook_2025,inflow,share,World,EV_battery_all_modes,battery,Na-ion,0
+2023,IEA_Global_EV_Outlook_2025,inflow,share,World,EV_battery_all_modes,battery,low-nickel,0.07
+2023,IEA_Global_EV_Outlook_2025,inflow,share,World,EV_battery_all_modes,battery,high-nickel,0.52
+2023,IEA_Global_EV_Outlook_2025,inflow,share,World,EV_battery_all_modes,battery,LFP,0.41
+2023,IEA_Global_EV_Outlook_2025,inflow,share,World,EV_battery_all_modes,battery,Na-ion,0
+2024,IEA_Global_EV_Outlook_2025,inflow,share,World,EV_battery_all_modes,battery,low-nickel,0.04
+2024,IEA_Global_EV_Outlook_2025,inflow,share,World,EV_battery_all_modes,battery,high-nickel,0.46
+2024,IEA_Global_EV_Outlook_2025,inflow,share,World,EV_battery_all_modes,battery,LFP,0.5
+2024,IEA_Global_EV_Outlook_2025,inflow,share,World,EV_battery_all_modes,battery,Na-ion,0
+2030,own assumption,inflow,share,World,EV_battery_all_modes,battery,low-nickel,0
+2030,own assumption,inflow,share,World,EV_battery_all_modes,battery,high-nickel,0.37
+2030,own assumption,inflow,share,World,EV_battery_all_modes,battery,LFP,0.62
+2030,own assumption,inflow,share,World,EV_battery_all_modes,battery,Na-ion,0.01
+2035,own assumption,inflow,share,World,EV_battery_all_modes,battery,low-nickel,0
+2035,own assumption,inflow,share,World,EV_battery_all_modes,battery,high-nickel,0.28
+2035,own assumption,inflow,share,World,EV_battery_all_modes,battery,LFP,0.7
+2035,own assumption,inflow,share,World,EV_battery_all_modes,battery,Na-ion,0.02
+2040,own assumption,inflow,share,World,EV_battery_all_modes,battery,low-nickel,0
+2040,own assumption,inflow,share,World,EV_battery_all_modes,battery,high-nickel,0.16999999999999996
+2040,own assumption,inflow,share,World,EV_battery_all_modes,battery,LFP,0.8
+2040,own assumption,inflow,share,World,EV_battery_all_modes,battery,Na-ion,0.03
+2045,own assumption,inflow,share,World,EV_battery_all_modes,battery,low-nickel,0
+2045,own assumption,inflow,share,World,EV_battery_all_modes,battery,high-nickel,0.15999999999999995
+2045,own assumption,inflow,share,World,EV_battery_all_modes,battery,LFP,0.8
+2045,own assumption,inflow,share,World,EV_battery_all_modes,battery,Na-ion,0.04
+2050,own assumption,inflow,share,World,EV_battery_all_modes,battery,low-nickel,0
+2050,own assumption,inflow,share,World,EV_battery_all_modes,battery,high-nickel,0.14999999999999997
+2050,own assumption,inflow,share,World,EV_battery_all_modes,battery,LFP,0.8
+2050,own assumption,inflow,share,World,EV_battery_all_modes,battery,Na-ion,0.05
