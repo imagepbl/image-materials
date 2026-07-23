@@ -1,10 +1,12 @@
-import xarray as xr
+import logging
+import prism
 import numpy as np
 import pandas as pd
-import logging
+import xarray as xr
 
-# from imagematerials.constants import IMAGE_REGIONS
+from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.read_mym import read_mym_df
+from imagematerials.util import read_climate_policy_config
 from imagematerials.vehicles.constants import (
     cap_adjustment,
     pkms_label,
@@ -166,3 +168,47 @@ def get_lifetimes(data_path: str, circular_economy_config: dict):
 
     data_xarray = pandas_to_xarray(lifetimes_vehicles, unit_mapping)
     return convert_lifetime(data_xarray)
+
+
+def simulate_timer_data(climate_policy_scenario_dir):
+    climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
+    passenger_kms_all = get_passengerkms(climate_policy_scenario_dir, climate_policy_config)
+    tonne_kms_all = get_tonnekms(climate_policy_scenario_dir, climate_policy_config)
+
+    # load of cars is also given by TIMER (not load factor as previously named!!!)
+    # TODO: why not use this for other modes?
+    load_car_all: pd.DataFrame = read_mym_df(climate_policy_scenario_dir.joinpath(
+        climate_policy_config['data_files']['transport']['passenger']['load'])).rename(columns={"DIM_1": "region"})
+
+    # convert the loaded data into xarray DataArrays for easier access during compute_values
+    passenger_kms = (passenger_kms_all.drop(index=[27, 28], level= "region") # drop empty and global 
+                     .rename_axis(index={"time": "Time", "region": "Region"}, columns="Type")
+                     .stack()
+                     .rename("passenger_kms")
+                     .to_xarray())*1e12 # from tera to base unit (pkm)
+
+    passenger_kms = prism.Q_(passenger_kms, "person*km")
+
+    tonne_kms = (tonne_kms_all.drop(index=[27, 28], level= "region") # drop empty and global 
+                 .rename_axis(index={"time": "Time", "region": "Region"}, columns="Type")
+                 .stack()
+                 .rename("tonne_kms")
+                 .to_xarray())*1e6 # from millions to base unit (tkm)
+
+    tonne_kms = prism.Q_(tonne_kms, "tonne*km")
+
+    # also load load for cars to xarray and assign region coordinates
+    # 5 seems to be cars, taken from Sebastiaans code, but should be checked
+    load_car = load_car_all[["time", "region", 5]].rename(columns={"time": "Time", "region": "Region", 5: "load"}
+                                                         ).set_index(["Time", "Region"])["load"].to_xarray().transpose("Time", "Region")
+    load_car = prism.Q_(load_car, "person/count")
+    # assign Region short names
+    passenger_kms = passenger_kms.assign_coords(Region=IMAGE_REGIONS)
+    tonne_kms = tonne_kms.assign_coords(Region=IMAGE_REGIONS)
+    load_car = load_car.assign_coords(Region=IMAGE_REGIONS)
+        
+    return {
+        "passenger_kms": passenger_kms,
+        "tonne_kms": tonne_kms,
+        "load_car": load_car
+    }

@@ -6,13 +6,8 @@ from pathlib import Path
 
 from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.read_mym import read_mym_df
-from imagematerials.util import read_climate_policy_config
 from imagematerials.vehicles.constants import pkms_label, tkms_label
-from imagematerials.vehicles.preprocessing.util import (
-    get_passengerkms,
-    get_tonkms,
-
-)
+from imagematerials.vehicles.preprocessing.util import simulate_timer_data
 from imagematerials.vehicles.stocks_prism import VehicleStocks
 
 REGION = prism.Dimension("Region", IMAGE_REGIONS)
@@ -45,41 +40,10 @@ class FakeTimerTransport(prism.Model):
         if scenario_dir is None:
             raise ValueError("climate_policy_scenario_dir must be provided to FakeTimerTransport (got None)")
 
-        climate_policy_config = read_climate_policy_config(scenario_dir)
-        passenger_kms_all = get_passengerkms(scenario_dir, climate_policy_config)
-        tonne_kms_all = get_tonkms(scenario_dir, climate_policy_config)
-
-        # load of cars is also given by TIMER (not load factor as previously named!!!)
-        # TODO: why not use this for other modes?
-        load_car: pd.DataFrame = read_mym_df(scenario_dir.joinpath(
-            climate_policy_config['data_files']['transport']['passenger']['load'])).rename(columns={"DIM_1": "region"})
-
-        # convert the loaded data into xarray DataArrays for easier access during compute_values
-        self.passenger_kms_all_xr = (passenger_kms_all.drop(index=[27, 28], level= "region") # drop empty and global 
-                                     .rename_axis(index={"time": "Time", "region": "Region"}, columns="Type")
-                                     .stack()
-                                     .rename("passenger_kms")
-                                     .to_xarray())*1e12 # from tera to base unit (pkm)
-
-        self.passenger_kms_all_xr = prism.Q_(self.passenger_kms_all_xr, "person*km")
-
-        self.tonne_kms_all_xr = (tonne_kms_all.drop(index=[27, 28], level= "region") # drop empty and global 
-                                 .rename_axis(index={"time": "Time", "region": "Region"}, columns="Type")
-                                 .stack()
-                                 .rename("tonne_kms")
-                                 .to_xarray())*1e6 # from millions to base unit (tkm)
-
-        self.tonne_kms_all_xr = prism.Q_(self.tonne_kms_all_xr, "tonne*km")
-
-        # also load load for cars to xarray and assign region coordinates
-        # 5 seems to be cars, taken from Sebastiaans code, but should be checked
-        self.load_car_xr = load_car[["time", "region", 5]].rename(columns={"time": "Time", "region": "Region", 5: "load"}
-                                                                              ).set_index(["Time", "Region"])["load"].to_xarray().transpose("Time", "Region")
-        self.load_car_xr = prism.Q_(self.load_car_xr, "person/count")
-        # assign Region short names
-        self.passenger_kms_all_xr = self.passenger_kms_all_xr.assign_coords(Region=IMAGE_REGIONS)
-        self.tonne_kms_all_xr = self.tonne_kms_all_xr.assign_coords(Region=IMAGE_REGIONS)
-        self.load_car_xr = self.load_car_xr.assign_coords(Region=IMAGE_REGIONS)
+        timer_data = simulate_timer_data(scenario_dir)
+        self.passenger_kms_all_xr = timer_data["passenger_kms"]
+        self.tonne_kms_all_xr = timer_data["tonne_kms"]
+        self.load_car_xr = timer_data["load_car"]
 
         # initialize vehicles model 
         self.vehicles_model = VehicleStocks(timeline,
