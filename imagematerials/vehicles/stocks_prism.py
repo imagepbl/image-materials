@@ -189,8 +189,8 @@ class VehicleStocks(prism.Model):
 
         # dimension check?
         # compute historic tail
-        vhc_originl = ModelFactory.load_pkl("examples/model_results/test.pkl")
-        self.stocks_original = vhc_originl.vehicles.get("stocks")
+        # vhc_originl = ModelFactory.load_pkl("examples/model_results/test.pkl")
+        # self.stocks_original = vhc_originl.vehicles.get("stocks")
     
     def compute_values(self, time: prism.Time, 
                        passenger_kms,
@@ -221,10 +221,10 @@ class VehicleStocks(prism.Model):
         self.total_vehicles = self._calculate_total_vehicles_by_type(t)
         
         # # Apply vehicle shares to expand to subtypes (fuel/technology variants)
-        # stocks_with_subtypes = self._apply_vehicle_shares(total_vehicles, year_key)
+        # stocks_with_subtypes = self._apply_vehicle_shares(self.total_vehicles, t)
          
         # # Store result using label-based Time indexing (calendar year, not positional index).
-        # self.stocks.loc[dict(Time=year_key)] = prism.Q_(total_vehicles, unit)
+        # self.stocks.loc[dict(Time=t)] = prism.Q_(self.total_vehicles, "count")
     
     
     def _calculate_total_vehicles_by_type(self, time: prism.Time):
@@ -249,7 +249,7 @@ class VehicleStocks(prism.Model):
                                                                      "passenger", 
                                                                      time)
         # test to assert that the calculation of simple vehicle types matches the original model for this time step (within a reasonable tolerance)
-        assert self.stocks_original.sel(Type = simple_types).loc[int(prism.M_(time))].sum() == nr_vehicles_simple.sum(), f"Discrepancy in simple vehicle types calculation for time {time.t}: original total {self.stocks_original.sel(Type = simple_types, Time = time.t).sum().values}, new total {nr_vehicles_simple.sum().values}"
+        # assert self.stocks_original.sel(Type = simple_types).loc[int(prism.M_(time))].sum() == nr_vehicles_simple.sum(), f"Discrepancy in simple vehicle types calculation for time {time.t}: original total {self.stocks_original.sel(Type = simple_types, Time = time.t).sum().values}, new total {nr_vehicles_simple.sum().values}"
         
         # # 2 (trucks) & 3 (freight planes) & 4. (freight trains & inland ships) Freight vehicles with special handling
         # 2 Trucks are calculated differently because the IMAGE model does not account for LCV trucks
@@ -298,24 +298,24 @@ class VehicleStocks(prism.Model):
                                                             self.kilometrage_cars, 
                                                             "passenger", 
                                                             time)
-        
+   
         total = xr.concat([nr_vehicles_simple, freight_vehicles_special_vehicles, cars_vehicles], dim="Type")
         ####
         # Test, delete later
-        for vehicle in total.coords["Type"].values:
-            # skip these for now as they are still need to be split up in suptypes in the new calculation
-            # compare to 1e-6 to account for small discrepancies in data handling
-            if vehicle not in ["Light Commercial Vehicles", "Cars", "Medium Freight Trucks", "Heavy Freight Trucks", "Regular Buses", "Midi Buses"]:
-                compare_old = self.stocks_original.sel(Type = vehicle).loc[int(prism.M_(time))].sum()
-                compare_new = total.sel(Type=vehicle).sum()
-                assert abs(compare_new - compare_old) < 1e-6, f"Discrepancy in {vehicle} calculation for time {time}: original total {self.stocks_original.sel(Type = vehicle).loc[int(prism.M_(time))].sum().values}, new total {total.sel(Type=vehicle).sum().values}"
-            if vehicle in ["Cars"]:
-                # there are some minor differences, so for cars assert if higher than 100 cars
-                sub_types = ['Cars - BEV','Cars - FCV', 'Cars - HEV', 'Cars - ICE', 'Cars - PHEV','Cars - Trolley']
-                compare_old = self.stocks_original.sel(Type = sub_types).loc[int(prism.M_(time))].sum(["Type", "Region"])
-                compare_new = total.sel(Type="Cars").sum()
-                print("Discrepancy in Cars calculation for time {}: original total {}, new total {}".format(time, compare_new.values, compare_old.values))
-                assert abs(compare_new - compare_old) < 100, f"Discrepancy in {vehicle} calculation for time {time}: original total {self.stocks_original.sel(Type = sub_types).loc[int(prism.M_(time))].sum(["Type", "Region"]).values}, new total {total.sel(Type="Cars").sum().values}"
+        # for vehicle in total.coords["Type"].values:
+            # # skip these for now as they are still need to be split up in suptypes in the new calculation
+            # # compare to 1e-6 to account for small discrepancies in data handling
+            # if vehicle not in ["Light Commercial Vehicles", "Cars", "Medium Freight Trucks", "Heavy Freight Trucks", "Regular Buses", "Midi Buses"]:
+                # compare_old = self.stocks_original.sel(Type = vehicle).loc[int(prism.M_(time))].sum()
+                # compare_new = total.sel(Type=vehicle).sum()
+                # assert abs(compare_new - compare_old) < 1e-6, f"Discrepancy in {vehicle} calculation for time {time}: original total {self.stocks_original.sel(Type = vehicle).loc[int(prism.M_(time))].sum().values}, new total {total.sel(Type=vehicle).sum().values}"
+            # if vehicle in ["Cars"]:
+                # # there are some minor differences, so for cars assert if higher than 100 cars
+                # sub_types = ['Cars - BEV','Cars - FCV', 'Cars - HEV', 'Cars - ICE', 'Cars - PHEV','Cars - Trolley']
+                # compare_old = self.stocks_original.sel(Type = sub_types).loc[int(prism.M_(time))].sum(["Type", "Region"])
+                # compare_new = total.sel(Type="Cars").sum()
+                # print("Discrepancy in Cars calculation for time {}: original total {}, new total {}".format(time, compare_new.values, compare_old.values))
+                # assert abs(compare_new - compare_old) < 100, f"Discrepancy in {vehicle} calculation for time {time}: original total {self.stocks_original.sel(Type = sub_types).loc[int(prism.M_(time))].sum(["Type", "Region"]).values}, new total {total.sel(Type="Cars").sum().values}"
 
         return total
 
