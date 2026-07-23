@@ -141,7 +141,7 @@ def convert_from_tkpm_or_pkm_to_nr_vehicles(tkm_or_pkm: xr.DataArray, types: lis
         load_by_type = load
         if "Type" not in load_by_type.dims:
             load_by_type = load_by_type.expand_dims("Type").assign_coords(Type=types)
-    
+
     if isinstance(loadfactor, pd.DataFrame):
         loadfactor_by_type = xr.DataArray(
             prism.Q_(loadfactor.loc[loadfactor.index[0], types].to_numpy(), loadfactor_unit),
@@ -162,7 +162,7 @@ def convert_from_tkpm_or_pkm_to_nr_vehicles(tkm_or_pkm: xr.DataArray, types: lis
         # check if Type is a dimension, if not expand dims to Type and assign the correct coordinates i.e. for Cars
         if "Type" not in mileage_by_type.dims:
             mileage_by_type = mileage_by_type.expand_dims("Type").assign_coords(Type=types)
-        prism.Q_(mileage_by_type, mileage_unit)
+        mileage_by_type = prism.Q_(mileage_by_type, mileage_unit)
     # Calculation steps:
     # 1) first convert to nr of vehicles
     # TODO: at the moment does not check for cars if (load_by_type * loadfactor_by_type) > 1, is this needed? maybe not, TIMER data should be right
