@@ -92,10 +92,10 @@ def get_vehicle_shares_prism(climate_data_path, climate_policy_config, knowledge
 
     # CARS - Aggregate car types into the vehicle_shares DataFrame
     for fuel, collist in car_collists.items():
-        vehicle_shares_typical.loc[:, pd.IndexSlice['Cars', fuel, :]] = \
+        vehicle_shares_typical[('Cars', fuel)] = \
             car_vshares[collist].sum(axis=1).unstack()
 
-    vehicle_shares_typical.loc[:, pd.IndexSlice['Cars', 'Trolley', :]] = 0  # Assuming no trolley cars
+    vehicle_shares_typical[('Cars', 'Trolley')] = 0  # Assuming no trolley cars
 
     # BUSES and TRUCKS
     # Sum of all buses except Trolleys
@@ -103,22 +103,22 @@ def get_vehicle_shares_prism(climate_data_path, climate_policy_config, knowledge
                                          bus_label))].sum(axis=1)
 
     # Fill the DataFrame with bus data
-    vehicle_shares_typical.loc[:, pd.IndexSlice['Regular Buses', 'ICE', :]] = \
+    vehicle_shares_typical[('Regular Buses', 'ICE')] = \
         buses_vshares[bus_label_ICE].sum(axis=1).unstack()
-    vehicle_shares_typical.loc[:, pd.IndexSlice['Regular Buses', 'HEV', :]] = \
+    vehicle_shares_typical[('Regular Buses', 'HEV')] = \
         buses_vshares[bus_label_HEV].sum(axis=1).unstack()
-    vehicle_shares_typical.loc[:, pd.IndexSlice['Regular Buses', 'BEV', :]] = \
+    vehicle_shares_typical[('Regular Buses', 'BEV')] = \
         buses_vshares['BusBattElectric'].unstack()
-    vehicle_shares_typical.loc[:, pd.IndexSlice['Regular Buses', 'Trolley', :]] = \
+    vehicle_shares_typical[('Regular Buses', 'Trolley')] = \
         buses_vshares['BusElecTrolley'].unstack()
 
-    vehicle_shares_typical.loc[:, pd.IndexSlice['Midi Buses', 'ICE', :]] = \
+    vehicle_shares_typical[('Midi Buses', 'ICE')] = \
         buses_vshares[bus_label_ICE].sum(axis=1).div(midi_sum).unstack()
-    vehicle_shares_typical.loc[:, pd.IndexSlice['Midi Buses', 'HEV', :]] = \
+    vehicle_shares_typical[('Midi Buses', 'HEV')] = \
         buses_vshares[bus_label_HEV].sum(axis=1).div(midi_sum).unstack()
-    vehicle_shares_typical.loc[:, pd.IndexSlice['Midi Buses', 'BEV', :]] = \
+    vehicle_shares_typical[('Midi Buses', 'BEV')] = \
         buses_vshares['BusBattElectric'].div(midi_sum).unstack()
-    vehicle_shares_typical.loc[:, pd.IndexSlice['Midi Buses', 'Trolley', :]] = 0
+    vehicle_shares_typical[('Midi Buses', 'Trolley')] = 0
 
     vehicle_shares_typical.loc[:, pd.IndexSlice[[
         'Regular Buses', 'Midi Buses'], ['FCV', 'PHEV']]] = 0
@@ -132,17 +132,17 @@ def get_vehicle_shares_prism(climate_data_path, climate_policy_config, knowledge
     }
 
     for truck_type, truck_df in truck_data.items():
-        vehicle_shares_typical.loc[:, pd.IndexSlice[truck_type, 'ICE', :]] = \
+        vehicle_shares_typical[(truck_type, 'ICE')] = \
             truck_df[truck_label_ICE].sum(axis=1).unstack()
-        vehicle_shares_typical.loc[:, pd.IndexSlice[truck_type, 'HEV', :]] = \
+        vehicle_shares_typical[(truck_type, 'HEV')] = \
             truck_df[truck_label_HEV].sum(axis=1).unstack()
-        vehicle_shares_typical.loc[:, pd.IndexSlice[truck_type, 'PHEV', :]] = \
+        vehicle_shares_typical[(truck_type, 'PHEV')] = \
             truck_df[truck_label_PHEV].sum(axis=1).unstack()
-        vehicle_shares_typical.loc[:, pd.IndexSlice[truck_type, 'BEV', :]] = \
+        vehicle_shares_typical[(truck_type, 'BEV')] = \
             truck_df[truck_label_BEV].sum(axis=1).unstack()
-        vehicle_shares_typical.loc[:, pd.IndexSlice[truck_type, 'FCV', :]] = \
+        vehicle_shares_typical[(truck_type, 'FCV')] = \
             truck_df[truck_label_FCV].sum(axis=1).unstack()
-        vehicle_shares_typical.loc[:, pd.IndexSlice[truck_type, 'Trolley', :]] = 0
+        vehicle_shares_typical[(truck_type, 'Trolley')] = 0
 
     vehicle_shares_typical = interpolate(vehicle_shares_typical, change='no')
     shares = xarray_conversion(
