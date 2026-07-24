@@ -30,35 +30,45 @@ abstract: >-
     each.
 authors:
     - family-names: von Köckritz
-        given-names: Luja
-        affiliation: Copernicus Institute of Sustainable Development - Utrecht University, Planbureau voor de Leefomgeving
+      given-names: Luja
+      orcid: https://orcid.org/0000-0001-8655-8731
+      affiliation: Copernicus Institute of Sustainable Development - Utrecht University, Planbureau voor de Leefomgeving
     - family-names: Arp
-        given-names: Anke Frederike
-        affiliation: Copernicus Institute of Sustainable Development - Utrecht University, Planbureau voor de Leefomgeving
+      given-names: Anke Frederike
+      orcid: https://orcid.org/0009-0004-9201-1707
+      affiliation: Copernicus Institute of Sustainable Development - Utrecht University, Planbureau voor de Leefomgeving
     - family-names: Tettenborn
-        given-names: Judith
-        affiliation: Copernicus Institute of Sustainable Development - Utrecht University, Planbureau voor de Leefomgeving
+      given-names: Judith
+      orcid: https://orcid.org/0009-0006-0394-2740
+      affiliation: Copernicus Institute of Sustainable Development - Utrecht University, Planbureau voor de Leefomgeving
     - family-names: Zanon-Zotin
-        given-names: Marianne
-        affiliation: Copernicus Institute of Sustainable Development - Utrecht University, Planbureau voor de Leefomgeving
+      given-names: Marianne
+      orcid: https://orcid.org/0000-0003-2393-6234
+      affiliation: Copernicus Institute of Sustainable Development - Utrecht University, Planbureau voor de Leefomgeving
     - family-names: van Engelenburg
-        given-names: Martijn
-        affiliation: Institute of Environmental Sciences (CML) - Leiden University
+      given-names: Martijn
+      orcid: https://orcid.org/0009-0005-9775-0653
+      affiliation: Institute of Environmental Sciences (CML) - Leiden University
     - family-names: Deetman
-        given-names: Sebastiaan
-        affiliation: Institute of Environmental Sciences (CML) - Leiden University
+      given-names: Sebastiaan
+      orcid: https://orcid.org/0000-0002-1820-658X
+      affiliation: Institute of Environmental Sciences (CML) - Leiden University
     - family-names: Schram
-        given-names: Raoul
-        affiliation: Information and Technology Services - Utrecht University
+      given-names: Raoul
+      orcid: https://orcid.org/0000-0001-6616-230X
+      affiliation: Information and Technology Services - Utrecht University
     - family-names: Brouwer
-        given-names: Roelof Jacob Jan
-        affiliation: Information and Technology Services - Utrecht University
+      given-names: Roelof Jacob Jan
+      orcid: https://orcid.org/0000-0001-8300-4290
+      affiliation: Information and Technology Services - Utrecht University
     - family-names: Zahedi
-        given-names: Parisa
-        affiliation: Information and Technology Services - Utrecht University
-   - family-names: Staiger
-       given-names: Christine
-       affiliation: Information and Technology Services - Utrecht University
+      given-names: Parisa
+      orcid: https://orcid.org/0000-0002-1610-3149
+      affiliation: Information and Technology Services - Utrecht University
+    - family-names: Staiger
+      given-names: Christine
+      orcid: https://orcid.org/0000-0002-6754-7647
+      affiliation: Information and Technology Services - Utrecht University
 
 license: Copyright IMAGE-materials team, Utrecht University 2026, all rights reserved
 repository-code: https://github.com/imagepbl/image-materials
