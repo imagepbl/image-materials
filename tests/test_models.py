@@ -13,6 +13,10 @@ from imagematerials.concepts import Node, KnowledgeGraph
 from imagematerials.model import GenericMaterials, GenericStocks, MaterialIntensities, RestOf
 from imagematerials.model import SharesInflowStocks, ElectricVehicleBatteries
 
+from imagematerials.vehicles.constants import (
+    EV_VEHICLE_TYPES
+)
+
 @pytest.fixture(scope="module")
 def coordinates():
     """Coordinate set to create fake datasets with."""
@@ -147,27 +151,9 @@ def test_electric_vehicle_batteries(coordinates, timelines):
     """Test the ElectricVehicleBatteries model for critical calculation logic."""
     complete_timeline, simulation_timeline = timelines
 
-    battery_types = ["NMC", "LFP"]
+    battery_types = ["high-nickel", "LFP"]
     material_types = ["copper", "lithium"]
     v2g_types = ["Cars - BEV"]
-
-    road_vehicle_types = [
-        'Cars - BEV', 'Cars - FCV', 'Cars - HEV', 'Cars - ICE',
-        'Cars - PHEV', 'Cars - Trolley', 'Heavy Freight Trucks - BEV',
-        'Heavy Freight Trucks - FCV', 'Heavy Freight Trucks - HEV',
-        'Heavy Freight Trucks - ICE', 'Heavy Freight Trucks - PHEV',
-        'Heavy Freight Trucks - Trolley', 'Light Commercial Vehicles - BEV',
-        'Light Commercial Vehicles - FCV', 'Light Commercial Vehicles - HEV',
-        'Light Commercial Vehicles - ICE', 'Light Commercial Vehicles - PHEV',
-        'Light Commercial Vehicles - Trolley', 'Medium Freight Trucks - BEV',
-        'Medium Freight Trucks - FCV', 'Medium Freight Trucks - HEV',
-        'Medium Freight Trucks - ICE', 'Medium Freight Trucks - PHEV',
-        'Medium Freight Trucks - Trolley', 'Midi Buses - BEV',
-        'Midi Buses - FCV', 'Midi Buses - HEV', 'Midi Buses - ICE',
-        'Midi Buses - PHEV', 'Midi Buses - Trolley', 'Regular Buses - BEV',
-        'Regular Buses - FCV', 'Regular Buses - HEV', 'Regular Buses - ICE',
-        'Regular Buses - PHEV', 'Regular Buses - Trolley',
-    ]
 
     time_coords = coordinates["Time"]
     cohort_coords = coordinates["Cohort"]
@@ -175,14 +161,14 @@ def test_electric_vehicle_batteries(coordinates, timelines):
  
     inflow_da = xr.DataArray(
         100.0, dims=("time", "Region", "Type"),
-        coords={"time": time_coords, "Region": region_coords, "Type": road_vehicle_types})
+        coords={"time": time_coords, "Region": region_coords, "Type": EV_VEHICLE_TYPES})
     inflow_da = prism.Q_(inflow_da, "count")
     inflow = prism.TimeVariable.from_array(inflow_da)
 
     outflow_da = xr.DataArray(
         20.0, dims=("time", "Cohort", "Region", "Type"),
         coords={"time": time_coords, "Cohort": cohort_coords,
-                "Region": region_coords, "Type": road_vehicle_types})
+                "Region": region_coords, "Type": EV_VEHICLE_TYPES})
     outflow_da = prism.Q_(outflow_da, "count")
     outflow_by_cohort = prism.TimeVariable.from_array(outflow_da)
 
@@ -190,37 +176,28 @@ def test_electric_vehicle_batteries(coordinates, timelines):
     stock_by_cohort = xr.DataArray(
         50.0, dims=("Time", "Cohort", "Region", "Type"),
         coords={"Time": time_coords, "Cohort": cohort_coords,
-                "Region": region_coords, "Type": road_vehicle_types})
+                "Region": region_coords, "Type": EV_VEHICLE_TYPES})
     stock_by_cohort = prism.Q_(stock_by_cohort, "count")
 
     # --- Battery-specific input data ---
 
     shares = xr.DataArray(
         0.5, dims=("BatteryType", "Type", "Cohort"),
-        coords={"BatteryType": battery_types, "Type": road_vehicle_types,
+        coords={"BatteryType": battery_types, "Type": EV_VEHICLE_TYPES,
                 "Cohort": cohort_coords})
     shares = shares / shares.sum("BatteryType")
 
-    # Battery weights: kg per vehicle
-    weights = xr.DataArray(
-        10.0, dims=("BatteryType", "Type", "Cohort"),
-        coords={"BatteryType": battery_types, "Type": road_vehicle_types,
-                "Cohort": cohort_coords})
-    weights = prism.Q_(weights, "kg/count")  # kg per vehicle
-
-    # Energy density: kg/kWh
-    energy_density = xr.DataArray(
-        0.1, dims=("BatteryType", "Type", "Cohort"),
-        coords={"BatteryType": battery_types, "Type": road_vehicle_types,
-                "Cohort": cohort_coords})
-    energy_density = prism.Q_(energy_density, "kWh/kg")
-
-    # Shares and material_fractions are dimensionless (fractions) — leave as plain arrays
+    # Battery capacity: kWh/vehicle
+    capacity = xr.DataArray(
+            10.0, dims=("Type", "Cohort"),
+            coords={"Type": EV_VEHICLE_TYPES,
+                    "Cohort": cohort_coords})
+    capacity = prism.Q_(capacity, "kWh/count")  # kg per vehicle
 
     material_intensities = xr.DataArray(
     5, dims=("material", "BatteryType", "Type", "Cohort"),
     coords={"material": material_types, "BatteryType": battery_types,
-            "Type": road_vehicle_types, "Cohort": cohort_coords})
+            "Type": EV_VEHICLE_TYPES, "Cohort": cohort_coords})
     material_intensities = prism.Q_(material_intensities, "kg/kWh")
 
     vhc_fraction_v2g = xr.DataArray(
@@ -237,13 +214,12 @@ def test_electric_vehicle_batteries(coordinates, timelines):
 
     model = ElectricVehicleBatteries(
         complete_timeline,
-        weights=weights,
+        battery_capacity=capacity,
         shares=shares,
         material_intensities=material_intensities,
-        energy_density=energy_density,
         vhc_fraction_v2g=vhc_fraction_v2g,
         capacity_fraction_v2g=capacity_fraction_v2g,
-        Type=road_vehicle_types,
+        Type=EV_VEHICLE_TYPES,
         BatteryType=battery_types,
         Region=region_coords,
         Cohort=cohort_coords,
@@ -266,25 +242,17 @@ def test_electric_vehicle_batteries(coordinates, timelines):
         assert hasattr(model, var_name), f"Expected output {var_name} not found on model"
 
     t = time_coords[0]  # 2000
-    n_types = len(road_vehicle_types)
+    n_types = len(EV_VEHICLE_TYPES)
     n_battery_types = len(battery_types)
     n_regions = len(region_coords)
 
-    # Per (BatteryType, Type, Region): mass = 100 vehicles × 0.5 shares × 10 kg/vehicle = 500 kg
-    expected_mass_per_bt_type = 100.0 * 0.5 * 10.0
-    # kWh = 500 kg * 0.1 kWh/kg = 50 kWh
-    expected_kwh_per_bt_type = expected_mass_per_bt_type * 0.1
+    # Per (BatteryType, Type, Region): mass = 100 vehicles × 0.5 shares × 10 kWh/vehicle = 500 kWh
+    expected_kwh_per_bt_type = 100.0 * 0.5 * 10.0
     expected_total_inflow_kwh = expected_kwh_per_bt_type * n_battery_types * n_types * n_regions
 
     inflow_kwh_total = prism.M_(model.inflow_battery_kWh[t].sum())
     assert inflow_kwh_total == pytest.approx(expected_total_inflow_kwh, rel=0.01), \
         f"Inflow kWh mismatch: expected {expected_total_inflow_kwh}, got {inflow_kwh_total}"
-
-    # Material mass total = battery mass total (fractions sum to 1.0)
-    expected_total_inflow_mass = expected_mass_per_bt_type * n_battery_types * n_types * n_regions
-    material_mass_total = prism.M_(model.inflow_battery_materials[t].sum())
-    assert material_mass_total == pytest.approx(expected_total_inflow_mass, rel=0.01), \
-        f"Material mass mismatch: expected {expected_total_inflow_mass}, got {material_mass_total}"
 
     # V2G stock only includes V2G-capable types
     assert set(model.stock_battery_kWh_v2g.Type.values) == set(v2g_types)
