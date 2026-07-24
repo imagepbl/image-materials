@@ -122,7 +122,7 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
                                        usecols=["Time", "sub_technology", "material", "value"])# .transpose()
 
     # market shares in % of total storage capacity (excluding pumped hydropower storage; values: 0-1)
-    market_shares = pd.read_csv(path_external_data_standard / 'storage_market_shares_stationary_long.csv', 
+    market_shares = pd.read_csv(path_external_data_standard / 'storage_market_shares_long.csv', 
                                 usecols=["Time", "sub_technology", "value"]) #index_col=[0,1],usecols=lambda col: col != "unit"
 
     # Data for Pumped Hydropower Storage (PHS) ---------------------------------------------------------

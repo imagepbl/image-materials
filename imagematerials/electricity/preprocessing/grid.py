@@ -34,8 +34,10 @@ from imagematerials.electricity.constants import (
 #############################################################################################################
 #############################################################################################################
 
-def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, circular_economy_config: dict):
-    """ Prepare preprocessing input data for the electricity grid sub-module.
+def get_preprocessing_data_grid(path_base: str, 
+                                climate_policy_config: dict, 
+                                circular_economy_config: dict):
+    """Prepare preprocessing input data for the electricity grid sub-module.
 
     This function reads static and scenario-dependent grid data (line lengths,
     lifetimes, material intensities, and grid additions) from a combination of IMAGE/TIMER 
@@ -65,8 +67,8 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
     prep_data_additions : dict
         Preprocessing data for grid additions (transformers and substations),
         structured analogously to `prep_data_lines`.
-    """    
 
+    """
     scen = Path(climate_policy_config["config_file_path"]).name
     path_external_data_standard = Path(path_base, "electricity", "standard_data")
     path_external_data_scenario = Path(path_base, "electricity", scen)
@@ -77,7 +79,7 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
     year_start = YEAR_FIRST_GRID
     year_end = 2100
 
-    ###########################################################################################################
+    ################################################################################################
     # Read in files #
 
     # lenght of the High-voltage (Hv) lines in the grid, based on Open Street Map (OSM) analysis (km)
@@ -87,20 +89,16 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
     # Regression constants in the linear function used to determine the relation between income & the percentage of underground power-lines (% underground = mult * gdp/cap + add)
     ratio_underground      = pd.read_csv(path_external_data_standard / 'grid_ratio_underground.csv', index_col=[0,1])
     # Transformers & substations per km of grid (Hv, Mv & Lv, in units/km)
-    ratio_grid_additions   = pd.read_csv(path_external_data_standard / 'grid_additions.csv', index_col=0)
-
-
-    # dynamic or scenario-dependent data (lifetimes & material intensity)
-
+    ratio_grid_additions   = pd.read_csv(path_external_data_standard / 'grid_ratio_facilities_per_km_line.csv', index_col=0)
     # Average lifetime in years of grid elements
-    grid_lifetime_data          = pd.read_csv(path_external_data_scenario  / 'operational_lifetime_grid.csv', index_col=0)
+    grid_lifetime_data          = pd.read_csv(path_external_data_standard  / 'grid_lifetimes.csv', index_col=0)
     # Material intensity of grid lines (Hv, Mv & Lv; specific for underground vs. aboveground lines) (kg/km)
-    materials_lines_data        = pd.read_csv(path_external_data_scenario / 'Materials_grid_dynamic.csv', index_col=[0,1])
+    materials_lines_data        = pd.read_csv(path_external_data_standard / 'grid_material_intensities_lines.csv', index_col=[0,1])
     # Material Intensity for additional infrastructure required for grid connections, such as transformers & substations (kg/unit)
-    materials_additions_data    = pd.read_csv(path_external_data_scenario / 'Materials_grid_additions.csv', index_col=[0,1])
+    materials_additions_data    = pd.read_csv(path_external_data_standard / 'grid_material_intensities_facilities.csv', index_col=[0,1])
 
 
-    # 2. IMAGE/TIMER files ====================================================================================
+    # 2. IMAGE/TIMER files =========================================================================
 
     # Generation capacity (stock & inflow/new) in MW peak capacity, FILES from TIMER
     # gcap_data = read_mym_df(path_image_output / 'GCap.out')
@@ -110,7 +108,7 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
     # gdp_pc_data: pd.DataFrame   = read_mym_df(Path(path_base, "data", "raw", "image", scen_folder, "Socioeconomic", "gdp_pc.scn"))
     gdp_pc_data = read_mym_df(climate_policy_config["config_file_path"] / climate_policy_config["data_files"]['gdp_pc'])
 
-    ###########################################################################################################
+    ################################################################################################
     # Transform to xarray #
 
     knowledge_graph_region = create_region_graph()
@@ -270,14 +268,14 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
     }, attrs=ds_ratio_hv.attrs)
 
 
-    ###########################################################################################################
+    ################################################################################################
     # Calculate variables #
 
-    # 1. calculate growth factors for the grid lines ------------------------------------------------------------
+    # 1. calculate growth factors for the grid lines -----------------------------------------------
 
     grid_growth = calculate_grid_growth(gcap, grid_lines)
     
-    # 2. calculate grid lengths (overhead) with ratios & growth factors -----------------------------------------
+    # 2. calculate grid lengths (overhead) with ratios & growth factors ----------------------------
 
     # calculate extend of MV and LV networks in 2016 based on Hv network and fixed ratios
     grid_lines.loc[{"Type": "MV - Lines - Overhead"}] = grid_lines.loc[{"Type": "HV - Lines - Overhead"}] * ds_ratio_hv["HV to MV"]
@@ -286,7 +284,7 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
     grid_lines = (grid_lines * grid_growth).rename(grid_lines.name).assign_attrs(grid_lines.attrs) # calculate line lengths over time based on growth factors; restore name and attributes (lost during multiplication)
 
 
-    # 3. calculate underground lines ----------------------------------------------------------------------------
+    # 3. calculate underground lines ---------------------------------------------------------------
     
     # determine length of underground and aboveground grid lines based on GDP/capita: fraction_underground = mult * gdp_pc + add
     # Based on insights from Kalt et al. 2021, we adjust the underground ratios downwards for non-European regions
@@ -301,7 +299,7 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
     grid_lines = (grid_lines * fraction_lines_above_below).rename(grid_lines.name).assign_attrs(grid_lines.attrs) # calculate line lengths over time based on growth factors; restore name and attributes (lost during multiplication)
 
 
-    # 4. calculate number of substations & transformers based on line lengths & fixed ratios -------------------------------------------------------------
+    # 4. calculate number of substations & transformers based on line lengths & fixed ratios -------
     
     ureg = grid_lines.data._REGISTRY # extract unit registry from pint xarray dataarray to be able to define units for the calculations below
     for level in ["HV", "MV", "LV"]:
@@ -309,7 +307,7 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
         grid_additions.loc[dict(Type=f"{level} - Substations")]  = (grid_lines.sel(Type=f"{level} - Lines - Overhead") + grid_lines.sel(Type=f"{level} - Lines - Underground")) * (ratio_grid_additions.loc['Substations',level] * (ureg.count/ureg.kilometer))  
 
 
-    ###########################################################################################################
+    ################################################################################################
     # Interpolate #
 
     grid_lifetime_interp        = interpolate_xr(grid_lifetime, year_start, year_end)
@@ -324,7 +322,7 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
     grid_lifetime_interp.loc[{"DistributionParams": "stdev"}] = grid_lifetime_interp.sel({"DistributionParams": "mean"}) * STD_LIFETIMES_ELECTR
 
 
-    ###########################################################################################################
+    ################################################################################################
     # CE measures #
 
     # Depending on circular economy scenario, apply different measures
@@ -334,7 +332,7 @@ def get_preprocessing_data_grid(path_base: str, climate_policy_config: dict, cir
                                                                                           grid_lifetime_interp,
                                                                                           circular_economy_config)
 
-    ###########################################################################################################
+    ################################################################################################
     # Prep_data File #
 
     # the lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
