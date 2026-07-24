@@ -1203,13 +1203,11 @@ class ElectricVehicleBatteries(prism.Model):
 
     """
     # Input data
-    # weights:             xr.DataArray
-    shares:              xr.DataArray
-    battery_capacity:            xr.DataArray
-    material_intensities:  xr.DataArray
-    # energy_density:      xr.DataArray
-    vhc_fraction_v2g:    xr.DataArray
-    capacity_fraction_v2g: xr.DataArray
+    shares:                 xr.DataArray
+    battery_capacity:       xr.DataArray
+    material_intensities:   xr.DataArray
+    vhc_fraction_v2g:       xr.DataArray
+    capacity_fraction_v2g:  xr.DataArray
     
 
     # Dimensions
@@ -1257,21 +1255,6 @@ class ElectricVehicleBatteries(prism.Model):
         self._types_v2g = self.vhc_fraction_v2g.Type
         # TODO: this is not ideal (hardcoding road vehicle types) -> improve!
         self.EV_VEHICLE_TYPES = EV_VEHICLE_TYPES
-    #     ['Cars - BEV', 'Cars - FCV', 'Cars - HEV', 'Cars - ICE', 
-    #    'Cars - PHEV', 'Cars - Trolley', 'Heavy Freight Trucks - BEV',
-    #    'Heavy Freight Trucks - FCV', 'Heavy Freight Trucks - HEV',
-    #    'Heavy Freight Trucks - ICE', 'Heavy Freight Trucks - PHEV',
-    #    'Heavy Freight Trucks - Trolley', 'Light Commercial Vehicles - BEV',
-    #    'Light Commercial Vehicles - FCV', 'Light Commercial Vehicles - HEV',
-    #    'Light Commercial Vehicles - ICE', 'Light Commercial Vehicles - PHEV',
-    #    'Light Commercial Vehicles - Trolley', 'Medium Freight Trucks - BEV',
-    #    'Medium Freight Trucks - FCV', 'Medium Freight Trucks - HEV',
-    #    'Medium Freight Trucks - ICE', 'Medium Freight Trucks - PHEV',
-    #    'Medium Freight Trucks - Trolley', 'Midi Buses - BEV',
-    #    'Midi Buses - FCV', 'Midi Buses - HEV', 'Midi Buses - ICE',
-    #    'Midi Buses - PHEV', 'Midi Buses - Trolley', 'Regular Buses - BEV',
-    #    'Regular Buses - FCV', 'Regular Buses - HEV', 'Regular Buses - ICE',
-    #    'Regular Buses - PHEV', 'Regular Buses - Trolley']
 
         self.stock_battery_kWh_v2g = xr.DataArray(
             0.0,
@@ -1292,12 +1275,9 @@ class ElectricVehicleBatteries(prism.Model):
         current simulation time step.
 
         For each time step, this method calculates:
-        1. Battery mass inflow, stock, and outflow (kg)
-        2. Battery energy capacity inflow, stock, and outflow (kWh) using energy
-        density
-        3. Battery material inflow, stock, and outflow (kg) based on material
-        composition
-        4. V2G-capable battery energy capacity stock (kWh)
+        1. Battery energy capacity inflow, stock, and outflow (kg)
+        2. Battery material inflow, stock, and outflow (kg) based on material composition
+        3. V2G-capable battery energy capacity stock (kWh)
 
         Parameters
         ----------
@@ -1331,179 +1311,15 @@ class ElectricVehicleBatteries(prism.Model):
         outflow_t = outflow_by_cohort[t].sel(Type=self.EV_VEHICLE_TYPES)
 
         # 1. Calculate battery energy capacity inflow, stock, outflow (kWh)
-        # inflow_battery_kg  = inflow_t * self.shares.sel(Cohort = t) * self.weights.sel(Cohort = t)
-        # stock_battery_kg   = (stock_t * self.shares * self.weights)
-        # outflow_battery_kg = (outflow_t * self.shares * self.weights) 
         self.inflow_battery_kWh[t]  = inflow_t * self.shares.sel(Cohort = t) * self.battery_capacity.sel(Cohort = t)
         self.stock_battery_kWh[t]   = (stock_t * self.shares * self.battery_capacity)
         self.outflow_battery_kWh[t] = (outflow_t * self.shares * self.battery_capacity)   
 
-        # 2. Calculate battery energy capacity inflow, stock, outflow (kWh)
-        # self.inflow_battery_kWh[t]  = inflow_battery_kg * self.energy_density.sel(Cohort = t)
-        # self.stock_battery_kWh[t]   = stock_battery_kg * self.energy_density
-        # self.outflow_battery_kWh[t] = outflow_battery_kg * self.energy_density
-
-        # 3. Calculate battery materials (copper, ..) inflow, stock, outflow (kg)
+        # 2. Calculate battery materials (copper, ..) inflow, stock, outflow (kg)
         self.inflow_battery_materials[t]  = (self.inflow_battery_kWh[t] * self.material_intensities.sel(Cohort = t))
         self.stock_battery_materials[t]   = (self.stock_battery_kWh[t] * self.material_intensities).sum(["Cohort"])
         self.outflow_battery_materials[t] = (self.outflow_battery_kWh[t] * self.material_intensities).sum(["Cohort"])
 
-        # 4. Calculate V2G capable battery energy capacity stock (kWh) (to calculate "Other storage" only the V2G battery stock is needed)
-        stock_v2g = self.stock_battery_kWh[t].sel(Type=self._types_v2g) * self.vhc_fraction_v2g
-        self.stock_battery_kWh_v2g.loc[dict(Time=t, Type=self._types_v2g)]  = (stock_v2g.sel(Time=t).drop_vars("Time") * self.capacity_fraction_v2g).sum(["Cohort"])
-
-@prism.interface
-class ElectricVehicleBatteries____old(prism.Model):
-    """Calculates EV battery energy capacity and EV battery materials per battery type for inflow, stock, outflow
-    in electric vehicles. Calculates also the battery stock that is available for V2G (vehicle to grid) applications.
-
-    Notes
-    -----
-        Assumption: battery lifetime = vehicle lifetime (no explicit battery stock calculation)
-
-    """
-    # Input data
-    weights:             xr.DataArray
-    shares:              xr.DataArray
-    material_intensities:  xr.DataArray
-    energy_density:      xr.DataArray
-    vhc_fraction_v2g:    xr.DataArray
-    capacity_fraction_v2g: xr.DataArray
-    
-
-    # Dimensions
-    Type:         prism.Coords[STOCK_TYPE]
-    BatteryType:  prism.Coords[BATTERY_TYPE]
-    Region:       prism.Coords[REGION]
-    Cohort:       prism.Coords[COHORT]
-    material:     prism.Coords[MATERIAL_TYPE]
-    Time:         prism.Coords[TIME]
-
-    # Data dependencies
-    input_data: tuple[str] = ("shares", "weights", "material_intensities", "energy_density", "vhc_fraction_v2g", "capacity_fraction_v2g", # input from battery preprocessing
-                              "stock_by_cohort", "inflow", "outflow_by_cohort") # input from vehicle stock module
-    output_data: tuple[str] = ("stock_battery_kWh_v2g", #"outflow_battery_kWh_v2g",#"inflow_battery_kWh_v2g",
-                               "inflow_battery_kWh","stock_battery_kWh","outflow_battery_kWh",
-                               "inflow_battery_materials","stock_battery_materials","outflow_battery_materials")
-
-    # Output
-    inflow_battery_kWh:        prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, "kWh"] = prism.export()
-    stock_battery_kWh:         prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, COHORT, "kWh"] = prism.export()
-    outflow_battery_kWh:       prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, COHORT, "kWh"] = prism.export()
-    # inflow_battery_kWh_v2g:    prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, "kWh"] = prism.export()
-    # stock_battery_kWh_v2g:     prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, COHORT, "kWh"] = prism.export()
-    # outflow_battery_kWh_v2g:   prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, COHORT, "kWh"] = prism.export()
-    inflow_battery_materials:  prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, MATERIAL_TYPE, "kg"] = prism.export()
-    stock_battery_materials:   prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, MATERIAL_TYPE, "kg"] = prism.export()
-    outflow_battery_materials: prism.TimeVariable[BATTERY_TYPE, STOCK_TYPE, REGION, MATERIAL_TYPE, "kg"] = prism.export()
-
-
-    def compute_initial_values(self, time: prism.Timeline):
-        """ Initialize variables required for the calculation of V2G battery stocks.
-
-        Parameters
-        ----------
-        time : prism.Timeline
-            Timeline object defining the simulation time horizon.
-
-        Notes
-        -----
-        - V2G-capable vehicle types are derived from ``self.vhc_fraction_v2g``.
-        - Only road vehicle types are considered in the battery-related calculations.
-
-        """
-        # vhc_fraction_v2g only contains Types that are V2G capable (e.g. "Cars - BEV")
-        self._types_v2g = self.vhc_fraction_v2g.Type
-        # TODO: this is not ideal (hardcoding road vehicle types) -> improve!
-        self.ROAD_VEHICLE_TYPES = ['Cars - BEV', 'Cars - FCV', 'Cars - HEV', 'Cars - ICE', 
-       'Cars - PHEV', 'Cars - Trolley', 'Heavy Freight Trucks - BEV',
-       'Heavy Freight Trucks - FCV', 'Heavy Freight Trucks - HEV',
-       'Heavy Freight Trucks - ICE', 'Heavy Freight Trucks - PHEV',
-       'Heavy Freight Trucks - Trolley', 'Light Commercial Vehicles - BEV',
-       'Light Commercial Vehicles - FCV', 'Light Commercial Vehicles - HEV',
-       'Light Commercial Vehicles - ICE', 'Light Commercial Vehicles - PHEV',
-       'Light Commercial Vehicles - Trolley', 'Medium Freight Trucks - BEV',
-       'Medium Freight Trucks - FCV', 'Medium Freight Trucks - HEV',
-       'Medium Freight Trucks - ICE', 'Medium Freight Trucks - PHEV',
-       'Medium Freight Trucks - Trolley', 'Midi Buses - BEV',
-       'Midi Buses - FCV', 'Midi Buses - HEV', 'Midi Buses - ICE',
-       'Midi Buses - PHEV', 'Midi Buses - Trolley', 'Regular Buses - BEV',
-       'Regular Buses - FCV', 'Regular Buses - HEV', 'Regular Buses - ICE',
-       'Regular Buses - PHEV', 'Regular Buses - Trolley']
-
-        self.stock_battery_kWh_v2g = xr.DataArray(
-            0.0,
-            dims=("Time", "Type", "BatteryType", "Region"), 
-            coords={"Time":         self.Time,
-                    "BatteryType":  self.BatteryType,
-                    "Type":         self._types_v2g,
-                    "Region":       self.Region})
-        self.stock_battery_kWh_v2g = prism.Q_(self.stock_battery_kWh_v2g, "kWh")
-        
-    def compute_values(self, 
-                       time: prism.Time, 
-                       inflow: prism.TimeVariable, 
-                       stock_by_cohort: xr.DataArray, 
-                       outflow_by_cohort: prism.TimeVariable):
-        """Compute battery energy capacity flows and stocks and corresponding
-        materials stocks and flows, and V2G-capable battery energy capacity stock for the 
-        current simulation time step.
-
-        For each time step, this method calculates:
-        1. Battery mass inflow, stock, and outflow (kg)
-        2. Battery energy capacity inflow, stock, and outflow (kWh) using energy
-        density
-        3. Battery material inflow, stock, and outflow (kg) based on material
-        composition
-        4. V2G-capable battery energy capacity stock (kWh)
-
-        Parameters
-        ----------
-        time : prism.Time
-            Current time step object containing the index ``t`` and time step
-            length ``dt``.
-        inflow : prism.TimeVariable
-            Vehicle inflow by type and region.
-        stock_by_cohort : xarray.DataArray
-            Vehicle stock by type, and region.
-        outflow_by_cohort : prism.TimeVariable
-            Vehicle outflow by type, and region.
-
-        Notes
-        -----
-        - Battery mass is calculated using vehicle inflow/stock/outflow together
-        with battery shares and battery weights.
-        - Energy capacity (kWh) is obtained by multiplying battery mass with the
-        battery energy density.
-        - Material flows are derived from battery mass using material intensities.
-        - V2G-capable battery stock is computed using the fraction of vehicles
-        that support V2G and the share of battery capacity available for grid
-        services.
-
-        """
-        t, dt = time.t, time.dt
-
-        # select road vehicles only, as only these have batteries
-        inflow_t  = inflow[t].sel(Type=self.ROAD_VEHICLE_TYPES)
-        stock_t   = stock_by_cohort.loc[t].sel(Type=self.ROAD_VEHICLE_TYPES)
-        outflow_t = outflow_by_cohort[t].sel(Type=self.ROAD_VEHICLE_TYPES)
-
-        # 1. Calculate battery mass inflow, stock, outflow (kg)
-        inflow_battery_kg  = inflow_t * self.shares.sel(Cohort = t) * self.weights.sel(Cohort = t)
-        stock_battery_kg   = (stock_t * self.shares * self.weights)
-        outflow_battery_kg = (outflow_t * self.shares * self.weights)    
-
-        # 2. Calculate battery energy capacity inflow, stock, outflow (kWh)
-        self.inflow_battery_kWh[t]  = inflow_battery_kg * self.energy_density.sel(Cohort = t)
-        self.stock_battery_kWh[t]   = stock_battery_kg * self.energy_density
-        self.outflow_battery_kWh[t] = outflow_battery_kg * self.energy_density
-        
-
-        # 3. Calculate battery materials (copper, ..) inflow, stock, outflow (kg)
-        self.inflow_battery_materials[t]  = (self.inflow_battery_kWh[t] * self.material_intensities.sel(Cohort = t))
-        self.stock_battery_materials[t]   = (self.stock_battery_kWh[t] * self.material_intensities).sum(["Cohort"])
-        self.outflow_battery_materials[t] = (self.outflow_battery_kWh[t] * self.material_intensities).sum(["Cohort"])
-
-        # 4. Calculate V2G capable battery energy capacity stock (kWh) (to calculate "Other storage" only the V2G battery stock is needed)
+        # 3. Calculate V2G capable battery energy capacity stock (kWh) (to calculate "Other storage" only the V2G battery stock is needed)
         stock_v2g = self.stock_battery_kWh[t].sel(Type=self._types_v2g) * self.vhc_fraction_v2g
         self.stock_battery_kWh_v2g.loc[dict(Time=t, Type=self._types_v2g)]  = (stock_v2g.sel(Time=t).drop_vars("Time") * self.capacity_fraction_v2g).sum(["Cohort"])
