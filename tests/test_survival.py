@@ -6,7 +6,7 @@ from pytest import mark
 from imagematerials.lifetimes import lifetimes_to_matrix
 
 
-def create_life_times(prefix, more_life=0, time_size=30):
+def create_life_times(prefix, time_size=30):
     time = np.arange(time_size)+1900
     mode = [f"{prefix}_{i}" for i in range(4)]
     array = xr.DataArray(0.0, dims=["Time", "Type", "ScipyParam"],
