@@ -12,7 +12,6 @@ from pint import UnitRegistry
 from imagematerials.concepts import KnowledgeGraph
 from imagematerials.lifetimes import lifetimes_to_matrix
 from imagematerials.maintenance import Maintenance
-# from imagematerials.survival import ScipySurvival, SurvivalMatrix
 
 REGION = prism.Dimension("Region")
 STOCK_TYPE = prism.Dimension("Type")
@@ -22,7 +21,7 @@ QUINTILE = prism.Dimension("Quintile")
 TIME = prism.Dimension("Time")
 MATERIAL_TYPE = prism.Dimension("material")
 BATTERY_TYPE = prism.Dimension("BatteryType")
-EOL_TYPE = prism.Dimension("eolt ype")
+EOL_TYPE = prism.Dimension("eoltype")
 UnitFlexibleStock = prism.DynamicUnit("my_unit_stock")
 
 prism.unit_registry.load_definitions(files(__package__) / "units.txt")
