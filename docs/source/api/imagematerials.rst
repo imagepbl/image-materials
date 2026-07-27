@@ -21,13 +21,6 @@ imagematerials.distribution module
    :show-inheritance:
 
 
-imagematerials.survival module
-------------------------------
-
-.. automodule:: imagematerials.survival
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
 imagematerials.util module
 ------------------------------
@@ -89,6 +82,14 @@ imagematerials.read_mym module
 ------------------------------
 
 .. automodule:: imagematerials.read_mym
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+imagematerials.lifetimes module
+------------------------------
+
+.. automodule:: imagematerials.lifetimes
    :members:
    :undoc-members:
    :show-inheritance:

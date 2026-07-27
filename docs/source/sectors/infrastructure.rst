@@ -116,7 +116,7 @@ The preprocessing proceeds in the following stages:
    subgrade, while 20% flows through the dynamic stock model like other materials.
 
 6. **Lifetimes.** Assemble Weibull and folded-normal parameter arrays suitable for
-   :class:`imagematerials.survival.ScipySurvival`.
+   :func:`imagematerials.lifetimes.lifetimes_to_matrix`.
 
 7. **Dictionary.** Return a dictionary with the following keys:
 

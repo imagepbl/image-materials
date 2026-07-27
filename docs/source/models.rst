@@ -21,8 +21,6 @@ Model Overview
 - :class:`imagematerials.model.MaterialIntensities`: A class for modeling materials based on material intensities.
 - :class:`imagematerials.model.EndOfLife`: A class for modeling end-of-life material flows.
 - :class:`imagematerials.model.RestOf`: A class for modeling rest-of-economy material consumption.
-- :class:`imagematerials.survival.SurvivalMatrix`: A class for computing survival probabilities based on lifetime distributions.
-- :class:`imagematerials.survival.ScipySurvival`: A class providing scipy-based lifetime distributions for survival calculations.
 
 Key Concepts
 ----------------------
