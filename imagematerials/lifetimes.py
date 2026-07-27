@@ -37,7 +37,7 @@ def lifetimes_to_matrix(
 
     for t in time_series.values:
         # print(matrix.coords["Type"], modes)
-        matrix.loc[t:, t] = compute_cohort(t, lifetime_parameters, time_series, dt, modes,
+        matrix.loc[t:, t] = compute_cohort(t, lifetime_parameters, time_series, dt, output_modes,
                                            knowledge_graph)
     return matrix
 
@@ -83,11 +83,13 @@ def compute_cohort(cohort: int, lifetime_parameters, time_series, dt, output_mod
                                         coords=array_coords))
     base_array = xr.concat(res_arrays, dim="Type", coords="minimal")
 
-    if output_modes is None:
+    if output_modes is None or list(output_modes) == list(base_array.coords["Type"].to_numpy()):
         # Not needed to deal with subtypes
         return base_array
 
-    if (knowledge_graph is None and
-            list(base_array.coords.values()) != list(output_modes)):
-        raise ValueError(f"Need knowledge graph for broadcasting to {output_modes}.")
+    if knowledge_graph is None:
+        if len(set(output_modes) - set(base_array.coords["Type"].to_numpy())) == 0:
+            return base_array.reindex({"Type": output_modes})
+        raise ValueError(f"Need knowledge graph for broadcasting to {output_modes} from "
+                         f"{base_array.coords.values()}.")
     return knowledge_graph.rebroadcast_xarray(base_array, output_modes)
