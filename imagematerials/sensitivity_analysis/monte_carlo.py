@@ -36,12 +36,24 @@ from imagematerials.concepts import (
     create_vehicle_graph_2,
     create_building_graph
 )
+from imagematerials.util import (
+    dataset_to_array,
+    convert_lifetime,
+    pandas_to_xarray
+)
 from imagematerials.electricity.utils import (
     logistic, 
     quadratic,
     interpolate_xr,
 )
-from imagematerials.vehicles.constants import maintenance_modes
+from imagematerials.vehicles.constants import (
+    maintenance_modes,
+    unit_mapping,
+)
+from imagematerials.vehicles.modelling_functions import (
+    interpolate,
+    scenario_change
+)
 
 dict_knowledge_graph = {
     "vehicles": create_vehicle_graph_2(),
@@ -84,7 +96,7 @@ DISTRIBUTIONS = {
 # Public API
 # ---------------------------------------------------------------------------
 
-def load_ranges_materials(filepath: str) -> pd.DataFrame:
+def load_ranges_material_intensities(filepath: str) -> pd.DataFrame:
     """Load the ranges CSV.
 
     Expected columns: year, material, technology, min, max
@@ -123,7 +135,7 @@ def load_ranges_materials(filepath: str) -> pd.DataFrame:
     return df
 
 
-def sample_intensities(
+def sample_material_intensities(
         sector: str,
         ranges: pd.DataFrame,
         rng: np.random.Generator | None = None,
@@ -198,6 +210,8 @@ def load_ranges_lifetimes(filepath: str, default_distribution: str = "uniform") 
                    var_name="Type", value_name="value")
     wide = (long.set_index([year_col, "Type", stat_col])["value"]
                 .unstack(stat_col).reset_index())
+    print("long:    \n", long)
+    print("wide:    \n", wide)
     wide.columns.name = None
     wide = wide.rename(columns={year_col: "Cohort"})
 
