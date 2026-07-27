@@ -13,10 +13,12 @@ def lifetimes_to_matrix(
     if output_modes is not None:
         try:
             # Xarray coordinates, convert to np.NDArray
-            modes = output_modes.values
+            output_modes = output_modes.values
         except AttributeError:
             # Lists, and other
-            modes = output_modes
+            pass
+
+        modes = output_modes
     else:
         modes = []
         for param_dict_array in lifetime_parameters.values():
@@ -36,7 +38,6 @@ def lifetimes_to_matrix(
     )
 
     for t in time_series.values:
-        # print(matrix.coords["Type"], modes)
         matrix.loc[t:, t] = compute_cohort(t, lifetime_parameters, time_series, dt, output_modes,
                                            knowledge_graph)
     return matrix
