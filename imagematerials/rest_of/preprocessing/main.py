@@ -158,11 +158,9 @@ def rest_of_preprocessing(base_directory, image_scenario_directory, scenario: st
     historic_diff_consumption_mean = read_historic_diff_cons_data_mean(base_directory)
     historic_diff_consumption_total = read_historic_diff_cons_data(base_directory)
     population = compute_population(image_scenario_directory, base_directory)
-    # Filter to total population from 1971 onward.
-    population = population.sel(Area="Total", Time=slice(1971, None)).drop_vars("Area")
-    # Total is duplicated across Quintile; collapse to a single Time x Region series.
-    if "Quintile" in population.dims:
-        population = population.mean("Quintile")
+    # Filter population data to start from 1971 & only total population needed
+    population = population.sum("Quintile").loc[1971:]
+    population = population.sel(Area = "Total").drop("Area")
     # from nr to Region abbreviations
     knowledge_graph_region = create_region_graph()
     population = knowledge_graph_region.rebroadcast_xarray(population, output_coords=IMAGE_REGIONS, dim="Region")
