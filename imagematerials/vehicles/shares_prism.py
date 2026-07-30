@@ -34,7 +34,7 @@ from imagematerials.vehicles.preprocessing.util import (
 )
 
 
-def get_vehicle_shares_prism(climate_data_path, climate_policy_config, knowledge_graph_vehicle):
+def get_vehicle_shares_prism(timer_vehicle_shares, passenger_kms, tonne_kms, knowledge_graph_vehicle):
     """Calculate vehicle technology and fuel type shares from climate data.
 
     Parameters
@@ -53,35 +53,14 @@ def get_vehicle_shares_prism(climate_data_path, climate_policy_config, knowledge
     """
     # The tonne kilometres of freight vehicles of the IMAGE/TIMER SSP2
     # (in Mega Tkm)
-    tonkms_Mtkms = get_tonnekms(climate_data_path, climate_policy_config)
+    # TODO: implement get_tonnekms correctly
+    tonkms_Mtkms = get_tonnekms(tonne_kms)
 
     # The passenger kilometres from the IMAGE/TIMER SSP2 (in Tera Pkm)
-    passengerkms_Tpkms = get_passengerkms(climate_data_path, climate_policy_config)
+    # TODO: implement get_passengerkms correctly
+    passengerkms_Tpkms = get_passengerkms(passenger_kms)
 
-    # The vehicle shares of buses of the SSP2
-    buses_vshares: pd.DataFrame = read_mym_df(climate_data_path.joinpath(
-        climate_policy_config['data_files']['transport']['passenger']['Vshare_bus']
-    )).rename(columns={"DIM_1": "region"})
-    buses_vshares = set_column_names(buses_vshares, bus_label)
-
-    # The vehicle shares of passenger cars of the SSP2
-    car_vshares: pd.DataFrame = read_mym_df(climate_data_path.joinpath(
-        climate_policy_config['data_files']['transport']['passenger']['Vshare_car']
-    )).rename(columns={"DIM_1": "region"})
-    car_vshares = set_column_names(car_vshares, None)
-
-    # The vehicle shares of trucks (medium) of the SSP2
-    medtruck_vshares: pd.DataFrame = read_mym_df(climate_data_path.joinpath(
-        climate_policy_config['data_files']['transport']['freight']['Vshare_MedTruck']
-    )).rename(columns={"DIM_1": "region"})
-    medtruck_vshares = set_column_names(medtruck_vshares, truck_label)
-
-    # The vehicle shares of trucks (heavy) of the SSP2
-    hvytruck_vshares: pd.DataFrame = read_mym_df(climate_data_path.joinpath(
-        climate_policy_config['data_files']['transport']['freight']['Vshare_HvyTruck']
-    )).rename(columns={"DIM_1": "region"})
-    hvytruck_vshares = set_column_names(hvytruck_vshares, truck_label)
-
+    # TODO: Change to just a single time
     # Vehicle shares of typical vehicles (specified by drivetrain)
     columns: pd.MultiIndex = pd.MultiIndex.from_product([typical_modes, drive_trains,
                                                          list(range(1, REGIONS + 1))],
@@ -90,7 +69,11 @@ def get_vehicle_shares_prism(climate_data_path, climate_policy_config, knowledge
         0, index=years_range, columns=columns)
     vehicle_shares_typical = vehicle_shares_typical.sort_index(axis=1)
 
-    # CARS - Aggregate car types into the vehicle_shares DataFrame
+    # TODO: Below this line: everything that used to come from a file we
+    # imported (buses_vshares, etc.) needs to come from the TimeVariable
+    # (timer_vehicle_shares) now.
+
+    # CARS - Aggregate car types into the vehicle_shares DataFram
     for fuel, collist in car_collists.items():
         vehicle_shares_typical[('Cars', fuel)] = \
             car_vshares[collist].sum(axis=1).unstack()

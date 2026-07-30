@@ -174,19 +174,6 @@ class VehicleStocks(prism.Model):
         self.kilometrage_midi_bus = vehicle_data["kilometrage_midi_bus"]
         self.kilometrage_bus = vehicle_data["kilometrage_bus"]
 
-        # Vehicle shares may be absent in integration preprocessing; compute them on demand.
-        if "vehicle_shares" in vehicle_data:
-            self.vehicle_shares = vehicle_data["vehicle_shares"]
-        elif "shares" in vehicle_data:
-            self.vehicle_shares = vehicle_data["shares"]
-        else:
-            climate_policy_config = read_climate_policy_config(self.climate_policy_scenario_dir)
-            self.vehicle_shares = get_vehicle_shares_prism(
-                self.climate_policy_scenario_dir,
-                climate_policy_config,
-                self.knowledge_graph,
-            )
-
         # dimension check?
         # compute historic tail
         # vhc_originl = ModelFactory.load_pkl("examples/model_results/test.pkl")
@@ -195,7 +182,9 @@ class VehicleStocks(prism.Model):
     def compute_values(self, time: prism.Time, 
                        passenger_kms,
                        tonne_kms,
-                       load_car):
+                       load_car  # ,
+                       # vehicle_shares
+        ):
         """Calculate vehicle stocks for the current timestep.
         
         Computes the number of vehicles needed to satisfy the yearly passenger
@@ -216,6 +205,8 @@ class VehicleStocks(prism.Model):
         self.passenger_kms = passenger_kms
         self.tonne_kms = tonne_kms
         self.load_car = load_car
+        # TODO: implement get_vehicle_shares_prism fully
+        #self.vehicle_shares = get_vehicle_shares_prism(vehicle_shares, passenger_kms, tonne_kms, self.knowledge_graph)
         # self.total_vehicles: prism.Array[REGION, MODE, "count"] = prism.export()
 
         self.total_vehicles = self._calculate_total_vehicles_by_type(t)
