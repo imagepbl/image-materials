@@ -46,7 +46,7 @@ from imagematerials.electricity.utils import (
 from imagematerials.electricity.constants import (
     YEAR_FIRST_GRID,
     EPG_TECHNOLOGIES,
-    EPG_SUB_TECHNOLOGIES,
+    # EPG_SUB_TECHNOLOGIES,
 )
 from imagematerials.vehicles.constants import (
     maintenance_modes,
@@ -129,7 +129,7 @@ DISTRIBUTIONS = {
 }
 
 # ===========================================================================
-# 1. Loaders - one per (sector, data type).
+# 1. Loaders - one per data type
 # ===========================================================================
 
 def _rename_to_canonical(df: pd.DataFrame, aliases: dict) -> pd.DataFrame: #TODO: discuss if strict guidelines on input files header names are the better way
@@ -186,16 +186,7 @@ def load_material_intensities(filepath: str) -> pd.DataFrame:
         "min":      ["min", "Min", "minimum"],
         "max":      ["max", "Max", "maximum"],
     })
-
-    # The file's own 'value' column is the central / best estimate (e.g. 0.7
-    # between 0.612 and 0.748). Rename it to 'peak' so that (a) it can serve as
-    # the most-likely value of a triangular distribution and (b) it cannot be
-    # confused with the column the sampler writes.
-    # if "value" in df.columns and "peak" not in df.columns:
-    #     df = df.rename(columns={"value": "peak"})
-
-    # Any other columns in the file (unit, Region, category, ...) are simply
-    # carried along; the sampler ignores them.
+    
     return _add_distribution_column(df)
 
 
@@ -214,32 +205,8 @@ def load_lifetimes(filepath: str) -> pd.DataFrame:
 
     df = _rename_to_canonical(df, {
         "Cohort": ["time", "Time", "year", "years", "Year", "cohort", "Cohort"],
-        "stat":   ["data", "Data", "stat", "statistic", "Statistic", "parameter"],
+        "parameter":   ["data", "Data", "stat", "statistic", "Statistic", "parameter"],
     })
-
-    # # Everything that is not an id column is a technology column.
-    # tech_cols = [c for c in df.columns if c not in ("Cohort", "stat")]
-    # if not tech_cols:
-    #     raise ValueError("No technology columns found besides the id columns.")
-
-    # # wide -> long -> one row per (Cohort, Type) with the statistics as columns
-    # long = df.melt(
-    #     id_vars=["Cohort", "stat"], value_vars=tech_cols,
-    #     var_name="Type", value_name="value",
-    # )
-    # wide = (long.set_index(["Cohort", "Type", "stat"])["value"]
-    #             .unstack("stat")
-    #             .reset_index())
-    # wide.columns.name = None
-
-    # # melt turns everything into object dtype as soon as one row holds a string
-    # # (e.g. a 'distribution' row), so force the numeric columns back.
-    # for col in wide.columns:
-    #     if col not in {"Cohort", "Type", "distribution"}:
-    #         wide[col] = pd.to_numeric(wide[col], errors="coerce")
-
-    # # Map onto the canonical parameter names the sampler understands.
-    # wide = wide.rename(columns={"mean_min": "min", "mean_max": "max", "mean": "peak"})
 
     return _add_distribution_column(df)
 
@@ -258,7 +225,8 @@ def sample_values(
     Parameters
     ----------
     params : pd.DataFrame
-        Output of any load_* function above.
+        Output of any load_* function above. Need to have the columns "min" and "max" (and "value" 
+        depending on the distribution).
     rng : np.random.Generator
         Pass the same generator on every iteration for a reproducible sequence.
     out_col : str
@@ -332,13 +300,13 @@ def process_material_intensities(
     da = prism.Q_(da, unit)
     da.name = f"{sector}Materials"
 
-    knowledge_graph = dict_knowledge_graph[sector]
+    knowledge_graph = dict_knowledge_graph[sector] #TODO: is this needed?
     da = knowledge_graph.rebroadcast_xarray(da, output_coords=dict_sector_types[sector])
 
     if not year_start:
         year_start = dict_sector_start_year[sector]
     if not year_end:
-        year_end = dict_sector_start_end[sector]
+        year_end = dict_sector_end_year[sector]
 
     da = interpolate_xr(da, year_start, year_end)
 
@@ -353,23 +321,25 @@ def process_lifetimes(
     ) -> xr.DataArray:
     """Sampled lifetime table -> model-ready DataArray.
 
-    The drawn value IS the mean lifetime; stdev/shape/scale are unchanged.
-    From there on this is byte-for-byte the deterministic transformation.
+    The drawn value IS the mean lifetime; stdev/shape/scale are unchanged due to entry "fixed" in 
+    distribution column.
+    
+    vehicles: lifetimes are defined on type level, not sub-type/engine (for Cars and not Cars - BEV, etc.)
 
     """
     da = sampled.copy()
 
     da = (
-        da.set_index(["Cohort", "Type", "stats"])["sampled"]
+        da.set_index(["Cohort", "Type", "parameter"])["sampled"]
         .to_xarray()
-        .rename({"stats": "DistributionParams"})
+        .rename({"parameter": "DistributionParams"})
     )
     da.name = f"{sector}Lifetime"
 
     if not year_start:
         year_start = dict_sector_start_year[sector]
     if not year_end:
-        year_end = dict_sector_start_end[sector]
+        year_end = dict_sector_end_year[sector]
 
     da = interpolate_xr(da, year_start, year_end)
 
