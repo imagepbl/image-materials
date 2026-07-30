@@ -39,9 +39,9 @@ Where :math:`t-c` is the age of the cohort at time :math:`t`.
 Implementation in IMAGE Materials
 ----------------------------------
 
-IMAGE materials uses the :class:`imagematerials.survival.SurvivalMatrix` class to handle survival calculations. For detailed API documentation, see :doc:`SurvivalMatrix <../api/models_detail>`.
+The function :func:`imagematerials.lifetimes.lifetimes_to_matrix` converts lifetime parameters to an array
+with time, cohort and other dimensions.
 
-The :class:`imagematerials.survival.ScipySurvival` class provides scipy-based distributions for computing survival probabilities. For detailed API documentation, see :doc:`ScipySurvival <../api/models_detail>`.
 
 Usage in Stock Models
 ---------------------

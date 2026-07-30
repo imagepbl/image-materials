@@ -23,19 +23,3 @@ GenericMaterials
 MaterialIntensities
 -------------------
 .. autoclass:: imagematerials.model.MaterialIntensities
-
-**Survival Classes**
---------------------
-
-SurvivalMatrix
-^^^^^^^^^^^^^^
-.. autoclass:: imagematerials.survival.SurvivalMatrix
-   :members:
-   :show-inheritance:
-
-ScipySurvival
-^^^^^^^^^^^^^
-.. autoclass:: imagematerials.survival.ScipySurvival
-   :members:
-   :show-inheritance:
-
