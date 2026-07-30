@@ -29,3 +29,8 @@ Some things that will increase the chance that your pull request is accepted.
 * Add comments to your code.
 * Follow PEP 8 – [Style Guide for Python Code](https://peps.python.org/pep-0008/)
 * Write a [good commit message](https://cbea.ms/git-commit/)
+
+## Merging to main
+When merging into main from development, you should not squash the commits.
+
+Before creating a new release, make sure to update the version number in citation.cff as well.
