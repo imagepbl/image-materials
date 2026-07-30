@@ -5,7 +5,7 @@ title: IMAGE-materials
 version: 3.5.1.1
 identifiers:
   - type: doi
-    value: 10.5281/zenodo.19696715
+    value: 10.5281/zenodo.19696714
 abstract: >-
     The IMAGE-materials model is a stock-driven dynamic material flow analysis model,
     part of the IMAGE integrated assessment model (IAM) framework. By combining
