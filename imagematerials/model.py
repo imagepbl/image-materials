@@ -1,17 +1,17 @@
 
-from typing import Callable, ClassVar, Optional
-import pint_xarray
-from pint import UnitRegistry
-from pathlib import Path
 from importlib.resources import files
+from pathlib import Path
+from typing import Callable, ClassVar, Optional
 
+import numpy as np
+import pint_xarray
 import prism
 import xarray as xr
-import numpy as np
+from pint import UnitRegistry
 
 from imagematerials.concepts import KnowledgeGraph
+from imagematerials.lifetimes import lifetimes_to_matrix
 from imagematerials.maintenance import Maintenance
-from imagematerials.survival import ScipySurvival, SurvivalMatrix
 from imagematerials.vehicles.constants import EV_VEHICLE_TYPES
 
 REGION = prism.Dimension("Region")
@@ -88,9 +88,8 @@ class GenericStocks(prism.Model):
             The simulation timeline.
         """
   
-        survival = ScipySurvival(self.lifetimes, self.stocks.coords["Type"],
-                                 knowledge_graph=self.knowledge_graph)
-        self.survival_matrix = SurvivalMatrix(survival)
+        self.survival_matrix = lifetimes_to_matrix(self.lifetimes, self.stocks.coords["Type"],
+                                                   knowledge_graph=self.knowledge_graph)
         self.stock_by_cohort = xr.DataArray(
             0.0,
             dims=("Time", "Cohort", "Region", "Type"),
@@ -119,11 +118,11 @@ class GenericStocks(prism.Model):
         # calculate missing stock to fulfill demand (input stock)
         stock_diff = stock_demand.loc[t] - self.stock_by_cohort.loc[t].sum("Cohort")
         # stock_diff cannot be negative (no negative inflow); when positive, divide by survival matrix in case there is a loss in the first year (inflow needs to be larger than input stock)
-        stock_diff = xr.where(stock_diff>0, stock_diff/self.survival_matrix[t, t].drop("Cohort"), 0)
+        stock_diff = xr.where(stock_diff>0, stock_diff/self.survival_matrix.loc[t, t].drop("Cohort"), 0)
 
         self.inflow[t] = stock_diff
         # calculate future development of the current cohort (inflow at time t; t: = time from current time onwards, t = cohort of time t)
-        self.stock_by_cohort.loc[t:, t] = self.inflow[t] * self.survival_matrix[t:, t]
+        self.stock_by_cohort.loc[t:, t] = self.inflow[t] * self.survival_matrix.loc[t:, t]
         # for t_future in stock_by_cohort[t].coords["Cohort"].loc[t_str:]:
             # t_future = int(t_future)
             # stock_by_cohort[t_future].loc[{"Cohort": t_str}] = inflow[t]*survival[t_future, t]
@@ -135,7 +134,7 @@ class GenericStocks(prism.Model):
             # for previous cohorts: calculate outflow by subtracting stocks of previous - current year
             self.outflow_by_cohort[t].loc[:, :, :t-1] = self.stock_by_cohort.loc[t-1, :t-1] - self.stock_by_cohort.loc[t, :t-1]
             # for current cohort: calculate outflow by inflow * (1-survival matrix) as stock at t-1 is not existent
-            self.outflow_by_cohort[t].loc[:, :, t] = self.inflow[t] * (1-self.survival_matrix[t, t])
+            self.outflow_by_cohort[t].loc[:, :, t] = self.inflow[t] * (1-self.survival_matrix.loc[t, t])
 
 
 @prism.interface
@@ -204,9 +203,8 @@ class StocksQuintiles(prism.Model):
             The simulation timeline.
         """
   
-        survival = ScipySurvival(self.lifetimes, self.stocks.coords["Type"],
-                                 knowledge_graph=self.knowledge_graph)
-        self.survival_matrix = SurvivalMatrix(survival)
+        self.survival_matrix = lifetimes_to_matrix(self.lifetimes, self.stocks.coords["Type"],
+                                                   knowledge_graph=self.knowledge_graph)
         self.stock_by_cohort = xr.DataArray(
             0.0,
             dims=("Time", "Cohort", "Region", "Type", "Quintile"),
@@ -236,11 +234,11 @@ class StocksQuintiles(prism.Model):
         # calculate missing stock to fulfill demand (input stock)
         stock_diff = stock_demand.loc[t] - self.stock_by_cohort.loc[t].sum("Cohort")
         # stock_diff cannot be negative (no negative inflow); when positive, divide by survival matrix in case there is a loss in the first year (inflow needs to be larger than input stock)
-        stock_diff = xr.where(stock_diff>0, stock_diff/self.survival_matrix[t, t].drop("Cohort"), 0)
+        stock_diff = xr.where(stock_diff>0, stock_diff/self.survival_matrix.loc[t, t].drop("Cohort"), 0)
 
         self.inflow[t] = stock_diff
         # calculate future development of the current cohort (inflow at time t; t: = time from current time onwards, t = cohort of time t)
-        self.stock_by_cohort.loc[t:, t] = self.inflow[t] * self.survival_matrix[t:, t]
+        self.stock_by_cohort.loc[t:, t] = self.inflow[t] * self.survival_matrix.loc[t:, t]
         # for t_future in stock_by_cohort[t].coords["Cohort"].loc[t_str:]:
             # t_future = int(t_future)
             # stock_by_cohort[t_future].loc[{"Cohort": t_str}] = inflow[t]*survival[t_future, t]
@@ -252,7 +250,7 @@ class StocksQuintiles(prism.Model):
             # for previous cohorts: calculate outflow by subtracting stocks of previous - current year
             self.outflow_by_cohort[t].loc[:, :, :, :t-1] = self.stock_by_cohort.loc[t-1, :t-1] - self.stock_by_cohort.loc[t, :t-1]
             # for current cohort: calculate outflow by inflow * (1-survival matrix) as stock at t-1 is not existent
-            self.outflow_by_cohort[t].loc[:, :, :, t] = self.inflow[t] * (1-self.survival_matrix[t, t])
+            self.outflow_by_cohort[t].loc[:, :, :, t] = self.inflow[t] * (1-self.survival_matrix.loc[t, t])
 
 
 @prism.interface
@@ -328,9 +326,8 @@ class SharesInflowStocks(prism.Model):
 
         """
         types_to_model = next(iter(self.lifetimes.values())).coords["Type"].values
-        survival = ScipySurvival(self.lifetimes, types_to_model,
-                                 knowledge_graph=self.knowledge_graph)
-        self.survival_matrix = SurvivalMatrix(survival)
+        self.survival_matrix = lifetimes_to_matrix(self.lifetimes, types_to_model,
+                                                   knowledge_graph=self.knowledge_graph)
         self.stock_by_cohort = xr.DataArray(
             0.0,
             dims=("Time", "Cohort", "Region", "Type"),
@@ -368,11 +365,11 @@ class SharesInflowStocks(prism.Model):
         # calculate the inflow by sub-technology by rebroadcasting the stock_diff (by super-type) to sub-technologies according to their shares in the inflow
         inflow_tech = self.knowledge_graph.rebroadcast_xarray(stock_diff, self.stock_by_cohort.coords["Type"].values, dim="SuperType", shares=self.shares.sel(Cohort=t), dim_shares="Type").rename({"SuperType": "Type"})
         # stock_diff cannot be negative (no negative inflow); when positive, divide by survival matrix in case there is a loss in the first year (inflow needs to be larger than input stock)
-        inflow_tech = xr.where(inflow_tech>0, inflow_tech/self.survival_matrix[t, t].drop("Cohort"), 0)
+        inflow_tech = xr.where(inflow_tech>0, inflow_tech/self.survival_matrix.loc[t, t].drop("Cohort"), 0)
         self.inflow[t] = inflow_tech
 
         # calculate future development of the current cohort (inflow at time t; t: = time from current time onwards, t = cohort of time t)
-        self.stock_by_cohort.loc[t:, t] = self.inflow[t] * self.survival_matrix[t:, t]
+        self.stock_by_cohort.loc[t:, t] = self.inflow[t] * self.survival_matrix.loc[t:, t]
 
         # Prevent out of bounds error, assume first outflow to be 0.
         if t-1 < time.start:
@@ -381,7 +378,7 @@ class SharesInflowStocks(prism.Model):
             # for previous cohorts: calculate outflow by subtracting stocks of previous - current year
             self.outflow_by_cohort[t].loc[:, :, :t-1] = self.stock_by_cohort.loc[t-1, :t-1] - self.stock_by_cohort.loc[t, :t-1]
             # for current cohort: calculate outflow by inflow * (1-survival matrix) as stock at t-1 is not existent
-            self.outflow_by_cohort[t].loc[:, :, t] = self.inflow[t] * (1-self.survival_matrix[t, t])
+            self.outflow_by_cohort[t].loc[:, :, t] = self.inflow[t] * (1-self.survival_matrix.loc[t, t])
 
 
 
@@ -1253,7 +1250,6 @@ class ElectricVehicleBatteries(prism.Model):
         """
         # vhc_fraction_v2g only contains Types that are V2G capable (e.g. "Cars - BEV")
         self._types_v2g = self.vhc_fraction_v2g.Type
-        # TODO: this is not ideal (hardcoding road vehicle types) -> improve!
         self.EV_VEHICLE_TYPES = EV_VEHICLE_TYPES
 
         self.stock_battery_kWh_v2g = xr.DataArray(
