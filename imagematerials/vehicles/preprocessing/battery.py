@@ -192,15 +192,15 @@ def get_preprocessing_data_evbattery(
     ################################################################################################
     # Interpolations #
 
-    # fix the market share of storage technologies before year_start and after 2050
-    market_shares_da_interp = interpolate_xr(market_shares_da, year_start, year_end)
-    market_shares_da_interp = market_shares_da_interp.expand_dims(Type=EV_VEHICLE_TYPES).copy() # add vehicle type dimension
+    # fix the market share of ev batteries technologies before year_start and after 2050
+    market_shares_da = interpolate_xr(market_shares_da, year_start, year_end)
+    market_shares_da = market_shares_da.expand_dims(Type=EV_VEHICLE_TYPES).copy() # add vehicle type dimension
 
     # 2. Battery Capacity ----------------------------------------------------------------
-    battery_capacity_da_interp = interpolate_xr(battery_capacity_da, year_start, year_end)
+    battery_capacity_da = interpolate_xr(battery_capacity_da, year_start, year_end)
 
     # 3. Material Intensities ----------------------------------------------------------------
-    material_intensities_da_interp = interpolate_xr(material_intensities_da, year_start, year_end)
+    material_intensities_da = interpolate_xr(material_intensities_da, year_start, year_end)
 
 
     ################################################################################################
@@ -208,9 +208,9 @@ def get_preprocessing_data_evbattery(
 
     # bring preprocessing data into a generic format for the model
     prep_data = {}
-    prep_data["shares"] = market_shares_da_interp
-    prep_data["battery_capacity"] = battery_capacity_da_interp
-    prep_data["material_intensities"] = material_intensities_da_interp
+    prep_data["shares"] = market_shares_da
+    prep_data["battery_capacity"] = battery_capacity_da
+    prep_data["material_intensities"] = material_intensities_da
     prep_data["vhc_fraction_v2g"] = vhc_fraction_v2g_da
     prep_data["capacity_fraction_v2g"] = capacity_fraction_v2g_da
     prep_data["knowledge_graph_elc"] = create_electricity_graph()
