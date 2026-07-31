@@ -114,15 +114,15 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
     # 1. External Data =================================================================================
 
     #read in the lifetime of storage technologies (in yrs). The lifetime is assumed to be 1.5* the number of cycles divided by the number of days in a year (assuming diurnal use, and 50% extra cycles before replacement, representing continued use below 80% remaining capacity) OR the maximum lifetime in years, which-ever comes first 
-    lifetimes = pd.read_csv(path_external_data_standard / 'storage_and_EV_batteries_lifetimes.csv', 
+    lifetimes = pd.read_csv(path_external_data_standard / 'storage_lifetimes_long.csv', 
                             usecols=["Time", "sub_technology", "value"])
 
     # material intensities in kg/kWh
-    material_intensities = pd.read_csv(path_external_data_standard / 'storage_and_EV_batteries_material_intensities.csv', 
+    material_intensities = pd.read_csv(path_external_data_standard / 'storage_and_ev_battery_material_intensities_long.csv', 
                                        usecols=["Time", "sub_technology", "material", "value"])# .transpose()
 
     # market shares in % of total storage capacity (excluding pumped hydropower storage; values: 0-1)
-    market_shares = pd.read_csv(path_external_data_standard / 'storage_stationary_market_shares.csv', 
+    market_shares = pd.read_csv(path_external_data_standard / 'storage_market_shares_long.csv', 
                                 usecols=["Time", "sub_technology", "value"]) #index_col=[0,1],usecols=lambda col: col != "unit"
 
     # Data for Pumped Hydropower Storage (PHS) ---------------------------------------------------------

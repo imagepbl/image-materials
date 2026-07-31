@@ -225,6 +225,15 @@ def interpolate_xr(data_array: xr.DataArray,
 
     data_array = data_array.interpolate_na(dim=dim)
 
+    # --- Handle the single-entry case ---
+    # With only one coordinate value, (linear) interpolation is undefined.
+    # Add one duplicate point at a range boundary so interp is defined and
+    # produces a constant series
+    if data_array.sizes[dim] == 1:
+        anchor = t_end if data_array[dim].values[0] != t_end else global_t_start
+        extra = data_array.isel({dim: [0]}).assign_coords({dim: [anchor]})
+        data_array = xr.concat([data_array, extra], dim=dim)
+
     # --- Interpolate over full time range ---
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UnitStrippedWarning)
@@ -260,12 +269,12 @@ def interpolate_xr(data_array: xr.DataArray,
 
     elif isinstance(t_start, dict):
         raise ValueError("t_start is a dict but 'Region' is not a dimension in the DataArray.")
-    
+
     else:
         # Uniform t_start — broadcast directly, no need to loop over regions       
         first_slice = da_interp.sel({dim: coord_values.min()})
         last_slice = da_interp.sel({dim: coord_values.max()})
-        
+
         if extrap_before == 'zero':
             ramp_times = np.arange(global_t_start, coord_values.min() + 1)
             # Compute ramp for each element, then reassemble into the right shape

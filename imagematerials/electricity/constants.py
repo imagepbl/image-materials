@@ -359,11 +359,9 @@ PHS_KG_PERKWH = 26.8   # kg per kWh storage capacity (as weight addition to exis
 # ratio_btm_to_solar = 0.5 #0.5 MW power capacity per 1 MW Solar PV
 ratio_btm_to_solar = 2 #2 MWh energy capacity per 1 MW Solar PV
 
-TECH_STATIONARY_STORAGE = ["LFP", "NMC333", "NMC532", "NMC622", "NMC811", "NMC955", "Na-ion", 
-                                "flow-ZnBr", "flow-vanadium", "lead-acid"]
+TECH_STATIONARY_STORAGE = ["LFP", "Na-ion", "low-nickel", "high-nickel"] # "LFP", "NMC333", "NMC532", "NMC622", "NMC811", "NMC955", "Na-ion", "flow-ZnBr", "flow-vanadium", "lead-acid"
 
-TECH_STATIONARY_STORAGE_ALL = ["LFP", "NMC333", "NMC532", "NMC622", "NMC811", "NMC955", "Na-ion", 
-                                "flow-ZnBr", "flow-vanadium", "lead-acid", "PHS"]
+TECH_STATIONARY_STORAGE_ALL = ["LFP", "Na-ion", "low-nickel", "high-nickel", "PHS"]
 
 dict_storage_tech_to_groups  = {
     "nickel battery":           ["NiMH"],
