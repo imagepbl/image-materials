@@ -6,6 +6,7 @@ from typing import Callable, ClassVar, Optional
 import numpy as np
 import pint_xarray
 import prism
+from prism._time_variable import TimeVariable
 import xarray as xr
 from pint import UnitRegistry
 
@@ -75,7 +76,7 @@ class GenericStocks(prism.Model):
     # stock_by_cohort: prism.TimeVariable[Region, Mode, Cohort, "count"] = prism.export(initial_value = prism.Array[Region, Mode, Cohort, 'count'](0.0))
     inflow: prism.TimeVariable[REGION, STOCK_TYPE, UnitFlexibleStock] = prism.export()
     outflow_by_cohort: prism.TimeVariable[REGION, STOCK_TYPE, COHORT, UnitFlexibleStock] = prism.export()
-
+   
     def compute_initial_values(self, time: prism.Timeline):
         """Compute the initial values for stocks and the survival matrix.
         Note:
@@ -88,8 +89,10 @@ class GenericStocks(prism.Model):
             The simulation timeline.
         """
   
-        self.survival_matrix = lifetimes_to_matrix(self.lifetimes, self.stocks.coords["Type"],
+        raw_matrix = lifetimes_to_matrix(self.lifetimes, self.stocks.coords["Type"],
                                                    knowledge_graph=self.knowledge_graph)
+        raw_matrix = raw_matrix.rename({"Time": "time"}) 
+        self.survival_matrix = TimeVariable.from_array(raw_matrix)
         self.stock_by_cohort = xr.DataArray(
             0.0,
             dims=("Time", "Cohort", "Region", "Type"),
@@ -117,16 +120,22 @@ class GenericStocks(prism.Model):
         stock_demand = self.stocks
         # calculate missing stock to fulfill demand (input stock)
         stock_diff = stock_demand.loc[t] - self.stock_by_cohort.loc[t].sum("Cohort")
+
+        survival_now = self.survival_matrix[t]  
         # stock_diff cannot be negative (no negative inflow); when positive, divide by survival matrix in case there is a loss in the first year (inflow needs to be larger than input stock)
-        stock_diff = xr.where(stock_diff>0, stock_diff/self.survival_matrix.loc[t, t].drop("Cohort"), 0)
+        stock_diff = xr.where(stock_diff > 0, stock_diff / survival_now.sel(Cohort=t), 0)
 
         self.inflow[t] = stock_diff
         # calculate future development of the current cohort (inflow at time t; t: = time from current time onwards, t = cohort of time t)
-        self.stock_by_cohort.loc[t:, t] = self.inflow[t] * self.survival_matrix.loc[t:, t]
         # for t_future in stock_by_cohort[t].coords["Cohort"].loc[t_str:]:
             # t_future = int(t_future)
             # stock_by_cohort[t_future].loc[{"Cohort": t_str}] = inflow[t]*survival[t_future, t]
 
+        for t_future in self.stock_by_cohort.coords["Time"].loc[t:].values:
+            t_future = int(t_future)
+            self.stock_by_cohort.loc[t_future, t] = (
+                self.inflow[t] * self.survival_matrix[t_future].sel(Cohort=t)
+            )
         # Prevent out of bounds error, assume first outflow to be 0.
         if t-1 < time.start:
             self.outflow_by_cohort[t] = prism.Q_(0.0, self.set_unit_flexible)
@@ -134,8 +143,7 @@ class GenericStocks(prism.Model):
             # for previous cohorts: calculate outflow by subtracting stocks of previous - current year
             self.outflow_by_cohort[t].loc[:, :, :t-1] = self.stock_by_cohort.loc[t-1, :t-1] - self.stock_by_cohort.loc[t, :t-1]
             # for current cohort: calculate outflow by inflow * (1-survival matrix) as stock at t-1 is not existent
-            self.outflow_by_cohort[t].loc[:, :, t] = self.inflow[t] * (1-self.survival_matrix.loc[t, t])
-
+            self.outflow_by_cohort[t].loc[:, :, t] = self.inflow[t] * (1 - survival_now.sel(Cohort=t))
 
 @prism.interface
 class StocksQuintiles(prism.Model):
@@ -203,8 +211,11 @@ class StocksQuintiles(prism.Model):
             The simulation timeline.
         """
   
-        self.survival_matrix = lifetimes_to_matrix(self.lifetimes, self.stocks.coords["Type"],
+        raw_matrix = lifetimes_to_matrix(self.lifetimes, self.stocks.coords["Type"],
                                                    knowledge_graph=self.knowledge_graph)
+        raw_matrix = raw_matrix.rename({"Time": "time"})
+        self.survival_matrix = TimeVariable.from_array(raw_matrix)
+
         self.stock_by_cohort = xr.DataArray(
             0.0,
             dims=("Time", "Cohort", "Region", "Type", "Quintile"),
@@ -233,12 +244,17 @@ class StocksQuintiles(prism.Model):
         stock_demand = self.stocks
         # calculate missing stock to fulfill demand (input stock)
         stock_diff = stock_demand.loc[t] - self.stock_by_cohort.loc[t].sum("Cohort")
+
+        survival_now = self.survival_matrix[t]
         # stock_diff cannot be negative (no negative inflow); when positive, divide by survival matrix in case there is a loss in the first year (inflow needs to be larger than input stock)
-        stock_diff = xr.where(stock_diff>0, stock_diff/self.survival_matrix.loc[t, t].drop("Cohort"), 0)
+        stock_diff = xr.where(stock_diff > 0, stock_diff / survival_now.sel(Cohort=t), 0)
 
         self.inflow[t] = stock_diff
         # calculate future development of the current cohort (inflow at time t; t: = time from current time onwards, t = cohort of time t)
-        self.stock_by_cohort.loc[t:, t] = self.inflow[t] * self.survival_matrix.loc[t:, t]
+        for t_future in self.stock_by_cohort.coords["Time"].loc[t:].values:
+            t_future = int(t_future)
+            self.stock_by_cohort.loc[t_future, t] = self.inflow[t] * self.survival_matrix[t_future].sel(Cohort=t)
+
         # for t_future in stock_by_cohort[t].coords["Cohort"].loc[t_str:]:
             # t_future = int(t_future)
             # stock_by_cohort[t_future].loc[{"Cohort": t_str}] = inflow[t]*survival[t_future, t]
@@ -250,8 +266,7 @@ class StocksQuintiles(prism.Model):
             # for previous cohorts: calculate outflow by subtracting stocks of previous - current year
             self.outflow_by_cohort[t].loc[:, :, :, :t-1] = self.stock_by_cohort.loc[t-1, :t-1] - self.stock_by_cohort.loc[t, :t-1]
             # for current cohort: calculate outflow by inflow * (1-survival matrix) as stock at t-1 is not existent
-            self.outflow_by_cohort[t].loc[:, :, :, t] = self.inflow[t] * (1-self.survival_matrix.loc[t, t])
-
+            self.outflow_by_cohort[t].loc[:, :, :, t] = self.inflow[t] * (1 - survival_now.sel(Cohort=t))
 
 @prism.interface
 class SharesInflowStocks(prism.Model):
@@ -326,8 +341,10 @@ class SharesInflowStocks(prism.Model):
 
         """
         types_to_model = next(iter(self.lifetimes.values())).coords["Type"].values
-        self.survival_matrix = lifetimes_to_matrix(self.lifetimes, types_to_model,
+        raw_matrix = lifetimes_to_matrix(self.lifetimes, types_to_model,
                                                    knowledge_graph=self.knowledge_graph)
+        raw_matrix = raw_matrix.rename({"Time": "time"})
+        self.survival_matrix = TimeVariable.from_array(raw_matrix)
         self.stock_by_cohort = xr.DataArray(
             0.0,
             dims=("Time", "Cohort", "Region", "Type"),
@@ -364,12 +381,17 @@ class SharesInflowStocks(prism.Model):
         stock_diff = stock_demand.loc[t] - self.knowledge_graph.aggregate_sum(self.stock_by_cohort.loc[t].sum("Cohort"), self.stocks.coords["SuperType"].values, dim="Type").rename({"Type": "SuperType"}) # rename needed for the difference calculation - cannot subtract over different dims
         # calculate the inflow by sub-technology by rebroadcasting the stock_diff (by super-type) to sub-technologies according to their shares in the inflow
         inflow_tech = self.knowledge_graph.rebroadcast_xarray(stock_diff, self.stock_by_cohort.coords["Type"].values, dim="SuperType", shares=self.shares.sel(Cohort=t), dim_shares="Type").rename({"SuperType": "Type"})
+
+        survival_now = self.survival_matrix[t]
         # stock_diff cannot be negative (no negative inflow); when positive, divide by survival matrix in case there is a loss in the first year (inflow needs to be larger than input stock)
-        inflow_tech = xr.where(inflow_tech>0, inflow_tech/self.survival_matrix.loc[t, t].drop("Cohort"), 0)
+        inflow_tech = xr.where(inflow_tech > 0, inflow_tech / survival_now.sel(Cohort=t), 0)
+
         self.inflow[t] = inflow_tech
 
         # calculate future development of the current cohort (inflow at time t; t: = time from current time onwards, t = cohort of time t)
-        self.stock_by_cohort.loc[t:, t] = self.inflow[t] * self.survival_matrix.loc[t:, t]
+        for t_future in self.stock_by_cohort.coords["Time"].loc[t:].values:
+            t_future = int(t_future)
+            self.stock_by_cohort.loc[t_future, t] = self.inflow[t] * self.survival_matrix[t_future].sel(Cohort=t)
 
         # Prevent out of bounds error, assume first outflow to be 0.
         if t-1 < time.start:
@@ -378,8 +400,7 @@ class SharesInflowStocks(prism.Model):
             # for previous cohorts: calculate outflow by subtracting stocks of previous - current year
             self.outflow_by_cohort[t].loc[:, :, :t-1] = self.stock_by_cohort.loc[t-1, :t-1] - self.stock_by_cohort.loc[t, :t-1]
             # for current cohort: calculate outflow by inflow * (1-survival matrix) as stock at t-1 is not existent
-            self.outflow_by_cohort[t].loc[:, :, t] = self.inflow[t] * (1-self.survival_matrix.loc[t, t])
-
+            self.outflow_by_cohort[t].loc[:, :, t] = self.inflow[t] * (1 - survival_now.sel(Cohort=t))
 
 
 

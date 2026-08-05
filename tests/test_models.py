@@ -2,11 +2,13 @@
 
 import inspect
 from dataclasses import is_dataclass
-
+from imagematerials.lifetimes import lifetimes_to_matrix
 import prism
+from prism._time_variable import TimeVariable
 import pytest
 import xarray as xr
 from pytest import mark
+import numpy as np
 
 from imagematerials.concepts import knowledge_graph
 from imagematerials.concepts import Node, KnowledgeGraph
@@ -92,6 +94,21 @@ def test_generic_stocks(coordinates, timelines):
     for t in coordinates["Time"]:
         assert (model.stock_by_cohort.loc[t].sum("Cohort") == stocks.loc[t]).all()
 
+    assert isinstance(model.survival_matrix, TimeVariable)
+    assert "time" in model.survival_matrix.to_array().dims
+    assert "Cohort" in [d.label for d in model.survival_matrix.dims]
+
+    # age-0 survival should always be 1.0
+    t0 = coordinates["Time"][0]
+    assert np.allclose(model.survival_matrix[t0].sel(Cohort=t0).values, 1.0)
+
+    raw = lifetimes_to_matrix(lifetimes, stocks.coords["Type"], knowledge_graph=knowledge_graph).rename({"Time": "time"})
+    t, t_future = coordinates["Time"][0], coordinates["Time"][2]
+    assert np.allclose(
+        model.survival_matrix[t_future].sel(Cohort=t).values,
+        raw.sel(time=t_future, Cohort=t).values
+    )
+
 
 @pytest.fixture(scope="module")
 def test_knowledge_graph():
@@ -146,6 +163,20 @@ def test_shares_inflow_stocks(coordinates, timelines, test_knowledge_graph):
         # With constant stock targets (all 1.0) and fast decay (Weibull c=1, scale=1),
         # inflow is always positive, so stock equals demand exactly.
         assert (stock_by_supertype == stocks.loc[t]).all()
+
+    assert isinstance(model.survival_matrix, TimeVariable)
+    assert "Cohort" in [d.label for d in model.survival_matrix.dims]
+
+    t0 = coordinates["Time"][0]
+    assert np.allclose(model.survival_matrix[t0].sel(Cohort=t0).values, 1.0)
+
+    types_to_model = next(iter(lifetimes.values())).coords["Type"].values
+    raw = lifetimes_to_matrix(lifetimes, types_to_model, knowledge_graph=test_knowledge_graph).rename({"Time": "time"})
+    t, t_future = coordinates["Time"][0], coordinates["Time"][2]
+    assert np.allclose(
+        model.survival_matrix[t_future].sel(Cohort=t).values,
+        raw.sel(time=t_future, Cohort=t).values
+    )
 
 def test_electric_vehicle_batteries(coordinates, timelines):
     """Test the ElectricVehicleBatteries model for critical calculation logic."""
