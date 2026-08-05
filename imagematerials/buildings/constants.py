@@ -6,6 +6,7 @@ files and/or default values.
 
 import xarray as xr
 import numpy as np
+from imagematerials.concepts import KnowledgeGraph, Node
 
 # Set general constants
 REGIONS = 26         # 26 IMAGE regions
@@ -39,21 +40,6 @@ if scenario_variant == "CP_RE" or scenario_variant == "2D_RE":
 else:
     LOWCOMM = 1
 
-#%%Load files & arrange tables ----------------------------------------------------
-
-SCENARIO_SELECT = base_scenario + "_" + scenario_variant
-
-if flag_Mean == 0:
-    FILE_ADDITION = ''
-elif flag_Mean == 1:
-    FILE_ADDITION = '_mean'
-elif flag_Mean ==2:
-    FILE_ADDITION = '_high'
-elif flag_Mean ==3:
-    FILE_ADDITION = '_low'
-else:
-    FILE_ADDITION = '_median'
-
 GOMPERTZ_EXPDEC = (25.601, 28.431, 0.0415)
 
 # Initialize minimum values
@@ -63,3 +49,34 @@ MINIMUM_COM = {
     "Hotels+": 25,
     "Govt+": 25
 }
+
+area_labels = {
+    1: "Total",
+    2: "Urban",
+    3: "Rural",
+    4: "Urban Q1",
+    5: "Urban Q2",
+    6: "Urban Q3",
+    7: "Urban Q4",
+    8: "Urban Q5",
+    9: "Rural Q1",
+    10: "Rural Q2",
+    11: "Rural Q3",
+    12: "Rural Q4",
+    13: "Rural Q5",
+}
+
+urban_q_areas = ["Urban Q1", "Urban Q2", "Urban Q3", "Urban Q4", "Urban Q5"]
+rural_q_areas = ["Rural Q1", "Rural Q2", "Rural Q3", "Rural Q4", "Rural Q5"]
+quintiles_generic = ["Q1", "Q2", "Q3", "Q4", "Q5"]
+
+commercial_types = ["Office", "Retail+", "Hotels+", "Govt+"]
+
+
+# Re-broadcast Area: Urban/Rural -> quintiles using a local Area knowledge graph
+area_graph = KnowledgeGraph(
+    Node("Urban"),
+    *[Node(q, inherits_from="Urban") for q in urban_q_areas],
+    Node("Rural"),
+    *[Node(q, inherits_from="Rural") for q in rural_q_areas],
+)

@@ -1,10 +1,10 @@
-imagematerials.electricity package
+imagematerials electricity package
 ===============================
 
 .. currentmodule:: imagematerials.electricity
 
 
-imagematerials.electricity.constants module
+electricity.constants module
 ----------------------------------------
 
 .. automodule:: imagematerials.electricity.constants
@@ -12,15 +12,39 @@ imagematerials.electricity.constants module
    :undoc-members:
    :show-inheritance:
 
-imagematerials.electricity.preprocessing module
---------------------------------------------
+electricity.preprocessing.circular_economy_measures module
+----------------------------------------------------------
 
-.. automodule:: imagematerials.electricity.preprocessing
+.. automodule:: imagematerials.electricity.preprocessing.circular_economy_measures
    :members:
    :undoc-members:
    :show-inheritance:
 
-imagematerials.electricity.utils module
+electricity.preprocessing.generation module
+--------------------------------------------
+
+.. automodule:: imagematerials.electricity.preprocessing.generation
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+electricity.preprocessing.grid module
+-------------------------------------
+
+.. automodule:: imagematerials.electricity.preprocessing.grid
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+electricity.preprocessing.storage module
+----------------------------------------
+
+.. automodule:: imagematerials.electricity.preprocessing.storage
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+electricity.utils module
 --------------------------------------------
 
 .. automodule:: imagematerials.electricity.utils

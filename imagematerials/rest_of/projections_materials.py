@@ -94,16 +94,12 @@ def estimate_models(cons_capita: pd.DataFrame, gdp_pc: pd.DataFrame, bounds:tupl
         print('log-gauss-saturate model', e)
         log_gauss_saturate_model = None
 
-
-
-    return (log_log_model, semi_log_model, log_inverse_model, log_log_inverse_model, 
-            log_log_square_model, non_linerar_inv_model, gompertz_model, 
-            logistic_growth_model, bw_model, log_gauss_saturate_model)
+    return (non_linerar_inv_model, gompertz_model, 
+            logistic_growth_model, bw_model, log_gauss_saturate_model, log_log_model, 
+            semi_log_model, log_inverse_model, log_log_inverse_model, log_log_square_model)
 
     
-
-#%% Make statistical analysis
-
+# Make statistical analysis
 def rmse_r2_models(models_output: tuple) -> pd.DataFrame:
     """
     Take list of regression models for selection of IMAGE grouped regions (output of estimate_models()).
@@ -121,23 +117,28 @@ def rmse_r2_models(models_output: tuple) -> pd.DataFrame:
     """
     # from tuple that is given as input create a dictionary that assigns the models to names
     models_output_dict = {
-        models_output[0]: 'log-log model',
-        models_output[1] : 'semi-log model',
-        models_output[2] : 'log-inverse model',
-        models_output[3] : 'log-log-inverse model',
-        models_output[4] : 'log-log-square model',
-        models_output[5] : 'non-linear inverse model',
-        models_output[6] : 'gompertz model',
-        models_output[7] : 'logistic growth model',
-        models_output[8] : 'limited growth model', # (beschraenktes Wachstum)
-        models_output[9] : 'log gauss saturate model'
+        models_output[0] : 'non-linear inverse model',
+        models_output[1] : 'gompertz model',
+        models_output[2] : 'logistic growth model',
+        models_output[3] : 'limited growth model', # (beschraenktes Wachstum)
+        models_output[4] : 'log gauss saturate model',
+        models_output[5]: 'log-log model',
+        models_output[6] : 'semi-log model',
+        models_output[7] : 'log-inverse model',
+        models_output[8] : 'log-log-inverse model',
+        models_output[9] : 'log-log-square model',
         }
     
     #loop over models in dict to calculate RMSE and R2
     # put in None if no model could be calculated
     rmse_r2 = {'Model': models_output_dict.values(),
             'RMSE': [model.rmse if model is not None else np.nan for model in models_output_dict],
-            'R^2' : [model.r2 if model is not None else np.nan for model in models_output_dict]}
+            'R^2' : [model.r2 if model is not None else np.nan for model in models_output_dict],
+            'p-value': [model.p_value if model is not None else np.nan for model in models_output_dict],
+            'p-values (params)': [model.p_values if model is not None else np.nan for model in models_output_dict],
+            'std (params)': [model.std_errors if model is not None else np.nan for model in models_output_dict],
+            '95% interval (params)': [model.confidence_intervals if model is not None else np.nan for model in models_output_dict]
+            } 
     
     # make output a pd.DF
     rmse_r2 = pd.DataFrame(rmse_r2)
@@ -146,8 +147,7 @@ def rmse_r2_models(models_output: tuple) -> pd.DataFrame:
     return rmse_r2
 
 
-#%% Estimate models for groups and perform statistical analysos
-
+# Estimate models for groups and perform statistical analysos
 def estimate_models_per_region_group(regions_groups_dict: dict, 
                                      cons_pc_groups: dict,
                                      gdp_pc_groups: dict,
@@ -194,8 +194,9 @@ def estimate_models_per_region_group(regions_groups_dict: dict,
     return model_groups, rmse_r2_groups, merged_rmse_r2
 
 
-
-def match_regions_to_best_model(rmse_r2_groups: dict, model_groups: dict,
+def match_regions_to_best_model(rmse_r2_groups: dict, 
+                                model_groups: dict,
+                                models_output_dict: dict,
                                 regions_groups_dict: dict[str, list[str]], 
                                 best_rmse_models: dict = None):
     """

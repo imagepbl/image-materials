@@ -13,12 +13,12 @@ In this quick start guide, we will cover the following steps:
 
 **Note**
 
-A more elaborate version of this page is also available as an interactive tutorial available on the :doc:`/tutorials` page.
+A more elaborate version of this page is also available as an interactive tutorial available on the :doc:`tutorials` page.
 
 
 1. Importing libraries
 ----------------------
-First, we need to import the necessary libraries. Make sure you have everything installed as per the :doc:`/installation` instructions.
+First, we need to import the necessary libraries. Make sure you have everything installed as per the :doc:`installation` instructions.
 Libraries specific to this model are imagematerials and prism.
 
 .. code-block:: python
@@ -42,7 +42,7 @@ Therefore we need to define a scenario and the path to the scenario data. Make s
 
 .. code-block:: python
 
-       scenario_name = "SSP2_M_CP"
+       scenario_name = "SSP2_baseline"
        climate_policy_scenario_dir = Path("..", "data", "raw", "image", scenario_name)
 
 

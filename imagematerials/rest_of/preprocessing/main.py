@@ -5,19 +5,13 @@ import prism
 
 from pathlib import Path
 
-from imagematerials.concepts import create_class_region_graph
-
-
 from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.concepts import create_region_graph
 
 from imagematerials.read_mym import read_mym_df
 from imagematerials.buildings.preprocessing.population import compute_population
 
-from imagematerials.rest_of.const import IAI_TO_IMAGE_CLASSES
-from imagematerials.rest_of.preprocessing.resource_efficiency_measures import adapt_gompertz_regional
-
-from imagematerials.rest_of.preprocessing.regressions_all_materials import (fit_models_all_materials,
+from imagematerials.rest_of.preprocessing.regressions_all_materials import (fit_models_all_materials, get_X_max_scaling_factor,
                                                                             make_gompertz_coefs_da, 
                                                                             mean_historic_other_fraction_consumption_to_xr, 
                                                                             historic_other_fraction_consumption_to_xr)
@@ -84,7 +78,9 @@ def read_gompertz_values(base_directory, scenario: str):
     - The function expects regions to be numeric strings for sorting.
     """
 
-    if scenario in ["SSP2_VLLO_LifeTech", "SSP2_narrow_activity","SSP2_narrow_act_26_tax","SSP2_narrow_26_tax","SSP2_narrow_slow_close_26_tax","SSP2_narrow_slow_close_19_tax","SSP2_narrow_act","SSP2_narrow", "SSP2_narrow_slow_close"]:
+    if scenario in ["SSP2_resource_efficiency", "SSP2_narrow_activity","SSP2_narrow", "SSP2_narrow_slow_close", 
+                    "SSP2_narrow_act_26_tax","SSP2_narrow_26_tax", "SSP2_narrow_slow_close_26_tax",
+                    "SSP2_narrow_slow_close_19_tax"]:
         print('Using Gompertz coefficients for resource efficiency measures')
         name = "coefs_gompertz_eff.nc"
     else: 
@@ -113,8 +109,6 @@ def read_historic_diff_cons_data(base_directory):
 
     return diff_consumption
 
-# TODO: read in max X data
-
 
 def read_image_gdp_cap_data(base_directory, image_scenario_directory):
     max_x = xr.open_dataset(base_directory / "rest-of" / "gompertz_values" / "max_x_regressor.nc", engine="netcdf4")
@@ -141,14 +135,22 @@ def read_image_gdp_cap_data(base_directory, image_scenario_directory):
     return downscaled_gdp_per_capita_xr
 
 
+def fit_all_materials_save_corrseponding_input_data(path_input_data, path_input_data_image):
+    results, regions_grouping = fit_models_all_materials(
+        path_input_data=path_input_data,
+        path_input_data_image=path_input_data_image
+        )
+    gompertz = make_gompertz_coefs_da(results)
+    mean_historic_other_fraction_consumption_to_xr(results)
+    all_historic_data_xr = historic_other_fraction_consumption_to_xr(results)
+    max_x = get_X_max_scaling_factor(results, save=True)
+
+
 def rest_of_preprocessing(base_directory, image_scenario_directory, scenario: str, 
                           refit = False):
     
     if refit == True:
-        results = fit_models_all_materials()
-        make_gompertz_coefs_da(results)
-        mean_historic_other_fraction_consumption_to_xr(results)
-        historic_other_fraction_consumption_to_xr(results)
+        fit_all_materials_save_corrseponding_input_data()
         print('Materials regression refitted and preprocessing data updated.')
 
     gompertz_values = read_gompertz_values(base_directory, scenario)
@@ -156,10 +158,12 @@ def rest_of_preprocessing(base_directory, image_scenario_directory, scenario: st
     historic_diff_consumption_mean = read_historic_diff_cons_data_mean(base_directory)
     historic_diff_consumption_total = read_historic_diff_cons_data(base_directory)
     population = compute_population(image_scenario_directory, base_directory)
-    # Filter population data to start from 1971 & only total population needed
-    population = population.sel(Area = 'Total').loc[1971:]
-    # drop Area coords
-    population = population.drop_vars('Area')
+    # Filter to total population from 1971 onward.
+    population = population.sel(Area="Total", Time=slice(1971, None)).drop_vars("Area")
+    # Total is duplicated across Quintile; collapse to a single Time x Region series.
+    if "Quintile" in population.dims:
+        population = population.mean("Quintile")
+    # from nr to Region abbreviations
     knowledge_graph_region = create_region_graph()
     population = knowledge_graph_region.rebroadcast_xarray(population, output_coords=IMAGE_REGIONS, dim="Region")
 

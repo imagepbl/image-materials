@@ -1,4 +1,4 @@
-imagematerials.vehicles package
+imagematerials vehicles package
 ===============================
 
 Submodules
@@ -12,58 +12,67 @@ imagematerials.vehicles.constants module
    :undoc-members:
    :show-inheritance:
 
-.. imagematerials.vehicles.modelling\_functions module
-.. ---------------------------------------------------
+vehicles.modelling_functions module
+-----------------------------------
 
-.. .. automodule:: imagematerials.vehicles.modelling_functions
-..    :members:
-..    :undoc-members:
-..    :show-inheritance:
-
-.. imagematerials.vehicles.postprocessing module
-.. ---------------------------------------------
-
-.. .. automodule:: imagematerials.vehicles.postprocessing
-..    :members:
-..    :undoc-members:
-..    :show-inheritance:
-
-imagematerials.vehicles.preprocessing module
---------------------------------------------
-
-.. automodule:: imagematerials.vehicles.preprocessing
+.. automodule:: imagematerials.vehicles.modelling_functions
    :members:
    :undoc-members:
    :show-inheritance:
 
-.. imagematerials.vehicles.util module
-.. -----------------------------------
+vehicles.preprocessing.battery module
+-------------------------------------
 
-.. .. automodule:: imagematerials.vehicles.util
-..    :members:
-..    :undoc-members:
-..    :show-inheritance:
+.. automodule:: imagematerials.vehicles.preprocessing.battery
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
-.. imagematerials.vehicles.vemamodeling module
-.. -------------------------------------------
+vehicles.preprocessing.main module
+----------------------------------
 
-.. .. automodule:: imagematerials.vehicles.vemamodeling
-..    :members:
-..    :undoc-members:
-..    :show-inheritance:
+.. automodule:: imagematerials.vehicles.preprocessing.main
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
-.. imagematerials.vehicles.visualization module
-.. --------------------------------------------
+vehicles.preprocessing.materials module
+---------------------------------------
 
-.. .. automodule:: imagematerials.vehicles.visualization
-..    :members:
-..    :undoc-members:
-..    :show-inheritance:
+.. automodule:: imagematerials.vehicles.preprocessing.materials
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
-.. Module contents
-.. ---------------
+vehicles.preprocessing.shares module
+------------------------------------
 
-.. .. automodule:: imagematerials.vehicles
-..    :members:
-..    :undoc-members:
-..    :show-inheritance:
+.. automodule:: imagematerials.vehicles.preprocessing.shares
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+vehicles.preprocessing.stocks module
+------------------------------------
+
+.. automodule:: imagematerials.vehicles.preprocessing.stocks
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+vehicles.preprocessing.util module
+----------------------------------
+
+.. automodule:: imagematerials.vehicles.preprocessing.util
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+vehicles.preprocessing.weights module
+-------------------------------------
+
+.. automodule:: imagematerials.vehicles.preprocessing.weights
+   :members:
+   :undoc-members:
+   :show-inheritance:
+

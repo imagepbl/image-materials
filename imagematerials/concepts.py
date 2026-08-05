@@ -1,18 +1,33 @@
 import json
 from dataclasses import dataclass, field
-from typing import Optional
+from pathlib import Path
+from typing import Sequence, Union, Optional
 
-import xarray as xr
 import prism
+import xarray as xr
 
+from imagematerials.electricity.constants import (
+    EPG_SUBTECH_TO_TECH,
+    TECH_STATIONARY_STORAGE
+)
 
 @dataclass
 class Node():
+    """Node for one concept in the knowledge graph.
+
+    Raises
+    ------
+    ValueError
+        When the name is the same as one of the synonyms or if the node inherits from itself.
+
+    """
+
     name: str
     synonyms: list[str] = field(default_factory=list)
     inherits_from: list[str] = field(default_factory=list)
 
     def __post_init__(self):
+        """Do some post init validation checks."""
         if self.inherits_from is None:
             self.inherits_from = []
         elif isinstance(self.inherits_from, str):
@@ -28,7 +43,27 @@ class Node():
             except KeyError:
                 pass
 
-    def match_coords(self, input_coords):
+    def match_coords(self, input_coords: Union[list[str], str]):
+        """Find the node inside a list of coordinates.
+
+        When the coordinates contain a synonym, that synonym is returned instead of the
+        main name of the node.
+
+        Parameters
+        ----------
+        input_coords
+            List of coordinates to find the node in.
+
+        Returns
+        -------
+            Name or synonym of the node that is in the input list of coordinates.
+
+        Raises
+        ------
+        KeyError
+            If the name or synonyms are not present in the input list of coordinates.
+
+        """
         if isinstance(input_coords, str):
             input_coords = [input_coords]
         name_list = [self.name] + self.synonyms
@@ -39,14 +74,70 @@ class Node():
                 return name
 
     def to_dict(self) -> str:
+        """Serizalize the node to a dictionary.
+
+        Returns
+        -------
+            A dictionary with the name synonyms and relationships to other concepts.
+
+        """
         return {"name": self.name, "synonyms": self.synonyms,
-                           "inherits_from": self.inherits_from}
+                "inherits_from": self.inherits_from}
+
     @classmethod
-    def from_dict(cls, node_dict):
+    def from_dict(cls, node_dict: dict):
+        """Create a node from a dictionary.
+
+        Used to deserialize complete knowledge graphs.
+
+        Parameters
+        ----------
+        node_dict
+            Dictionary containing the name, synonyms and inheritance properties of the node.
+
+        Returns
+        -------
+            A newly created node.
+
+        """
         return cls(**node_dict)
 
 class KnowledgeGraph():
+    """Contains concepts and the relations between those concepts.
+
+    Concepts are for example: vehicle, car, BEV car. The relationships between concepts are
+    mostly the "is a" type of relations. For example a car is a vehicle would be denoted by
+    the "inherits_from='vehicle'" attribute. Note that concepts can inherit from multiple sources.
+    So, BEV could inherit from car and it can also inherit from has_battery for example. This can
+    be useful if you want to aggregate over both vehicles and object that have batteries (which
+    can include objects that are not vehicles of course).
+
+    One of the goals of the knowledge graph is to facilitate easier computation when concept
+    synonyms or concept inheritance is used inside of the data. For example, say that you have data
+    for the average lifespan of cars, but not specifically for BEV cars. Then you can use the
+    knowledge graph to use the lifespan of cars for all cars that do not have more specific data
+    available. This feature is written for xarray DataArrays.
+
+    The knowledge graph class is built progressively, so the order in which the nodes are added is
+    important. You should add the root nodes (most basic concept such as "vehicle") first and then
+    more detailed concepts. Note that you can't create cycles of A -> B -> C -> A with inheritance,
+    since you will get an error message beforehand.
+
+    Parameters
+    ----------
+    items:
+        Nodes to add to the knowledge graph. Note that the order matters.
+        A general way to build this knowledge graph is to initialize the knowledge graph without
+        any items, but add them later one by one with the :meth:`add` method.
+
+    Examples
+    --------
+    >>> KnowledgeGraph(Node("A"), Node("B", inherits_from="A"))
+
+    """
+
     def __init__(self, *items):
+        """Initialize the knowledge graph."""
         self._items: list[Node] = []
         for item in items:
             self.add(item)
@@ -74,7 +165,16 @@ class KnowledgeGraph():
 
         self._items.append(node)
 
-    def __contains__(self, node_name) -> bool:
+    def __contains__(self, node_name: str) -> bool:
+        """Check whether a node_name already exists in the knowledge tree.
+
+        Examples
+        --------
+        >>> kgraph = KnowledgeGraph(Node("a", synonyms=["b"]))
+        >>> ("a" in kgraph, "b" in kgraph, "c" in kgraph)
+        (True, True, False)
+
+        """
         try:
             self[node_name]
         except KeyError:
@@ -82,6 +182,7 @@ class KnowledgeGraph():
         return True
 
     def __getitem__(self, node_name) -> Node:
+        """Get a node with a name or synonym."""
         for item in self._items:
             if item.name == node_name:
                 return item
@@ -89,13 +190,88 @@ class KnowledgeGraph():
                 return item
         raise KeyError(f"Key {node_name} does not exist")
 
-    def find_relations(self, input_coords, output_coords):
+    def find_relations(self, input_coords: Sequence[str], output_coords, require_relation: bool = True) -> dict[str, str]:
+        """Find the connections from the input coordinates to output coordinates.
+
+        Parameters
+        ----------
+        input_coords:
+            Coordinates in the xarray DataArray that you might want to transform.
+        output_coords:
+            Coordinates in the output xarray DataArray that you want to transform to.
+        require_relation:
+            Whether to raise an error if no relation is found. By default True. If False, an empty
+            list is returned when no relation is found, which can be useful when you want to find
+            relations for multiple output coordinates and do not want to raise an error when no
+            relation is found for one of the output coordinates.
+
+        Examples
+        --------
+        >>> kg = KnowledgeGraph(Node("car", synonyms=["automobile"]))
+        >>> kg.find_relations(["automobile"], ["car"])
+        {
+            "car": ["automobile"]
+        }
+
+        Returns
+        -------
+        relations:
+            Dictionary containing keys for each output coordinate, and values for each input
+            that is linked by synonym, parent or child node and is present in the list of
+            input coordinates.
+
+        """
         relations = {}
         for cur_out_coord in output_coords:
-            relations[cur_out_coord] = self.find_one_relation(input_coords, cur_out_coord)
+            relations[cur_out_coord] = self.find_one_relation(input_coords, cur_out_coord, require_relation)
         return relations
 
-    def find_one_relation(self, input_coords: list[str], output_name: str) -> list[str]:
+    def find_one_relation(self, 
+                          input_coords: list[str], 
+                          output_name: str,
+                          require_relation: bool = True) -> list[str]:
+        """Find a related object from a list of inputs.
+
+        Differs from :meth:`KnowledgeGraph.find_relations` through finding the related inputs
+        for one output coordinate, instead of multiple.
+
+        Parameters
+        ----------
+        input_coords
+            Coordinates in an xarray DataArray in which related concepts are attempted to be
+            found for the output name.
+        output_name
+            Output name for which related terms are to be found.
+        require_relation
+            Whether to raise an error if no relation is found. By default True. If False, an empty 
+            list is returned when no relation is found, which can be useful when you want to find 
+            relations for multiple output coordinates and do not want to raise an error when no 
+            relation is found for one of the output coordinates.
+
+        Returns
+        -------
+            A list of related terms to the output_name.
+
+        Raises
+        ------
+        ValueError
+            If the output_name has both ancestors and descendants in the input coordinates.
+        ValueError
+            If no known relations are known.
+
+
+        Examples
+        --------
+        >>> kg = KnowledgeGraph(Node("vehicle", synonyms=["transport_object"])
+        >>>                     Node("car", synonyms=["automobile"], inherits_from="vehicle"),
+        >>>                     Node("bicycle", synonyms=["bike"], inherits_from="vehicle),
+        >>> )
+        >>> kg.find_one_relation(["car, "bike"], "bicycle")
+        ["bike"]
+        >>> kg.find_one_relation(["car", "bike"], "vehicle")
+        ["car", "bike"]
+
+        """
         if output_name in input_coords:
             return [output_name]
 
@@ -113,14 +289,42 @@ class KnowledgeGraph():
             descendants = []
 
         if len(ancestors) > 0 and len(descendants) > 0:
-            raise ValueError(f"Cannot find relations, because {output_node} has both ancestors ({ancestors}) "
-                             f"and descendants ({descendants})")
-        if len(ancestors) + len(descendants) == 0:
+            raise ValueError(f"Cannot find relations, because {output_node} has both ancestors "
+                             f"({ancestors}) and descendants ({descendants})")
+        if require_relation and len(ancestors) + len(descendants) == 0:
             raise ValueError(f"Cannot find relations of {output_node} in input coordinates.")
 
         return list(set(ancestors + descendants))
 
     def find_relations_inverse(self, input_coords, output_coords):
+        """Find which coordinates in the input match the coordinates in the output.
+
+        Similar to :meth:`find_relations`, but inverse of that. Assumes that the input coordinates
+        are unique.
+
+        Parameters
+        ----------
+        input_coords
+            Input coordinates for the xarray DataArray.
+        output_coords
+            Output coordinates for which the inputs need to be transformed.
+
+        Returns
+        -------
+        inverse_relations:
+            A dictionary with keys that input coordinates as keys, and lists of
+            output coordinates as values.
+
+        Examples
+        --------
+        >>> kg = KnowledgeGraph(Node("vehicle", synonyms=["transport_object"])
+        >>>                     Node("car", synonyms=["automobile"], inherits_from="vehicle"),
+        >>>                     Node("bicycle", synonyms=["bike"], inherits_from="vehicle),
+        >>> )
+        >>> kg.find_relations_inverse(["automobile", "bicycle", "vehicle"], ["car", "bicycle"])
+        {"automobile": ["car"], "bicycle": ["vehicle"], "vehicle": ["car", "bicycle"]}
+
+        """
         relations = self.find_relations(input_coords, output_coords)
         inverse_relations = {}
         for cur_output, cur_input_list in relations.items():
@@ -128,6 +332,7 @@ class KnowledgeGraph():
         return inverse_relations
 
     def _find_ancestors(self, input_coords, output_node):
+        """Find an ancestor/parent using recursion."""
         try:
             return [output_node.match_coords(input_coords)]
         except KeyError:
@@ -141,6 +346,7 @@ class KnowledgeGraph():
 
 
     def _find_descendants(self, input_coords, output_node):
+        """Find a descendant/child using recursion."""
         try:
             return [output_node.match_coords(input_coords)]
         except KeyError:
@@ -152,9 +358,17 @@ class KnowledgeGraph():
                 all_descendants.extend(self._find_descendants(input_coords, item))
         return all_descendants
 
-    def rebroadcast_xarray(self, input_array, output_coords, dim="Type", shares=None, dim_shares=None):
-        """Disaggregates supertypes into subtypes. If shares for the subtypes are provided,
-        the values of the input_array data is adjusted accordingly (value of supertype * shares = values of subtypes).
+    def rebroadcast_xarray(self, 
+                           input_array: xr.DataArray, 
+                           output_coords: Sequence[str], 
+                           dim: str = "Type", 
+                           shares: Optional[xr.DataArray] = None,
+                           dim_shares: Optional[str] = None):
+        """Disaggregate supertypes into subtypes.
+
+        If shares for the subtypes are provided,
+        the values of the input_array data is adjusted accordingly
+        (value of supertype * shares = values of subtypes).
         If no shares are provided, the value of the supertype is taken for all subtypes.
 
         Parameters
@@ -167,16 +381,36 @@ class KnowledgeGraph():
             Dimension of the input_array to disaggregate over, by default "Type"
         shares, optional
             Shares to be used for rebroadcasting, by default None. Must have the dimension "Type".
+            Shares of subtypes per supertype must not sum to 1, since the value of the supertype is 
+            multiplied by the shares to get the value of the subtypes. E.g., if you have a supertype with 
+            value 100, and two subtypes with shares 0.5 and 0.5, the values of the subtypes will be 
+            50 and 50. But if the shares are 0.25 and 0.25, the values of the subtypes will be 25 
+            and 25, and the remaining 50 will not be allocated to any subtype.
         dim_shares, optional
-            Dimension of the shares DataArray. By default None. If shares is defined and dim_shares not, dim is used.
-            In case the shares have a different dimension name than the input_array, it can be specified here.
+            Dimension of the shares DataArray. By default None. If shares is defined and
+            dim_shares not, dim is used. In case the shares have a different dimension name than
+            the input_array, it can be specified here.
 
         Returns
         -------
             Disaggregated xr.DataArray.
 
         """
-
+        # Dataset case ----------
+        if isinstance(input_array, xr.Dataset):
+            # Apply to each variable independently
+            return xr.Dataset({
+                var: self.rebroadcast_xarray(
+                    input_array[var],
+                    output_coords,
+                    dim=dim,
+                    shares=shares,
+                    dim_shares=dim_shares
+                )
+                for var in input_array.data_vars
+            }, attrs=input_array.attrs)
+    
+        # DataArray case ----------
         if shares is not None and dim_shares is None:
             dim_shares = dim
 
@@ -189,7 +423,8 @@ class KnowledgeGraph():
         keep_coords = []
         new_array = xr.DataArray(0.0, dims=input_array.dims, coords=new_coords)
         if input_array.pint.units:
-            new_array = prism.Q_(new_array, input_array.pint.units) # check if input array had a unit and if so, reapply this unit to new array
+            # check if input array had a unit and if so, reapply this unit to new array
+            new_array = prism.Q_(new_array, input_array.pint.units)
         for cur_coord in list(output_coords):
             if cur_coord in input_coords:
                 keep_coords.append(cur_coord)
@@ -207,16 +442,21 @@ class KnowledgeGraph():
             else:
                 # disaggregate, by just taking the value of the parent
                 new_array.loc[{dim: cur_coord}] = input_array.loc[{dim: parent}]
-        # Copy data for all coordinates that exist in both the input_array and output_coords (`keep_coords`) -> only new coordinates are filled through disaggregation logic above
+        # Copy data for all coordinates that exist in both the input_array and output_coords
+        # (`keep_coords`) -> only new coordinates are filled through disaggregation logic above
         new_array.loc[{dim: keep_coords}] = input_array.loc[{dim: keep_coords}]
-        # Preserve metadata 
+        # Preserve metadata
         new_array.attrs = input_array.attrs.copy()
         new_array.name = input_array.name
         # new_array.encoding = input_array.encoding.copy() # do wee need this?
 
         return new_array
 
-    def aggregate_sum(self, input_array, output_coords, dim="Type"):
+    def aggregate_sum(self, 
+                      input_array: xr.DataArray, 
+                      output_coords: Sequence[str], 
+                      dim: str = "Type",
+                      require_relation: bool = True) -> xr.DataArray:
         """Aggregate the data over subtypes and sums them.
 
         Parameters
@@ -227,13 +467,34 @@ class KnowledgeGraph():
             The output coordinates over which to aggregate/sum.
         dim, optional
             Dimension to aggregate/sum over, by default "Type"
+        require_relation, optional
+            Whether to raise an error if one of the output coordinates has no relation in the input
+            array. By default True. If False, output coordinates without a relation in the input 
+            array are filled with zeros, which can be useful when you want to find relations for 
+            multiple output coordinates and do not want to raise an error when no relation is found 
+            for one of the output coordinates.
 
         Returns
         -------
             Aggregated xr.DataArray.
 
         """
-        output_to_input = self.find_relations(input_array.coords[dim].values, output_coords)
+
+        # Dataset case ----------
+        if isinstance(input_array, xr.Dataset):
+            # Apply to each variable independently
+            return xr.Dataset({
+                var: self.aggregate_sum(
+                    input_array[var],
+                    output_coords,
+                    dim=dim,
+                    require_relation=require_relation
+                )
+                for var in input_array.data_vars
+            }, attrs=input_array.attrs)
+    
+        # DataArray case ----------
+        output_to_input = self.find_relations(input_array.coords[dim].values, output_coords, require_relation)
         output_arrays = []
         for output, input_list in output_to_input.items():
             output_arrays.append(input_array.sel(**{dim: input_list}).sum(dim))
@@ -241,15 +502,41 @@ class KnowledgeGraph():
         output_xr.coords[dim] = output_coords
         return output_xr
 
-    def to_netcdf(self, out_fp, **kwargs):
+    def to_netcdf(self, out_fp: Path|str, **kwargs):
+        """Store the knowledge graph in a netCDF file as an attribute.
+
+        The attribute will be called 'knowledge_graph' and is stored
+        in the root of the netCDF file.
+
+        Parameters
+        ----------
+        out_fp
+            Output netCDF file.
+        kwargs:
+            Extra keyword arguments that are passed on to the xr.DataArray.to_netcdf() method.
+
+        """
         json_items = [x.to_dict() for x in self._items]
         data = xr.DataArray()
         data.attrs["knowledge_graph"] = json.dumps(json_items)
         data.to_netcdf(out_fp, **kwargs)
 
     @classmethod
-    def from_dataarray(cls, data):
-        # data = xr.open_dataarray(in_fp, **kwargs)
+    def from_dataarray(cls, data: xr.DataArray|Path|str):
+        """Create the knowledge graph from a xarray data array.
+
+        Parameters
+        ----------
+        data
+            xr.DataArray that contains an attribute called 'knowledge_graph' which is
+            a serialized version of the knowledge graph.
+
+        Returns
+        -------
+        knowledge_graph:
+            An initialized knowledge graph.
+
+        """
         json_str = data.attrs["knowledge_graph"]
         knowledge_list = json.loads(json_str)
         items = [Node.from_dict(item) for item in knowledge_list]
@@ -259,6 +546,7 @@ class KnowledgeGraph():
 
 
 def create_vehicle_graph():
+    """Create the knowledge graph for the vehicle/transport sector."""
     vehicle_subtypes = ["BEV", "FCV", "HEV", "ICE", "PHEV", "Trolley"]
     vehicle_supertypes = ["Cars", "Heavy Freight Trucks", "Light Commercial Vehicles",
                         "Medium Freight Trucks", "Regular Buses", "Midi Buses"]
@@ -293,11 +581,13 @@ def create_vehicle_graph():
         else:
             vehicle_knowledge_graph.add(Node(name=super_type))
         for sub_type in vehicle_subtypes:
-            vehicle_knowledge_graph.add(Node(f"{super_type} - {sub_type}", inherits_from=super_type))
+            vehicle_knowledge_graph.add(
+                Node(f"{super_type} - {sub_type}", inherits_from=super_type))
     return vehicle_knowledge_graph
 
 
 def create_building_graph():
+    """Create the knowledge graph for the buildings sector."""
     building_nodes = [
     Node("Buildings"),
 
@@ -323,7 +613,7 @@ def create_building_graph():
     #     Node("Detached"),
     #     Node("Detached - Urban", "Detached"),
     #     Node("Detached - Rural", "Detached"),
-        
+
     # )
     return building_knowledge_graph
 
@@ -365,14 +655,55 @@ def create_class_region_graph():
 
     for number, synonyms in numeric_region_map.items():
         inherits_from = None
-        class_region_knowledge_graph.add(Node(number, synonyms=synonyms, inherits_from=inherits_from))
+        class_region_knowledge_graph.add(
+            Node(number, synonyms=synonyms, inherits_from=inherits_from))
 
     return class_region_knowledge_graph
 
+def create_image_region_graph() -> KnowledgeGraph:
+    """Construct and return a knowledge graph representing IMAGE regions and their associated countries.
+
+    The graph consists of two hierarchical layers:
+    1. Region nodes (e.g., "region_1", "region_2"), each with a set of synonyms representing the 
+       IMAGE regions.
+    2. Country nodes identified by ISO numeric codes, each linked to a parent
+       region via the `inherits_from` attribute.
+
+    Returns:
+    -------
+        KnowledgeGraph: A populated knowledge graph containing:
+            - Region nodes without parents.
+            - Country nodes linked to their respective regions.
+
+    Notes:
+    ------
+        - Synonyms include abbreviations and alternative spellings to support
+          flexible matching.
+        - ISO codes are stored as strings.
+        - The region and ISO mappings are hardcoded and may be moved to a
+          separate configuration file in the future.
+        - CAUTION: nodes must be unique, so the IMAGE region "USA" can't be added as a country with 
+          the same name, but only as a synonym (US or United States). In the case of the USA, if it 
+          occurs in a dataset as a country this is not a problem as it will be matched to the region 
+          node directly (and region = country in that case).
+
+    """
+    data_path = Path(__file__).parent / "knowledge_graphs" / "image_region_graph.json"
+    with open(data_path) as f:
+        data = json.load(f)
+
+    graph = KnowledgeGraph()
+    for region in data["regions"]:
+        graph.add(Node(region["id"], synonyms=region["synonyms"], inherits_from=None))
+
+        for country in region["countries"]:
+            graph.add(Node(country["iso"], synonyms=country["synonyms"], inherits_from=region["id"]))
+
+    return graph
 
 def create_region_graph():
     #TODO move to seperate file
-    
+
     region_knowledge_graph = KnowledgeGraph()
 
     # Add target regions as main nodes (non-numeric)
@@ -432,76 +763,44 @@ def create_region_graph():
 
     return region_knowledge_graph
 
+def create_iha_region_graph():
+    """Construct and return a knowledge graph representing a mapping between IHA regions and their
+        associated IMAGE regions (used in electricity storage preprocessing).
+
+        The graph consists of two hierarchical layers:
+        1. Superregion nodes ("North & Central America") from the International Hydropower 
+        Association (IHA) dataset.
+        2. IMAGE regions, each linked to a parent superregion via the `inherits_from` attribute.
+
+        Returns:
+        -------
+            KnowledgeGraph: A populated knowledge graph containing:
+        """
+    iha_region_knowledge_graph = KnowledgeGraph()
+
+    for super_region in ["North & Central America", "South America", "East Asia & Pacific", "South & Central Asia", "Europe", "Africa"]:
+        iha_region_knowledge_graph.add(Node(super_region, inherits_from=None))
+    for region in ["CAN", "USA", "MEX", "RCAM"]:
+        iha_region_knowledge_graph.add(Node(region, inherits_from="North & Central America"))
+    for region in ["BRA", "RSAM"]:
+        iha_region_knowledge_graph.add(Node(region, inherits_from="South America"))
+    for region in ["INDO", "CHN", "KOR", "JAP", "SEAS", "OCE"]:
+        iha_region_knowledge_graph.add(Node(region, inherits_from="East Asia & Pacific"))
+    for region in ["ME", "RUS", "STAN", "INDIA", "RSAS"]:
+        iha_region_knowledge_graph.add(Node(region, inherits_from="South & Central Asia"))
+    for region in ["WEU", "CEU", "TUR", "UKR"]:
+        iha_region_knowledge_graph.add(Node(region, inherits_from="Europe"))
+    for region in ["NAF", "WAF", "SAF", "RSAF", "EAF"]:
+        iha_region_knowledge_graph.add(Node(region, inherits_from="Africa"))
+
+    return iha_region_knowledge_graph
+
 knowledge_graph = KnowledgeGraph(*create_building_graph()._items, *create_vehicle_graph()._items)
 
-
-def create_class_region_graph():
-    #TODO move to seperate file
-    
-    region_knowledge_graph = KnowledgeGraph()
-
-    # Add target regions as main nodes (non-numeric)
-    target_regions = [
-        "Latin America", "Middle East and Northern Africa",
-        "Other Asia", "Other OECD", "Reforming Economies", "Subsaharan Africa"
-    ]
-    for region in target_regions:
-        region_knowledge_graph.add(Node(region))
-
-    # Add numeric region nodes first with full synonyms
-    numeric_region_map = {
-        "class_ 1": ["Canada", "CAN"],
-        "class_ 2": ["USA", "US"],
-        "class_ 3": ["Mexico", "MEX"],
-        "class_ 4": ["Rest of Central America", "RCAM", "Rest C.Am."],
-        "class_ 5": ["Brazil", "BRA"],
-        "class_ 6": ["Rest of South America", "RSAM", "Rest S.Am."],
-        "class_ 7": ["Northern Africa", "NAF", "N.Africa"],
-        "class_ 8": ["Western Africa", "WAF", "W.Africa"],
-        "class_ 9": ["Eastern Africa", "EAF", "E.Africa"],
-        "class_ 10": ["South Africa", "SAF"],
-        "class_ 11": ["Western Europe", "WEU", "W.Europe"],
-        "class_ 12": ["Central Europe", "CEU", "C.Europe"],
-        "class_ 13": ["Turkey", "TUR"],
-        "class_ 14": ["Ukraine +", "UKR", "Ukraine"],
-        "class_ 15": ["Asian-Stan", "STAN", "Stan"],
-        "class_ 16": ["Russia +", "RUS", "Russia"],
-        "class_ 17": ["Middle East", "ME", "M.East"],
-        "class_ 18": ["India +", "INDIA", "India"],
-        "class_ 19": ["Korea", "KOR"],
-        "class_ 20": ["China +", "CHN", "China"],
-        "class_ 21": ["Southeastern Asia", "SEAS", "SE.Asia"],
-        "class_ 22": ["Indonesia +", "INDO", "Indonesia"],
-        "class_ 23": ["Japan", "JAP"],
-        "class_ 24": ["Oceania", "OCE"],
-        "class_ 25": ["Rest of South Asia", "RSAS", "Rest S.Asia"],
-        "class_ 26": ["Rest of Southern Africa", "RSAF", "Rest S.Africa"]
-    }
-
-    subregion_division = {
-        "Latin America": {"RCAM", "BRA", "RSAM"},
-        "Middle East and Northern Africa": {"NAF", "ME"},
-        "Subsaharan Africa": {"WAF", "EAF", "SAF", "RSAF"},
-        "Reforming Economies": {"UKR", "STAN", "RUS"},
-        "Other Asia": {"KOR", "SEAS", "INDO", "RSAS"},
-        "Other OECD": {"TUR", "OCE", "MEX"},
-    }
-
-    for number, synonyms in numeric_region_map.items():
-        inherits_from = None
-        for super_region, regions in subregion_division.items():
-            if len(regions.intersection(synonyms)) > 0:
-                inherits_from = super_region
-                break
-        region_knowledge_graph.add(Node(number, synonyms=synonyms, inherits_from=inherits_from))
-
-    return region_knowledge_graph
-
-
 def create_electricity_graph():
-    """
-    Constructs and returns a hierarchical knowledge graph representing the electricity system for the subsystems:
-    generation, transmission, and storage components.
+    """Construct a hierarchical knowledge graph representing the electricity system.
+
+    For the subsystems: generation, transmission, and storage components.
 
     The function builds a structured ontology using `KnowledgeGraph` and `Node` objects to
     define relationships between electricity-related entities. It organizes technologies and
@@ -509,135 +808,161 @@ def create_electricity_graph():
 
     Structure:
 
-    Electricity
-    ├── Generation
-    │   ├── Solar PV
-    │   ├── Conv. Coal
-    │   ├── ...
-    │   └── CHP Biomass + CCS
-    │
-    ├── Transmission
-    │   ├── High Voltage (HV)
-    │   │   ├── Lines
-    │   │   │   ├── Overhead
-    │   │   │   └── Underground
-    │   │   ├── Substations
-    │   │   └── Transformers
-    │   ├── Medium Voltage (MV)
-    │   │   ├── ...
-    │   └── Low Voltage (LV)
-    │       ├── ...
-    │
-    └── Storage
-        ├── PHS
-        ├── V2G-Batteries
-        └── Other Storage
-            ├── mechanical storage
-            │   ├── Flywheel
-            │   └── Compressed Air
-            ├── lithium batteries
-            │   ├── LMO
-            │   ├── ...
-            │   └── Lithium-air
-            ├── molten salt and flow batteries
-            │   ├── Zinc-Bromide
-            │   ├── ...
-            └── other
-                ├── Hydrogen FC
-                ├── NiMH
-                └── Deep-cycle Lead-Acid
+    > Electricity
+    > ├── Generation
+    > │   ├── Solar PV
+    > │   ├── Conv. Coal
+    > │   ├── ...
+    > │   └── CHP Biomass + CCS
+    > │
+    > ├── Transmission
+    > │   ├── High Voltage (HV)
+    > │   │   ├── Lines
+    > │   │   │   ├── Overhead
+    > │   │   │   └── Underground
+    > │   │   ├── Substations
+    > │   │   └── Transformers
+    > │   ├── Medium Voltage (MV)
+    > │   │   ├── ...
+    > │   └── Low Voltage (LV)
+    > │       ├── ...
+    > │
+    > └── Storage
+    >     ├── PHS
+    >     ├── V2G-Batteries
+    >     └── Other Storage
+    >         ├── mechanical storage
+    >         │   ├── Flywheel
+    >         │   └── Compressed Air
+    >         ├── lithium batteries
+    >         │   ├── LMO
+    >         │   ├── ...
+    >         │   └── Lithium-air
+    >         ├── molten salt and flow batteries
+    >         │   ├── Zinc-Bromide
+    >         │   ├── ...
+    >         └── other
+    >             ├── Hydrogen FC
+    >             ├── NiMH
+    >             └── Deep-cycle Lead-Acid
 
-
-    Returns:
-        KnowledgeGraph: A fully constructed knowledge graph object describing the
+    Returns
+    -------
+    KnowledgeGraph:
+        A fully constructed knowledge graph object describing the
         electricity system hierarchy.
 
-    Notes:
-        - `V2G-Batteries` (Vehicle-to-Grid) could later be linked to vehicle systems.
-        - The graph currently does not include sub-technologies (e.g. different PV techologies) for generation types, but
-          placeholders are present for future expansion.
-    """
+    Notes
+    -----
+    `V2G-Batteries` (Vehicle-to-Grid) could later be linked to vehicle systems.
 
-    # Generation ======================================================================================
-    
+    The graph currently does not include sub-technologies (e.g. different PV techologies) for generation types, but
+    placeholders are present for future expansion.
+
+    """
+    # Generation ===================================================================================
+
     numeric_generation_map = {
-        "1": ["Solar PV", "SPV"],               # Solar PV power (central)
-        "2": ["Solar PV residential", "SPVR"],  # Solar PV power (decentral/residential)
-        "3": ["CSP"],                           # Concentrated Solar Power 
-        "4": ["Wind onshore", "WON"],           # Onshore wind power
-        "5": ["Wind offshore", "WOFF"],         # Offshore wind power
-        "6": ["Wave", "WAVE"],                  # Wave power
-        "7": ["Hydro", "HYD"],                  # Hydro power
-        "8": ["Other Renewables", "OREN"],      # Other renewables (tidal and geothermal power)
-        "9": ["Geothermal", "GEO"],             # Geothermal power
-        "10": ["Hydrogen power", "H2P"],        # Hydrogen to power
-        "11": ["Nuclear", "NUC"],               # Nuclear
-        "12": ["<EMPTY>", "FREE12"],            # Free spot
-        "13": ["Conv. Coal", "ClST"],           # Coal steam turbine
-        "14": ["Conv. Oil", "OlST"],            # Oil steam turbine
-        "15": ["Conv. Natural Gas", "NGOT"],    # NG open cycle turbine
-        "16": ["Waste", "BioST"],               # Biomass steam turbine
-        "17": ["IGCC"],                         # Integrated gasification combined cycle
-        "18": ["OGCC", "OlCC"],                 # Oil combined cycle
-        "19": ["NG CC", "NGCC"],                # NG combined cycle
-        "20": ["Biomass CC", "BioCC"],          # Biomass combined cycle
-        "21": ["Coal + CCS", "ClCS"],           # Coal carbon capture and storage
-        "22": ["Oil/Coal + CCS", "OlCS"],       # Oil carbon capture and storage
-        "23": ["Natural Gas + CCS", "NGCS"],    # NG carbon capture and storage
-        "24": ["Biomass + CCS", "BioCS"],       # Biomass carbon capture and storage
-        "25": ["CHP Coal", "ClCHP"],            # Coal combined heat and power
-        "26": ["CHP Oil", "OlCHP"],             # Oil combined heat and power
-        "27": ["CHP Natural Gas", "NGCHP"],     # NG combined heat and power
-        "28": ["CHP Biomass", "BioCHP"],        # Biomass combined heat and power
-        "29": ["CHP Coal + CCS", "ClCHPCS"],    # Coal combined heat and power carbon capture and storage
-        "30": ["CHP Oil + CCS", "OlCHPCS"],     # Oil combined heat and power carbon capture and storage
-        "31": ["CHP Natural Gas + CCS", "NGCHPCS"], # NG combined heat and power carbon capture and storage
-        "32": ["CHP Biomass + CCS", "BioCHPCS"],    # Biomass combined heat and power carbon capture and storage
-        "33": ["CHP Geothermal", "GeoCHP"],         # Geothermal combined heat and power
-        "34": ["CHP Hydrogen", "H2CHP"]             # Hydrogen combined heat and power
+        "SPV":      ["1",  "Solar PV (Central)", "Solar PV"],                                           # Solar PV power (central)
+        "SPVR":     ["2", "Solar PV (Residential)", "Solar PV residential"],                           # Solar PV power (decentral/residential)
+        "CSP":      ["3",  "Concentrated Solar Power"],                                                 # Concentrated Solar Power 
+        "WON":      ["4",  "Wind Onshore", "Wind onshore"],                                             # Onshore wind power
+        "WOFF":     ["5", "Wind Offshore", "Wind offshore"],                                           # Offshore wind power
+        "WAVE":     ["6", "Wave"],                                                                     # Wave power
+        "HYD":      ["7",  "Hydropower", "Hydro"],                                                      # Hydro power
+        "OREN":     ["8", "Other Renewables"],                                                         # Other renewables (tidal and geothermal power)
+        "GEO":      ["9",  "Geothermal", "geothermal"],                                                 # Geothermal power
+        "H2P":      ["10",  "Hydrogen Power", "Hydrogen power"],                                         # Hydrogen to power
+        "NUC":      ["11",  "Nuclear"],                                                                  # Nuclear
+        "FREE12":   ["12", "<EMPTY>"],                                                                # Free spot
+        "ClST":     ["13",  "Coal Steam Turbine", "Conv. Coal"],                                        # Coal steam turbine
+        "OlST":     ["14",  "Oil Steam Turbine", "Conv. Oil"],                                          # Oil steam turbine
+        "NGOT":     ["15",  "Natural Gas Open Cycle", "Conv. Natural Gas"],                             # NG open cycle turbine
+        "BioST":    ["16", "Biomass Steam Turbine", "Waste"],                                          # Biomass steam turbine
+        "IGCC":     ["17",  "Integrated Gasification Combined Cycle", "CIGCC", "Coal Integrated Gasification Combined Cycle"],  # Coal Integrated gasification combined cycle
+        "OlCC":     ["18",  "Oil Combined Cycle", "OGCC", "Oil CC"],                                    # Oil combined cycle
+        "NGCC":     ["19",  "Natural Gas Combined Cycle", "NG CC"],                                     # NG combined cycle
+        "BioCC":    ["20", "Biomass Combined Cycle", "Biomass CC"],                                    # Biomass combined cycle
+        "ClCS":     ["21",  "Coal Carbon Capture and Storage", "Coal + CCS"],                           # Coal carbon capture and storage
+        "OlCS":     ["22",  "Oil Carbon Capture and Storage", "Oil/Coal + CCS"],                        # Oil carbon capture and storage
+        "NGCS":     ["23",  "Natural Gas Carbon Capture and Storage", "Natural Gas + CCS"],             # NG carbon capture and storage
+        "BioCS":    ["24", "Biomass Carbon Capture and Storage", "Biomass + CCS"],                     # Biomass carbon capture and storage
+        "ClCHP":    ["25", "Coal Combined Heat and Power", "CHP Coal"],                                # Coal combined heat and power
+        "OlCHP":    ["26", "Oil Combined Heat and Power", "CHP Oil"],                                  # Oil combined heat and power
+        "NGCHP":    ["27", "Natural Gas Combined Heat and Power", "CHP Natural Gas"],                  # NG combined heat and power
+        "BioCHP":   ["28", "Biomass Combined Heat and Power", "CHP Biomass"],                         # Biomass combined heat and power
+        "ClCHPCS":  ["29", "CHP Coal + CCS"],                                                        # Coal combined heat and power carbon capture and storage
+        "OlCHPCS":  ["30", "CHP Oil + CCS"],                                                         # Oil combined heat and power carbon capture and storage
+        "NGCHPCS":  ["31", "CHP Natural Gas + CCS"],                                                 # NG combined heat and power carbon capture and storage
+        "BioCHPCS": ["32", "CHP Biomass + CCS"],                                                    # Biomass combined heat and power carbon capture and storage
+        "GeoCHP":   ["33", "Geothermal Combined Heat and Power", "CHP Geothermal"],                   # Geothermal combined heat and power
+        "H2CHP":    ["34", "Hydrogen Combined Heat and Power", "CHP Hydrogen"]                         # Hydrogen combined heat and power
     }
 
-
+    id_to_categories = {
+        "SPV": ["renewable", "other_technologies"],
+        "SPVR": ["renewable", "other_technologies"],
+        "CSP": ["renewable", "other_technologies"],
+        "WON": ["renewable", "other_technologies"],
+        "WOFF": ["renewable", "other_technologies"],
+        "WAVE": ["renewable", "other_technologies"],
+        "HYD": ["renewable", "other_technologies"],
+        "OREN": ["renewable", "other_technologies"],
+        "GEO": ["renewable", "other_technologies"],
+        "H2P": ["hydrogen", "other_technologies"],
+        "NUC": ["nuclear", "other_technologies"],
+        "ClST": ["fossil", "steam_turbine"],
+        "OlST": ["fossil", "steam_turbine"],
+        "NGOT": ["fossil", "open_cycle"],
+        "BioST": ["biomass", "steam_turbine"],
+        "IGCC": ["fossil", "combined_cycle"],
+        "OlCC": ["fossil", "combined_cycle"],
+        "NGCC": ["fossil", "combined_cycle"],
+        "BioCC": ["biomass", "combined_cycle"],
+        "ClCS": ["fossil", "ccs"],
+        "OlCS": ["fossil", "ccs"],
+        "NGCS": ["fossil", "ccs"],
+        "BioCS": ["biomass", "ccs"],
+        "ClCHP": ["fossil", "chp"],
+        "OlCHP": ["fossil", "chp"],
+        "NGCHP": ["fossil", "chp"],
+        "BioCHP": ["biomass", "chp"],
+        "ClCHPCS": ["fossil", "chp_ccs"],
+        "OlCHPCS": ["fossil", "chp_ccs"],
+        "NGCHPCS": ["fossil", "chp_ccs"],
+        "BioCHPCS": ["biomass", "chp_ccs"],
+        "GeoCHP": ["renewable", "geo_chp"],
+        "H2CHP": ["hydrogen", "hydrogen_chp"]
+    }
     electricity_knowledge_graph = KnowledgeGraph(Node("Electricity"))
     electricity_knowledge_graph.add(Node("Generation", inherits_from="Electricity"))
-    for number, synonyms in numeric_generation_map.items():
-        electricity_knowledge_graph.add(Node(number, synonyms=synonyms, inherits_from="Generation"))
 
-    # # Sub-Technologies --------------------------
+    # Technology categories ------------------------------------------------------------------------
+    for cat in ["chp_all", "ccs_all", "combined_cycle", "steam_turbine", "open_cycle", 
+                "other_technologies"]:
+        electricity_knowledge_graph.add(Node(cat, inherits_from="Generation"))
 
-    # for subtype in ["c-Si", "a-Si", "CIGS", "CdTe", "Perovskite"]:
-    #     electricity_knowledge_graph.add(Node(subtype, inherits_from="Solar PV"))
-    #     electricity_knowledge_graph.add(Node(subtype, inherits_from="Solar PV residential")) # is this possible?
+    electricity_knowledge_graph.add(Node("ccs", inherits_from="ccs_all"))
 
-    # for subtype in ["Fresnel Reflector", "Central Receiver", "Parabolic Trough", "Parabolic Dish"]:
-    #     electricity_knowledge_graph.add(Node(subtype, inherits_from="CSP"))
+    for cat in ["chp", "geo_chp", "hydrogen_chp"]:
+        electricity_knowledge_graph.add(Node(cat, inherits_from="chp_all"))
 
-    # for subtype in ["Geared - High Speed", "Geared - Medium speed", "Direct Drive"]:
-    #     electricity_knowledge_graph.add(Node(subtype, inherits_from="Wind onshore"))
-    #     electricity_knowledge_graph.add(Node(subtype, inherits_from="Wind offshore"))
+    electricity_knowledge_graph.add(Node("chp_ccs", inherits_from=["ccs_all","chp_all"]))
 
-    # # Category Relations -------------------------
+    # Feedstock categories -------------------------------------------------------------------------
+    for cat in ["renewable", "hydrogen", "nuclear", "fossil", "biomass"]:
+        electricity_knowledge_graph.add(Node(cat, inherits_from="Generation"))
 
-    # # Renewables
-    # electricity_knowledge_graph.add(Node("Renewables", inherits_from="Generation"))
-    # for supertype in ["Solar PV", "Solar PV residential", "CSP", "Wind onshore", "Wind offshore",
-    #                   "Wave", "Other Renewables", "Geothermal", "Biomass CC","Biomass + CCS",
-    #                   "CHP Biomass","CHP Geothermal", "CHP Biomass + CCS"]:
-    #     electricity_knowledge_graph.add(Node(supertype, inherits_from="Renewables"))
+    # Generation technologies ----------------------------------------------------------------------
+    for id, synonyms in numeric_generation_map.items():
+        parent = id_to_categories.get(id)
+        electricity_knowledge_graph.add(Node(id, synonyms=synonyms, inherits_from=parent))
 
-    # # Climate Neutral
-    # electricity_knowledge_graph.add(Node("Climate Neutral", inherits_from="Generation"))
-    # for supertype in ["Solar PV", "Solar PV residential", "CSP", "Wind onshore", "Wind offshore",
-    #                   "Wave", "Other Renewables", "Geothermal", "Biomass CC","Biomass + CCS",
-    #                   "CHP Biomass","CHP Geothermal", "CHP Biomass + CCS","Coal + CCS", "Oil/Coal + CCS", 
-    #                   "Natural Gas + CCS", "Nuclear"]:
-    #     electricity_knowledge_graph.add(Node(supertype, inherits_from="Climate Neutral"))
+    # # Sub-Technologies ---------------------------------------------------------------------------
 
-    # # Fossil
-    # electricity_knowledge_graph.add(Node("Fossil", inherits_from="Generation"))
-    # for supertype in ["Conv. Coal", "Conv. Oil", "Conv. Natural Gas"]:
-    #     electricity_knowledge_graph.add(Node(supertype, inherits_from="Fossil"))
-
+    for subtech in EPG_SUBTECH_TO_TECH.keys():
+        parent = EPG_SUBTECH_TO_TECH.get(subtech)
+        electricity_knowledge_graph.add(Node(subtech, inherits_from=parent))
 
     # Transmission Grid ============================================================================
     transmission_types = ["HV", "MV", "LV"]
@@ -655,31 +980,22 @@ def create_electricity_graph():
 
 
     # Storage ======================================================================================
-    storage_supertypes = ["PHS", "V2G-Batteries", "Other Storage"] # Pumped Hydro Storage, Vehicle-to-Grid Batteries
-    # Storage calculations follow a 3 tiered structure: Demand is filled first with PHS, then with (anyway available) V2G-Batteries, and 
-    # the residual demand with Other Storage
-    storage_subtypes_categories = ["mechanical storage", "lithium batteries", "molten salt and flow batteries", "other"]
-    storage_subtypes = ["Flywheel", "Compressed Air", "Hydrogen FC", "NiMH", "Deep-cycle Lead-Acid", "LMO",
-                        "NMC", "NCA", "LFP", "LTO", "Zinc-Bromide", "Vanadium Redox", "Sodium-Sulfur", "ZEBRA",
-                        "Lithium Sulfur", "Lithium Ceramic", "Lithium-air"]
+    # storage_by_storage_technology_type = ["mechanical_storage", "electrochemical_storage", "chemical_storage", "thermal_storage", "electrical_storage"]
+    storage_by_category_type = ["PHS", "V2G-Batteries", "Other Storage"] # Pumped Hydro Storage, Vehicle-to-Grid Batteries
+    # Storage calculations follow a 3 tiered structure: Demand is filled first with PHS, then with 
+    # capacity supplied by V2G-Batteries (if enabled), and the residual demand with Other Storage    
 
     electricity_knowledge_graph.add(Node("Storage", inherits_from="Electricity"))
 
-    for supertype in storage_supertypes:
-        electricity_knowledge_graph.add(Node(supertype, inherits_from="Storage"))
+    # for supertype in storage_by_storage_technology_type:
+    #     electricity_knowledge_graph.add(Node(supertype, inherits_from="Storage"))
     # TODO: V2G Batteries are also related to Vehicles + Add V2G-Batteries subtypes? Problem with that is, that these are the same sub types as for Other Storage, how to do this?
-    for subtype_category in storage_subtypes_categories:
-        electricity_knowledge_graph.add(Node(subtype_category, inherits_from="Other Storage"))
-    for subtype in ["Flywheel", "Compressed Air"]:
-        electricity_knowledge_graph.add(Node(subtype, inherits_from="mechanical storage"))
-    for subtype in ["LMO","NMC", "NCA", "LFP", "LTO","Lithium Sulfur", "Lithium Ceramic", "Lithium-air"]:
-        electricity_knowledge_graph.add(Node(subtype, inherits_from="lithium batteries"))
-    for subtype in ["Zinc-Bromide", "Vanadium Redox", "Sodium-Sulfur", "ZEBRA"]:
-        electricity_knowledge_graph.add(Node(subtype, inherits_from="molten salt and flow batteries"))
-    for subtype in ["Hydrogen FC", "NiMH", "Deep-cycle Lead-Acid"]:
-        electricity_knowledge_graph.add(Node(subtype, inherits_from="other"))
-    
+    for supertype_category in storage_by_category_type:
+        electricity_knowledge_graph.add(Node(supertype_category, inherits_from="Storage"))
 
+    for subtype in TECH_STATIONARY_STORAGE:
+        electricity_knowledge_graph.add(Node(subtype, inherits_from="Other Storage"))
+    
     return electricity_knowledge_graph
 
 

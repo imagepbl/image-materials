@@ -42,3 +42,19 @@ buildings.preprocessing.circular_economy_measures module
    :members:
    :undoc-members:
    :show-inheritance:
+
+buildings.preprocessing.materials module
+----------------------------------------
+
+.. automodule:: imagematerials.buildings.preprocessing.materials
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+buildings.preprocessing.population module
+-----------------------------------------
+
+.. automodule:: imagematerials.buildings.preprocessing.population
+   :members:
+   :undoc-members:
+   :show-inheritance:

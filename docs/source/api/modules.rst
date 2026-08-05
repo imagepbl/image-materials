@@ -8,3 +8,6 @@ API
    vehicles
    buildings
    electricity
+   end-of-life
+   infrastructure
+   rest-of

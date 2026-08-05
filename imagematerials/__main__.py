@@ -6,7 +6,6 @@ import xarray as xr
 
 import prism
 from imagematerials.stock import compute_dynamic_stock_driven, compute_historic, material_computation, battery_computation
-from imagematerials.survival import ScipySurvival, SurvivalMatrix
 from imagematerials.util import (
     import_from_netcdf,
 )

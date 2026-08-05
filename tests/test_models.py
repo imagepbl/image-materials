@@ -9,8 +9,13 @@ import xarray as xr
 from pytest import mark
 
 from imagematerials.concepts import knowledge_graph
+from imagematerials.concepts import Node, KnowledgeGraph
 from imagematerials.model import GenericMaterials, GenericStocks, MaterialIntensities, RestOf
-from imagematerials.vehicles.battery import Battery
+from imagematerials.model import SharesInflowStocks, ElectricVehicleBatteries
+
+from imagematerials.vehicles.constants import (
+    EV_VEHICLE_TYPES
+)
 
 @pytest.fixture(scope="module")
 def coordinates():
@@ -20,7 +25,8 @@ def coordinates():
         "Type": ["vehicle_a", "vehicle_b"],
         "Cohort": [2000, 2001, 2002],
         "Time": [2000, 2001, 2002],
-        "ScipyParam": ["c", "scale"]
+        "ScipyParam": ["c", "scale"],
+        "SuperType": ["vehicle_super"],
     }
 
 @pytest.fixture(scope="module")
@@ -29,8 +35,8 @@ def timelines():
     return prism.Timeline(2000, 2002, 1), prism.Timeline(2001, 2002, 1)
 
 @mark.parametrize(
-    "model_class", [GenericStocks, GenericMaterials, MaterialIntensities, RestOf,
-                    Battery]
+    "model_class", [GenericStocks, GenericMaterials, MaterialIntensities, RestOf, 
+                    SharesInflowStocks, ElectricVehicleBatteries]
 )
 def test_basic_model(model_class):
     """Test to check any model without specific tests and without running it."""
@@ -57,7 +63,7 @@ def test_basic_model(model_class):
             continue
         if var_name in model_class.input_data:
             continue
-        assert var_name in ["input_data", "output_data", "time"], (
+        assert var_name in ["input_data", "output_data", "time", "transition_years"], (
             f"Unknown dataclass attribute '{var_name}' for '{model_class}'")
 
 def _get_xarray(coordinates, *dims):
@@ -85,3 +91,173 @@ def test_generic_stocks(coordinates, timelines):
 
     for t in coordinates["Time"]:
         assert (model.stock_by_cohort.loc[t].sum("Cohort") == stocks.loc[t]).all()
+
+
+@pytest.fixture(scope="module")
+def test_knowledge_graph():
+    """Create a test knowledge graph."""
+    return KnowledgeGraph(
+        Node("vehicle_super"),
+        Node("vehicle_a", inherits_from="vehicle_super"),
+        Node("vehicle_b", inherits_from="vehicle_super"),
+    )
+def test_shares_inflow_stocks(coordinates, timelines, test_knowledge_graph):
+    """Test the SharesInflowStocks model."""
+    stocks = _get_xarray(coordinates, "Time", "Region", "SuperType")
+    stocks = prism.Q_(stocks, "count")
+
+   
+    shares = _get_xarray(coordinates, "Region", "Type", "Cohort")
+    shares = shares / shares.sum("Type") 
+
+    lt = _get_xarray(coordinates, "Time", "Region", "Type", "ScipyParam")
+    lt.attrs["loc"] = 0
+    lifetimes = {"weibull": lt}
+
+    complete_timeline, simulation_timeline = timelines
+
+    model = SharesInflowStocks(
+        complete_timeline,
+        stocks=stocks,
+        shares=shares,
+        lifetimes=lifetimes,
+        knowledge_graph=test_knowledge_graph,
+        set_unit_flexible="count",
+        Region=coordinates["Region"],
+        SuperType=coordinates["SuperType"],
+        Type=coordinates["Type"],
+        Cohort=coordinates["Cohort"],
+        Time=coordinates["Time"]
+    )
+
+    model.simulate(complete_timeline)
+
+    for var_name in ["outflow_by_cohort", "inflow", "stock_by_cohort"]:
+        assert hasattr(model, var_name)
+    
+    for t in coordinates["Time"]:
+        stock_by_type = model.stock_by_cohort.loc[t].sum("Cohort")
+        stock_by_supertype = test_knowledge_graph.aggregate_sum(
+            stock_by_type,
+            stocks.coords["SuperType"].values,
+            dim="Type"
+        ).rename({"Type": "SuperType"})
+        
+        # With constant stock targets (all 1.0) and fast decay (Weibull c=1, scale=1),
+        # inflow is always positive, so stock equals demand exactly.
+        assert (stock_by_supertype == stocks.loc[t]).all()
+
+def test_electric_vehicle_batteries(coordinates, timelines):
+    """Test the ElectricVehicleBatteries model for critical calculation logic."""
+    complete_timeline, simulation_timeline = timelines
+
+    battery_types = ["high-nickel", "LFP"]
+    material_types = ["copper", "lithium"]
+    v2g_types = ["Cars - BEV"]
+
+    time_coords = coordinates["Time"]
+    cohort_coords = coordinates["Cohort"]
+    region_coords = coordinates["Region"]
+ 
+    inflow_da = xr.DataArray(
+        100.0, dims=("time", "Region", "Type"),
+        coords={"time": time_coords, "Region": region_coords, "Type": EV_VEHICLE_TYPES})
+    inflow_da = prism.Q_(inflow_da, "count")
+    inflow = prism.TimeVariable.from_array(inflow_da)
+
+    outflow_da = xr.DataArray(
+        20.0, dims=("time", "Cohort", "Region", "Type"),
+        coords={"time": time_coords, "Cohort": cohort_coords,
+                "Region": region_coords, "Type": EV_VEHICLE_TYPES})
+    outflow_da = prism.Q_(outflow_da, "count")
+    outflow_by_cohort = prism.TimeVariable.from_array(outflow_da)
+
+    # stock_by_cohort uses .loc[t] in the model, so plain Q_ with "Time" dim works
+    stock_by_cohort = xr.DataArray(
+        50.0, dims=("Time", "Cohort", "Region", "Type"),
+        coords={"Time": time_coords, "Cohort": cohort_coords,
+                "Region": region_coords, "Type": EV_VEHICLE_TYPES})
+    stock_by_cohort = prism.Q_(stock_by_cohort, "count")
+
+    # --- Battery-specific input data ---
+
+    shares = xr.DataArray(
+        0.5, dims=("BatteryType", "Type", "Cohort"),
+        coords={"BatteryType": battery_types, "Type": EV_VEHICLE_TYPES,
+                "Cohort": cohort_coords})
+    shares = shares / shares.sum("BatteryType")
+
+    # Battery capacity: kWh/vehicle
+    capacity = xr.DataArray(
+            10.0, dims=("Type", "Cohort"),
+            coords={"Type": EV_VEHICLE_TYPES,
+                    "Cohort": cohort_coords})
+    capacity = prism.Q_(capacity, "kWh/count")  # kg per vehicle
+
+    material_intensities = xr.DataArray(
+    5, dims=("material", "BatteryType", "Type", "Cohort"),
+    coords={"material": material_types, "BatteryType": battery_types,
+            "Type": EV_VEHICLE_TYPES, "Cohort": cohort_coords})
+    material_intensities = prism.Q_(material_intensities, "kg/kWh")
+
+    vhc_fraction_v2g = xr.DataArray(
+    0.8, dims=("Type", "Time", "Cohort"),
+    coords={"Type": v2g_types,
+            "Time": time_coords,
+            "Cohort": cohort_coords})
+    
+    capacity_fraction_v2g = xr.DataArray(
+        0.9, dims=("Type", "BatteryType"),
+        coords={"Type": v2g_types, "BatteryType": battery_types})
+
+    # --- Instantiate and run ---
+
+    model = ElectricVehicleBatteries(
+        complete_timeline,
+        battery_capacity=capacity,
+        shares=shares,
+        material_intensities=material_intensities,
+        vhc_fraction_v2g=vhc_fraction_v2g,
+        capacity_fraction_v2g=capacity_fraction_v2g,
+        Type=EV_VEHICLE_TYPES,
+        BatteryType=battery_types,
+        Region=region_coords,
+        Cohort=cohort_coords,
+        material=material_types,
+        Time=time_coords,
+    )
+
+    def get_inputs(time_value):
+        return {
+            'inflow': inflow,
+            'stock_by_cohort': stock_by_cohort,
+            'outflow_by_cohort': outflow_by_cohort,
+        }
+
+    model.simulate(complete_timeline, inputs=get_inputs)
+
+
+    expected_outputs = ['stock_battery_kWh_v2g', 'inflow_battery_kWh', 'stock_battery_kWh', 'outflow_battery_kWh', 'inflow_battery_materials', 'stock_battery_materials', 'outflow_battery_materials']
+    for var_name in expected_outputs:
+        assert hasattr(model, var_name), f"Expected output {var_name} not found on model"
+
+    t = time_coords[0]  # 2000
+    n_types = len(EV_VEHICLE_TYPES)
+    n_battery_types = len(battery_types)
+    n_regions = len(region_coords)
+
+    # Per (BatteryType, Type, Region): mass = 100 vehicles × 0.5 shares × 10 kWh/vehicle = 500 kWh
+    expected_kwh_per_bt_type = 100.0 * 0.5 * 10.0
+    expected_total_inflow_kwh = expected_kwh_per_bt_type * n_battery_types * n_types * n_regions
+
+    inflow_kwh_total = prism.M_(model.inflow_battery_kWh[t].sum())
+    assert inflow_kwh_total == pytest.approx(expected_total_inflow_kwh, rel=0.01), \
+        f"Inflow kWh mismatch: expected {expected_total_inflow_kwh}, got {inflow_kwh_total}"
+
+    # V2G stock only includes V2G-capable types
+    assert set(model.stock_battery_kWh_v2g.Type.values) == set(v2g_types)
+
+    # V2G stock ≤ total stock
+    total_stock_kwh = prism.M_(model.stock_battery_kWh[t].sum())
+    v2g_stock_kwh = prism.M_(model.stock_battery_kWh_v2g.loc[dict(Time=t)].sum())
+    assert v2g_stock_kwh <= total_stock_kwh

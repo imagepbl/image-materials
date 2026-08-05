@@ -7,6 +7,7 @@ import xarray as xr
 
 from imagematerials.concepts import create_region_graph
 from imagematerials.constants import IMAGE_REGIONS
+from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.util import apply_change_per_region
 
 
@@ -225,6 +226,9 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
     
     print("FUNCTION CALLED")
     print(f"ce keys: {list(circular_economy_config.keys())}")
+    
+    print("FUNCTION CALLED")
+    print(f"ce keys: {list(circular_economy_config.keys())}")
     region_knowledge_graph = create_region_graph()
     regions = floorspace_commercial.coords["Region"].values
     # floorspace_commercial in m^2/cap
@@ -251,13 +255,19 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
             floor_pc_2020_xr, output_coords=regions_mapped, dim="Region")
         target_vals = floor_pc_2020_mapped
         current_vals = floorspace_commercial.sel(Time=2020, Region=regions_mapped).sum(dim="Type")
+        current_vals = floorspace_commercial.sel(Time=2020, Region=regions_mapped).sum(dim="Type")
 
+        scaling_factors = xr.where(current_vals > 0, target_vals / current_vals, 1.0)
         scaling_factors = xr.where(current_vals > 0, target_vals / current_vals, 1.0)
 
         floorspace_commercial.loc[{"Region": regions_mapped}] *= scaling_factors
         logging.debug("implemented 'base' for Commercial Buildings")
 
     ce_scen = None  # INITIALIZE ce_scen
+
+    # Right after ce_scen is set
+    print(f"ce_scen = {ce_scen}")
+
 
     # Right after ce_scen is set
     print(f"ce_scen = {ce_scen}")
@@ -271,9 +281,17 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
         commercial_ce_mode = circular_economy_config[ce_scen]["buildings"].get(
             "commercial_ce_mode", "relative")
         implementation_rate = circular_economy_config[ce_scen]['buildings']['implementation_rate']
+        commercial_ce_mode = circular_economy_config[ce_scen]["buildings"].get(
+            "commercial_ce_mode", "relative")
+        implementation_rate = circular_economy_config[ce_scen]['buildings']['implementation_rate']
         base_year = circular_economy_config[ce_scen]["buildings"]["base_year"]
         target_year = circular_economy_config[ce_scen]["buildings"]["target_year"]
 
+        # --- Build the region-mapped relative-change array (shared by both modes) ---
+        commercial_scenario_settings = circular_economy_config[ce_scen]["buildings"]\
+            ['commercial']['m2_change_pc']
+
+        print(f"mode = {commercial_ce_mode}")
         # --- Build the region-mapped relative-change array (shared by both modes) ---
         commercial_scenario_settings = circular_economy_config[ce_scen]["buildings"]\
             ['commercial']['m2_change_pc']

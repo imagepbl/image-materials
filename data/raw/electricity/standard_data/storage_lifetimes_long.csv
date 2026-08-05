@@ -1,0 +1,16 @@
+Time,type_data,unit,Region,category,technology,sub_technology,value,min,max
+2018,lifetime,yr,World,storage,battery,LFP,10.3,,
+2018,lifetime,yr,World,storage,battery,Na-ion,10,,
+2018,lifetime,yr,World,storage,mechanical_storage,PHS,60,60,80
+2018,lifetime,yr,World,storage,battery,high-nickel,6.2,,
+2018,lifetime,yr,World,storage,battery,low-nickel,6.2,,
+2030,lifetime,yr,World,storage,battery,LFP,20,,
+2030,lifetime,yr,World,storage,battery,Na-ion,15,,
+2030,lifetime,yr,World,storage,mechanical_storage,PHS,60,60,80
+2030,lifetime,yr,World,storage,battery,high-nickel,8.2,,
+2030,lifetime,yr,World,storage,battery,low-nickel,8.2,,
+2050,lifetime,yr,World,storage,battery,LFP,20,,
+2050,lifetime,yr,World,storage,battery,Na-ion,20,,
+2050,lifetime,yr,World,storage,mechanical_storage,PHS,80,60,80
+2050,lifetime,yr,World,storage,battery,high-nickel,8.2,,
+2050,lifetime,yr,World,storage,battery,low-nickel,8.2,,
