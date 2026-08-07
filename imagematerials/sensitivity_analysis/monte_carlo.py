@@ -1,24 +1,21 @@
 """
 Monte Carlo input pipeline, split into three stages.
 
-    load_*(filepath)      -> tidy parameter table      (one per data type / category)
-    sample_values(...)    -> same table + 'value'      (ONE function, shared by all)
+    load_*(filepath)      -> tidy parameter table       (one per data type)
+    sample_values(...)    -> same table + 'sampled'     (ONE function, shared by all)
     process_*(...)        -> xr.DataArray for the model (one per data type)
 
 Every loader must produce the same *canonical* table:
 
-    <id columns, free>  |  distribution  |  value | min  |  max  |  [extras...]
+    <id columns, free>  |  value  |  min  |  max  | distribution | [extras...]
 
-sample_values() only ever looks at 'distribution', 'min', 'max' and 'peak', and
-writes its result to a new column called 'sampled'. The id columns and any extra
-columns - unit, Region, category, a pre-existing 'value', ... - pass through
-untouched. That is what
-makes one sampler enough for material intensities, lifetimes, vehicles, power
-generation, and whatever you add later.
+sample_values() only ever looks at 'distribution', 'min', 'max' (and 'value', depending on the 
+distribution), and writes its result to a new column called 'sampled'. The id columns and any extra
+columns - unit, Region, category, ... - pass through untouched. Thereffore it can be used for 
+different data types and sectors.
 
-Note on the name 'value': it is the most-likely value of a triangular distribution
-(what scipy/numpy call the "mode"). It is deliberately NOT called 'mode', because
-'mode' is already a dimension name in the lifetime data (car / ship / plane).
+Note on the name 'value': it is the standard value used for normal model runs. It is used here as 
+the central tendency for distributions.
 """
 
 import numpy as np
@@ -49,7 +46,7 @@ from imagematerials.electricity.constants import (
     # EPG_SUB_TECHNOLOGIES,
 )
 from imagematerials.vehicles.constants import (
-    maintenance_modes,
+    vehicles_modes_sensitivity_analysis,
     unit_mapping,
     END_YEAR, 
     FIRST_YEAR
@@ -59,13 +56,15 @@ from imagematerials.vehicles.modelling_functions import (
     scenario_change
 )
 
+
+
 dict_sector_knowledge_graph = {
     "vehicles": create_vehicle_graph_2(),
     "electricity": create_electricity_graph(),
     "buildings": create_building_graph(),
 }
 dict_sector_types = {
-    "vehicles": maintenance_modes,
+    "vehicles": vehicles_modes_sensitivity_analysis,
 }
 dict_sector_start_year = {
     "vehicles": FIRST_YEAR,
@@ -176,6 +175,7 @@ def load_material_intensities(filepath: str) -> pd.DataFrame:
 
     Expected columns: year, material, technology, min, max
     Optional:         value, distribution
+
     """
     df = pd.read_csv(filepath)
 
@@ -200,6 +200,7 @@ def load_lifetimes(filepath: str) -> pd.DataFrame:
     passed through unchanged. min/max come from mean_min/mean_max and peak from
     mean, i.e. the MC randomises the MEAN lifetime. stdev/shape/scale parameterise
     the survival curve and are NOT randomised - they just ride along.
+
     """
     df = pd.read_csv(filepath)
 
@@ -296,11 +297,16 @@ def process_material_intensities(
 
     """
     da = sampled.set_index(["Cohort", "Type", "material"])["sampled"].to_xarray()
-    unit = sampled.loc["unit"][0]
+    unique_units = sampled["unit"].unique()
+    if len(unique_units) != 1:
+        raise ValueError(
+            f"Expected a single unit for all rows, but found multiple: {unique_units}"
+        )
+    unit = unique_units[0]
     da = prism.Q_(da, unit)
     da.name = f"{sector}Materials"
 
-    knowledge_graph = dict_knowledge_graph[sector] #TODO: is this needed?
+    knowledge_graph = dict_sector_knowledge_graph[sector] #TODO: is this needed?
     da = knowledge_graph.rebroadcast_xarray(da, output_coords=dict_sector_types[sector])
 
     if not year_start:
@@ -344,5 +350,5 @@ def process_lifetimes(
     da = interpolate_xr(da, year_start, year_end)
 
     da = convert_lifetime(da)
-    
+
     return da
