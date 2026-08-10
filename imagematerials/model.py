@@ -1,22 +1,24 @@
 
-from typing import Callable, ClassVar, Optional
-import pint_xarray
-from pint import UnitRegistry
-from pathlib import Path
 from importlib.resources import files
+from pathlib import Path
+from typing import Callable, ClassVar, Optional
 
+import numpy as np
+import pint_xarray
 import prism
 import xarray as xr
-import numpy as np
+from pint import UnitRegistry
 
 from imagematerials.concepts import KnowledgeGraph
+from imagematerials.lifetimes import lifetimes_to_matrix
 from imagematerials.maintenance import Maintenance
-from imagematerials.survival import ScipySurvival, SurvivalMatrix
+from imagematerials.vehicles.constants import EV_VEHICLE_TYPES
 
 REGION = prism.Dimension("Region")
 STOCK_TYPE = prism.Dimension("Type")
 STOCK_SUPERTYPE = prism.Dimension("SuperType")
 COHORT = prism.Dimension("Cohort")
+QUINTILE = prism.Dimension("Quintile")
 TIME = prism.Dimension("Time")
 MATERIAL_TYPE = prism.Dimension("material")
 BATTERY_TYPE = prism.Dimension("BatteryType")
@@ -86,9 +88,8 @@ class GenericStocks(prism.Model):
             The simulation timeline.
         """
   
-        survival = ScipySurvival(self.lifetimes, self.stocks.coords["Type"],
-                                 knowledge_graph=self.knowledge_graph)
-        self.survival_matrix = SurvivalMatrix(survival)
+        self.survival_matrix = lifetimes_to_matrix(self.lifetimes, self.stocks.coords["Type"],
+                                                   knowledge_graph=self.knowledge_graph)
         self.stock_by_cohort = xr.DataArray(
             0.0,
             dims=("Time", "Cohort", "Region", "Type"),
@@ -117,11 +118,11 @@ class GenericStocks(prism.Model):
         # calculate missing stock to fulfill demand (input stock)
         stock_diff = stock_demand.loc[t] - self.stock_by_cohort.loc[t].sum("Cohort")
         # stock_diff cannot be negative (no negative inflow); when positive, divide by survival matrix in case there is a loss in the first year (inflow needs to be larger than input stock)
-        stock_diff = xr.where(stock_diff>0, stock_diff/self.survival_matrix[t, t].drop("Cohort"), 0)
+        stock_diff = xr.where(stock_diff>0, stock_diff/self.survival_matrix.loc[t, t].drop("Cohort"), 0)
 
         self.inflow[t] = stock_diff
         # calculate future development of the current cohort (inflow at time t; t: = time from current time onwards, t = cohort of time t)
-        self.stock_by_cohort.loc[t:, t] = self.inflow[t] * self.survival_matrix[t:, t]
+        self.stock_by_cohort.loc[t:, t] = self.inflow[t] * self.survival_matrix.loc[t:, t]
         # for t_future in stock_by_cohort[t].coords["Cohort"].loc[t_str:]:
             # t_future = int(t_future)
             # stock_by_cohort[t_future].loc[{"Cohort": t_str}] = inflow[t]*survival[t_future, t]
@@ -133,7 +134,123 @@ class GenericStocks(prism.Model):
             # for previous cohorts: calculate outflow by subtracting stocks of previous - current year
             self.outflow_by_cohort[t].loc[:, :, :t-1] = self.stock_by_cohort.loc[t-1, :t-1] - self.stock_by_cohort.loc[t, :t-1]
             # for current cohort: calculate outflow by inflow * (1-survival matrix) as stock at t-1 is not existent
-            self.outflow_by_cohort[t].loc[:, :, t] = self.inflow[t] * (1-self.survival_matrix[t, t])
+            self.outflow_by_cohort[t].loc[:, :, t] = self.inflow[t] * (1-self.survival_matrix.loc[t, t])
+
+
+@prism.interface
+class StocksQuintiles(prism.Model):
+    """Stock class that can be used for different products.
+    A model class for managing stocks and their inflows and outflows over time, 
+    including the computation of initial and dynamic stock values based on input data.
+    Accounting also for income quintiles
+
+    Attributes
+    ----------
+    Region : prism.Coords[REGION]
+        Defines the regions for the stock.
+    Type : prism.Coords[STOCK_TYPE]
+        Defines the stock types (e.g., vehicle types, buildings).
+    Cohort : prism.Coords[COHORT]
+        Defines the cohorts (e.g., different age groups of stock).
+    Time : prism.Coords[TIME]
+        Defines the time steps for the stock simulation.
+    Quintile : prism.Coords[QUINTILE]
+        Defines the income quintiles.
+    lifetimes : xr.DataArray
+        Expected lifetimes for each stock type.
+    stocks : xr.DataArray
+        Initial stock values.
+    shares : Optional[xr.DataArray]
+        Optional share data for the stock subtypes.
+    input_data : tuple of str
+        Tuple of input data variable names.
+    output_data : tuple of str
+        Tuple of output data variable names.
+    """
+     
+    # Dimensions
+    Region: prism.Coords[REGION]
+    Type: prism.Coords[STOCK_TYPE]
+    Cohort: prism.Coords[COHORT]
+    Time: prism.Coords[TIME]
+    Quintile: prism.Coords[QUINTILE]
+
+    # Inputs
+    lifetimes: xr.DataArray
+    stocks: xr.DataArray #TODO check how to have property that can be both input and output within prism
+    # stock_function: Callable    # defines the stock function to use e.g. stock or inflow driven
+    knowledge_graph: KnowledgeGraph
+    # set a flexible unit that can be changed depending on type of stock - is passed by preprocessing
+    set_unit_flexible: prism.VarUnit[UnitFlexibleStock]
+
+    # For module dependency, ignored by prism
+    input_data: tuple[str] = ("stocks", "lifetimes", "knowledge_graph", "set_unit_flexible")
+    output_data: tuple[str] = ("outflow_by_cohort", "inflow", "stock_by_cohort")
+
+    # stock_by_cohort: prism.TimeVariable[Region, Mode, Cohort, "count"] = prism.export(initial_value = prism.Array[Region, Mode, Cohort, 'count'](0.0))
+    inflow: prism.TimeVariable[REGION, STOCK_TYPE, QUINTILE, UnitFlexibleStock] = prism.export()
+    outflow_by_cohort: prism.TimeVariable[REGION, STOCK_TYPE, QUINTILE, COHORT, UnitFlexibleStock] = prism.export()
+
+    def compute_initial_values(self, time: prism.Timeline):
+        """Compute the initial values for stocks and the survival matrix.
+        Note:
+        stock_by_cohort is defined here instead of together with the other output data (inflow, outflow_by_cohort) to increase 
+        computational efficiency, might need to change when coupling to TIMER (should be prism.TimeVariable as well then)
+       
+        Parameters
+        ----------
+        time : prism.Timeline
+            The simulation timeline.
+        """
+  
+        self.survival_matrix = lifetimes_to_matrix(self.lifetimes, self.stocks.coords["Type"],
+                                                   knowledge_graph=self.knowledge_graph)
+        self.stock_by_cohort = xr.DataArray(
+            0.0,
+            dims=("Time", "Cohort", "Region", "Type", "Quintile"),
+            coords={"Time": self.Time,
+                    "Cohort": self.Cohort,
+                    "Region": self.Region,
+                    "Type": self.Type,
+                    "Quintile": self.Quintile})
+        self.stock_by_cohort = prism.Q_(self.stock_by_cohort, self.set_unit_flexible) # pass unit from stocks: set_unit_flexible should contain stocks unit
+
+    def compute_values(self, time: prism.Time):
+        """
+        Computes the stock values at each time step, including inflow and outflow by cohort.
+        
+        Parameters
+        ----------
+        time : prism.Time
+            The current simulation time step.
+        """
+        
+        t, dt = time.t, time.dt
+        self.inflow[t].loc[:] = prism.Q_(0.0, self.set_unit_flexible)
+        self.outflow_by_cohort[t].loc[:] = prism.Q_(0.0, self.set_unit_flexible)
+
+        # copy only for readability
+        stock_demand = self.stocks
+        # calculate missing stock to fulfill demand (input stock)
+        stock_diff = stock_demand.loc[t] - self.stock_by_cohort.loc[t].sum("Cohort")
+        # stock_diff cannot be negative (no negative inflow); when positive, divide by survival matrix in case there is a loss in the first year (inflow needs to be larger than input stock)
+        stock_diff = xr.where(stock_diff>0, stock_diff/self.survival_matrix.loc[t, t].drop("Cohort"), 0)
+
+        self.inflow[t] = stock_diff
+        # calculate future development of the current cohort (inflow at time t; t: = time from current time onwards, t = cohort of time t)
+        self.stock_by_cohort.loc[t:, t] = self.inflow[t] * self.survival_matrix.loc[t:, t]
+        # for t_future in stock_by_cohort[t].coords["Cohort"].loc[t_str:]:
+            # t_future = int(t_future)
+            # stock_by_cohort[t_future].loc[{"Cohort": t_str}] = inflow[t]*survival[t_future, t]
+
+        # Prevent out of bounds error, assume first outflow to be 0.
+        if t-1 < time.start:
+            self.outflow_by_cohort[t] = prism.Q_(0.0, self.set_unit_flexible)
+        else:
+            # for previous cohorts: calculate outflow by subtracting stocks of previous - current year
+            self.outflow_by_cohort[t].loc[:, :, :, :t-1] = self.stock_by_cohort.loc[t-1, :t-1] - self.stock_by_cohort.loc[t, :t-1]
+            # for current cohort: calculate outflow by inflow * (1-survival matrix) as stock at t-1 is not existent
+            self.outflow_by_cohort[t].loc[:, :, :, t] = self.inflow[t] * (1-self.survival_matrix.loc[t, t])
 
 
 @prism.interface
@@ -142,7 +259,7 @@ class SharesInflowStocks(prism.Model):
     present for which the market shares are known for the INFLOW.
     A model class for managing stocks and their inflows and outflows over time, 
     including the computation of initial and dynamic stock values based on input data.
-    
+
     Attributes
     ----------
     Region : prism.Coords[REGION]
@@ -150,7 +267,7 @@ class SharesInflowStocks(prism.Model):
     SuperType : prism.Coords[STOCK_SUPERTYPE]
         Defines the stock super types (e.g., electricity storage type ("Other storage")).
     Type : prism.Coords[STOCK_TYPE]
-        Defines the stock sub types (e.g., different storage sub types (NIMH, Hydrogen, Lithium Sulfur etc.)).
+        Defines the stock sub types (e.g., different storage sub types (NMC, LFP etc.)).
     Cohort : prism.Coords[COHORT]
         Defines the cohorts (e.g., different age groups of stock).
     Time : prism.Coords[TIME]
@@ -158,15 +275,17 @@ class SharesInflowStocks(prism.Model):
     lifetimes : xr.DataArray
         Expected lifetimes for each stock type.
     stocks : xr.DataArray
-        Prescribed stock values of supertype (e.g. how many MWh "Other storage" capacity per year is needed).
+        Prescribed stock values of supertype (e.g. how many MWh "Other storage" capacity per year is 
+        needed).
     shares : xr.DataArray
-        Percentage shares of the INFLOW subtypes (e.g. shares of NIMH, Hydrogen, Lithium Sulfur etc. of "Other storage" technologies).
+        Percentage shares of the INFLOW subtypes (e.g. shares of NMC, LFP etc. of "Other storage" 
+        technologies).
     input_data : tuple of str
         Tuple of input data variable names.
     output_data : tuple of str
         Tuple of output data variable names.
+
     """
-     
     # Dimensions
     Region:     prism.Coords[REGION]
     SuperType:  prism.Coords[STOCK_SUPERTYPE]
@@ -194,47 +313,46 @@ class SharesInflowStocks(prism.Model):
     outflow_by_cohort:  prism.TimeVariable[REGION, STOCK_TYPE, COHORT, UnitFlexibleStock] = prism.export()
 
     def compute_initial_values(self, time: prism.Timeline):
-        """
-        Initializes stocks and the survival matrix.
+        """Initializes stocks and the survival matrix.
 
         Creates the survival matrix from lifetime distributions and type shares,
         and initializes the stock-by-cohort array with zeros (carrying the units
         from `self.stocks`).
-        
+
         Parameters
         ----------
         time : prism.Timeline
             The simulation timeline.
+
         """
-        
-        survival = ScipySurvival(self.lifetimes, self.shares.coords["Type"],
-                                 knowledge_graph=self.knowledge_graph)
-        self.survival_matrix = SurvivalMatrix(survival)
+        types_to_model = next(iter(self.lifetimes.values())).coords["Type"].values
+        self.survival_matrix = lifetimes_to_matrix(self.lifetimes, types_to_model,
+                                                   knowledge_graph=self.knowledge_graph)
         self.stock_by_cohort = xr.DataArray(
             0.0,
             dims=("Time", "Cohort", "Region", "Type"),
             coords={"Time":     self.Time,
                     "Cohort":   self.Cohort,
                     "Region":   self.Region,
-                    "Type":     self.shares.coords["Type"]})
+                    "Type":     types_to_model})
         self.stock_by_cohort = prism.Q_(self.stock_by_cohort, self.set_unit_flexible) # pass unit from stocks
 
 
     def compute_values(self, time: prism.Time):
-        """
-        Computes stocks, inflows by cohort, and outflows by cohort for the current time step.
+        """Computes stocks, inflows by cohort, and outflows by cohort for the current time step.
 
         At time `t`, this method:
         - Computes the inflow required to meet the target stock, distributed across sub-technologies 
         according to shares in the inflow.
-        - Calculates future stock development of the current cohort `t` (= inflow in year t) based on 
-        the survival matrix.
+        - Calculates future stock development of the current cohort `t` (= inflow in year t) based 
+        on the survival matrix.
         - Computes outflow by cohort in year t
-        
+
         Parameters
         ----------
         time : prism.Time
             The current simulation time step.
+
         """
         # pass unit from stocks
         t, dt = time.t, time.dt
@@ -247,11 +365,11 @@ class SharesInflowStocks(prism.Model):
         # calculate the inflow by sub-technology by rebroadcasting the stock_diff (by super-type) to sub-technologies according to their shares in the inflow
         inflow_tech = self.knowledge_graph.rebroadcast_xarray(stock_diff, self.stock_by_cohort.coords["Type"].values, dim="SuperType", shares=self.shares.sel(Cohort=t), dim_shares="Type").rename({"SuperType": "Type"})
         # stock_diff cannot be negative (no negative inflow); when positive, divide by survival matrix in case there is a loss in the first year (inflow needs to be larger than input stock)
-        inflow_tech = xr.where(inflow_tech>0, inflow_tech/self.survival_matrix[t, t].drop("Cohort"), 0)
+        inflow_tech = xr.where(inflow_tech>0, inflow_tech/self.survival_matrix.loc[t, t].drop("Cohort"), 0)
         self.inflow[t] = inflow_tech
 
         # calculate future development of the current cohort (inflow at time t; t: = time from current time onwards, t = cohort of time t)
-        self.stock_by_cohort.loc[t:, t] = self.inflow[t] * self.survival_matrix[t:, t]
+        self.stock_by_cohort.loc[t:, t] = self.inflow[t] * self.survival_matrix.loc[t:, t]
 
         # Prevent out of bounds error, assume first outflow to be 0.
         if t-1 < time.start:
@@ -260,7 +378,7 @@ class SharesInflowStocks(prism.Model):
             # for previous cohorts: calculate outflow by subtracting stocks of previous - current year
             self.outflow_by_cohort[t].loc[:, :, :t-1] = self.stock_by_cohort.loc[t-1, :t-1] - self.stock_by_cohort.loc[t, :t-1]
             # for current cohort: calculate outflow by inflow * (1-survival matrix) as stock at t-1 is not existent
-            self.outflow_by_cohort[t].loc[:, :, t] = self.inflow[t] * (1-self.survival_matrix[t, t])
+            self.outflow_by_cohort[t].loc[:, :, t] = self.inflow[t] * (1-self.survival_matrix.loc[t, t])
 
 
 
@@ -358,7 +476,6 @@ class GenericMaterials(prism.Model):
         self.stock_by_cohort_materials.loc[t] = (stock_by_cohort.loc[t]*self.material_fractions*self.weights).sum("Cohort")
 
 
-
 @prism.interface
 class MaterialIntensities(prism.Model):
     """
@@ -423,6 +540,104 @@ class MaterialIntensities(prism.Model):
                     # "Cohort": coordinates["Time"].values,
                     "Region": self.Region,
                     "Type": self.Type,
+                    "material": self.material})
+        self.stock_by_cohort_materials = prism.Q_(self.stock_by_cohort_materials, "kg") 
+
+    def compute_values(self, time: prism.Time, inflow, stock_by_cohort, outflow_by_cohort):
+        """
+        Computes the material inflows, outflows, and stock usage by cohort for the current time step.
+        
+        At time `t`, computes:
+        - material inflows from stock `inflow` and cohort-specific material intensities,
+        - material outflows by cohort aggregated across cohorts,
+        - material stocks by cohort aggregated across cohorts.
+        
+        Parameters
+        ----------
+        time : prism.Time
+            The current simulation time step.
+        inflow : xr.DataArray
+            Inflow data for the stocks.
+        stock_by_cohort : xr.DataArray
+            Stock-by-cohort data.
+        outflow_by_cohort : xr.DataArray
+            Outflow data of the stock given by cohort.
+        """
+
+        t, dt = time.t, time.dt
+        self.inflow_materials[t] = inflow[t]*self.material_intensities.sel(Cohort=t).drop_vars("Cohort")
+        self.outflow_by_cohort_materials[t] = (outflow_by_cohort[t]*self.material_intensities).sum("Cohort")
+        self.stock_by_cohort_materials.loc[t] = (stock_by_cohort.loc[t]*self.material_intensities).sum("Cohort")
+
+
+@prism.interface
+class MaterialIntensitiesQuintiles(prism.Model):
+    """
+    A model class for managing materials used in stock cohorts, including 
+    inflows and outflows of materials. This version uses material intensities
+    (material per unit of stock) instead of weights and material fractions.
+
+    Attributes
+    ----------
+    material_intensities : xr.DataArray
+        Material intenisities applied to the inflow (kg steel/unit of stock), varying by cohort.
+    Region : prism.Coords[REGION]
+        The region where material use is calculated.
+    Type : prism.Coords[STOCK_TYPE]
+        The type of stock (e.g., Cars - ICE).
+    Cohort : prism.Coords[COHORT]
+        Cohort groups within the stock (e.g., yearly age groups).
+    Quintile : prism.Coords[QUINTILE]
+        Material demand per income quintiles 
+    material : prism.Coords[MATERIAL_TYPE]
+        The material types used in the model.
+    input_data : tuple of str
+        Tuple of input data variable names.
+    output_data : tuple of str
+        Tuple of output data variable names.
+    """
+    # Input data
+    material_intensities: xr.DataArray
+
+    # Dimensions
+    Region: prism.Coords[REGION]
+    Type: prism.Coords[STOCK_TYPE]
+    Cohort: prism.Coords[COHORT]
+    Quintile: prism.Coords[QUINTILE]
+    Time: prism.Coords[TIME]
+    material: prism.Coords[MATERIAL_TYPE]
+
+    # Data dependencies
+    input_data: tuple[str] = ("material_intensities", "inflow",
+                              "stock_by_cohort", "outflow_by_cohort")
+    output_data: tuple[str] = ("stock_by_cohort_materials", "inflow_materials",
+                               "outflow_by_cohort_materials")
+    # stock_by_cohort_materials & outflow_by_cohort_materials is NOT by cohort as it currently requires too much memory
+
+    # Output data
+    inflow_materials: prism.TimeVariable[REGION, STOCK_TYPE, QUINTILE, MATERIAL_TYPE, "kg"] = prism.export()
+    outflow_by_cohort_materials: prism.TimeVariable[REGION, STOCK_TYPE, QUINTILE, MATERIAL_TYPE, "kg"] = prism.export()
+
+    def compute_initial_values(self, time: prism.Timeline):
+        """
+        Create and initialize the `stock_by_cohort_materials` data array.
+
+        The array is constructed with dimensions (Time, Region, Type, material),
+        filled with zeros, and assigned units of kilograms.
+        
+        Parameters
+        ----------
+        time : prism.Timeline
+            The simulation timeline.
+        """
+        
+        self.stock_by_cohort_materials = xr.DataArray(
+            0.0, dims=("Time", "Region", "Type", "Quintile", "material"),
+            coords={"Time": self.Time,
+                    # "Cohort": coordinates["Time"].values,
+                    "Region": self.Region,
+                    "Type": self.Type,
+                    "Quintile": self.Quintile,
                     "material": self.material})
         self.stock_by_cohort_materials = prism.Q_(self.stock_by_cohort_materials, "kg") 
 
@@ -701,6 +916,10 @@ class EndOfLife(prism.Model):
                 # calculate sum outflow by supertype 
                 sum_outflow = outflow_t.sel(Type=present).sum("Type")
 
+                # End-of-life outputs are tracked without quintiles; aggregate if present.
+                if "Quintile" in sum_outflow.dims:
+                    sum_outflow = sum_outflow.sum("Quintile")
+
                 # --- reindex to target materials ---
                 target_mats = self.sum_outflow.to_array().coords["material"]  #  defining the ordering of material coords
                 sum_outflow = sum_outflow.reindex(material=target_mats, fill_value=0)
@@ -745,6 +964,10 @@ class EndOfLife(prism.Model):
 
                 sum_inflow = inflow_t.sel(Type=present).sum("Type")
 
+                # End-of-life outputs are tracked without quintiles; aggregate if present.
+                if "Quintile" in sum_inflow.dims:
+                    sum_inflow = sum_inflow.sum("Quintile")
+
                 # --- harmonize coordinates ---
                 sum_inflow = sum_inflow.reindex_like(collection, fill_value=0)
             
@@ -774,6 +997,9 @@ class RestOf(prism.Model):
                               "historic_diff_consumption_mean", "historic_diff_consumption_total")
     output_data: tuple[str] = ("inflow_materials",)
 
+    # Number of years used to blend from last historic observation to modeled values.
+    transition_years: ClassVar[int] = 20
+
     # Output data inflow_materials_rest
     # inflow_materials: prism.TimeVariable[REGION, MATERIAL_TYPE] = prism.export()
 
@@ -787,43 +1013,93 @@ class RestOf(prism.Model):
             }
         )
         self.inflow_materials = prism.Q_(self.inflow_materials, "t")
+        # Track last valid historic point per (Region, material) incrementally.
+        self._historic_transition_last_year = xr.DataArray(
+            np.nan,
+            dims=("Region", "material"),
+            coords={"Region": self.Region, "material": self.material},
+        )
+        # Store the corresponding historic value at the cached year above.
+        self._historic_transition_last_value = xr.DataArray(
+            np.nan,
+            dims=("Region", "material"),
+            coords={"Region": self.Region, "material": self.material},
+        )
         
     def compute_values(self, time: prism.Time, gompertz_coefs, gdp_per_capita, population, 
                        historic_diff_consumption_mean, historic_diff_consumption_total):
         t, dt = time.t, time.dt
 
         if t > 1970:
-            # Select coefficients for all regions/materials
+            # extract coefficients for all regions/materials
             a = gompertz_coefs.sel(coef='a', Time = t)
             b = gompertz_coefs.sel(coef='b', Time = t)
             c = gompertz_coefs.sel(coef='c', Time = t)
+            # calculate per capita inflow for the rest of the world based on gompertz function with gdp per capita as input
             self.inflow_per_capita_rest = (a * np.exp(-b * np.exp(-c * gdp_per_capita.loc[t])))
             self.inflow_per_capita_rest = prism.Q_(self.inflow_per_capita_rest, "t/person")
             self.inflow_materials.loc[t] = self.inflow_per_capita_rest * population.loc[t]
             
-            # Create a mask of where values are nan
+            # Create a mask of where values are nan, thus where the model needs to fill in values based on 
+            # historic_diff_consumption_mean because no gomppert paramters are available, e..g beacuse region could not be fitted due to lacking data
             mask = np.isnan(self.inflow_materials.loc[t])
            
-            # Use the mask to fill nans with historic_diff_consumption
-            # Align historic_diff_consumption to the same dims/order as inflow_materials
-
+            # 1) Use the mask to fill nans with historic_diff_consumption Align historic_diff_consumption to the same dims/order as inflow_materials
             self.inflow_materials.loc[t] = xr.where(
-                mask,
-                historic_diff_consumption_mean.transpose(*self.inflow_materials.loc[t].dims),
-                self.inflow_materials.loc[t]
+                mask, # True or False
+                historic_diff_consumption_mean.transpose(*self.inflow_materials.loc[t].dims), # fall back to mean value (if available)
+                self.inflow_materials.loc[t] # keep calculated value
             )
-            if t > 1970 and t < 2025:
-                # check if real historic data is available (not nan)
-                real_historic_data_mask = ~np.isnan(historic_diff_consumption_total.sel(Time=t))
-                self.inflow_materials.loc[t] = xr.where(
-                    real_historic_data_mask,
-                    historic_diff_consumption_total.sel(Time=t),
-                    self.inflow_materials.loc[t]
-                )
 
+            # Smoothly transition from the last available historic value to modeled values.
+            # This avoids an abrupt jump in the first years after historic observations end.
+            current_historic_value = historic_diff_consumption_total.sel(Time=t)
+            # Identify where this timestep still has real historical observations.
+            current_valid_historic_mask = ~np.isnan(current_historic_value)
+            # Update cache only where historic data exists; otherwise keep previous cache.
+            self._historic_transition_last_year = xr.where(
+                current_valid_historic_mask, # mask for True or False
+                t, # assigns year if True
+                self._historic_transition_last_year, # keeps previuosly assigned year if False
+            )
+            self._historic_transition_last_value = xr.where(
+                current_valid_historic_mask, # mask for True or False
+                current_historic_value, # assigns current historic value if True
+                self._historic_transition_last_value, # keeps previously assigned value if False
+            )
+            # Cached year/value define the anchor point for linear blending.
+            last_historic_year = self._historic_transition_last_year
+            last_historic_value = self._historic_transition_last_value
+            years_since_last = t - last_historic_year
+            blend_weight = (years_since_last / self.transition_years).clip(min=0.0, max=1.0)
+            smoothed_inflow = (
+                (1.0 - blend_weight) * last_historic_value
+                + blend_weight * self.inflow_materials.loc[t]
+            )
+            # 2) Apply smoothing only for points within the transition window.
+            transition_mask = (
+                (years_since_last > 0)
+                & (years_since_last <= self.transition_years)
+                & ~np.isnan(last_historic_value)
+            )
+            self.inflow_materials.loc[t] = xr.where(
+                transition_mask, # mask for True or False
+                smoothed_inflow, # assigns smoothed value if True
+                self.inflow_materials.loc[t], # keeps original modeled value if False
+            )
+
+            # 3) Final precedence rule: whenever real historic data exists at this year,
+            # overwrite modeled values for those points.
+            historic_at_t = historic_diff_consumption_total.sel(Time=t)
+            real_historic_data_mask = ~np.isnan(historic_at_t)
+            self.inflow_materials.loc[t] = xr.where(
+                real_historic_data_mask, # mask for True or False
+                historic_at_t, # assigns historic value if True
+                self.inflow_materials.loc[t] # keeps original modeled value if False
+            )
+            
         else:
             pass # No inflow before 1970
-
 
 
 @prism.interface
@@ -913,24 +1189,22 @@ class EvBatteryLinkModule(prism.Model):
         stock_ev_storage = self.stock_battery_kWh_v2g.loc[t].sum(["BatteryType","Type"]) # stock_ev_storage has dims ('Region',)
         self.stocks.loc[t] = (self.stocks_non_phs.loc[t] - stock_ev_storage).clip(min=prism.Q_(0,self.set_unit_flexible)) # clip: cannot be negative
 
-
 @prism.interface
 class ElectricVehicleBatteries(prism.Model):
-    """ Calculates ev battery energy capacity and ev battery materials per battery type for inflow, stock, outflow
+    """Calculates EV battery energy capacity and EV battery materials per battery type for inflow, stock, outflow
     in electric vehicles. Calculates also the battery stock that is available for V2G (vehicle to grid) applications.
 
     Notes
     -----
         Assumption: battery lifetime = vehicle lifetime (no explicit battery stock calculation)
-    """
 
+    """
     # Input data
-    weights:             xr.DataArray
-    shares:              xr.DataArray
-    material_fractions:  xr.DataArray
-    energy_density:      xr.DataArray
-    vhc_fraction_v2g:    xr.DataArray
-    capacity_fraction_v2g: xr.DataArray
+    shares:                 xr.DataArray
+    battery_capacity:       xr.DataArray
+    material_intensities:   xr.DataArray
+    vhc_fraction_v2g:       xr.DataArray
+    capacity_fraction_v2g:  xr.DataArray
     
 
     # Dimensions
@@ -942,7 +1216,7 @@ class ElectricVehicleBatteries(prism.Model):
     Time:         prism.Coords[TIME]
 
     # Data dependencies
-    input_data: tuple[str] = ("shares", "weights", "material_fractions", "energy_density", "vhc_fraction_v2g", "capacity_fraction_v2g", # input from battery preprocessing
+    input_data: tuple[str] = ("shares", "material_intensities", "battery_capacity", "vhc_fraction_v2g", "capacity_fraction_v2g", # "weights", "energy_density", # input from battery preprocessing
                               "stock_by_cohort", "inflow", "outflow_by_cohort") # input from vehicle stock module
     output_data: tuple[str] = ("stock_battery_kWh_v2g", #"outflow_battery_kWh_v2g",#"inflow_battery_kWh_v2g",
                                "inflow_battery_kWh","stock_battery_kWh","outflow_battery_kWh",
@@ -972,25 +1246,11 @@ class ElectricVehicleBatteries(prism.Model):
         -----
         - V2G-capable vehicle types are derived from ``self.vhc_fraction_v2g``.
         - Only road vehicle types are considered in the battery-related calculations.
+
         """
         # vhc_fraction_v2g only contains Types that are V2G capable (e.g. "Cars - BEV")
         self._types_v2g = self.vhc_fraction_v2g.Type
-        # TODO: this is not ideal (hardcoding road vehicle types) -> improve!
-        self.ROAD_VEHICLE_TYPES = ['Cars - BEV', 'Cars - FCV', 'Cars - HEV', 'Cars - ICE', 
-       'Cars - PHEV', 'Cars - Trolley', 'Heavy Freight Trucks - BEV',
-       'Heavy Freight Trucks - FCV', 'Heavy Freight Trucks - HEV',
-       'Heavy Freight Trucks - ICE', 'Heavy Freight Trucks - PHEV',
-       'Heavy Freight Trucks - Trolley', 'Light Commercial Vehicles - BEV',
-       'Light Commercial Vehicles - FCV', 'Light Commercial Vehicles - HEV',
-       'Light Commercial Vehicles - ICE', 'Light Commercial Vehicles - PHEV',
-       'Light Commercial Vehicles - Trolley', 'Medium Freight Trucks - BEV',
-       'Medium Freight Trucks - FCV', 'Medium Freight Trucks - HEV',
-       'Medium Freight Trucks - ICE', 'Medium Freight Trucks - PHEV',
-       'Medium Freight Trucks - Trolley', 'Midi Buses - BEV',
-       'Midi Buses - FCV', 'Midi Buses - HEV', 'Midi Buses - ICE',
-       'Midi Buses - PHEV', 'Midi Buses - Trolley', 'Regular Buses - BEV',
-       'Regular Buses - FCV', 'Regular Buses - HEV', 'Regular Buses - ICE',
-       'Regular Buses - PHEV', 'Regular Buses - Trolley']
+        self.EV_VEHICLE_TYPES = EV_VEHICLE_TYPES
 
         self.stock_battery_kWh_v2g = xr.DataArray(
             0.0,
@@ -1000,7 +1260,6 @@ class ElectricVehicleBatteries(prism.Model):
                     "Type":         self._types_v2g,
                     "Region":       self.Region})
         self.stock_battery_kWh_v2g = prism.Q_(self.stock_battery_kWh_v2g, "kWh")
-
         
     def compute_values(self, 
                        time: prism.Time, 
@@ -1012,12 +1271,9 @@ class ElectricVehicleBatteries(prism.Model):
         current simulation time step.
 
         For each time step, this method calculates:
-        1. Battery mass inflow, stock, and outflow (kg)
-        2. Battery material inflow, stock, and outflow (kg) based on material
-        composition
-        3. Battery energy capacity inflow, stock, and outflow (kWh) using energy
-        density
-        4. V2G-capable battery energy capacity stock (kWh)
+        1. Battery energy capacity inflow, stock, and outflow (kg)
+        2. Battery material inflow, stock, and outflow (kg) based on material composition
+        3. V2G-capable battery energy capacity stock (kWh)
 
         Parameters
         ----------
@@ -1035,38 +1291,31 @@ class ElectricVehicleBatteries(prism.Model):
         -----
         - Battery mass is calculated using vehicle inflow/stock/outflow together
         with battery shares and battery weights.
-        - Material flows are derived from battery mass using material fractions.
-        - Energy capacity (kWh) is obtained by dividing battery mass by the
-        battery energy density since energy density is in units of kg/kWh.
+        - Energy capacity (kWh) is obtained by multiplying battery mass with the
+        battery energy density.
+        - Material flows are derived from battery mass using material intensities.
         - V2G-capable battery stock is computed using the fraction of vehicles
         that support V2G and the share of battery capacity available for grid
         services.
+
         """
-         
         t, dt = time.t, time.dt
 
         # select road vehicles only, as only these have batteries
-        inflow_t  = inflow[t].sel(Type=self.ROAD_VEHICLE_TYPES)
-        stock_t   = stock_by_cohort.loc[t].sel(Type=self.ROAD_VEHICLE_TYPES)
-        outflow_t = outflow_by_cohort[t].sel(Type=self.ROAD_VEHICLE_TYPES)
+        inflow_t  = inflow[t].sel(Type=self.EV_VEHICLE_TYPES)
+        stock_t   = stock_by_cohort.loc[t].sel(Type=self.EV_VEHICLE_TYPES)
+        outflow_t = outflow_by_cohort[t].sel(Type=self.EV_VEHICLE_TYPES)
 
-        # 1. Calculate battery mass inflow, stock, outflow (kg)
-        inflow_battery_kg  = inflow_t * self.shares.sel(Cohort = t) * self.weights.sel(Cohort = t)
-        stock_battery_kg   = (stock_t * self.shares * self.weights)
-        outflow_battery_kg = (outflow_t * self.shares * self.weights)    
+        # 1. Calculate battery energy capacity inflow, stock, outflow (kWh)
+        self.inflow_battery_kWh[t]  = inflow_t * self.shares.sel(Cohort = t) * self.battery_capacity.sel(Cohort = t)
+        self.stock_battery_kWh[t]   = (stock_t * self.shares * self.battery_capacity)
+        self.outflow_battery_kWh[t] = (outflow_t * self.shares * self.battery_capacity)   
 
         # 2. Calculate battery materials (copper, ..) inflow, stock, outflow (kg)
-        self.inflow_battery_materials[t]  = (inflow_battery_kg * self.material_fractions.sel(Cohort = t))
-        self.stock_battery_materials[t]   = (stock_battery_kg * self.material_fractions).sum(["Cohort"])
-        self.outflow_battery_materials[t] = (outflow_battery_kg * self.material_fractions).sum(["Cohort"])
+        self.inflow_battery_materials[t]  = (self.inflow_battery_kWh[t] * self.material_intensities.sel(Cohort = t))
+        self.stock_battery_materials[t]   = (self.stock_battery_kWh[t] * self.material_intensities).sum(["Cohort"])
+        self.outflow_battery_materials[t] = (self.outflow_battery_kWh[t] * self.material_intensities).sum(["Cohort"])
 
-        # 3. Calculate battery energy capacity inflow, stock, outflow (kWh)
-        self.inflow_battery_kWh[t]  = inflow_battery_kg / self.energy_density.sel(Cohort = t)
-        self.stock_battery_kWh[t]   = stock_battery_kg / self.energy_density
-        self.outflow_battery_kWh[t] = outflow_battery_kg / self.energy_density
-
-        # 4. Calculate V2G capable battery energy capacity stock (kWh) (to calculate "Other storage" only the V2G battery stock is needed)
+        # 3. Calculate V2G capable battery energy capacity stock (kWh) (to calculate "Other storage" only the V2G battery stock is needed)
         stock_v2g = self.stock_battery_kWh[t].sel(Type=self._types_v2g) * self.vhc_fraction_v2g
         self.stock_battery_kWh_v2g.loc[dict(Time=t, Type=self._types_v2g)]  = (stock_v2g.sel(Time=t).drop_vars("Time") * self.capacity_fraction_v2g).sum(["Cohort"])
-
-        

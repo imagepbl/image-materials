@@ -1,0 +1,58 @@
+Time,type_data,unit,Region,category,technology,sub_technology,value,min,max
+2022,inflow,kWh/vehicle,World,EV_battery,Cars,Cars - BEV,61,55,90
+2022,inflow,kWh/vehicle,World,EV_battery,Cars,Cars - HEV,5.286666666666667,5.286666666666667,5.286666666666667
+2022,inflow,kWh/vehicle,World,EV_battery,Cars,Cars - PHEV,14,14,14
+2022,inflow,kWh/vehicle,World,EV_battery,Heavy Freight Trucks,Heavy Freight Trucks - BEV,311,190,390
+2022,inflow,kWh/vehicle,World,EV_battery,Heavy Freight Trucks,Heavy Freight Trucks - HEV,22.179791481810113,22.179791481810113,22.179791481810113
+2022,inflow,kWh/vehicle,World,EV_battery,Heavy Freight Trucks,Heavy Freight Trucks - PHEV,47.74001774622893,47.74001774622893,47.74001774622893
+2022,inflow,kWh/vehicle,World,EV_battery,Light Commercial Vehicles,Light Commercial Vehicles - BEV,100,100,100
+2022,inflow,kWh/vehicle,World,EV_battery,Light Commercial Vehicles,Light Commercial Vehicles - HEV,10.118110236220472,10.118110236220472,10.118110236220472
+2022,inflow,kWh/vehicle,World,EV_battery,Light Commercial Vehicles,Light Commercial Vehicles - PHEV,21.732283464566933,21.732283464566933,21.732283464566933
+2022,inflow,kWh/vehicle,World,EV_battery,Medium Freight Trucks,Medium Freight Trucks - BEV,92,50,110
+2022,inflow,kWh/vehicle,World,EV_battery,Medium Freight Trucks,Medium Freight Trucks - HEV,6.644444444444444,6.644444444444444,6.644444444444444
+2022,inflow,kWh/vehicle,World,EV_battery,Medium Freight Trucks,Medium Freight Trucks - PHEV,14.311111111111112,14.311111111111112,14.311111111111112
+2022,inflow,kWh/vehicle,World,EV_battery,Midi Buses,Midi Buses - BEV,150,150,150
+2022,inflow,kWh/vehicle,World,EV_battery,Midi Buses,Midi Buses - HEV,9.697802197802197,9.697802197802197,9.697802197802197
+2022,inflow,kWh/vehicle,World,EV_battery,Midi Buses,Midi Buses - PHEV,20.87912087912088,20.87912087912088,20.87912087912088
+2022,inflow,kWh/vehicle,World,EV_battery,Regular Buses,Regular Buses - BEV,300,180,560
+2022,inflow,kWh/vehicle,World,EV_battery,Regular Buses,Regular Buses - HEV,21.544585987261147,21.544585987261147,21.544585987261147
+2022,inflow,kWh/vehicle,World,EV_battery,Regular Buses,Regular Buses - PHEV,46.361464968152866,46.361464968152866,46.361464968152866
+2022,inflow,kWh/vehicle,World,EV_battery,Regular Buses,Regular Buses - Trolley,28.184713375796182,28.184713375796182,28.184713375796182
+2030,inflow,kWh/vehicle,World,EV_battery,Cars,Cars - BEV,63,55,90
+2030,inflow,kWh/vehicle,World,EV_battery,Cars,Cars - HEV,5.46,5.46,5.46
+2030,inflow,kWh/vehicle,World,EV_battery,Cars,Cars - PHEV,22.5,20,25
+2030,inflow,kWh/vehicle,World,EV_battery,Heavy Freight Trucks,Heavy Freight Trucks - BEV,650,210,780
+2030,inflow,kWh/vehicle,World,EV_battery,Heavy Freight Trucks,Heavy Freight Trucks - HEV,46.356477373558114,46.356477373558114,46.356477373558114
+2030,inflow,kWh/vehicle,World,EV_battery,Heavy Freight Trucks,Heavy Freight Trucks - PHEV,99.77817213842059,99.77817213842059,99.77817213842059
+2030,inflow,kWh/vehicle,World,EV_battery,Light Commercial Vehicles,Light Commercial Vehicles - BEV,100,100,100
+2030,inflow,kWh/vehicle,World,EV_battery,Light Commercial Vehicles,Light Commercial Vehicles - HEV,10.118110236220472,10.118110236220472,10.118110236220472
+2030,inflow,kWh/vehicle,World,EV_battery,Light Commercial Vehicles,Light Commercial Vehicles - PHEV,21.732283464566933,21.732283464566933,21.732283464566933
+2030,inflow,kWh/vehicle,World,EV_battery,Medium Freight Trucks,Medium Freight Trucks - BEV,350,210,450
+2030,inflow,kWh/vehicle,World,EV_battery,Medium Freight Trucks,Medium Freight Trucks - HEV,25.277777777777775,25.277777777777775,25.277777777777775
+2030,inflow,kWh/vehicle,World,EV_battery,Medium Freight Trucks,Medium Freight Trucks - PHEV,54.44444444444444,54.44444444444444,54.44444444444444
+2030,inflow,kWh/vehicle,World,EV_battery,Midi Buses,Midi Buses - BEV,200,200,200
+2030,inflow,kWh/vehicle,World,EV_battery,Midi Buses,Midi Buses - HEV,12.930402930402929,12.930402930402929,12.930402930402929
+2030,inflow,kWh/vehicle,World,EV_battery,Midi Buses,Midi Buses - PHEV,27.83882783882784,27.83882783882784,27.83882783882784
+2030,inflow,kWh/vehicle,World,EV_battery,Regular Buses,Regular Buses - BEV,400,300,560
+2030,inflow,kWh/vehicle,World,EV_battery,Regular Buses,Regular Buses - HEV,28.726114649681527,28.726114649681527,28.726114649681527
+2030,inflow,kWh/vehicle,World,EV_battery,Regular Buses,Regular Buses - PHEV,61.81528662420382,61.81528662420382,61.81528662420382
+2030,inflow,kWh/vehicle,World,EV_battery,Regular Buses,Regular Buses - Trolley,37.57961783439491,37.57961783439491,37.57961783439491
+2050,inflow,kWh/vehicle,World,EV_battery,Cars,Cars - BEV,72.44999999999999,60,100
+2050,inflow,kWh/vehicle,World,EV_battery,Cars,Cars - HEV,6.279,6.279,6.279
+2050,inflow,kWh/vehicle,World,EV_battery,Cars,Cars - PHEV,25.874999999999996,20,30
+2050,inflow,kWh/vehicle,World,EV_battery,Heavy Freight Trucks,Heavy Freight Trucks - BEV,896.9999999999999,500,950
+2050,inflow,kWh/vehicle,World,EV_battery,Heavy Freight Trucks,Heavy Freight Trucks - HEV,63.97193877551019,63.97193877551019,63.97193877551019
+2050,inflow,kWh/vehicle,World,EV_battery,Heavy Freight Trucks,Heavy Freight Trucks - PHEV,137.6938775510204,137.6938775510204,137.6938775510204
+2050,inflow,kWh/vehicle,World,EV_battery,Light Commercial Vehicles,Light Commercial Vehicles - BEV,114.99999999999999,114.99999999999999,114.99999999999999
+2050,inflow,kWh/vehicle,World,EV_battery,Light Commercial Vehicles,Light Commercial Vehicles - HEV,11.635826771653543,11.635826771653543,11.635826771653543
+2050,inflow,kWh/vehicle,World,EV_battery,Light Commercial Vehicles,Light Commercial Vehicles - PHEV,24.99212598425197,24.99212598425197,24.99212598425197
+2050,inflow,kWh/vehicle,World,EV_battery,Medium Freight Trucks,Medium Freight Trucks - BEV,402.49999999999994,210,580
+2050,inflow,kWh/vehicle,World,EV_battery,Medium Freight Trucks,Medium Freight Trucks - HEV,29.06944444444444,29.06944444444444,29.06944444444444
+2050,inflow,kWh/vehicle,World,EV_battery,Medium Freight Trucks,Medium Freight Trucks - PHEV,62.61111111111111,62.61111111111111,62.61111111111111
+2050,inflow,kWh/vehicle,World,EV_battery,Midi Buses,Midi Buses - BEV,250,250,250
+2050,inflow,kWh/vehicle,World,EV_battery,Midi Buses,Midi Buses - HEV,16.16300366300366,16.16300366300366,16.16300366300366
+2050,inflow,kWh/vehicle,World,EV_battery,Midi Buses,Midi Buses - PHEV,34.7985347985348,34.7985347985348,34.7985347985348
+2050,inflow,kWh/vehicle,World,EV_battery,Regular Buses,Regular Buses - BEV,500,300,650
+2050,inflow,kWh/vehicle,World,EV_battery,Regular Buses,Regular Buses - HEV,35.90764331210191,35.90764331210191,35.90764331210191
+2050,inflow,kWh/vehicle,World,EV_battery,Regular Buses,Regular Buses - PHEV,77.26910828025478,77.26910828025478,77.26910828025478
+2050,inflow,kWh/vehicle,World,EV_battery,Regular Buses,Regular Buses - Trolley,46.97452229299363,46.97452229299363,46.97452229299363

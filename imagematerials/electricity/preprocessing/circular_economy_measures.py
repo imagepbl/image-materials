@@ -8,8 +8,8 @@ from imagematerials.electricity.utils import (
 
 
 def apply_ce_measures_to_elc_generation(materials_array: xr.DataArray,
-                                            lifetime_array: xr.DataArray,
-                                            circular_economy_config: dict):
+                                        lifetime_array: xr.DataArray,
+                                        circular_economy_config: dict):
     """Implement circular economy measures for electricity generation.
 
     Parameters
@@ -31,11 +31,11 @@ def apply_ce_measures_to_elc_generation(materials_array: xr.DataArray,
     """
 
     if "narrow_product" in circular_economy_config.keys():
-        ce_scen = "narrow_product"
-        target_year          = circular_economy_config[ce_scen]['electricity']['target_year']
-        base_year            = circular_economy_config[ce_scen]['electricity']['base_year']
-        implementation_rate  = circular_economy_config[ce_scen]['electricity']['implementation_rate']
-        weight_change_pc = circular_economy_config[ce_scen]['electricity']['generation']['weight_change_pc']
+        ce_scen             = "narrow_product"
+        target_year         = circular_economy_config[ce_scen]['electricity']['target_year']
+        base_year           = circular_economy_config[ce_scen]['electricity']['base_year']
+        implementation_rate = circular_economy_config[ce_scen]['electricity']['implementation_rate']
+        weight_change_pc    = circular_economy_config[ce_scen]['electricity']['generation']['weight_change_pc']
 
         materials_array = apply_ce_measures_to_elc(
             materials_array,
@@ -47,11 +47,11 @@ def apply_ce_measures_to_elc_generation(materials_array: xr.DataArray,
         print("narrow|lightweighting applied to ", materials_array.name)
 
     if "slow" in circular_economy_config.keys():
-        ce_scen = "slow"
-        target_year          = circular_economy_config[ce_scen]['electricity']['target_year']
-        base_year            = circular_economy_config[ce_scen]['electricity']['base_year']
-        implementation_rate  = circular_economy_config[ce_scen]['electricity']['implementation_rate']
-        lifetime_change_pc = circular_economy_config[ce_scen]['electricity']['generation']['lifetime_increase_percent']
+        ce_scen             = "slow"
+        target_year         = circular_economy_config[ce_scen]['electricity']['target_year']
+        base_year           = circular_economy_config[ce_scen]['electricity']['base_year']
+        implementation_rate = circular_economy_config[ce_scen]['electricity']['implementation_rate']
+        lifetime_change_pc  = circular_economy_config[ce_scen]['electricity']['generation']['lifetime_increase_percent']
 
         lifetime_array = apply_ce_measures_to_elc(
             lifetime_array,

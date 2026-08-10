@@ -21,13 +21,11 @@ Model Overview
 - :class:`imagematerials.model.MaterialIntensities`: A class for modeling materials based on material intensities.
 - :class:`imagematerials.model.EndOfLife`: A class for modeling end-of-life material flows.
 - :class:`imagematerials.model.RestOf`: A class for modeling rest-of-economy material consumption.
-- :class:`imagematerials.survival.SurvivalMatrix`: A class for computing survival probabilities based on lifetime distributions.
-- :class:`imagematerials.survival.ScipySurvival`: A class providing scipy-based lifetime distributions for survival calculations.
 
 Key Concepts
 ----------------------
 
-**Dynamic Stock Modeling**: The foundation of IMAGE materials is dynamic stock modeling, which tracks how stocks (e.g. buildings, vehicles, infrastructure) change over time through inflows and outflows via aging processes. This relies on :doc:`survival matrices <survival_matrix>` to model how stocks age and exit the system.
+**Dynamic Stock Modeling**: The foundation of IMAGE materials is dynamic stock modeling, which tracks how stocks (e.g. buildings, vehicles, infrastructure) change over time through inflows and outflows via aging processes. This relies on :doc:`survival matrices <model/survival_matrix>` to model how stocks age and exit the system.
 
 **Cohort-based Tracking**: Stocks are organized by cohorts (age groups), allowing for different properties of the stock over time such as a change in weight or material composition. Each cohort has its own survival characteristics.
 
@@ -80,7 +78,7 @@ Model Description and relationships
 
 The :class:`Factory/Sector <imagematerials.factory.Sector>` class serves as the main orchestrator for model creation and coordination. It manages preprocessing data, coordinates model instantiation, and handles the computational workflow for different sectors. This is the primary entry point for running IMAGE materials models. For detailed documentation, see :doc:`Factory <api/factory>`.
 
-The :class:`GenericStocks <imagematerials.model.GenericStocks>` class provides a flexible framework for modeling stock dynamics. Based on externally defined annual stock levels, it calculates the initial stock and uses :doc:`survival matrices <survival_matrix>` to determine stock aging and outflows. During simulation, the stock inflow and outflow are calculated based on lifetimes which influence the survival matrix of the stock. For detailed documentation, see :doc:`GenericStocks <api/models_detail>`.
+The :class:`GenericStocks <imagematerials.model.GenericStocks>` class provides a flexible framework for modeling stock dynamics. Based on externally defined annual stock levels, it calculates the initial stock and uses :doc:`survival matrices <model/survival_matrix>` to determine stock aging and outflows. During simulation, the stock inflow and outflow are calculated based on lifetimes which influence the survival matrix of the stock. For detailed documentation, see :doc:`GenericStocks <api/models_detail>`.
 
 The :class:`SharesInflowStocks <imagematerials.model.SharesInflowStocks>` class extends the GenericStocks class. It is designed for scenarios where stock inflows are influenced by sub-type share dynamics, allowing for more complex interactions between different stock types. It is for instance used in the :doc:`electricity <api/electricity>` module. For detailed documentation, see :doc:`SharesInflowStocks <api/models_detail>`.
 
@@ -92,9 +90,6 @@ The :class:`EndOfLife <imagematerials.model.EndOfLife>` class models end-of-life
 
 The :class:`RestOf <imagematerials.model.RestOf>` class models material consumption in the rest-of-economy sectors using Gompertz curves based on GDP per capita and population data. For detailed documentation, see :doc:`RestOf <api/models_detail>`.
 
-The :class:`SurvivalMatrix <imagematerials.survival.SurvivalMatrix>` class provides the core functionality for computing survival probabilities over time. It determines how stocks age and when they exit the system based on lifetime distributions. This class is fundamental to all dynamic stock modeling in IMAGE materials. For detailed documentation, see :doc:`SurvivalMatrix <api/models_detail>`.
-
-The :class:`ScipySurvival <imagematerials.survival.ScipySurvival>` class provides scipy-based statistical distributions (normal, Weibull, etc.) for computing survival probabilities. It offers a range of lifetime distribution shapes to model different types of stocks with various aging characteristics. For detailed documentation, see :doc:`ScipySurvival <api/models_detail>`.
 
 **When to Use Each Alternative:**
 
