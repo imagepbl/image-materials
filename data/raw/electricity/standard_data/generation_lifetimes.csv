@@ -57,9 +57,6 @@ Time,type_data,unit,Region,category,technology,sub_technology,value
 2020,inflow,years,World,generation,WOFF,WOFF_DD-PMSG,25
 2050,inflow,years,World,generation,WOFF,WOFF_DD-PMSG,25
 
-2020,inflow,years,World,generation,WOFF,WOFF_DD-EESG,25
-2050,inflow,years,World,generation,WOFF,WOFF_DD-EESG,25
-
 2020,inflow,years,World,generation,WAVE,WAVE_tech1,25
 2050,inflow,years,World,generation,WAVE,WAVE_tech1,25
 

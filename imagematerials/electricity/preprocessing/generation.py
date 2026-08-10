@@ -102,7 +102,7 @@ def get_preprocessing_data_gen(path_base: str,
                             usecols=["Time","technology","sub_technology","value"])        
 
     # material compositions of electricity generation tecnologies (kg/MW)
-    material_intensities = pd.read_csv(path_external_data_standard / "generation_material_intensities.csv",
+    material_intensities = pd.read_csv(path_external_data_standard / "generation_material_intensities_long.csv",
                             usecols=["Time","technology","sub_technology","material","value"], comment="#")#.transpose()
 
     # market shares

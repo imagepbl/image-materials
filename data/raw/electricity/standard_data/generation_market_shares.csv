@@ -27,27 +27,22 @@ Time,type_data,unit,Region,category,technology,sub_technology,value
 2010,inflow,share,World,generation,WOFF,WOFF_GB-DFIG,0.21
 2010,inflow,share,World,generation,WOFF,WOFF_GB-PMSG,0.25
 2010,inflow,share,World,generation,WOFF,WOFF_DD-PMSG,0.54
-2010,inflow,share,World,generation,WOFF,WOFF_DD-EESG,0.00
 
 2020,inflow,share,World,generation,WOFF,WOFF_GB-DFIG,0.065
 2020,inflow,share,World,generation,WOFF,WOFF_GB-PMSG,0.18
 2020,inflow,share,World,generation,WOFF,WOFF_DD-PMSG,0.755
-2020,inflow,share,World,generation,WOFF,WOFF_DD-EESG,0.00
 
 2030,inflow,share,World,generation,WOFF,WOFF_GB-DFIG,0.00
 2030,inflow,share,World,generation,WOFF,WOFF_GB-PMSG,0.15
 2030,inflow,share,World,generation,WOFF,WOFF_DD-PMSG,0.85
-2030,inflow,share,World,generation,WOFF,WOFF_DD-EESG,0.00
 
 2040,inflow,share,World,generation,WOFF,WOFF_GB-DFIG,0.00
 2040,inflow,share,World,generation,WOFF,WOFF_GB-PMSG,0.13
 2040,inflow,share,World,generation,WOFF,WOFF_DD-PMSG,0.88
-2040,inflow,share,World,generation,WOFF,WOFF_DD-EESG,0.00
 
 2050,inflow,share,World,generation,WOFF,WOFF_GB-DFIG,0.00
 2050,inflow,share,World,generation,WOFF,WOFF_GB-PMSG,0.00
 2050,inflow,share,World,generation,WOFF,WOFF_DD-PMSG,1.00
-2050,inflow,share,World,generation,WOFF,WOFF_DD-EESG,0.00
 
 2010,inflow,share,World,generation,CSP,parabolic trough,0.95
 2010,inflow,share,World,generation,CSP,solar tower,0.05
