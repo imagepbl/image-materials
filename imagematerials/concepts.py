@@ -366,9 +366,8 @@ class KnowledgeGraph():
                            dim_shares: Optional[str] = None):
         """Disaggregate supertypes into subtypes.
 
-        If shares for the subtypes are provided,
-        the values of the input_array data is adjusted accordingly
-        (value of supertype * shares = values of subtypes).
+        If shares for the subtypes are provided, the values of the input_array data is adjusted 
+        accordingly (value of supertype * shares = values of subtypes).
         If no shares are provided, the value of the supertype is taken for all subtypes.
 
         Parameters
@@ -1147,6 +1146,209 @@ def create_electricity_graph():
     
     return electricity_knowledge_graph
 
+def create_materials_graph():
+    materials_knowledge_graph = KnowledgeGraph(Node("Materials"))
+
+    materials_knowledge_graph.add(Node("bulk_materials", inherits_from="Materials"))
+    materials_knowledge_graph.add(Node("speciality_materials", inherits_from="Materials"))
+    materials_knowledge_graph.add(Node("strategic_raw_materials", synonyms=["SRM"], inherits_from="Materials"))
+    materials_knowledge_graph.add(Node("critical_raw_materials", synonyms=["CRM"], inherits_from="Materials"))
+
+    materials = {
+        "aggregate":  [],
+        "alumina": ["Al2O3", "aluminium oxide"],
+        "aluminium": ["Al", "aluminum"],
+        "antimony": ["Sb"],
+        "arsenic": ["As"],
+        "asphalt": [],
+        "baryte": ["barite", "BaSO4", "barium sulfate"],
+        "bauxite": ["aluminium ore"],
+        "beryllium": ["Be"],
+        "bismuth": ["Bi"],
+        "boron": ["B"],
+        "brick": [],
+        "bronze": ["CuSn", "copper-tin alloy"],
+        "cadmium": ["Cd"],
+        "carbon": ["C"],
+        "cement": [],
+        "chromium": ["Cr"],
+        "cobalt": ["Co"],
+        "coking_coal": ["metallurgical coal"],
+        "concrete": [],
+        "copper": ["Cu"],
+        "feldspar": [],
+        "fluorspar": ["fluorite", "CaF2", "calcium fluoride"],
+        "gallium": ["Ga"],
+        "germanium": ["Ge"],
+        "glass": [],
+        "graphite": [],
+        "hafnium": ["Hf"],
+        "helium": ["He"],
+        "indium": ["In"],
+        "lead": ["Pb"],
+        "lithium": ["Li"],
+        "magnesium": ["Mg"],
+        "manganese": ["Mn"],
+        "molybdenum": ["Mo"],
+        "nickel": ["Ni"],
+        "niobium": ["Nb"],
+        "phosphate_rock": ["rock phosphate"],
+        "phosphorous": ["P", "phosphorus"],
+        "plastics": ["polymers"],
+        "rubber": [],
+        "selenium": ["Se"],
+        "silicon": ["Si"],
+        "silver": ["Ag"],
+        "sodium": ["Na"],
+        "steel": [],
+        "stone": [],
+        "strontium": ["Sr"],
+        "tantalum": ["Ta"],
+        "tellurium": ["Te"],
+        "tin": ["Sn"],
+        "titanium": ["Ti"],
+        "tungsten": ["W", "wolfram"],
+        "vanadium": ["V"],
+        "wood": ["timber"],
+        "zinc": ["Zn"],
+        "zirconium": ["Zr"],
+
+        # group nodes ------------------------------------------------------------------------------
+        # since later we loop over the materials and add them to the graph, we need to add the group 
+        # nodes first, so that they are available when we add the individual materials
+        "rare_earth_elements": ["REE"],  # group node
+        "light_rare_earth_elements": ["LREE"],  # group node
+        "heavy_rare_earth_elements": ["HREE"],  # group node
+        "scandium": ["Sc"],
+        "lanthanum": ["La"],
+        "cerium": ["Ce"],
+        "praseodymium": ["Pr"],
+        "neodymium": ["Nd"],
+        "promethium": ["Pm"],
+        "samarium": ["Sm"],
+        "europium": ["Eu"],
+        "gadolinium": ["Gd"],
+        "yttrium": ["Yt"],
+        "terbium": ["Tb"],
+        "dysprosium": ["Dy"],
+        "holmium": ["Ho"],
+        "erbium": ["Er"],
+        "thulium": ["Tm"],
+        "ytterbium": ["Yb"],
+        "lutetium": ["Lu"],
+
+        "platinum_group_metals": ["PGM"],  # group node
+        "ruthenium": ["Ru"],
+        "rhodium": ["Rh"],
+        "palladium": ["Pd"],
+        "osmium": ["Os"],
+        "iridium": ["Ir"],
+        "platinum": ["Pt"],
+
+    }
+ 
+    materials_mapping = {
+        "aggregate": ["bulk_materials"],
+        "alumina": ["critical_raw_materials", "strategic_raw_materials"],
+        "aluminium": ["bulk_materials", "critical_raw_materials", "strategic_raw_materials"],
+        "antimony": ["speciality_materials", "critical_raw_materials"],
+        "arsenic": ["speciality_materials", "critical_raw_materials"],
+        "asphalt": ["bulk_materials"],
+        "baryte": ["speciality_materials", "critical_raw_materials"],
+        "bauxite": ["critical_raw_materials", "strategic_raw_materials"],
+        "beryllium": ["speciality_materials", "critical_raw_materials"],
+        "bismuth": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"],
+        "boron": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"],  # SRM = metallurgy grade only
+        "brick": ["bulk_materials"],
+        "bronze": ["bulk_materials"],
+        "cadmium": ["speciality_materials"],
+        "carbon": ["speciality_materials"],
+        "cement": ["bulk_materials"],
+        "chromium": ["speciality_materials"],
+        "cobalt": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"],
+        "coking_coal": ["bulk_materials", "critical_raw_materials"],
+        "concrete": ["bulk_materials"],
+        "copper": ["bulk_materials", "critical_raw_materials", "strategic_raw_materials"],
+        # "dysprosium": see group node below
+        "feldspar": ["speciality_materials", "critical_raw_materials"],
+        "fluorspar": ["speciality_materials", "critical_raw_materials"],
+        "gallium": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"],
+        "germanium": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"],
+        "glass": ["bulk_materials"],
+        "graphite": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"],  # SRM = battery grade only
+        "hafnium": ["speciality_materials", "critical_raw_materials"],
+        "helium": ["speciality_materials", "critical_raw_materials"],
+        "indium": ["speciality_materials"],
+        "lead": ["speciality_materials"],
+        "lithium": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"],  # SRM = battery grade only
+        "magnesium": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"],  # SRM = magnesium metal
+        "manganese": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"],  # SRM = battery grade only
+        "molybdenum": ["speciality_materials"],
+        # "neodymium":  see group node below
+        "nickel": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"],  # both = battery grade only
+        "niobium": ["speciality_materials", "critical_raw_materials"],
+        "phosphate_rock": ["speciality_materials", "critical_raw_materials"],
+        "phosphorous": ["speciality_materials", "critical_raw_materials"],
+        "plastics": ["bulk_materials"],
+        "platinum_group_metals": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"],
+        # "praseodymium": see group node below
+        "rubber": ["bulk_materials"],
+        "selenium": ["speciality_materials"],
+        "silicon": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"], #silicon metal
+        "silver": ["speciality_materials"],
+        "sodium": ["speciality_materials"],
+        "steel": ["bulk_materials"],
+        "stone": ["bulk_materials"],
+        "strontium": ["speciality_materials", "critical_raw_materials"],
+        "tantalum": ["speciality_materials", "critical_raw_materials"],
+        "tellurium": ["speciality_materials"],
+        # "terbium": see group node below
+        "tin": ["speciality_materials"],
+        "titanium": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"],
+        "tungsten": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"],
+        "vanadium": ["speciality_materials", "critical_raw_materials"],
+        "wood": ["bulk_materials"],
+        "zinc": ["speciality_materials"],
+        "zirconium": ["speciality_materials"],
+
+        # group nodes ------------------------------------------------------------------------------
+        "rare_earth_elements": ["speciality_materials", "critical_raw_materials"],
+        "light_rare_earth_elements": ["rare_earth_elements"],
+        "heavy_rare_earth_elements": ["rare_earth_elements"],
+        "scandium": ["rare_earth_elements"],
+        "lanthanum": ["light_rare_earth_elements"],
+        "cerium": ["light_rare_earth_elements"],
+        "praseodymium": ["light_rare_earth_elements"],
+        "neodymium": ["light_rare_earth_elements"],
+        "promethium": ["light_rare_earth_elements"],
+        "samarium": ["light_rare_earth_elements"],
+        "europium": ["light_rare_earth_elements"],
+        "gadolinium": ["light_rare_earth_elements"],
+        "yttrium": ["heavy_rare_earth_elements"],
+        "terbium": ["heavy_rare_earth_elements"],
+        "dysprosium": ["heavy_rare_earth_elements"],
+        "holmium": ["heavy_rare_earth_elements"],
+        "erbium": ["heavy_rare_earth_elements"],
+        "thulium": ["heavy_rare_earth_elements"],
+        "ytterbium": ["heavy_rare_earth_elements"],
+        "lutetium": ["heavy_rare_earth_elements"],
+
+        "platinum_group_metals": ["speciality_materials", "critical_raw_materials"],
+        "ruthenium": ["platinum_group_metals"],
+        "rhodium": ["platinum_group_metals"],
+        "palladium": ["platinum_group_metals"],
+        "osmium": ["platinum_group_metals"],
+        "iridium": ["platinum_group_metals"],
+        "platinum": ["platinum_group_metals"]
+
+    }
+
+
+    for id, synonyms in materials.items():
+            parent = materials_mapping.get(id)
+            materials_knowledge_graph.add(Node(id, synonyms=synonyms, inherits_from=parent))
+
+    return materials_knowledge_graph
 
 knowledge_graph = KnowledgeGraph(*create_building_graph()._items, *create_vehicle_graph()._items, *create_electricity_graph()._items)
 
