@@ -6,7 +6,6 @@ from typing import Callable, ClassVar, Optional
 import numpy as np
 import pint_xarray
 import prism
-from prism._time_variable import TimeVariable
 import xarray as xr
 from pint import UnitRegistry
 
@@ -20,7 +19,7 @@ STOCK_TYPE = prism.Dimension("Type")
 STOCK_SUPERTYPE = prism.Dimension("SuperType")
 COHORT = prism.Dimension("Cohort")
 QUINTILE = prism.Dimension("Quintile")
-TIME = prism.Dimension("Time")
+TIME = prism.Dimension("time")
 MATERIAL_TYPE = prism.Dimension("material")
 BATTERY_TYPE = prism.Dimension("BatteryType")
 EOL_TYPE = prism.Dimension("eoltype")
@@ -76,7 +75,7 @@ class GenericStocks(prism.Model):
     # stock_by_cohort: prism.TimeVariable[Region, Mode, Cohort, "count"] = prism.export(initial_value = prism.Array[Region, Mode, Cohort, 'count'](0.0))
     inflow: prism.TimeVariable[REGION, STOCK_TYPE, UnitFlexibleStock] = prism.export()
     outflow_by_cohort: prism.TimeVariable[REGION, STOCK_TYPE, COHORT, UnitFlexibleStock] = prism.export()
-   
+
     def compute_initial_values(self, time: prism.Timeline):
         """Compute the initial values for stocks and the survival matrix.
         Note:
@@ -89,14 +88,12 @@ class GenericStocks(prism.Model):
             The simulation timeline.
         """
   
-        raw_matrix = lifetimes_to_matrix(self.lifetimes, self.stocks.coords["Type"],
+        self.survival_matrix = lifetimes_to_matrix(self.lifetimes, self.stocks.coords["Type"],
                                                    knowledge_graph=self.knowledge_graph)
-        raw_matrix = raw_matrix.rename({"Time": "time"}) 
-        self.survival_matrix = TimeVariable.from_array(raw_matrix)
         self.stock_by_cohort = xr.DataArray(
             0.0,
-            dims=("Time", "Cohort", "Region", "Type"),
-            coords={"Time": self.Time,
+            dims=("time", "Cohort", "Region", "Type"),
+            coords={"time": self.Time,
                     "Cohort": self.Cohort,
                     "Region": self.Region,
                     "Type": self.Type})
@@ -131,7 +128,7 @@ class GenericStocks(prism.Model):
             # t_future = int(t_future)
             # stock_by_cohort[t_future].loc[{"Cohort": t_str}] = inflow[t]*survival[t_future, t]
 
-        for t_future in self.stock_by_cohort.coords["Time"].loc[t:].values:
+        for t_future in self.stock_by_cohort.coords["time"].loc[t:].values:
             t_future = int(t_future)
             self.stock_by_cohort.loc[t_future, t] = (
                 self.inflow[t] * self.survival_matrix[t_future].sel(Cohort=t)
@@ -211,15 +208,12 @@ class StocksQuintiles(prism.Model):
             The simulation timeline.
         """
   
-        raw_matrix = lifetimes_to_matrix(self.lifetimes, self.stocks.coords["Type"],
+        self.survival_matrix = lifetimes_to_matrix(self.lifetimes, self.stocks.coords["Type"],
                                                    knowledge_graph=self.knowledge_graph)
-        raw_matrix = raw_matrix.rename({"Time": "time"})
-        self.survival_matrix = TimeVariable.from_array(raw_matrix)
-
         self.stock_by_cohort = xr.DataArray(
             0.0,
-            dims=("Time", "Cohort", "Region", "Type", "Quintile"),
-            coords={"Time": self.Time,
+            dims=("time", "Cohort", "Region", "Type", "Quintile"),
+            coords={"time": self.Time,
                     "Cohort": self.Cohort,
                     "Region": self.Region,
                     "Type": self.Type,
@@ -251,7 +245,7 @@ class StocksQuintiles(prism.Model):
 
         self.inflow[t] = stock_diff
         # calculate future development of the current cohort (inflow at time t; t: = time from current time onwards, t = cohort of time t)
-        for t_future in self.stock_by_cohort.coords["Time"].loc[t:].values:
+        for t_future in self.stock_by_cohort.coords["time"].loc[t:].values:
             t_future = int(t_future)
             self.stock_by_cohort.loc[t_future, t] = self.inflow[t] * self.survival_matrix[t_future].sel(Cohort=t)
 
@@ -285,7 +279,7 @@ class SharesInflowStocks(prism.Model):
         Defines the stock sub types (e.g., different storage sub types (NMC, LFP etc.)).
     Cohort : prism.Coords[COHORT]
         Defines the cohorts (e.g., different age groups of stock).
-    Time : prism.Coords[TIME]
+    time : prism.Coords[TIME]
         Defines the time steps for the stock simulation.
     lifetimes : xr.DataArray
         Expected lifetimes for each stock type.
@@ -341,14 +335,12 @@ class SharesInflowStocks(prism.Model):
 
         """
         types_to_model = next(iter(self.lifetimes.values())).coords["Type"].values
-        raw_matrix = lifetimes_to_matrix(self.lifetimes, types_to_model,
+        self.survival_matrix = lifetimes_to_matrix(self.lifetimes, types_to_model,
                                                    knowledge_graph=self.knowledge_graph)
-        raw_matrix = raw_matrix.rename({"Time": "time"})
-        self.survival_matrix = TimeVariable.from_array(raw_matrix)
         self.stock_by_cohort = xr.DataArray(
             0.0,
-            dims=("Time", "Cohort", "Region", "Type"),
-            coords={"Time":     self.Time,
+            dims=("time", "Cohort", "Region", "Type"),
+            coords={"time":     self.Time,
                     "Cohort":   self.Cohort,
                     "Region":   self.Region,
                     "Type":     types_to_model})
@@ -389,7 +381,7 @@ class SharesInflowStocks(prism.Model):
         self.inflow[t] = inflow_tech
 
         # calculate future development of the current cohort (inflow at time t; t: = time from current time onwards, t = cohort of time t)
-        for t_future in self.stock_by_cohort.coords["Time"].loc[t:].values:
+        for t_future in self.stock_by_cohort.coords["time"].loc[t:].values:
             t_future = int(t_future)
             self.stock_by_cohort.loc[t_future, t] = self.inflow[t] * self.survival_matrix[t_future].sel(Cohort=t)
 
@@ -463,8 +455,8 @@ class GenericMaterials(prism.Model):
             The simulation timeline.
         """
         self.stock_by_cohort_materials = xr.DataArray(
-            0.0, dims=("Time", "Region", "Type", "material"),
-            coords={"Time": self.Time,
+            0.0, dims=("time", "Region", "Type", "material"),
+            coords={"time": self.Time,
                     # "Cohort": coordinates["Time"].values,
                     "Region": self.Region,
                     "Type": self.Type,
@@ -556,8 +548,8 @@ class MaterialIntensities(prism.Model):
         """
         
         self.stock_by_cohort_materials = xr.DataArray(
-            0.0, dims=("Time", "Region", "Type", "material"),
-            coords={"Time": self.Time,
+            0.0, dims=("time", "Region", "Type", "material"),
+            coords={"time": self.Time,
                     # "Cohort": coordinates["Time"].values,
                     "Region": self.Region,
                     "Type": self.Type,
@@ -653,8 +645,8 @@ class MaterialIntensitiesQuintiles(prism.Model):
         """
         
         self.stock_by_cohort_materials = xr.DataArray(
-            0.0, dims=("Time", "Region", "Type", "Quintile", "material"),
-            coords={"Time": self.Time,
+            0.0, dims=("time", "Region", "Type", "Quintile", "material"),
+            coords={"time": self.Time,
                     # "Cohort": coordinates["Time"].values,
                     "Region": self.Region,
                     "Type": self.Type,
@@ -711,7 +703,7 @@ class GenericMainModel(prism.Model):
         The type of stock (e.g., vehicles).
     Cohort : prism.Coords
         Cohort groups within the stock.
-    Time : prism.Coords
+    time : prism.Coords
         Time steps in the simulation.
     material : prism.Coords
         Material type used in the model.
@@ -771,7 +763,7 @@ class GenericMainModel(prism.Model):
         # EV Battery materials
         if self.compute_battery_materials:
             self.battery_model = Battery(
-                self.complete_timeline, Region=self.Region, Type=self.Type, Cohort=self.Cohort, Time=self.Time, 
+                self.complete_timeline, Region=self.Region, Type=self.Type, Cohort=self.Cohort, Time=self.Time,
                 material=self.material, battery  = self.battery, battery_weights=self.prep_data["battery_weights"],
                 battery_material_fractions=self.prep_data["battery_materials"], battery_shares = self.prep_data["battery_shares"]
             )
@@ -946,7 +938,7 @@ class EndOfLife(prism.Model):
                 sum_outflow = sum_outflow.reindex(material=target_mats, fill_value=0)
                 # --- harmonize coordinates ---
                 coords = {"Type": supertype, "material": target_mats, "Region": sum_outflow.coords["Region"]}    
-                input_coords = {"Time":t, "Type":supertype} 
+                input_coords = {"time":t, "Type":supertype} 
                 
                 # store sum outflow
                 self.sum_outflow[t].loc[coords] = sum_outflow
@@ -993,7 +985,7 @@ class EndOfLife(prism.Model):
                 sum_inflow = sum_inflow.reindex_like(collection, fill_value=0)
             
                 coords = {"Type": supertype, "material": sum_inflow.coords["material"], "Region": sum_inflow.coords["Region"]}
-                input_coords = {"Time":t, "Type":supertype}
+                input_coords = {"time":t, "Type":supertype}
 
                 self.sum_inflow[t].loc[coords] = sum_inflow
 
@@ -1053,9 +1045,9 @@ class RestOf(prism.Model):
 
         if t > 1970:
             # extract coefficients for all regions/materials
-            a = gompertz_coefs.sel(coef='a', Time = t)
-            b = gompertz_coefs.sel(coef='b', Time = t)
-            c = gompertz_coefs.sel(coef='c', Time = t)
+            a = gompertz_coefs.sel(coef='a', time = t)
+            b = gompertz_coefs.sel(coef='b', time = t)
+            c = gompertz_coefs.sel(coef='c', time = t)
             # calculate per capita inflow for the rest of the world based on gompertz function with gdp per capita as input
             self.inflow_per_capita_rest = (a * np.exp(-b * np.exp(-c * gdp_per_capita.loc[t])))
             self.inflow_per_capita_rest = prism.Q_(self.inflow_per_capita_rest, "t/person")
@@ -1074,7 +1066,7 @@ class RestOf(prism.Model):
 
             # Smoothly transition from the last available historic value to modeled values.
             # This avoids an abrupt jump in the first years after historic observations end.
-            current_historic_value = historic_diff_consumption_total.sel(Time=t)
+            current_historic_value = historic_diff_consumption_total.sel(time=t)
             # Identify where this timestep still has real historical observations.
             current_valid_historic_mask = ~np.isnan(current_historic_value)
             # Update cache only where historic data exists; otherwise keep previous cache.
@@ -1111,7 +1103,7 @@ class RestOf(prism.Model):
 
             # 3) Final precedence rule: whenever real historic data exists at this year,
             # overwrite modeled values for those points.
-            historic_at_t = historic_diff_consumption_total.sel(Time=t)
+            historic_at_t = historic_diff_consumption_total.sel(time=t)
             real_historic_data_mask = ~np.isnan(historic_at_t)
             self.inflow_materials.loc[t] = xr.where(
                 real_historic_data_mask, # mask for True or False
@@ -1184,8 +1176,8 @@ class EvBatteryLinkModule(prism.Model):
         """
         self.stocks = xr.DataArray(
             0.0,
-            dims=("Time", "Region", "SuperType"),
-            coords={"Time":     self.Time,
+            dims=("time", "Region", "SuperType"),
+            coords={"time":     self.Time,
                     "Region":   self.Region,
                     "SuperType":   self.stocks_non_phs.coords["SuperType"]})
         self.stocks = prism.Q_(self.stocks, self.set_unit_flexible)
@@ -1275,8 +1267,8 @@ class ElectricVehicleBatteries(prism.Model):
 
         self.stock_battery_kWh_v2g = xr.DataArray(
             0.0,
-            dims=("Time", "Type", "BatteryType", "Region"), 
-            coords={"Time":         self.Time,
+            dims=("time", "Type", "BatteryType", "Region"), 
+            coords={"time":         self.Time,
                     "BatteryType":  self.BatteryType,
                     "Type":         self._types_v2g,
                     "Region":       self.Region})
@@ -1339,4 +1331,4 @@ class ElectricVehicleBatteries(prism.Model):
 
         # 3. Calculate V2G capable battery energy capacity stock (kWh) (to calculate "Other storage" only the V2G battery stock is needed)
         stock_v2g = self.stock_battery_kWh[t].sel(Type=self._types_v2g) * self.vhc_fraction_v2g
-        self.stock_battery_kWh_v2g.loc[dict(Time=t, Type=self._types_v2g)]  = (stock_v2g.sel(Time=t).drop_vars("Time") * self.capacity_fraction_v2g).sum(["Cohort"])
+        self.stock_battery_kWh_v2g.loc[dict(time=t, Type=self._types_v2g)]  = (stock_v2g.sel(time=t).drop_vars("time") * self.capacity_fraction_v2g).sum(["Cohort"])

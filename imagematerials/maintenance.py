@@ -19,7 +19,7 @@ from imagematerials.concepts import create_vehicle_graph
 REGION = prism.Dimension("Region")
 STOCK_TYPE = prism.Dimension("Type")
 COHORT = prism.Dimension("Cohort")
-TIME = prism.Dimension("Time")
+TIME = prism.Dimension("time")
 MATERIAL_TYPE = prism.Dimension("material")
 
 ureg = UnitRegistry()
