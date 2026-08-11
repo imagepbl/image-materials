@@ -73,7 +73,7 @@ def read_gompertz_values(base_directory, scenario: str):
 
     Notes
     -----
-    - The returned DataArray has dimensions including 'coef', 'material', 'Region', and 'Time'.
+    - The returned DataArray has dimensions including 'coef', 'material', 'Region', and 'time'.
     - Only the 'a' coefficient is adapted for resource efficiency scenarios.
     - The function expects regions to be numeric strings for sorting.
     """
@@ -119,12 +119,12 @@ def read_image_gdp_cap_data(base_directory, image_scenario_directory):
     # to xarry
     # drop empty and global region
     gdp_per_capita = gdp_per_capita.loc[:, :26]
-    gdp_per_capita = gdp_per_capita.rename_axis(index = "Time", columns = "Region")
+    gdp_per_capita = gdp_per_capita.rename_axis(index = "time", columns = "Region")
 
     gdp_per_capita_xr = xr.DataArray(
         data=gdp_per_capita.values,                # Data values from the DataFrame
-        dims=["Time", "Region"],            # Names for the two dimensions
-        coords={"Time": gdp_per_capita.index,      # Time coordinates from the DataFrame index
+        dims=["time", "Region"],            # Names for the two dimensions
+        coords={"time": gdp_per_capita.index,      # time coordinates from the DataFrame index
                 "Region": gdp_per_capita.columns}  # Region coordinates from the DataFrame columns
     )
     gdp_per_capita_xr.coords["Region"]  = [str(x.values) for x in gdp_per_capita_xr.coords["Region"]]
@@ -159,8 +159,8 @@ def rest_of_preprocessing(base_directory, image_scenario_directory, scenario: st
     historic_diff_consumption_total = read_historic_diff_cons_data(base_directory)
     population = compute_population(image_scenario_directory, base_directory)
     # Filter to total population from 1971 onward.
-    population = population.sel(Area="Total", Time=slice(1971, None)).drop_vars("Area")
-    # Total is duplicated across Quintile; collapse to a single Time x Region series.
+    population = population.sel(Area="Total", time=slice(1971, None)).drop_vars("Area")
+    # Total is duplicated across Quintile; collapse to a single time x Region series.
     if "Quintile" in population.dims:
         population = population.mean("Quintile")
     # from nr to Region abbreviations

@@ -138,9 +138,6 @@ def calcualte_resource_efficiency_measures():
     # per-year multiplier (choose sign correctly: reductions -> 1 - r_frac)
     per_year_multiplier = 1 - (all_materials_resource_eff_procentual / 100.0) 
 
-    # rename coordinate per_year_multiplier from time to Time
-    per_year_multiplier = per_year_multiplier.rename({'time':'Time'})
-
     a0_expanded = a0.copy()
     a_t = (a0_expanded * per_year_multiplier)
     gompertz_eff = gompertz_original.copy()
