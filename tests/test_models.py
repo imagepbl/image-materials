@@ -4,7 +4,6 @@ import inspect
 from dataclasses import is_dataclass
 from imagematerials.lifetimes import lifetimes_to_matrix
 import prism
-from prism._time_variable import TimeVariable
 import pytest
 import xarray as xr
 from pytest import mark
@@ -76,9 +75,9 @@ def _get_xarray(coordinates, *dims):
 
 def test_generic_stocks(coordinates, timelines):
     """Test the GenericStocks model."""
-    stocks = _get_xarray(coordinates, "Time", "Region", "Type")
+    stocks = _get_xarray(coordinates, "Time", "Region", "Type").rename({"Time": "time"})
     stocks = prism.Q_(stocks, "count")
-    lt =  _get_xarray(coordinates, "Time", "Region", "Type", "ScipyParam")
+    lt =  _get_xarray(coordinates, "Time", "Region", "Type", "ScipyParam").rename({"Time": "time"})
     lt.attrs["loc"] = 0
     lifetimes = {"weibull": lt}
     complete_timeline, simulation_timeline = timelines
@@ -94,7 +93,7 @@ def test_generic_stocks(coordinates, timelines):
     for t in coordinates["Time"]:
         assert (model.stock_by_cohort.loc[t].sum("Cohort") == stocks.loc[t]).all()
 
-    assert isinstance(model.survival_matrix, TimeVariable)
+    assert isinstance(model.survival_matrix, prism.TimeVariable)
     assert "time" in model.survival_matrix.to_array().dims
     assert "Cohort" in [d.label for d in model.survival_matrix.dims]
 
@@ -102,11 +101,11 @@ def test_generic_stocks(coordinates, timelines):
     t0 = coordinates["Time"][0]
     assert np.allclose(model.survival_matrix[t0].sel(Cohort=t0).values, 1.0)
 
-    raw = lifetimes_to_matrix(lifetimes, stocks.coords["Type"], knowledge_graph=knowledge_graph).rename({"Time": "time"})
+    raw = lifetimes_to_matrix(lifetimes, stocks.coords["Type"], knowledge_graph=knowledge_graph)
     t, t_future = coordinates["Time"][0], coordinates["Time"][2]
     assert np.allclose(
         model.survival_matrix[t_future].sel(Cohort=t).values,
-        raw.sel(time=t_future, Cohort=t).values
+        raw[t_future].sel(Cohort=t).values 
     )
 
 
@@ -120,14 +119,14 @@ def test_knowledge_graph():
     )
 def test_shares_inflow_stocks(coordinates, timelines, test_knowledge_graph):
     """Test the SharesInflowStocks model."""
-    stocks = _get_xarray(coordinates, "Time", "Region", "SuperType")
+    stocks = _get_xarray(coordinates, "Time", "Region", "SuperType").rename({"Time": "time"})
     stocks = prism.Q_(stocks, "count")
 
    
     shares = _get_xarray(coordinates, "Region", "Type", "Cohort")
     shares = shares / shares.sum("Type") 
 
-    lt = _get_xarray(coordinates, "Time", "Region", "Type", "ScipyParam")
+    lt = _get_xarray(coordinates, "Time", "Region", "Type", "ScipyParam").rename({"Time": "time"})
     lt.attrs["loc"] = 0
     lifetimes = {"weibull": lt}
 
@@ -164,18 +163,18 @@ def test_shares_inflow_stocks(coordinates, timelines, test_knowledge_graph):
         # inflow is always positive, so stock equals demand exactly.
         assert (stock_by_supertype == stocks.loc[t]).all()
 
-    assert isinstance(model.survival_matrix, TimeVariable)
+    assert isinstance(model.survival_matrix, prism.TimeVariable)
     assert "Cohort" in [d.label for d in model.survival_matrix.dims]
 
     t0 = coordinates["Time"][0]
     assert np.allclose(model.survival_matrix[t0].sel(Cohort=t0).values, 1.0)
 
     types_to_model = next(iter(lifetimes.values())).coords["Type"].values
-    raw = lifetimes_to_matrix(lifetimes, types_to_model, knowledge_graph=test_knowledge_graph).rename({"Time": "time"})
+    raw = lifetimes_to_matrix(lifetimes, types_to_model, knowledge_graph=test_knowledge_graph)
     t, t_future = coordinates["Time"][0], coordinates["Time"][2]
     assert np.allclose(
         model.survival_matrix[t_future].sel(Cohort=t).values,
-        raw.sel(time=t_future, Cohort=t).values
+        raw[t_future].sel(Cohort=t).values
     )
 
 def test_electric_vehicle_batteries(coordinates, timelines):
@@ -205,8 +204,8 @@ def test_electric_vehicle_batteries(coordinates, timelines):
 
     # stock_by_cohort uses .loc[t] in the model, so plain Q_ with "Time" dim works
     stock_by_cohort = xr.DataArray(
-        50.0, dims=("Time", "Cohort", "Region", "Type"),
-        coords={"Time": time_coords, "Cohort": cohort_coords,
+        50.0, dims=("time", "Cohort", "Region", "Type"),
+        coords={"time": time_coords, "Cohort": cohort_coords,
                 "Region": region_coords, "Type": EV_VEHICLE_TYPES})
     stock_by_cohort = prism.Q_(stock_by_cohort, "count")
 
@@ -232,9 +231,9 @@ def test_electric_vehicle_batteries(coordinates, timelines):
     material_intensities = prism.Q_(material_intensities, "kg/kWh")
 
     vhc_fraction_v2g = xr.DataArray(
-    0.8, dims=("Type", "Time", "Cohort"),
+    0.8, dims=("Type", "time", "Cohort"),
     coords={"Type": v2g_types,
-            "Time": time_coords,
+            "time": time_coords,
             "Cohort": cohort_coords})
     
     capacity_fraction_v2g = xr.DataArray(
@@ -290,5 +289,5 @@ def test_electric_vehicle_batteries(coordinates, timelines):
 
     # V2G stock ≤ total stock
     total_stock_kwh = prism.M_(model.stock_battery_kWh[t].sum())
-    v2g_stock_kwh = prism.M_(model.stock_battery_kWh_v2g.loc[dict(Time=t)].sum())
+    v2g_stock_kwh = prism.M_(model.stock_battery_kWh_v2g.loc[dict(time=t)].sum())
     assert v2g_stock_kwh <= total_stock_kwh
