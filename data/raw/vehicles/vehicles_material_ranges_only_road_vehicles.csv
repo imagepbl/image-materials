@@ -1,4 +1,4 @@
-time,category,unit,technology,material,min,max
+time,sector,unit,technology,material,min,max
 2020,transport,fraction,bicycle,aluminium,0.414,0.506
 2020,transport,fraction,bicycle,cobalt,0.0,0.0
 2020,transport,fraction,bicycle,copper,0.0,0.0

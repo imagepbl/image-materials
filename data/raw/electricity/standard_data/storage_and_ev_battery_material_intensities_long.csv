@@ -1,4 +1,4 @@
-Time,type_data,unit,Region,category,technology,sub_technology,material,value,min,max
+Time,type_data,unit,Region,sector,category,sub_technology,material,value,min,max
 2020,inflow,kg/kWh,World,storage,battery,Na-ion,steel,1.176,1.176,1.176
 2020,inflow,kg/kWh,World,storage,battery,Na-ion,aluminium,0.26,0.26,0.26
 2020,inflow,kg/kWh,World,storage,battery,Na-ion,plastics,0.835,0.835,0.835

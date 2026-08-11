@@ -30,11 +30,11 @@ Time,type_data,unit,Region,category,technology,sub_technology,value
 2020,inflow,years,World,generation,SPVR,SPVR_a-Si,25
 2050,inflow,years,World,generation,SPVR,SPVR_a-Si,25
 
-2020,inflow,years,World,generation,CSP,parabolic trough,25
-2050,inflow,years,World,generation,CSP,parabolic trough,25
+2020,inflow,years,World,generation,CSP,CSP_parabolic trough,25
+2050,inflow,years,World,generation,CSP,CSP_parabolic trough,25
 
-2020,inflow,years,World,generation,CSP,solar tower,25
-2050,inflow,years,World,generation,CSP,solar tower,25
+2020,inflow,years,World,generation,CSP,CSP_solar tower,25
+2050,inflow,years,World,generation,CSP,CSP_solar tower,25
 
 2020,inflow,years,World,generation,WON,WON_GB-DFIG,25
 2050,inflow,years,World,generation,WON,WON_GB-DFIG,25

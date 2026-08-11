@@ -43,7 +43,8 @@ from imagematerials.electricity.utils import (
 from imagematerials.electricity.constants import (
     YEAR_FIRST_GRID,
     EPG_TECHNOLOGIES,
-    # EPG_SUB_TECHNOLOGIES,
+    EPG_TECHNOLOGIES_FINAL,
+    EPG_SUB_TECHNOLOGIES,
 )
 from imagematerials.vehicles.constants import (
     vehicles_modes_sensitivity_analysis,
@@ -65,6 +66,7 @@ dict_sector_knowledge_graph = {
 }
 dict_sector_types = {
     "vehicles": vehicles_modes_sensitivity_analysis,
+    "electricity": EPG_SUB_TECHNOLOGIES,
 }
 dict_sector_start_year = {
     "vehicles": FIRST_YEAR,
@@ -74,9 +76,40 @@ dict_sector_end_year = {
     "vehicles": END_YEAR,
     "electricity": 2100
 }
+dict_sector_separator = {
+    "vehicles": " - ",
+    "electricity": "_",
+}
 
 # ===========================================================================
-# 0. Distribution registry
+# 0. Helpers
+# ===========================================================================
+
+def _merge_type_subtype(df: pd.DataFrame, sector: str) -> pd.DataFrame:
+    """Merge 'Type' and 'SubType' columns into 'Type', separator depends on sector.
+
+    If 'SubType' is not present in df, df is returned unchanged.
+    Rows with an empty/NaN SubType keep 'Type' unmodified (no dangling separator).
+    """
+    if "SubType" not in df.columns:
+        return df
+
+    if sector not in dict_sector_separator:
+        raise ValueError(
+            f"Unknown sector '{sector}'; expected one of {list(dict_sector_separator)}"
+        )
+    separator = dict_sector_separator[sector]
+
+    df = df.copy()
+    has_sub = df["SubType"].notna() & (df["SubType"].astype(str).str.strip() != "")
+    df["Type"] = df["Type"].astype(str)
+    df.loc[has_sub, "Type"] = (
+        df.loc[has_sub, "Type"] + separator + df.loc[has_sub, "SubType"].astype(str)
+    )
+    return df.drop(columns="SubType")
+
+# ===========================================================================
+# 1. Distribution registry
 # ===========================================================================
 # Each sampler gets (rng, block) where `block` is a DataFrame containing ALL the
 # rows that use that distribution. numpy broadcasts over the columns, so one call
@@ -128,19 +161,26 @@ DISTRIBUTIONS = {
 }
 
 # ===========================================================================
-# 1. Loaders - one per data type
+# 2. Loaders - one per data type
 # ===========================================================================
 
-def _rename_to_canonical(df: pd.DataFrame, aliases: dict) -> pd.DataFrame: #TODO: discuss if strict guidelines on input files header names are the better way
+def _rename_to_canonical(df: pd.DataFrame,
+                         aliases: dict,
+                         optional: set = frozenset()
+                         ) -> pd.DataFrame: #TODO: discuss if strict guidelines on input files header names are the better way
     """Rename columns to canonical names using an alias table.
 
     aliases maps canonical_name -> list of accepted spellings in the file.
-    Raises ValueError if a required column is missing entirely.
+    optional is a set of canonical_names that may be absent from the file without raising an error 
+    (e.g. sub_technology).
+    Raises ValueError if a required (non-optional) column is missing entirely.
     """
     rename_map = {}
     for canonical, candidates in aliases.items():
         found = [c for c in candidates if c in df.columns]
         if not found:
+            if canonical in optional:
+                continue
             raise ValueError(
                 f"Missing required column for '{canonical}'. "
                 f"Expected one of: {candidates}"
@@ -170,11 +210,13 @@ def _add_distribution_column(df: pd.DataFrame, default_distribution: str = "unif
     return df
 
 
-def load_material_intensities(filepath: str) -> pd.DataFrame:
+def load_material_intensities(filepath: str,
+                              sector: str
+                              ) -> pd.DataFrame:
     """Long-form intensity ranges -> canonical table.
 
     Expected columns: year, material, technology, min, max
-    Optional:         value, distribution
+    Optional:         value, distribution, sub_technology
 
     """
     df = pd.read_csv(filepath)
@@ -182,10 +224,13 @@ def load_material_intensities(filepath: str) -> pd.DataFrame:
     df = _rename_to_canonical(df, {
         "Cohort":   ["time", "Time", "year", "years", "Year", "cohort", "Cohort"],
         "Type":     ["technology", "Technology", "type", "Type"],
+        "SubType":  ["SubType", "sub_technology", "sub-technology", "sub_type", "Sub-type", "subtype"],
         "material": ["material", "Material"],
         "min":      ["min", "Min", "minimum"],
         "max":      ["max", "Max", "maximum"],
-    })
+    }, optional={"SubType"})
+
+    df = _merge_type_subtype(df, sector)
     
     return _add_distribution_column(df)
 
@@ -213,7 +258,7 @@ def load_lifetimes(filepath: str) -> pd.DataFrame:
 
 
 # ===========================================================================
-# 2. The sampler - ONE function, reused everywhere.
+# 3. The sampler - ONE function, reused everywhere.
 # ===========================================================================
 
 def sample_values(
@@ -278,7 +323,7 @@ def sample_values(
 
 
 # ===========================================================================
-# 3. Processors - one per data type. These are your existing deterministic
+# 4. Processors - one per data type. These are your existing deterministic
 #    transformations, with the sampled table as input instead of the CSV.
 # ===========================================================================
 
@@ -308,6 +353,7 @@ def process_material_intensities(
 
     knowledge_graph = dict_sector_knowledge_graph[sector] #TODO: is this needed?
     da = knowledge_graph.rebroadcast_xarray(da, output_coords=dict_sector_types[sector])
+    da = da.sortby("Type")
 
     if not year_start:
         year_start = dict_sector_start_year[sector]
