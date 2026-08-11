@@ -90,19 +90,19 @@ def compute_lifetimes(base_directory: Path,
     )
     # Convert commercial lifetimes to xarray and add Type dimension.
     xr_lifetimes_commercial = dataset_to_array(lifetimes_commercial_interpolated.to_xarray(),
-                                               ["Time", "Region"],
+                                               ["time", "Region"],
                                                ["Parameter"])
     xr_lifetimes_commercial = xr_lifetimes_commercial.expand_dims({"Type": commercial_types})
 
     # Convert residential lifetimes to xarray and merge Type - Area
     xr_lifetimes_residential = dataset_to_array(lifetimes_residential_interpolated.to_xarray(),
-                                                ["Region", "Type", "Area", "Time"],
+                                                ["Region", "Type", "Area", "time"],
                                                 ["Parameter"])
     fixed_coords = [x if x != "Appartments" else "Appartment"
                     for x in xr_lifetimes_residential.coords["Type"].values]
     xr_lifetimes_residential.coords["Type"] = fixed_coords
     xr_lifetimes_residential = merge_dims(xr_lifetimes_residential, "Type", "Area")
-    xr_lifetimes_residential = xr_lifetimes_residential.transpose("Time", "Region",
+    xr_lifetimes_residential = xr_lifetimes_residential.transpose("time", "Region",
                                                                   "Type", "Parameter")
     lifetimes_array = xr.concat((xr_lifetimes_commercial, xr_lifetimes_residential), dim="Type")
     return convert_lifetimes_buildings(lifetimes_array, distribution_type)
@@ -133,7 +133,7 @@ def convert_lifetimes_buildings(lifetimes: xr.DataArray,
     scipy_lifetimes.coords["ScipyParam"] = ["c", "scale"]
     scipy_lifetimes.coords["Region"] = [str(x) for x in scipy_lifetimes.coords["Region"].values]
     lifetimes_xr = xr.Dataset({distribution_type: scipy_lifetimes.drop("Parameter").transpose(
-        "Time", "Region", "Type", "ScipyParam", transpose_coords=True)})
+        "time", "Region", "Type", "ScipyParam", transpose_coords=True)})
     return {dist_name: arr.dropna("Type")
             for dist_name, arr in lifetimes_xr.items()}
 
