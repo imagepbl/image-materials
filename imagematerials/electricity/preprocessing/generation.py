@@ -148,7 +148,10 @@ def get_preprocessing_data_gen(path_base: str,
 
     # material intensities (kg/MW) -----------------------------------------------------------------
     # create new column with sub-technology name if available, otherwise technology name
-    material_intensities["Type"] = material_intensities["sub_technology"].fillna(material_intensities["technology"])
+    # material_intensities["Type"] = material_intensities["sub_technology"].fillna(material_intensities["technology"])
+    material_intensities["Type"] = (
+            material_intensities["technology"] + "_" + material_intensities["sub_technology"]
+        )
     material_intensities_da = (
         material_intensities.set_index(["Time", "Type", "material"])["value"]
         .to_xarray()
