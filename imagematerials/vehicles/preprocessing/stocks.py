@@ -181,7 +181,7 @@ def get_vehicle_stocks(data_path: str, standard_data_path, climate_data_path, cl
                                            first_year_vehicle_regionalized,
                                            change='no')
 
-    stocks = xarray_conversion(total_nr_vehicles_simple, (["Time"], ["Type", "Region"],))
+    stocks = xarray_conversion(total_nr_vehicles_simple, (["time"], ["Type", "Region"],))
 
     region_coords = np.sort(stocks.coords["Region"].values.astype(int)).astype(str)[:-2]
     share_coords = set()
