@@ -159,7 +159,8 @@ class ModelFactory():
         # Add coordinates
         for dim_name, dim_type in model_class.__annotations__.items():
             if isinstance(dim_type, prism._typing.CoordsType):
-                init_args[dim_name] = sector.coordinates[dim_name]
+                #init_args[dim_name] = sector.coordinates[dim_name]
+                init_args[dim_name] = sector.coordinates[dim_type.dim.label]
 
         def _get_data(var_name):
             """Get the preprocessing/output data from the sectors."""
