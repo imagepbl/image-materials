@@ -1,4 +1,4 @@
-Time,source,type_data,unit,Region,category,technology,sub_technology,value
+Time,source,type_data,unit,Region,sector,category,technology,value
 2000,own assumptions,inflow,share,World,stationary_storage,battery,low-nickel,1
 2000,own assumptions,inflow,share,World,stationary_storage,battery,high-nickel,0
 2000,own assumptions,inflow,share,World,stationary_storage,battery,LFP,0

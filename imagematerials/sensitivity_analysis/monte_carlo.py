@@ -45,10 +45,12 @@ from imagematerials.electricity.constants import (
     EPG_TECHNOLOGIES,
     EPG_TECHNOLOGIES_FINAL,
     EPG_SUB_TECHNOLOGIES,
+    TECH_STATIONARY_STORAGE,
 )
 from imagematerials.vehicles.constants import (
     vehicles_modes_sensitivity_analysis,
     unit_mapping,
+    EV_BATTERY_TYPES,
     END_YEAR, 
     FIRST_YEAR
 )
@@ -61,24 +63,40 @@ from imagematerials.vehicles.modelling_functions import (
 
 dict_sector_knowledge_graph = {
     "vehicles": create_vehicle_graph_2(),
-    "electricity": create_electricity_graph(),
+    "generation": create_electricity_graph(),
+    "storage_phs": create_electricity_graph(),
+    "storage_other": create_electricity_graph(),
+    "ev_battery": create_electricity_graph(),
     "buildings": create_building_graph(),
 }
 dict_sector_types = {
     "vehicles": vehicles_modes_sensitivity_analysis,
-    "electricity": EPG_SUB_TECHNOLOGIES,
+    "generation": EPG_SUB_TECHNOLOGIES,
+    "storage_phs": ["PHS"],
+    "storage_other": TECH_STATIONARY_STORAGE,
+    "ev_battery": EV_BATTERY_TYPES,
 }
 dict_sector_start_year = {
     "vehicles": FIRST_YEAR,
-    "electricity": YEAR_FIRST_GRID
+    "generation": YEAR_FIRST_GRID,
+    "storage_phs": YEAR_FIRST_GRID,
+    "storage_other": YEAR_FIRST_GRID,
+    "ev_battery": YEAR_FIRST_GRID,
 }
 dict_sector_end_year = {
     "vehicles": END_YEAR,
-    "electricity": 2100
+    "generation": 2100,
+    "storage_phs": 2100,
+    "storage_other": 2100,
+    "ev_battery": 2100,
 }
 dict_sector_separator = {
-    "vehicles": " - ",
-    "electricity": "_",
+    "vehicles":         " - ",
+    "electricity":      "_",
+    "generation":       "_",
+    "storage_phs":      "_",
+    "storage_other":    "_",
+    "ev_battery":     "_",
 }
 
 # ===========================================================================

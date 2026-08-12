@@ -85,15 +85,15 @@ def get_preprocessing_data_evbattery(
 
     # material intensities in kg/kWh
     material_intensities = pd.read_csv(path_external_data_standard_elc / 'storage_and_ev_battery_material_intensities_long.csv', 
-                                        usecols=["Time", "sub_technology", "material", "value"])
+                                        usecols=["Time", "technology", "material", "value"])
 
     # market shares in % of total storage capacity (excluding pumped hydropower storage; values: 0-1)
     market_shares = pd.read_csv(path_external_data_standard_vhc / 'ev_battery_market_shares_long.csv', 
-                                usecols=["Time", "sub_technology", "value"])
+                                usecols=["Time", "technology", "value"])
 
     # battery capacity per vehicle type (kWh/vehicle)
     battery_capacity = pd.read_csv(path_external_data_standard_vhc / "ev_battery_capacity_per_vehicle_long.csv",
-                                usecols=["Time", "sub_technology", "value"])
+                                usecols=["Time", "technology", "sub_technology", "value"])
 
     # usable capacity of EV batteries for V2G applications (relative: fraction of the total battery capacity that can be used for V2G)
     if SENS_ANALYSIS == 'high_stor':
@@ -114,20 +114,23 @@ def get_preprocessing_data_evbattery(
     # 1. Market Shares -----------------------------------------------------------------------------
 
     market_shares_da = (
-            market_shares.set_index(["Time", "sub_technology"])["value"]
+            market_shares.set_index(["Time", "technology"])["value"]
             .to_xarray()
-            .rename({"sub_technology": "BatteryType", "Time": "Cohort"})
+            .rename({"technology": "BatteryType", "Time": "Cohort"})
         )
    
     market_shares_da = prism.Q_(market_shares_da, "dimensionless")
     market_shares_da.name = "EVBatteryMarketShares"
 
     # 2. battery capacity --------------------------------------------------------------------------
-        
+    
+    battery_capacity["Type"] = (
+                battery_capacity["technology"] + " - " + battery_capacity["sub_technology"]
+            )
     battery_capacity_da = (
-        battery_capacity.set_index(["Time", "sub_technology"])["value"]
+        battery_capacity.set_index(["Time", "Type"])["value"]
         .to_xarray()
-        .rename({"sub_technology": "Type", "Time": "Cohort"})
+        .rename({"Time": "Cohort"})
     )
     battery_capacity_da = prism.Q_(battery_capacity_da, "kWh/count")
     battery_capacity_da.name = "EVBatteryCapacity"
@@ -136,9 +139,9 @@ def get_preprocessing_data_evbattery(
     # 3. material intensities ----------------------------------------------------------------------
 
     material_intensities_da = (
-        material_intensities.set_index(["Time", "sub_technology", "material"])["value"]
+        material_intensities.set_index(["Time", "technology", "material"])["value"]
         .to_xarray()
-        .rename({"sub_technology": "BatteryType", "Time": "Cohort"})
+        .rename({"technology": "BatteryType", "Time": "Cohort"})
     )
     material_intensities_da = prism.Q_(material_intensities_da, "kg/kWh")
     material_intensities_da.name = "EVBatteryMaterialIntensities"
