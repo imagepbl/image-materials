@@ -42,8 +42,7 @@ from imagematerials.read_mym import read_mym_df
 from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
 from imagematerials.concepts import KnowledgeGraph, Node, create_fossil_fuel_graph, create_region_graph
 from imagematerials.electricity.utils import (
-   MNLogit, 
-   stock_tail, 
+   MNLogit,
    create_prep_data, 
    interpolate_xr, 
    add_historic_stock, 
