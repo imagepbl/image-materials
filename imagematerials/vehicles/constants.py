@@ -81,8 +81,7 @@ labels_fre = ["inland_shipping", "rail_freight", "LCV", "MFT", "HFT",
               "sea_shipping_large", "sea_shipping_vl"]
 labels_materials = ["steel", "aluminium", "copper", "plastics", "glass", "titanium",
                     "wood", "rubber", "lithium", "cobalt", "nickel", "manganese", "neodymium", "lead"]
-labels_ev_batt = ["NiMH", "LMO", "NMC", "NCA", "LFP", "Lithium Sulfur",
-                  "Lithium Ceramic", "Lithium-air"]
+# labels_ev_batt is defined below
 
 
 # define #TODO Roel is that fine?
@@ -123,6 +122,8 @@ simple_modes = ["Trains", "High Speed Trains", "Freight Trains",
               "Medium Ships", "Large Ships", "Very Large Ships",
               "Inland Ships"]
 all_modes = typical_modes + simple_modes
+EV_BATTERY_TYPES = ["low-nickel", "high-nickel", "LFP", "Na-ion"]
+labels_ev_batt = EV_BATTERY_TYPES
 
 cap_adjustment  = [1, 1, 1, 1]
 mile_adjustment = [1, 1, 1, 1]
@@ -196,6 +197,13 @@ all_types = ['Bikes', 'Cars', 'Cars - BEV', 'Cars - FCV', 'Cars - HEV',
        'Regular Buses - HEV', 'Regular Buses - ICE',
        'Regular Buses - PHEV', 'Regular Buses - Trolley', 'Small Ships',
        'Trains', 'Very Large Ships']
+
+EV_VEHICLE_TYPES = ['Cars - BEV', 'Cars - HEV','Cars - PHEV',
+        'Light Commercial Vehicles - BEV','Light Commercial Vehicles - HEV','Light Commercial Vehicles - PHEV',
+        'Medium Freight Trucks - BEV', 'Medium Freight Trucks - HEV','Medium Freight Trucks - PHEV',
+        'Heavy Freight Trucks - BEV', 'Heavy Freight Trucks - HEV', 'Heavy Freight Trucks - PHEV',
+        'Midi Buses - BEV','Midi Buses - HEV', 'Midi Buses - PHEV', 
+        'Regular Buses - BEV', 'Regular Buses - HEV','Regular Buses - PHEV', 'Regular Buses - Trolley']
 
 # This should be removed eventually, but is used in the maintenance module
 # to determine the maintenance lifetime of vehicles.

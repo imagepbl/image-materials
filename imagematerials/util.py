@@ -161,12 +161,14 @@ def export_to_netcdf(prep_data: dict, out_fp):
     for key, data in new_prep_data.items():
         try:
             data.to_netcdf(out_fp, group=key, mode="a", engine="netcdf4")
+
         except AttributeError:
             with netCDF4.Dataset(out_fp, "a") as rootgrp:
                 if data is None:
                     setattr(rootgrp, key, NONE_SENTINEL)
                 else:
                     setattr(rootgrp, key, data)
+
 
 def import_from_netcdf(in_fp) -> dict:
     """Import the xarray data from a netcdf4 file.
@@ -183,6 +185,7 @@ def import_from_netcdf(in_fp) -> dict:
     """
     prep_data_dict = {}
     lt = xr.open_dataset(in_fp, group="lifetimes", engine="netcdf4").load()
+
     prep_data_dict["lifetimes"] = {dist_name: arr.dropna("Type")
                                             for dist_name, arr in lt.items()}
     # prep_data = xr.open_dataset(in_fp, group="main", engine="netcdf4").load()
@@ -198,6 +201,7 @@ def import_from_netcdf(in_fp) -> dict:
     all_groups.remove("lifetimes")
     for key in all_groups:
         prep_data_dict[key] = xr.open_dataarray(in_fp, group=key, engine="netcdf4").load()
+
         if key == "knowledge_graph":
             prep_data_dict[key] = KnowledgeGraph.from_dataarray(prep_data_dict[key])
     return prep_data_dict
@@ -220,7 +224,8 @@ def summarize_prep_data(data):
             all_summary[data_name] = array
         else:
             raise ValueError(f"Cannot compare data with name '{data_name}' with type {type(array)}")
-    return all_summary
+
+    return normalize_dict(all_summary)
 
 
 def _summarize_array(array):
@@ -250,10 +255,9 @@ def rebroadcast_prep_data(prep_data, knowledge_graph, dim, output_coords):
             new_prep_data[data_name] = knowledge_graph.rebroadcast_xarray(data, output_coords, dim=dim)
     return new_prep_data
 
-  
+
 def read_climate_policy_config(scenario_folder) -> dict:
-    """
-    Extracts data from a .toml-file.
+    """Extract data from a .toml-file.
 
     Parameters
     ----------
@@ -263,12 +267,13 @@ def read_climate_policy_config(scenario_folder) -> dict:
     Returns
     -------
         Dictionary containing the contents of the toml-file
+
     """
     return _read_config(scenario_folder)
 
+
 def read_circular_economy_config(scenario_folders: dict) -> dict:
-    """
-    Extracts data from multiple .toml-files and joins it together.
+    """Extract data from multiple .toml-files and joins it together.
 
     Parameters
     ----------
@@ -279,15 +284,16 @@ def read_circular_economy_config(scenario_folders: dict) -> dict:
     -------
         Dictionary containing the contents of all toml-file, accessible
         under the specified labels.
+
     """
     config_dict = {}
     for key, scenario_folder in scenario_folders.items():
         config_dict[key] = _read_config(scenario_folder)
     return config_dict
 
+
 def _read_config(scenario_folder) -> dict:
-    """
-    Extracts data from a .toml-file.
+    """Extract data from a .toml-file.
 
     Parameters
     ----------
@@ -297,12 +303,13 @@ def _read_config(scenario_folder) -> dict:
     Returns
     -------
         Dictionary containing the contents of the toml-file
+
     """
     # Turn the path into a Path object, if it wasn't already
     scenario_folder = Path(scenario_folder)
     with open(scenario_folder / "config.toml", "rb") as f:
         config_dict = tomllib.load(f)
-    
+
     config_dict['config_file_path'] = scenario_folder.resolve()
 
     return config_dict
@@ -315,11 +322,12 @@ def convert_lifetime(lifetimes):
         return convert_lifetime_dataarray(lifetimes)
     else:
         raise TypeError("Input must be an xarray.Dataset or xarray.DataArray")
-    
+
 
 def convert_lifetime_dataset(lifetime_dataset: xr.Dataset) -> dict[str, xr.DataArray]:
-    """ Convert dataset with lifetimes to a dictonary with 
-    keys = name of the distribution applied to the lifetimes (folded_normal, Weibull)
+    """Convert dataset with lifetimes to a dictonary.
+
+    With keys = name of the distribution applied to the lifetimes (folded_normal, Weibull)
     values = xarray DataArray with the scipy parameters for the distribution
 
     This conversion should probably move to the preprocessing stage after we figure out
@@ -333,13 +341,15 @@ def convert_lifetime_dataset(lifetime_dataset: xr.Dataset) -> dict[str, xr.DataA
         the same for each of the modes. Thus, the distribution types need to be inferred from the
         names of the parameters that are given. If multiple parameter sets for multiple distributions
         are given, the Weibull distribution is given preference over the FoldedNormal distribution.
-        Only works when the dataset has dimensions (mode, param) and coordinate 'year'. #TODO: make it more flexible to work with Year, Time, Cohort, not only year?
+        Only works when the dataset has dimensions (mode, param) and coordinate 'year'. #TODO: make
+        it more flexible to work with Year, Time, Cohort, not only year?
 
     Returns
     -------
-        A dictionary that contains a data array for each of the distributions. Given the setup there is
-        an implicit assumption that only one distribution is used for each of the modes. If distribution
-        types change over time, this data structure needs to be adjusted.
+        A dictionary that contains a data array for each of the distributions.
+        Given the setup there is an implicit assumption that only one distribution is used for each
+        of the modes. If distribution types change over time, this data structure needs to be
+        adjusted.
 
     """
     # 1. Build a dictionary of parameters available for each mode (technology)
@@ -355,7 +365,7 @@ def convert_lifetime_dataset(lifetime_dataset: xr.Dataset) -> dict[str, xr.DataA
             if mode not in modes_done and dist.has_param(param):
                 dist_mode[dist.name].append(mode)
                 modes_done.add(mode)
-    
+
     # Raise error if nothing matched
     if not any(dist_mode.values()):
         accepted_params = {dist.name: dist.params for dist in ALL_DISTRIBUTIONS}
@@ -378,14 +388,15 @@ def convert_lifetime_dataset(lifetime_dataset: xr.Dataset) -> dict[str, xr.DataA
                 "Time": lifetime_dataset.coords["year"].to_numpy(),
                 "Type": mode_list,
                 "ScipyParam": dist.variable_scipy_param})
-        
+
         for mode in mode_list:
             orig_param_dict = {}
             for param in dist.params:
                 if (str(mode), param) not in lifetime_dataset.data_vars:
                     raise ValueError(
                         f"Missing expected parameter '{param}' for mode '{mode}'. "
-                        "Please verify that all required distribution parameters are present in the dataset."
+                        "Please verify that all required distribution parameters are present"
+                        " in the dataset."
                     )
                 orig_param_dict[param] = lifetime_dataset.data_vars[str(mode), param].to_numpy()
 
@@ -398,15 +409,16 @@ def convert_lifetime_dataset(lifetime_dataset: xr.Dataset) -> dict[str, xr.DataA
                     array.attrs[cur_scipy_key] = cur_scipy_par
 
         ret_scipy_params[dist_name] = array
-        
+
     return ret_scipy_params
 
 
 def convert_lifetime_dataarray(lifetime_dataarray: xr.DataArray) -> dict[str, xr.DataArray]:
-    """ Convert DataArray with lifetimes to a dictonary with 
-    keys = name of the distribution applied to the lifetimes (folded_normal, Weibull)
+    """Convert DataArray with lifetimes to a dictonary.
+
+    With keys = name of the distribution applied to the lifetimes (folded_normal, Weibull)
     values = xarray DataArray with the scipy parameters for the distribution
-    
+
     Parameters
     ----------
     lifetime_dataarray : xr.DataArray
@@ -418,15 +430,13 @@ def convert_lifetime_dataarray(lifetime_dataarray: xr.DataArray) -> dict[str, xr
         Dictionary containing one DataArray per distribution, with dimensions (Time, Type, ScipyParam),
         fully preserving coordinates for compatibility with downstream code.
 
-    Notes
-    -----
+    """
     #TODO: make it more flexible to work with Year, Time, year, not only Cohort?
     #TODO: works only when all modes ('Type') have the same distribution, so the same parameters in DistributionParams.
-           -> Support cases where different modes use different distributions with different parameters. In this case,
-           different parameters would be within DistributionParams (mean, stedv, shape, scale), and the values associated with 
-           modes in the Type coordinate would be either the right value for that distribution parameters, or NaN for the distribution parameters that do not apply to that mode.
-    """
-    
+    # -> Support cases where different modes use different distributions with different parameters. In this case,
+    # different parameters would be within DistributionParams (mean, stedv, shape, scale), and the values associated with 
+    # modes in the Type coordinate would be either the right value for that distribution parameters, or NaN for the distribution parameters that do not apply to that mode.
+
     # 1. Build a dictionary of parameters available for each mode (technology)
     mode_param = defaultdict(list)
     for mode in lifetime_dataarray.coords["Type"].values:
@@ -491,13 +501,12 @@ def convert_lifetime_dataarray(lifetime_dataarray: xr.DataArray) -> dict[str, xr
     return ret_scipy_params
 
 
-
-
 def scenario_change(arr: xr.DataArray, base_year: int, target_year: int, change: dict,
-                    implementation_rate: str, data_type: Optional[str]=None, steepness: float=0.5) -> xr.DataArray:
+                    implementation_rate: str, data_type: Optional[str]=None,
+                    steepness: float=0.5) -> xr.DataArray:
+    """Apply a time-based change to values in a Xarray.
 
-    """
-    Applies a time-based change to values in a Xarray between a base and target year using a specified implementation method.
+    Between a base and target year using a specified implementation method.
 
     Parameters
     ----------
@@ -528,6 +537,7 @@ def scenario_change(arr: xr.DataArray, base_year: int, target_year: int, change:
     Notes
     -----
     For verhicles, this function has an implementation that works on Pandas dataframes.
+
     """
     result = arr.copy()
 
@@ -588,25 +598,29 @@ def scenario_change(arr: xr.DataArray, base_year: int, target_year: int, change:
     return result.interpolate_na("Time", method="cubic")
 
 
-
 def apply_change_per_region(arr: xr.DataArray, base_year: int, target_year: int, increase: float,
                             implementation_rate: str, data_type: Optional[str]=None,
                             steepness: float=0.5) -> xr.DataArray:
-    """
-    Applies a uniform percentage increase across all regions (columns) in the DataFrame using a specified implementation method.
+    """Apply a uniform percentage increase across all regions (columns).
 
-    Parameters:
-        arr (xarray): A time-indexed Xarray with regions as columns and a common structure across all regions.
+    In the DataFrame using a specified implementation method.
+
+    Parameters
+    ----------
+    arr (xarray):
+        A time-indexed Xarray with regions as columns and a common structure across all regions.
         base_year (int): The starting year for the change.
         target_year (int): The year by which the full change should be achieved.
-    increase
+    increase:
         The percentage increase to apply to all regions (e.g., 10 for +10%).
         implementation_rate (str): The implementation method; one of 'linear', 'immediate', or 's-curve'.
         data_type (str): Indicates what kind of data is being modified; one of 'lifetime' or 'mileages'.
         steepness (float, optional): Steepness parameter for the 's-curve' implementation; default is 0.5.
 
-    Returns:
+    Returns
+    -------
         array: An xarray with updated values for each region, aligned by year (index).
+
     """
     results = []
     for region, subarr in arr.groupby('Region'):
@@ -626,8 +640,9 @@ def apply_change_per_region(arr: xr.DataArray, base_year: int, target_year: int,
 
 
 def overwrite_future_rates(arr: xr.DataArray, target_year: int, supertypes: list, new_val: dict) -> xr.DataArray:
-    """
-    Overwrites values in an Xarray at a specific target year for each material in each Sector.
+    """Overwrite values in an Xarray at a specific target year.
+
+    For each material in each Sector.
     Currently works for collection, reuse, and recycling rates that are not region-specific.
 
     Parameters
@@ -645,6 +660,7 @@ def overwrite_future_rates(arr: xr.DataArray, target_year: int, supertypes: list
     -------
     xr.DataArray
         Updated DataArray with overwritten values for target_year.
+
     """
     result = arr.copy()
     for material, new_value in new_val.items():
@@ -653,28 +669,55 @@ def overwrite_future_rates(arr: xr.DataArray, target_year: int, supertypes: list
         result.loc[{"Time": target_year,"Type": supertypes, "material": material}] = new_value
     return result
 
+
 def reindex_material(sector, materials):
-    """
-    Reindex the 'material' coordinate of a sector's data to match a given list of materials.
+    """Reindex the 'material' coordinate of a sector's data to match a given list of materials.
+
     Parameters
     ----------
     sector : xr.DataArray or xr.Dataset (e.g., electricity sector)
         The sector data to be reindexed.
     materials : list
         The list of materials to reindex to.
+
     Returns
     -------
         The reindexed sector data.
+
     """
     if isinstance(sector, xr.DataArray):                                    # check if it's a DataArray
         if "material" in sector.coords:                                     # only reindex if material coord exists
             return sector.reindex(material=materials, fill_value=0)         # reindex and fill missing materials with 0
         return sector
 
-    if isinstance(sector, xr.Dataset):                                      # check if it's a Dataset                   
+    if isinstance(sector, xr.Dataset):                                      # check if it's a Dataset
         return sector.map(                                                  # apply reindexing to each DataArray in the Dataset
             lambda da: da.reindex(material=materials, fill_value=0)         # only if material coord exists
-            if "material" in da.coords else da                              
+            if "material" in da.coords else da
         )
 
     return sector
+
+
+def normalize_key(key):
+    """Convert dict keys to JSON-safe, stable strings."""
+    if isinstance(key, tuple):
+        # ("EU", "Solar") -> "EU|Solar"
+        return "|".join(str(k) for k in key)
+
+    return str(key)
+
+
+def normalize_dict(d):
+    new = {}
+
+    for k in sorted(d.keys(), key=lambda x: str(x)):
+        v = d[k]
+        nk = normalize_key(k)
+
+        if isinstance(v, dict):
+            v = normalize_dict(v)
+
+        new[nk] = v
+
+    return new

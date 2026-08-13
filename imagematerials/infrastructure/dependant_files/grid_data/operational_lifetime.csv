@@ -1,0 +1,7 @@
+year,start,end
+rail,30,30
+rail_bridge,75,75
+rail_tunnel,100,100
+urban_rail,30,30
+subsurface_road,999,999
+obs_rail,500,500

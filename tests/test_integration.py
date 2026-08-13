@@ -1,5 +1,5 @@
 import prism
-from imagematerials.model import GenericStocks, GenericMaterials, MaterialIntensities
+from imagematerials.model import GenericStocks, GenericMaterials, MaterialIntensities, MaterialIntensitiesQuintiles, StocksQuintiles
 from imagematerials.factory import ModelFactory, Sector
 
 
@@ -24,7 +24,7 @@ def test_buildings_stocks(bld_prep_data):
     simulation_timeline = prism.Timeline(1970, sim_end, 1)
 
     sector = Sector("bld", bld_prep_data)
-    model = ModelFactory(sector, complete_timeline).add(GenericStocks).add(MaterialIntensities).finish()
+    model = ModelFactory(sector, complete_timeline).add(StocksQuintiles).add(MaterialIntensitiesQuintiles).finish()
     model.simulate(simulation_timeline)
 
 
@@ -37,7 +37,7 @@ def test_combined_stocks(bld_prep_data, vhc_prep_data):
     sectors = [Sector("bld", bld_prep_data), Sector("vhc", vhc_prep_data)]
     factory = ModelFactory(sectors, complete_timeline)
     factory.add(GenericStocks, "vhc").add(GenericMaterials, "vhc")
-    factory.add(GenericStocks, "bld").add(MaterialIntensities, "bld")
+    factory.add(StocksQuintiles, "bld").add(MaterialIntensitiesQuintiles, "bld")
     model = factory.finish()
     model.simulate(simulation_timeline)
     assert len(model.stocks) == 2

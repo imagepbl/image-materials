@@ -1,0 +1,76 @@
+cff-version: 1.2.0
+message: If you use IMAGE-materials model or data from it in your research, please cite it using the metadata in this cff file.
+type: software
+title: IMAGE-materials
+version: 3.5.1.1
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.19696714
+abstract: >-
+    The IMAGE-materials model is a stock-driven dynamic material flow analysis model,
+    part of the IMAGE integrated assessment model (IAM) framework. By combining
+    modelling principles from the IAM and Industrial Ecology (IE) communities, the model
+    quantifies material inflows, stocks, and outflows affected by climate and resource
+    policy scenarios. IMAGE-materials is a recursive yearly simulation model that projects
+    global material demand until 2100 for 26 world regions on a sectoral level for a wide
+    variety of bulk and critical materials. The model includes buildings, vehicles,
+    electricity, rail and road infrastructure, and a residual sector capturing the remaining
+    demand, including different types and modes (e.g., housing types and transport modes).
+    It is written using a modular, object-oriented Python architecture, enabling the easy
+    addition of new sectors and data. Key assumptions include product lifetimes, material
+    intensities, and technology mixes. The model is driven by service demand scenarios
+    produced by the IMAGE framework, based on socio-economic and climate policy
+    assumptions. IMAGE-materials can flexibly simulate the adoption of numerous circular
+    economy measures, such as service demand reductions, lifetime extension,
+    lightweighting, and recycling. Therefore, IMAGE-materials enables scientists and
+    policymakers to explore mitigation pathways with a detailed additional dimension of
+    material flows. It can thus assess the synergies and trade-offs between climate and
+    circularity policies by explicitly accounting for their material implications. As such,
+    IMAGE-materials integrates the fields of IAMs and IE, building on the strengths of
+    each.
+authors:
+    - family-names: von Köckritz
+      given-names: Luja
+      orcid: https://orcid.org/0000-0001-8655-8731
+      affiliation: Copernicus Institute of Sustainable Development - Utrecht University, Planbureau voor de Leefomgeving
+    - family-names: Arp
+      given-names: Anke Frederike
+      orcid: https://orcid.org/0009-0004-9201-1707
+      affiliation: Copernicus Institute of Sustainable Development - Utrecht University, Planbureau voor de Leefomgeving
+    - family-names: Tettenborn
+      given-names: Judith
+      orcid: https://orcid.org/0009-0006-0394-2740
+      affiliation: Copernicus Institute of Sustainable Development - Utrecht University, Planbureau voor de Leefomgeving
+    - family-names: Zanon-Zotin
+      given-names: Marianne
+      orcid: https://orcid.org/0000-0003-2393-6234
+      affiliation: Copernicus Institute of Sustainable Development - Utrecht University, Planbureau voor de Leefomgeving
+    - family-names: van Engelenburg
+      given-names: Martijn
+      orcid: https://orcid.org/0009-0005-9775-0653
+      affiliation: Institute of Environmental Sciences (CML) - Leiden University
+    - family-names: Deetman
+      given-names: Sebastiaan
+      orcid: https://orcid.org/0000-0002-1820-658X
+      affiliation: Institute of Environmental Sciences (CML) - Leiden University
+    - family-names: Schram
+      given-names: Raoul
+      orcid: https://orcid.org/0000-0001-6616-230X
+      affiliation: Information and Technology Services - Utrecht University
+    - family-names: Brouwer
+      given-names: Roelof Jacob Jan
+      orcid: https://orcid.org/0000-0001-8300-4290
+      affiliation: Information and Technology Services - Utrecht University
+    - family-names: Zahedi
+      given-names: Parisa
+      orcid: https://orcid.org/0000-0002-1610-3149
+      affiliation: Information and Technology Services - Utrecht University
+    - family-names: Staiger
+      given-names: Christine
+      orcid: https://orcid.org/0000-0002-6754-7647
+      affiliation: Information and Technology Services - Utrecht University
+
+license: Copyright IMAGE-materials team, Utrecht University 2026, all rights reserved
+repository-code: https://github.com/imagepbl/image-materials
+keywords:
+    - model: dynamic material flow analysis, stock-driven, recursive simulation, modular, object-oriented, circular economy, sectoral, global, service demand, mitigation pathways, top-down, bottom-up, scenario analysis
