@@ -2,7 +2,7 @@ def export_material_inflows(model, output_dir="data/raw/rest-of", include_mainte
     """Aggregate sector material inflows and export one CSV per material."""
     from pathlib import Path
 
-    from constants import REGION_TO_CLASS_DICT_IMAGE_MAT
+    from imagematerials.rest_of.const import REGION_TO_CLASS_DICT_IMAGE_MAT
 
     cement_in_concrete_factor = 0.12
     sand_in_concrete = cement_in_concrete_factor * 0.17
