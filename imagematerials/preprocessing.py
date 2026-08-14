@@ -25,7 +25,7 @@ from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.vehicles.preprocessing.main_prism import vehicles_preprocessing_integration
 
 
-def _get_vehicles_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_scenario_dirs, integration_preprocessing=False):
+def _get_vehicles_prep_data(base_dir, climate_policy_scenario_dir=None, circular_economy_scenario_dirs=None, integration_preprocessing=False):
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -34,7 +34,8 @@ def _get_vehicles_prep_data(base_dir, climate_policy_scenario_dir, circular_econ
         if integration_preprocessing == False:
             prep_data = prep_vhc(base_dir, climate_policy_config, circular_economy_config)
         elif integration_preprocessing == True:
-            prep_data = vehicles_preprocessing_integration(base_dir, climate_policy_config, circular_economy_config)
+            prep_data = vehicles_preprocessing_integration(base_dir, circular_economy_config)
+            #climate_policy_config -> TIMER gives the data for the intended scenario, don't need to specify that (only for non-TIMER datat, solve this later (currently uses standard SSP2))
 
     return prep_data
 

@@ -300,6 +300,9 @@ def _read_config(scenario_folder) -> dict:
     """
     # Turn the path into a Path object, if it wasn't already
     scenario_folder = Path(scenario_folder)
+    print("#############################################################")
+    print(Path.cwd())
+    print(scenario_folder)
     with open(scenario_folder / "config.toml", "rb") as f:
         config_dict = tomllib.load(f)
     

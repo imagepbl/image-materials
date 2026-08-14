@@ -17,7 +17,20 @@ from pathlib import Path
 from pint.errors import UnitStrippedWarning
 
 from imagematerials.concepts import KnowledgeGraph, create_region_graph
-from imagematerials.constants import IMAGE_REGIONS, base_directory, base_directory_integration
+from imagematerials.constants import (
+    IMAGE_REGIONS,
+    base_directory,
+    base_directory_integration,
+    TravelModes,
+    TravelModesTotal,
+    FreightModesTotal,
+    Region_26,
+    ExtendedRegion,
+    FleetCars,
+    FleetBus,
+    FleetMedTruck,
+    FleetHvyTruck,
+)
 from imagematerials.preprocessing import get_preprocessing_data
 from imagematerials.util import read_climate_policy_config
 from imagematerials.vehicles.constants import (
@@ -35,8 +48,12 @@ from imagematerials.vehicles.shares_prism import get_vehicle_shares_prism
 from imagematerials.vehicles.preprocessing.util import (
     xarray_conversion
 )
-
 from imagematerials.vehicles.modelling_functions import convert_from_tkpm_or_pkm_to_nr_vehicles
+
+# preprocessing.py lives at .../image-materials/imagematerials/preprocessing.py
+PACKAGE_ROOT = Path(__file__).resolve().parent.parent        # .../image-materials/imagematerials
+PROJECT_ROOT = PACKAGE_ROOT.parent                     # .../image-materials
+DATA_ROOT = PROJECT_ROOT / "data" / "raw"
 
 REGION = prism.Dimension("Region", IMAGE_REGIONS)
 STOCK_TYPE = prism.Dimension("Type")
@@ -71,7 +88,7 @@ class VehicleStocks(prism.Model):
         Time steps for simulation (derived from preprocessing data)
     passengerkms : prism.TimeVariable[Region, Type]
         Yearly passenger kilometers demanded
-    tonekms : prism.TimeVariable[Region, Type]
+    tonnekms : prism.TimeVariable[Region, Type]
         Yearly tonne kilometers demanded
     conversion_factor_tkms : xr.DataArray
         Conversion factor from tkms to vehicle numbers
@@ -91,12 +108,16 @@ class VehicleStocks(prism.Model):
     stocks : prism.TimeVariable[Region, Type]
         Number of vehicles by type and region for each year
     """
-    climate_policy_scenario_dir: Path
+    #climate_policy_scenario_dir: Path
+
+    #passenger_kms
+
+    # Output data
     # total_vehicles: prism.Array[REGION, MODE] = prism.export() # exported for debugging and testing
     stocks: prism.TimeVariable = prism.export()
     
     input_data: tuple[str] = (
-        "passengerkms", "tonekms", "vehicle_shares", "conversion_factor_tkms", 
+        "passenger_kms", "tonne_kms", "vehicle_shares", "conversion_factor_tkms", 
         "first_year_vehicle", "market_share", "knowledge_graph", "set_unit_flexible"
     )
     output_data: tuple[str] = ("stocks",)
@@ -116,14 +137,15 @@ class VehicleStocks(prism.Model):
 
         # Load preprocessing of Vehicles data 
         vehicle_preprocessing = get_preprocessing_data(
-            "vehicles", 
-            base_directory_integration, # when run in .py file for debugginf this should be: base_directory!
-            climate_policy_scenario_dir=self.climate_policy_scenario_dir,
+            "vehicles",
+            DATA_ROOT,
+            #base_directory_integration, # when run in .py file for debugginf this should be: base_directory!
+            #climate_policy_scenario_dir=self.climate_policy_scenario_dir,
             circular_economy_scenario_dirs=None,
             integration_preprocessing = True
         )
 
-        # # initialize fake timer model to get passengerkms and tonekms data
+        # # initialize fake timer model to get passengerkms and tonnekms data
         # self.timer_model = FakeTimerTransport(time,
         #                                       self.climate_policy_scenario_dir)
         
@@ -179,10 +201,15 @@ class VehicleStocks(prism.Model):
         # vhc_originl = ModelFactory.load_pkl("examples/model_results/test.pkl")
         # self.stocks_original = vhc_originl.vehicles.get("stocks")
     
-    def compute_values(self, time: prism.Time, 
-                       passenger_kms,
-                       tonne_kms,
-                       load_car  # ,
+    def compute_values(self, 
+                       time: prism.Time, 
+                       #passenger_kms,
+                       #tonne_kms,
+                       #load_car
+                        passenger_kms: prism.Array[ExtendedRegion, TravelModesTotal, "tera person km"],
+                        loadfactor: prism.Array[Region_26, TravelModes, "dimensionless"],
+                        # loadfactor: prism.Array[Region_26, "dimensionless"],
+                        tonne_kms: prism.Array[ExtendedRegion, FreightModesTotal, "Mtonne km"],
                        # vehicle_shares
         ):
         """Calculate vehicle stocks for the current timestep.
@@ -199,12 +226,37 @@ class VehicleStocks(prism.Model):
         print("Current time step:", t)
         # unit = str(self.set_unit_flexible)
 
-        # run the "timer model" to get the latest passengerkms and tonekms data for this time step
+        # run the "timer model" to get the latest passengerkms and tonnekms data for this time step
         # self.timer_model.compute_values(time)
         # Directly transfer TIMER transport activity values into the vehicles stock model.
+        # Type names differ between TIMER and IMAGE-materials -> need to rename.
+        # TODO: use knowledge_graph or adjust names in IMAGE-materials to TIMER names?
+        PASSENGERKMS_TYPE_NAME_MAP = {
+            "Air": "Passenger Planes",
+            "Train": "Trains",
+            "High-Speed Train": "High Speed Trains",
+            "Bike": "Bikes",
+            "Car": "Cars",
+        }
+        passenger_kms = passenger_kms.assign_coords(
+            Type=[PASSENGERKMS_TYPE_NAME_MAP.get(t, t) for t in passenger_kms.Type.values]
+        )
+        loadfactor = loadfactor.assign_coords(
+            Type=[PASSENGERKMS_TYPE_NAME_MAP.get(t, t) for t in loadfactor.Type.values]
+        )
+        TONNEKMS_TYPE_NAME_MAP = {
+            "Medium Truck": "Medium Freight Trucks",
+            "Heavy Truck": "Heavy Freight Trucks",
+            "Air Cargo": "Freight Planes",
+            "Train": "Freight Trains",
+            "National Shipping": "Inland Ships",
+        }
+        tonne_kms = tonne_kms.assign_coords(
+            Type=[TONNEKMS_TYPE_NAME_MAP.get(t, t) for t in tonne_kms.Type.values]
+        )
         self.passenger_kms = passenger_kms
         self.tonne_kms = tonne_kms
-        self.load_car = load_car
+        self.load_car = loadfactor #load_car
         # TODO: implement get_vehicle_shares_prism fully
         #self.vehicle_shares = get_vehicle_shares_prism(vehicle_shares, passenger_kms, tonne_kms, self.knowledge_graph)
         # self.total_vehicles: prism.Array[REGION, MODE, "count"] = prism.export()
@@ -231,7 +283,9 @@ class VehicleStocks(prism.Model):
 
         # 1. Simple vehicle types ["Passenger Planes", "Trains", "High Speed Trains", "Bikes"]
         simple_types = ["Passenger Planes", "Trains", "High Speed Trains", "Bikes"]
+        # simple_types = ["Air", "Train", "High-Speed Train", "Bike"]
         # unit handling maybe not the nicest way, but works for now, otherwise all need to be loaded as xr instead of pd
+
         nr_vehicles_simple = convert_from_tkpm_or_pkm_to_nr_vehicles(self.passenger_kms, 
                                                                      simple_types, 
                                                                      self.load, 
@@ -241,7 +295,7 @@ class VehicleStocks(prism.Model):
                                                                      time)
         # test to assert that the calculation of simple vehicle types matches the original model for this time step (within a reasonable tolerance)
         # assert self.stocks_original.sel(Type = simple_types).loc[int(prism.M_(time))].sum() == nr_vehicles_simple.sum(), f"Discrepancy in simple vehicle types calculation for time {time.t}: original total {self.stocks_original.sel(Type = simple_types, Time = time.t).sum().values}, new total {nr_vehicles_simple.sum().values}"
-        
+
         # # 2 (trucks) & 3 (freight planes) & 4. (freight trains & inland ships) Freight vehicles with special handling
         # 2 Trucks are calculated differently because the IMAGE model does not account for LCV trucks
         trucks_total_tkm = (self.tonne_kms.sel(Type="Medium Freight Trucks") + self.tonne_kms.sel(Type="Heavy Freight Trucks"))
@@ -283,7 +337,7 @@ class VehicleStocks(prism.Model):
         cars_pkms = self.passenger_kms.sel(Type=["Cars"])
          
         cars_vehicles = convert_from_tkpm_or_pkm_to_nr_vehicles(cars_pkms,
-                                                            ["Cars"], 
+                                                            ["Cars"],
                                                             self.load_car, 
                                                             LOAD_FACTOR, 
                                                             self.kilometrage_cars, 
@@ -291,6 +345,7 @@ class VehicleStocks(prism.Model):
                                                             time)
    
         total = xr.concat([nr_vehicles_simple, freight_vehicles_special_vehicles, cars_vehicles], dim="Type")
+        
         ####
         # Test, delete later
         # for vehicle in total.coords["Type"].values:

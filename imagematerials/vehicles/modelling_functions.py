@@ -141,6 +141,7 @@ def convert_from_tkpm_or_pkm_to_nr_vehicles(tkm_or_pkm: xr.DataArray, types: lis
         load_by_type = load
         if "Type" not in load_by_type.dims:
             load_by_type = load_by_type.expand_dims("Type").assign_coords(Type=types)
+        load_by_type = prism.Q_(load_by_type, load_unit)
 
     if isinstance(loadfactor, pd.DataFrame):
         loadfactor_by_type = xr.DataArray(
@@ -150,6 +151,7 @@ def convert_from_tkpm_or_pkm_to_nr_vehicles(tkm_or_pkm: xr.DataArray, types: lis
         # for cars this comes as constant value
     if isinstance(loadfactor, int) or isinstance(loadfactor, float):
         loadfactor_by_type = loadfactor
+        loadfactor_by_type = prism.Q_(loadfactor_by_type, loadfactor_unit)
 
     # for cars & buses kilometrage, and also Region dependent, already passed as xarray, so no need to convert from pd.DataFrame
     if isinstance(mileage, pd.DataFrame):

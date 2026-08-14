@@ -61,6 +61,7 @@ IMAGE_REGIONS = [
     "RSAS",
     "RSAF"
 ]
+Region_26 =  prism.Dimension("region", IMAGE_REGIONS)
 Region = prism.Dimension('region', IMAGE_REGIONS + ["World"])  # World regions
 ExtendedRegion = prism.Dimension('region', Region.coords + ["World2"])
 ImportRegion = prism.Dimension("import_region", Region.coords)
@@ -172,7 +173,10 @@ _MODE_TRVL = [
     "High-Speed Train",
     "Air"
 ]
-TravelModes = prism.Dimension('mode', _MODE_TRVL)  # Travel modes
+#TravelModes = prism.Dimension('mode', _MODE_TRVL)  # Travel modes
+#TravelModesTotal = prism.Dimension("mode", TravelModes.coords + ["Total"])
+TravelModes = prism.Dimension('Type', _MODE_TRVL)  # Travel modes
+TravelModesTotal = prism.Dimension("Type", TravelModes.coords + ["Total"])
 _MODE_FRGT = [
     "National Shipping",
     "Train",
@@ -182,5 +186,97 @@ _MODE_FRGT = [
     "International Shipping",
     "Pipeline"
 ]
-FreightModes = prism.Dimension('mode', _MODE_FRGT)  # Freight
+# FreightModes = prism.Dimension('mode', _MODE_FRGT)  # Freight
+# FreightModesTotal = prism.Dimension("mode", FreightModes.coords + ["Total"])
+FreightModes = prism.Dimension('Type', _MODE_FRGT)  # Freight
+FreightModesTotal = prism.Dimension("Type", FreightModes.coords + ["Total"])
 
+FLEET_CARS = [
+    "ICE2000",              # 1
+    "ICE2010",              # 2
+    "ICEAdvOil",            # 3
+    "ICEAdvH2",             # 4
+    "ICETurboOil",          # 5
+    "ICEDieselOil",         # 6
+    "ICEDieselBiofuels",    # 7
+    "IceHevOil",            # 8
+    "IceHevGas",            # 9
+    "IceHevH2",             # 10
+    "IceHevOil2",           # 11
+    "IceHevFT50",           # 12
+    "FcvOil",               # 13
+    "FcvBio",               # 14
+    "FcvH2",                # 15
+    "Phev10Oil",            # 16
+    "Phev30Oil",            # 17
+    "Phev60Oil",            # 18
+    "Phev10Bio",            # 19
+    "Phev30Bio",            # 20
+    "Phev60Bio",            # 21
+    "BEV",                  # 22
+    "BEV range extended",   # 23
+    "BEV 150km",            # 24
+    "ICECNG",               # 25
+]
+FLEET_BUS = [
+    "BusOil",           # 1
+    "BusBio",           # 2
+    "BusGas",           # 3
+    "BusElecTrolley",   # 4
+    "BusHybOil",        # 5
+    "BusHybBio",        # 6
+    "BusBattElectric",  # 7
+]
+FLEET_MEDTRUCK = [
+    "ICE2000",                  # 1
+    "ICE2010",                  # 2
+    "ICEAdvOil",                # 3
+    "ICEAdvH2",                 # 4
+    "ICETurboOil",              # 5
+    "ICEDieselOil",             # 6
+    "ICEDieselBiofuel",         # 7
+    "IceHevTurboGasolineOil",   # 8
+    "IceHevDieselOil",          # 9
+    "IceHevH2",                 # 10
+    "IceHevGas",                # 11
+    "IceHevBio",                # 12
+    "FcvOil",                   # 13
+    "FcvBio",                   # 14
+    "FcvH2",                    # 15
+    "Phev10Oil",                # 16
+    "Phev30Oil",                # 17
+    "Phev60Oil",                # 18
+    "Phev10Bio",                # 19
+    "Phev30Bio",                # 20
+    "Phev60Bio",                # 21
+    "Bev",                      # 22
+]
+FLEET_HVYTRUCK = [
+    "ICE2000",                  # 1
+    "ICE2010",                  # 2
+    "ICEAdvOil",                # 3
+    "ICEAdvH2",                 # 4
+    "ICETurboOil",              # 5
+    "ICEDieselOil",             # 6
+    "ICEDieselBiofuel",         # 7
+    "IceHevTurboGasolineOil",   # 8
+    "IceHevDieselOil",          # 9
+    "IceHevH2",                 # 10
+    "IceHevGas",                # 11
+    "IceHevBio",                # 12
+    "FcvOil",                   # 13
+    "FcvBio",                   # 14
+    "FcvH2",                    # 15
+    "Phev10Oil",                # 16
+    "Phev30Oil",                # 17
+    "Phev60Oil",                # 18
+    "Phev10Bio",                # 19
+    "Phev30Bio",                # 20
+    "Phev60Bio",                # 21
+    "Bev",                      # 22
+]
+
+FleetCars =  prism.Dimension("fleet", FLEET_CARS)
+FleetBus =  prism.Dimension("fleet", FLEET_BUS)
+FleetMedTruck =  prism.Dimension("fleet", FLEET_MEDTRUCK)
+FleetHvyTruck =  prism.Dimension("fleet", FLEET_HVYTRUCK)

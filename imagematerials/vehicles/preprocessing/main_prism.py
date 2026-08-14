@@ -23,7 +23,7 @@ from imagematerials.vehicles.preprocessing.util import get_lifetimes
 from imagematerials.vehicles.preprocessing.weights import get_weights
 from imagematerials.vehicles.preprocessing.stock_info_prism import get_vehicle_stock_info
 
-def vehicles_preprocessing_integration(base_directory: str, climate_policy_config: dict,
+def vehicles_preprocessing_integration(base_directory: str, #climate_policy_config: dict,
                            circular_economy_config: dict, image_scenario: str = FOLDER):
     # Preparing directory shorthands
     base_directory = Path(base_directory)
