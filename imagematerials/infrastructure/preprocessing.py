@@ -489,7 +489,7 @@ def get_preprocessing_data_infrastructure(path_base: Path, scen_folder: str, sta
                 final_area.loc[FIRST_YEAR_GRID] = 0.0
                 final_area = final_area.reindex(ext_time_coords).interpolate().fillna(0.0)
                 active_das.append(xr.DataArray(final_area.values,
-                    coords=[ext_time_coords, region_cols], dims=['Time', 'Region']))
+                    coords=[ext_time_coords, region_cols], dims=['time', 'Region']))
 
                 # Obsolete
                 obs_name = f"{prefix_obs}{loc}_{label}_{pave_status}"
@@ -500,7 +500,7 @@ def get_preprocessing_data_infrastructure(path_base: Path, scen_folder: str, sta
                 obs_final.loc[FIRST_YEAR_GRID] = 0.0
                 obs_final = obs_final.reindex(ext_time_coords).interpolate().fillna(0.0)
                 obs_das.append(xr.DataArray(obs_final.values,
-                    coords=[ext_time_coords, region_cols], dims=['Time', 'Region']))
+                    coords=[ext_time_coords, region_cols], dims=['time', 'Region']))
 
         return active_types, active_das, obs_types, obs_das
 
@@ -603,7 +603,7 @@ def get_preprocessing_data_infrastructure(path_base: Path, scen_folder: str, sta
             area = area.apply(pd.to_numeric, errors='coerce')
             area.loc[FIRST_YEAR_GRID] = 0.0
             area = area.reindex(ext_tc).interpolate().fillna(0.0)
-            da = xr.DataArray(area.values, coords=[ext_tc, reg_c], dims=['Time', 'Region'])
+            da = xr.DataArray(area.values, coords=[ext_tc, reg_c], dims=['time', 'Region'])
             da_items.append(da)
         return types_list, da_items
 
@@ -667,7 +667,7 @@ def get_preprocessing_data_infrastructure(path_base: Path, scen_folder: str, sta
             parea_c.loc[FIRST_YEAR_GRID] = 0.0
             parea_c = parea_c.reindex(extended_time_coords).interpolate().fillna(0.0)
             da = xr.DataArray(parea_c.values, coords=[extended_time_coords, region_coords],
-                              dims=['Time', 'Region'])
+                              dims=['time', 'Region'])
             das_out.append(da)
 
     # --- 9c. Compute Rail stocks ---
@@ -872,7 +872,7 @@ def get_preprocessing_data_infrastructure(path_base: Path, scen_folder: str, sta
         df_c = df_c.apply(pd.to_numeric, errors='coerce')
         df_c.loc[FIRST_YEAR_GRID] = 0.0
         df_c = df_c.reindex(ext_tc).interpolate().fillna(0.0)
-        return xr.DataArray(df_c.values, coords=[ext_tc, reg_c], dims=['Time', 'Region'])
+        return xr.DataArray(df_c.values, coords=[ext_tc, reg_c], dims=['time', 'Region'])
 
     rail_element_types = []
     rail_element_das = []
@@ -908,7 +908,7 @@ def get_preprocessing_data_infrastructure(path_base: Path, scen_folder: str, sta
     da_all = prism.Q_(da_all, "km**2")
 
     # reorder da_roads to have the order: TIME, REGION, TYPE
-    da_all = da_all.transpose("Time", "Region", "Type")
+    da_all = da_all.transpose("time", "Region", "Type")
 
     preprocessing_results["stocks"] = da_all
 
@@ -1407,9 +1407,9 @@ def get_preprocessing_data_infrastructure(path_base: Path, scen_folder: str, sta
     fn_param = np.transpose(fn_param, (2, 0, 1))  # (ScipyParam, Time, Type)
     da_lt_foldnorm = xr.DataArray(
         fn_param,
-        dims=["ScipyParam", "Time", "Type"],
+        dims=["ScipyParam", "time", "Type"],
         coords={"ScipyParam": ["c", "scale"],
-                "Time": extended_time_coords,
+                "time": extended_time_coords,
                 "Type": fn_types},
         attrs={"loc": 0}
     )

@@ -162,9 +162,9 @@ def get_preprocessing_data_evbattery(
     data_array = np.broadcast_to(data_array, data_array.shape[:2] + (len(IMAGE_REGIONS),)) # (Time, Type, Region) - add region dimension, though all regions have the same values for now
     vhc_fraction_v2g_da = xr.DataArray(
         data_array,
-        dims=("Time", "Type", "Region"),
+        dims=("time", "Type", "Region"),
         coords={
-            "Time": years,
+            "time": years,
             "Type": techs,
             "Region": IMAGE_REGIONS
         },

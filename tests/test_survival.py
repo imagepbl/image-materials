@@ -9,8 +9,8 @@ from imagematerials.lifetimes import lifetimes_to_matrix
 def create_life_times(prefix, time_size=30):
     time = np.arange(time_size)+1900
     mode = [f"{prefix}_{i}" for i in range(4)]
-    array = xr.DataArray(0.0, dims=["Time", "Type", "ScipyParam"],
-                         coords={"Time": time, "Type": mode, "ScipyParam": ["c", "scale"]})
+    array = xr.DataArray(0.0, dims=["time", "Type", "ScipyParam"],
+                         coords={"time": time, "Type": mode, "ScipyParam": ["c", "scale"]})
     for i_mode, mode_name in enumerate(mode):
         array.loc[:, mode[i_mode], "c"] = 4
         array.loc[:, mode[i_mode], "scale"] = i_mode + 1
@@ -31,9 +31,10 @@ def test_scipy_survival(time_size):
         "weibull": create_life_times("weibull", time_size=time_size),
         "folded_norm": create_life_times("folded_norm", time_size=time_size)
     }
-    survival_matrix = lifetimes_to_matrix(lifetime_vehicles)
+    raw = lifetimes_to_matrix(lifetime_vehicles)
+    survival_matrix = raw.to_array()
     assert len(survival_matrix.coords["Type"]) == 8
-    assert len(survival_matrix.coords["Time"]) == time_size
+    assert len(survival_matrix.coords["time"]) == time_size
     assert len(survival_matrix.coords["Cohort"]) == time_size
     sm_numpy = survival_matrix.to_numpy().mean(axis=2)
 
@@ -53,4 +54,5 @@ def test_scipy_survival(time_size):
         lifetime_vehicles,
         output_modes=new_output_modes)
 
-    assert list(survival_matrix_2.coords["Type"].to_numpy()) == new_output_modes
+    assert list(survival_matrix_2.to_array().coords["Type"].to_numpy()) == new_output_modes
+

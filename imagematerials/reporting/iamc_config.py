@@ -25,7 +25,7 @@ FAMILY_YAML = {
 # Core dimensions
 # -----------------------------------------------------------------------------
 
-CORE_DIMS: Dict[str, str] = {"time": "Time", "region": "Region"}
+CORE_DIMS: Dict[str, str] = {"time": "time", "region": "Region"}
 
 # -----------------------------------------------------------------------------
 # Scenarios (IAMC label → model key)
