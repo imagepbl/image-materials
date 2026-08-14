@@ -64,11 +64,11 @@ def calcualte_resource_efficiency_measures():
         resource_eff_procentual_year = None
         if material in ['limestone']:
             cement_inflow = calculate_cement_equivalent(total_inflow_base,
-                                                        include_rest_of=False).sum('Type')
+                                                        include_rest_of=False).sum(['Type', 'Quintile'])
             cement_inflow_eff = calculate_cement_equivalent(total_inflow_eff,
-                                                            include_rest_of=False).sum('Type')
-            steel_inflow = total_inflow_base.sel(material="steel").sum('Type')
-            steel_inflow_eff = total_inflow_eff.sel(material="steel").sum('Type')
+                                                            include_rest_of=False).sum(['Type', 'Quintile'])
+            steel_inflow = total_inflow_base.sel(material="steel").sum(['Type', 'Quintile'])
+            steel_inflow_eff = total_inflow_eff.sel(material="steel").sum(['Type', 'Quintile'])
 
             cement_resource_eff = ((cement_inflow / gdp) - (cement_inflow_eff / gdp)) / (cement_inflow / gdp) * 100
             steel_resource_eff = ((steel_inflow / gdp) - (steel_inflow_eff / gdp)) / (steel_inflow / gdp) * 100
@@ -80,12 +80,12 @@ def calcualte_resource_efficiency_measures():
             resource_eff_procentual_year = resource_eff_procentual.diff(dim='time').fillna(0)
 
         elif material in ["clay"]:
-            brick_inflow = total_inflow_base.sel(material="brick").sum('Type')
-            brick_inflow_eff = total_inflow_eff.sel(material="brick").sum('Type')
+            brick_inflow = total_inflow_base.sel(material="brick").sum(['Type', 'Quintile'])
+            brick_inflow_eff = total_inflow_eff.sel(material="brick").sum(['Type', 'Quintile'])
             cement_inflow = calculate_cement_equivalent(total_inflow_base,
-                                                        include_rest_of=False).sum('Type')
+                                                        include_rest_of=False).sum(['Type', 'Quintile'])
             cement_inflow_eff = calculate_cement_equivalent(total_inflow_eff,
-                                                            include_rest_of=False).sum('Type')
+                                                            include_rest_of=False).sum(['Type', 'Quintile'])
 
             brick_resource_eff = ((brick_inflow / gdp) - (brick_inflow_eff / gdp)) / (brick_inflow / gdp) * 100
             cement_resource_eff = ((cement_inflow / gdp) - (cement_inflow_eff / gdp)) / (cement_inflow / gdp) * 100
@@ -99,19 +99,19 @@ def calcualte_resource_efficiency_measures():
         elif material == 'sand':
             # replace with sand_gravel_crushed_rock_equivalent
             inflow = sand_gravel_crushed_rock_equivalent(total_inflow_base, 
-                                                         include_rest_bool = False).sum('Type')
+                                                         include_rest_bool = False).sum(['Type', 'Quintile'])
             inflow_eff = sand_gravel_crushed_rock_equivalent(total_inflow_eff, 
-                                                             include_rest_bool=False).sum('Type')
+                                                             include_rest_bool=False).sum(['Type', 'Quintile'])
             inflow = inflow.assign_coords(material='sand')
             inflow_eff = inflow_eff.assign_coords(material='sand')
         elif material == 'cement':
             inflow = calculate_cement_equivalent(total_inflow_base, 
-                                                 include_rest_of=False).sum('Type')
+                                                 include_rest_of=False).sum(['Type', 'Quintile'])
             inflow_eff = calculate_cement_equivalent(total_inflow_eff, 
-                                                    include_rest_of=False).sum('Type')
+                                                    include_rest_of=False).sum(['Type', 'Quintile'])
         else:
-            inflow = total_inflow_base.sel(material=material).sum('Type')
-            inflow_eff = total_inflow_eff.sel(material=material).sum('Type')
+            inflow = total_inflow_base.sel(material=material).sum(['Type', 'Quintile'])
+            inflow_eff = total_inflow_eff.sel(material=material).sum(['Type', 'Quintile'])
 
         if resource_eff_procentual is None:
             # Material intensities per GDP
@@ -143,7 +143,7 @@ def calcualte_resource_efficiency_measures():
     gompertz_eff = gompertz_original.copy()
 
     # apply a 20-year rolling mean to smoothen & extend to edges
-    a_t_rolling_20 = a_t.rolling(Time=20, center=False, min_periods=1).mean()
+    a_t_rolling_20 = a_t.rolling(time=20, center=False, min_periods=1).mean()
 
     gompertz_eff.loc[dict(coef='a')] = a_t_rolling_20
     # save new gompertz coefs
