@@ -268,5 +268,6 @@ def change_sector(orig_sector: Sector, change_definition: dict[str, Any], inplac
         )
         return Sector(
             orig_sector.name,
-            new_data
+            new_data,
+            check_coordinates = orig_sector.check_coordinates,
         )
