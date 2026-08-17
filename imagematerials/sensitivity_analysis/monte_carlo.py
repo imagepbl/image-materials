@@ -142,11 +142,11 @@ def _uniform(rng: np.random.Generator, block: pd.DataFrame) -> np.ndarray:
     return rng.uniform(block["min"], block["max"])
  
  
-def _triangular(rng: np.random.Generator, block: pd.DataFrame) -> np.ndarray: #TODO: check this!!!
+def _triangular(rng: np.random.Generator, block: pd.DataFrame) -> np.ndarray:
     """Triangular with the most-likely value at 'value'.
  
-    Written as a full function rather than a lambda because it needs two guards:
-    numpy raises error if peak falls outside [min, max], and also if min == max.
+    Note:
+    Raises error if peak falls outside [min, max].
     """
     lo   = block["min"].to_numpy(dtype=float)
     peak = block["value"].to_numpy(dtype=float)
@@ -155,7 +155,7 @@ def _triangular(rng: np.random.Generator, block: pd.DataFrame) -> np.ndarray: #T
     bad = (peak < lo) | (peak > hi)
     if bad.any():
         raise ValueError(
-            f"'peak' lies outside [min, max] in {bad.sum()} row(s):\n"
+            f"'peak (value)' lies outside [min, max] in {bad.sum()} row(s):\n"
             + block[bad].to_string()
         )
  
@@ -207,7 +207,7 @@ def _rename_to_canonical(df: pd.DataFrame,
     return df.rename(columns=rename_map)
 
 
-def _add_distribution_column(df: pd.DataFrame, default_distribution: str = "uniform") -> pd.DataFrame:
+def _add_distribution_column(df: pd.DataFrame, default_distribution: str = "triangular") -> pd.DataFrame:
     """Shared last step for every loader: fill the distribution column, make sure
     the index is unique (sample_values assigns by index), and sanity-check bounds.
 
