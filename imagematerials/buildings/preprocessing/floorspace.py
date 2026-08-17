@@ -521,7 +521,7 @@ def compute_housing_residential(population: xr.DataArray,
     # Calculate the share of housing types on a m2 basis
     m2_housing_share = m2_housing_per_capita / m2_housing_per_capita.sum(["Type"])
     total_m2_housing_per_cap = m2_housing_share*floorspace_rururb
-    total_m2_housing_per_cap = prism.Q_(total_m2_housing_per_cap, "m^2/person") 
+    total_m2_housing_per_cap = prism.Q_(total_m2_housing_per_cap, "m^2/person")
 
     # Implement circular economy measures if configuration is provided
     if 'base' in circular_economy_config.keys():
