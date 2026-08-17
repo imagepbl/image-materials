@@ -7,7 +7,6 @@ import xarray as xr
 
 from imagematerials.concepts import create_region_graph
 from imagematerials.constants import IMAGE_REGIONS
-from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.util import apply_change_per_region
 
 
@@ -143,7 +142,12 @@ def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray, popu
         all_times = total_m2_housing_per_cap.Time.values
         post_mask = all_times > target_year
 
-        # Smootherstep ramp 0 -> 1 across target_year -> convergence_year_end
+        # Smootherstep (6x^5 - 15x^4 + 10x^3) ramp 0 -> 1 across target_year -> convergence_year_end to the cap
+        # Chosen over linear/spline/sigmoid smoothing because it's the minimal,
+        # parameter-free function that is monotonic and bounded in [0,1] (never
+        # overshoots the cap) and continuous at both anchor years (no kinks in
+        # the floorspace trajectory, which would otherwise show up as spikes in 
+        # the stock -> flow series). 
         lin = np.clip((all_times - target_year) / (convergence_year_end - target_year), 0.0, 1.0)
         smooth = 6 * lin**5 - 15 * lin**4 + 10 * lin**3
         ramp = xr.DataArray(smooth, dims=["Time"], coords={"Time": all_times})
@@ -223,10 +227,7 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
         Updated floorspace for commercial targets with circular economy configuration.
 
     """
-    
-    print("FUNCTION CALLED")
-    print(f"ce keys: {list(circular_economy_config.keys())}")
-    
+
     print("FUNCTION CALLED")
     print(f"ce keys: {list(circular_economy_config.keys())}")
     region_knowledge_graph = create_region_graph()
@@ -255,20 +256,13 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
             floor_pc_2020_xr, output_coords=regions_mapped, dim="Region")
         target_vals = floor_pc_2020_mapped
         current_vals = floorspace_commercial.sel(Time=2020, Region=regions_mapped).sum(dim="Type")
-        current_vals = floorspace_commercial.sel(Time=2020, Region=regions_mapped).sum(dim="Type")
 
-        scaling_factors = xr.where(current_vals > 0, target_vals / current_vals, 1.0)
         scaling_factors = xr.where(current_vals > 0, target_vals / current_vals, 1.0)
 
         floorspace_commercial.loc[{"Region": regions_mapped}] *= scaling_factors
         logging.debug("implemented 'base' for Commercial Buildings")
 
     ce_scen = None  # INITIALIZE ce_scen
-
-    # Right after ce_scen is set
-    print(f"ce_scen = {ce_scen}")
-
-
     # Right after ce_scen is set
     print(f"ce_scen = {ce_scen}")
 
@@ -281,17 +275,9 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
         commercial_ce_mode = circular_economy_config[ce_scen]["buildings"].get(
             "commercial_ce_mode", "relative")
         implementation_rate = circular_economy_config[ce_scen]['buildings']['implementation_rate']
-        commercial_ce_mode = circular_economy_config[ce_scen]["buildings"].get(
-            "commercial_ce_mode", "relative")
-        implementation_rate = circular_economy_config[ce_scen]['buildings']['implementation_rate']
         base_year = circular_economy_config[ce_scen]["buildings"]["base_year"]
         target_year = circular_economy_config[ce_scen]["buildings"]["target_year"]
 
-        # --- Build the region-mapped relative-change array (shared by both modes) ---
-        commercial_scenario_settings = circular_economy_config[ce_scen]["buildings"]\
-            ['commercial']['m2_change_pc']
-
-        print(f"mode = {commercial_ce_mode}")
         # --- Build the region-mapped relative-change array (shared by both modes) ---
         commercial_scenario_settings = circular_economy_config[ce_scen]["buildings"]\
             ['commercial']['m2_change_pc']
@@ -354,8 +340,6 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
             low_regions = total_pc_2020.where(total_pc_2020 < low_threshold, drop=True)\
                 .coords["Region"].values
             low_region_strs = set(str(r) for r in low_regions)
-            eligible_regions = total_pc_2020.where(total_pc_2020 >= low_threshold, drop=True)\
-                .coords["Region"].values
 
             logging.info(
                 "Commercial CE: low regions (< %.1f m²/cap in 2020, no relative reduction): %s",
