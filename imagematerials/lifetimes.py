@@ -2,13 +2,14 @@ from typing import Union
 
 import numpy as np
 import xarray as xr
+import prism
 from imagematerials.distribution import NAME_TO_DIST
 
 
 def lifetimes_to_matrix(
         lifetime_parameters: dict[str, xr.DataArray],
         output_modes: Union[None, list, xr.DataArray] = None,
-        knowledge_graph = None) -> xr.DataArray:
+        knowledge_graph = None) -> prism.TimeVariable:
 
     if output_modes is not None:
         try:
@@ -25,21 +26,23 @@ def lifetimes_to_matrix(
             modes.extend(str(x) for x in param_dict_array.coords["Type"].to_numpy())
 
     first_array = list(lifetime_parameters.values())[0]
-    time_series = first_array.coords["Time"]
-    extra_dims = [dim for dim in first_array.dims if dim not in ["Time", "ScipyParam"]]
+    time_series = first_array.coords["time"]
+    extra_dims = [dim for dim in first_array.dims if dim not in ["time", "ScipyParam"]]
     extra_coords = {dim: modes if dim == "Type" else first_array.coords[dim] for dim in extra_dims}
-    dt = first_array.coords["Time"].values[1] - first_array.coords["Time"].values[0]
+    dt = first_array.coords["time"].values[1] - first_array.coords["time"].values[0]
 
-    coords = {"Time": time_series.to_numpy(), "Cohort": time_series.to_numpy()}
+    coords = {"time": time_series.to_numpy(), "Cohort": time_series.to_numpy()}
     coords.update(extra_coords)
     matrix = xr.DataArray(
-        0.0, dims=("Time", "Cohort", *extra_dims),
+        0.0, dims=("time", "Cohort", *extra_dims),
         coords=coords
     )
 
     for t in time_series.values:
         matrix.loc[t:, t] = compute_cohort(t, lifetime_parameters, time_series, dt, output_modes,
                                            knowledge_graph)
+
+    matrix = prism.TimeVariable.from_array(matrix)
     return matrix
 
 
@@ -64,7 +67,7 @@ def compute_cohort(cohort: int, lifetime_parameters, time_series, dt, output_mod
     n_coords_left = len(time_series.loc[cohort:])
     res_arrays = []
     for dist_name, param_array in lifetime_parameters.items():
-        var_shape = [len(param_array.coords[dim]) for dim in param_array.dims if dim not in ["Time", "ScipyParam"]]
+        var_shape = [len(param_array.coords[dim]) for dim in param_array.dims if dim not in ["time", "ScipyParam"]]
         # n_modes = len(param_array.coords["Type"])
         # The index array signifies the relative time delta from the cohort to the
         # future.
@@ -74,12 +77,12 @@ def compute_cohort(cohort: int, lifetime_parameters, time_series, dt, output_mod
             if param_name in param_array.attrs:
                 param_dict[param_name] = param_array.attrs[param_name]
             else:
-                param_dict[param_name] = param_array.loc[{"Time": cohort, "ScipyParam": param_name}]
+                param_dict[param_name] = param_array.loc[{"time": cohort, "ScipyParam": param_name}]
         method = NAME_TO_DIST[dist_name].method
         res_numpy_array = method(index_array, **param_dict)
-        array_coords = {"Time": time_series.loc[cohort:]}
+        array_coords = {"time": time_series.loc[cohort:]}
         array_coords.update({dim: param_array.coords[dim] for dim in param_array.dims
-                                if dim not in ["Time", "ScipyParam"]})
+                                if dim not in ["time", "ScipyParam"]})
         res_arrays.append(xr.DataArray(res_numpy_array, dims=list(array_coords),
                                         coords=array_coords))
     base_array = xr.concat(res_arrays, dim="Type", coords="minimal")

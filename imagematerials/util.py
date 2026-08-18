@@ -383,9 +383,9 @@ def convert_lifetime_dataset(lifetime_dataset: xr.Dataset) -> dict[str, xr.DataA
         dist = NAME_TO_DIST[dist_name]
 
         array = xr.DataArray(
-            0.0, dims=("Time", "Type", "ScipyParam"),
+            0.0, dims=("time", "Type", "ScipyParam"),
             coords={
-                "Time": lifetime_dataset.coords["year"].to_numpy(),
+                "time": lifetime_dataset.coords["year"].to_numpy(),
                 "Type": mode_list,
                 "ScipyParam": dist.variable_scipy_param})
 
@@ -427,7 +427,7 @@ def convert_lifetime_dataarray(lifetime_dataarray: xr.DataArray) -> dict[str, xr
     Returns
     -------
     dict[str, xr.DataArray]
-        Dictionary containing one DataArray per distribution, with dimensions (Time, Type, ScipyParam),
+        Dictionary containing one DataArray per distribution, with dimensions (time, Type, ScipyParam),
         fully preserving coordinates for compatibility with downstream code.
 
     """
@@ -470,9 +470,9 @@ def convert_lifetime_dataarray(lifetime_dataarray: xr.DataArray) -> dict[str, xr
 
         array = xr.DataArray(
             0.0,
-            dims=("Time", "Type", "ScipyParam"),
+            dims=("time", "Type", "ScipyParam"),
             coords={
-                "Time": lifetime_dataarray.coords["Cohort"].to_numpy(),
+                "time": lifetime_dataarray.coords["Cohort"].to_numpy(),
                 "Type": mode_list,
                 "ScipyParam": dist.variable_scipy_param,
             },
@@ -543,7 +543,7 @@ def scenario_change(arr: xr.DataArray, base_year: int, target_year: int, change:
     result = arr.copy()
 
     for region, increase in change.items():
-        base_val = result.loc[{"Time": target_year, "Region": region}]  # kept (not relied on)
+        base_val = result.loc[{"time": target_year, "Region": region}]  # kept (not relied on)
         if region in result.Region:
             if implementation_rate == 'linear':
                 # ramp progress: 0 at base_year, 1 at target_year, held at 1 after
@@ -551,12 +551,12 @@ def scenario_change(arr: xr.DataArray, base_year: int, target_year: int, change:
                 # apply to each year explicitly to preserve structure
                 for year in range(base_year + 1, target_year + 1):
                     progress = (year - base_year) / span
-                    result.loc[{"Time": year, "Region": region}] = (
-                        arr.loc[{"Time": year, "Region": region}] * (1 + (increase / 100.0) * progress)
+                    result.loc[{"time": year, "Region": region}] = (
+                        arr.loc[{"time": year, "Region": region}] * (1 + (increase / 100.0) * progress)
                     )
                 # after target_year, full effect but still relative to same-year baseline
-                result.loc[{"Time": slice(target_year + 1, None), "Region": region}] = (
-                    arr.loc[{"Time": slice(target_year + 1, None), "Region": region}] * (1 + increase / 100.0)
+                result.loc[{"time": slice(target_year + 1, None), "Region": region}] = (
+                    arr.loc[{"time": slice(target_year + 1, None), "Region": region}] * (1 + increase / 100.0)
                 )
                 # keep explicit anchor years (only when data_type is set,
                 # e.g. vehicles with sparse time steps)
@@ -572,10 +572,10 @@ def scenario_change(arr: xr.DataArray, base_year: int, target_year: int, change:
 
             elif implementation_rate == 'immediate':
                 # unchanged up to base_year; full step from base_year+1 onward, relative to same-year baseline
-                result.loc[{"Time": slice(None, base_year), "Region": region}] = \
-                    arr.loc[{"Time": slice(None, base_year), "Region": region}]
-                result.loc[{"Time": slice(base_year + 1, None), "Region": region}] = \
-                    arr.loc[{"Time": slice(base_year + 1, None), "Region": region}] * (1 + increase / 100.0)
+                result.loc[{"time": slice(None, base_year), "Region": region}] = \
+                    arr.loc[{"time": slice(None, base_year), "Region": region}]
+                result.loc[{"time": slice(base_year + 1, None), "Region": region}] = \
+                    arr.loc[{"time": slice(base_year + 1, None), "Region": region}] * (1 + increase / 100.0)
 
             elif implementation_rate == 's-curve':
                 years = list(range(base_year, target_year + 1))
@@ -586,19 +586,19 @@ def scenario_change(arr: xr.DataArray, base_year: int, target_year: int, change:
                 for year in years:
                     s = 1.0 / (1.0 + np.exp(-steepness * (year - mid_year)))
                     progress = np.clip((s - s0) / (s1 - s0), 0.0, 1.0)
-                    result.loc[{"Time": year, "Region": region}] = (
-                        arr.loc[{"Time": year, "Region": region}] * (1 + (increase / 100.0) * progress)
+                    result.loc[{"time": year, "Region": region}] = (
+                        arr.loc[{"time": year, "Region": region}] * (1 + (increase / 100.0) * progress)
                     )
                 # after target_year, full effect relative to same-year baseline
-                result.loc[{"Time": slice(target_year + 1, None), "Region": region}] = (
-                    arr.loc[{"Time": slice(target_year + 1, None), "Region": region}] * (1 + increase / 100.0)
+                result.loc[{"time": slice(target_year + 1, None), "Region": region}] = (
+                    arr.loc[{"time": slice(target_year + 1, None), "Region": region}] * (1 + increase / 100.0)
                 )
             else: 
                 raise ValueError(f"Unknown implementation method: '{implementation_rate}'. "
                                   "Supported methods are 'immediate', 'linear', and 's-curve'.")
         else:
             raise ValueError(f"Region {region} not found in DataArray.")
-    return result.interpolate_na("Time", method="cubic")
+    return result.interpolate_na("time", method="cubic")
 
 
 def apply_change_per_region(arr: xr.DataArray, base_year: int, target_year: int, increase: float,
@@ -651,7 +651,7 @@ def overwrite_future_rates(arr: xr.DataArray, target_year: int, supertypes: list
     Parameters
     ----------
     arr : xr.DataArray
-        A DataArray with dimensions including 'Time', 'material', and 'Type'.
+        A DataArray with dimensions including 'time', 'material', and 'Type'.
     target_year : int
         The year for which values should be overwritten.
     supertypes: list
@@ -669,7 +669,7 @@ def overwrite_future_rates(arr: xr.DataArray, target_year: int, supertypes: list
     for material, new_value in new_val.items():
         if material not in result.material.values:
             raise ValueError(f"'{material}' not found in DataArray.")
-        result.loc[{"Time": target_year,"Type": supertypes, "material": material}] = new_value
+        result.loc[{"time": target_year,"Type": supertypes, "material": material}] = new_value
     return result
 
 

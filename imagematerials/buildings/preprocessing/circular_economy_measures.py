@@ -255,7 +255,7 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
         floor_pc_2020_mapped = region_knowledge_graph.rebroadcast_xarray(
             floor_pc_2020_xr, output_coords=regions_mapped, dim="Region")
         target_vals = floor_pc_2020_mapped
-        current_vals = floorspace_commercial.sel(Time=2020, Region=regions_mapped).sum(dim="Type")
+        current_vals = floorspace_commercial.sel(time=2020, Region=regions_mapped).sum(dim="Type")
 
         scaling_factors = xr.where(current_vals > 0, target_vals / current_vals, 1.0)
 
@@ -328,7 +328,7 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
             baseline = floorspace_commercial.copy(deep=True)
 
             # Classify regions by 2020 per-capita commercial floorspace (plain float)
-            total_pc_2020 = floorspace_commercial.sel(Time=2020).sum(dim="Type")
+            total_pc_2020 = floorspace_commercial.sel(time=2020).sum(dim="Type")
 
             # Helper: numeric region string -> name (1-indexed into IMAGE_REGIONS)
             def _reg_name(r):
@@ -372,7 +372,7 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
             )
 
             # Phase 2: convergence after target_year (all comparisons on plain floats)
-            total_pc_at_target = floorspace_commercial.sel(Time=target_year).sum(dim="Type")
+            total_pc_at_target = floorspace_commercial.sel(time=target_year).sum(dim="Type")
 
             # Exclude low regions from above-cap classification (they are handled separately)
             above_cap_at_target = [
@@ -397,7 +397,7 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
                           convergence_cap, convergence_year_end,
                           [_reg_name(r) for r in mid_range_regions])
 
-            all_times = floorspace_commercial.Time.values
+            all_times = floorspace_commercial.time.values
             post_mask = all_times > target_year
 
             ramp = xr.DataArray(
@@ -405,8 +405,8 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
                     (all_times - target_year) / (convergence_year_end - target_year),
                     0.0, 1.0
                 ),
-                dims=["Time"],
-                coords={"Time": all_times},
+                dims=["time"],
+                coords={"time": all_times},
             )
 
             def _capped_end_vals(fs_end: np.ndarray) -> np.ndarray:
@@ -418,15 +418,15 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
 
             # (a) Above cap at target_year — linear decline to cap by convergence_year_end
             for reg in above_cap_at_target:
-                fs_at_target = floorspace_commercial.sel(Time=target_year, Region=reg).values
+                fs_at_target = floorspace_commercial.sel(time=target_year, Region=reg).values
                 total_at_target = fs_at_target.sum()
                 type_shares = fs_at_target / total_at_target if total_at_target > 0 \
                     else np.zeros_like(fs_at_target)
                 end_vals = convergence_cap * type_shares  # exactly at cap
 
                 for t in all_times[post_mask]:
-                    r = float(ramp.sel(Time=t))
-                    floorspace_commercial.loc[{"Time": t, "Region": reg}] = \
+                    r = float(ramp.sel(time=t))
+                    floorspace_commercial.loc[{"time": t, "Region": reg}] = \
                         fs_at_target * (1 - r) + end_vals * r
 
             # (b) Low regions — follow baseline, linearly capped if baseline exceeds cap.
@@ -437,25 +437,25 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
                 floorspace_commercial.loc[{"Region": reg}] = baseline.sel(Region=reg).values
 
             for reg in low_regions:
-                fs_at_target = floorspace_commercial.sel(Time=target_year, Region=reg).values
-                baseline_end = baseline.sel(Region=reg, Time=convergence_year_end).values
+                fs_at_target = floorspace_commercial.sel(time=target_year, Region=reg).values
+                baseline_end = baseline.sel(Region=reg, time=convergence_year_end).values
                 end_vals = _capped_end_vals(baseline_end)
 
                 for t in all_times[post_mask]:
-                    r = float(ramp.sel(Time=t))
-                    floorspace_commercial.loc[{"Time": t, "Region": reg}] = \
+                    r = float(ramp.sel(time=t))
+                    floorspace_commercial.loc[{"time": t, "Region": reg}] = \
                         fs_at_target * (1 - r) + end_vals * r
 
             # (c) Mid-range — linear transition from CE value at target_year toward
             # the (capped) baseline value at convergence_year_end.
             for reg in mid_range_regions:
-                fs_at_target = floorspace_commercial.sel(Time=target_year, Region=reg).values
-                baseline_end = baseline.sel(Region=reg, Time=convergence_year_end).values
+                fs_at_target = floorspace_commercial.sel(time=target_year, Region=reg).values
+                baseline_end = baseline.sel(Region=reg, time=convergence_year_end).values
                 end_vals = _capped_end_vals(baseline_end)
 
                 for t in all_times[post_mask]:
-                    r = float(ramp.sel(Time=t))
-                    floorspace_commercial.loc[{"Time": t, "Region": reg}] = \
+                    r = float(ramp.sel(time=t))
+                    floorspace_commercial.loc[{"time": t, "Region": reg}] = \
                         fs_at_target * (1 - r) + end_vals * r
 
             # Final clamp: ensure convergence interpolation never exceeds baseline
@@ -481,7 +481,7 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
         floorspace_commercial.attrs.pop("units", None)
         floorspace_commercial = prism.Q_(floorspace_commercial, "m^2/person")
 
-    return floorspace_commercial.transpose("Time", "Region", "Type")
+    return floorspace_commercial.transpose("time", "Region", "Type")
 
 
 def circular_economy_measures_material_intensities_residential(
@@ -503,7 +503,7 @@ def circular_economy_measures_material_intensities_residential(
     """
     # rename Cohort to Time for compatibility with apply_change_per_region function
     if "Cohort" in xr_mat_res_intensities.dims:
-        xr_mat_res_intensities = xr_mat_res_intensities.rename({"Cohort": "Time"})
+        xr_mat_res_intensities = xr_mat_res_intensities.rename({"Cohort": "time"})
 
     ce_scen = None  # INITIALIZE ce_scen
 
@@ -548,8 +548,8 @@ def circular_economy_measures_material_intensities_residential(
         xr_mat_res_intensities.loc[dict(material=mat)] = updated
 
     # rename back
-    if "Time" in xr_mat_res_intensities.dims:
-        xr_mat_res_intensities = xr_mat_res_intensities.rename({"Time": "Cohort"})
+    if "time" in xr_mat_res_intensities.dims:
+        xr_mat_res_intensities = xr_mat_res_intensities.rename({"time": "Cohort"})
 
     logging.debug(f"implemented '{ce_scen}' for Residential Buildings (lightweighting)")
     return xr_mat_res_intensities
@@ -576,7 +576,7 @@ def circular_economy_measures_material_intensities_commercial(xr_mat_comm_intens
 
     """
     # work array with Time dim
-    xr_mat_comm_intensities = (xr_mat_comm_intensities.rename({"Cohort": "Time"})
+    xr_mat_comm_intensities = (xr_mat_comm_intensities.rename({"Cohort": "time"})
               if "Cohort" in xr_mat_comm_intensities.dims else xr_mat_comm_intensities)
     
     ce_scen = None  # INITIALIZE ce_scen
@@ -631,8 +631,8 @@ def circular_economy_measures_material_intensities_commercial(xr_mat_comm_intens
     xr_mat_updated = xr.concat(updated_slices, dim="material")
 
     # rename back to Cohort if needed
-    xr_mat_comm_intensities = (xr_mat_updated.rename({"Time": "Cohort"})
-                               if "Time" in xr_mat_updated.dims else xr_mat_updated)
+    xr_mat_comm_intensities = (xr_mat_updated.rename({"time": "Cohort"})
+                               if "time" in xr_mat_updated.dims else xr_mat_updated)
 
     logging.debug("implemented 'narrow_product' for Commercial Buildings (lightweighting)")
     return xr_mat_comm_intensities

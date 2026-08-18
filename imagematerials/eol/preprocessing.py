@@ -25,16 +25,16 @@ def interpolate_eol_rates(
     - Clipped between min_value and max_value
     """
     # Fill pre-anchor with anchor value
-    ds = ds.reindex(Time=full_time)
-    ds_before = ds.sel(Time=anchor_year)
-    ds.loc[dict(Time=slice(None, anchor_year - 1))] = ds_before
+    ds = ds.reindex(time=full_time)
+    ds_before = ds.sel(time=anchor_year)
+    ds.loc[dict(time=slice(None, anchor_year - 1))] = ds_before
 
     # Interpolate between anchor and target
-    ds = ds.interpolate_na(dim="Time", method="linear")
+    ds = ds.interpolate_na(dim="time", method="linear")
 
     # Fill post-target with target value
-    ds_after = ds.sel(Time=target_year)
-    ds.loc[dict(Time=slice(target_year + 1, None))] = ds_after
+    ds_after = ds.sel(time=target_year)
+    ds.loc[dict(time=slice(target_year + 1, None))] = ds_after
 
     # Clip to valid range
     return ds.clip(min=min_value, max=max_value)
@@ -52,9 +52,10 @@ def eol_preprocessing(base_dir, circular_economy_scenario_dirs=None):
     recycling_in = pd.read_csv(Path(base_dir, "end_of_life","SSP2_CP","recycling.csv"))
 
     # renaming columns for consistency
-    collection_in = collection_in.rename(columns={'time':'Time','sector': 'Sector', 'regions': 'Region', 'category':'Type'})
-    reuse_in = reuse_in.rename(columns={'Element': 'Type'} )
-    recycling_in = recycling_in.rename(columns={'Element': 'Type'} )
+    collection_in = collection_in.rename(columns={'sector': 'Sector', 'regions': 'Region', 'category':'Type'})
+    reuse_in = reuse_in.rename(columns={'Element': 'Type', 'Time': 'time'} )
+    recycling_in = recycling_in.rename(columns={'Element': 'Type', 'Time': 'time'} )
+
 
     # dropping redundant 'Sector' level
     collection_in = collection_in.drop(columns='Sector')
@@ -62,7 +63,7 @@ def eol_preprocessing(base_dir, circular_economy_scenario_dirs=None):
     recycling_in = recycling_in.drop(columns='Sector')
 
     # melting material columns
-    id_vars = ['Region', 'Time', 'Type'] 
+    id_vars = ['Region', 'time', 'Type'] 
     value_vars = ['Steel','Concrete','Wood','Cu','Aluminium', 'Glass']
 
     collection_df = pd.melt(
@@ -104,13 +105,13 @@ def eol_preprocessing(base_dir, circular_economy_scenario_dirs=None):
     recycling_df['material'] = recycling_df['material'].replace(material_rename)
 
     # creating xarrays from EoL dfs
-    xr_collection = collection_df.set_index(['Time', 'Region', 'Type', 'material']) \
+    xr_collection = collection_df.set_index(['time', 'Region', 'Type', 'material']) \
                     .to_xarray()['value']
 
-    xr_reuse = reuse_df.set_index(['Time', 'Region','Type', 'material']) \
+    xr_reuse = reuse_df.set_index(['time', 'Region','Type', 'material']) \
                     .to_xarray()['value']
 
-    xr_recycling = recycling_df.set_index(['Time', 'Region','Type', 'material']) \
+    xr_recycling = recycling_df.set_index(['time', 'Region','Type', 'material']) \
                     .to_xarray()['value']
     
     # add othermaterials dim, fill w/ 0 and reorder
@@ -120,9 +121,9 @@ def eol_preprocessing(base_dir, circular_economy_scenario_dirs=None):
     xr_recycling = xr_recycling.reindex(material=outflows_materials, fill_value=0)
     
     # set targets for 2060 instead of 2050
-    xr_collection = xr_collection.assign_coords(Time = [2060 if t == 2050 else t for t in xr_collection.Time.values])
-    xr_reuse = xr_reuse.assign_coords(Time = [2060 if t == 2050 else t for t in xr_reuse.Time.values])
-    xr_recycling = xr_recycling.assign_coords(Time = [2060 if t == 2050 else t for t in xr_recycling.Time.values])
+    xr_collection = xr_collection.assign_coords(time = [2060 if t == 2050 else t for t in xr_collection.time.values])
+    xr_reuse = xr_reuse.assign_coords(time = [2060 if t == 2050 else t for t in xr_reuse.time.values])
+    xr_recycling = xr_recycling.assign_coords(time = [2060 if t == 2050 else t for t in xr_recycling.time.values])
 
     # scenario implementation
     building_supertypes = ["urban", "rural", "commercial"]

@@ -5,7 +5,7 @@ def scale_to_target(dataarray, target_values, year=2020):
     Scales the entire time series for selected regions so that the 2020 values match the targets.
     
     Parameters:
-    - dataarray: xarray.DataArray with dimensions Region, Area, Type, Time
+    - dataarray: xarray.DataArray with dimensions Region, Area, Type, time
     - target_values_2020: dict of {region_name: (region_id, target_value)}
     - year: year to match to target (default = 2020)
     
@@ -18,7 +18,7 @@ def scale_to_target(dataarray, target_values, year=2020):
         region_str = str(region_id)
 
         # Get original 2020 mean value
-        original = dataarray.sel(Region=region_str, Time=year)
+        original = dataarray.sel(Region=region_str, time=year)
         original_mean = original.sum(dim="Type").mean(dim="Area").item()
 
         # Compute scale factor
