@@ -103,10 +103,7 @@ UNIT_CONVERSIONS:
   # SCRAP
   # -------------------------------
   Scrap:
-    "Scrap|Iron and Steel|Steel|{Demand Sector}":
-      factor: 1e-9
-      to: "Mt/yr"
-    "Scrap|Non-Ferrous Metals|Aluminum|{Demand Sector}":
+    "Scrap|{Engineered Material}|{Demand Sector Disaggregated}":
       factor: 1e-9
       to: "Mt/yr"
     "Scrap|Iron and Steel|Steel":

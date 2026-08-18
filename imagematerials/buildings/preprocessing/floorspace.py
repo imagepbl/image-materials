@@ -500,7 +500,7 @@ def compute_housing_residential(population: xr.DataArray,
     Parameters
     ----------
     population:
-        Population for each region at year t.
+        Population for each region at year t, per Area (Rural, Urban) and Total.
     average_m2_capita:
         Average floorspace per capita.
     housing_type:
@@ -519,13 +519,13 @@ def compute_housing_residential(population: xr.DataArray,
     # Calculate the m2 per capita for each housing type
     m2_housing_per_capita = average_m2_capita * housing_type
     # Calculate the share of housing types on a m2 basis
-    m2_housing_share = m2_housing_per_capita / m2_housing_per_capita.sum("Type")
-    total_m2_housing_per_cap = m2_housing_share * floorspace_rururb
+    m2_housing_share = m2_housing_per_capita / m2_housing_per_capita.sum(["Type"])
+    total_m2_housing_per_cap = m2_housing_share*floorspace_rururb
     total_m2_housing_per_cap = prism.Q_(total_m2_housing_per_cap, "m^2/person")
 
     # Implement circular economy measures if configuration is provided
-    if "base" in circular_economy_config:
-        total_m2_housing_per_cap = ce_measures_residential_housing(total_m2_housing_per_cap,
+    if 'base' in circular_economy_config.keys():
+        total_m2_housing_per_cap = ce_measures_residential_housing(total_m2_housing_per_cap, population,
                                                                    circular_economy_config)
 
     # Align Area labels/order with the split residential floorspace coordinates.
