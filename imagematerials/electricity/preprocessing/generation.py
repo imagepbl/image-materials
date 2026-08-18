@@ -134,9 +134,9 @@ def get_preprocessing_data_gen(path_base: str,
     # Build xarray DataArray
     gcap_da = xr.DataArray(
         data_array,
-        dims=('Time', 'Region', 'SuperType'),
+        dims=('time', 'Region', 'SuperType'),
         coords={
-            'Time': years,
+            'time': years,
             'Region': [str(r) for r in regions],
             'SuperType': [str(r) for r in techs]
         },
@@ -356,9 +356,9 @@ def get_preprocessing_data_gen_supertype(path_base: str, climate_policy_config: 
     # Build xarray DataArray
     gcap_da = xr.DataArray(
         data_array,
-        dims=('Time', 'Region', 'Type'),
+        dims=('time', 'Region', 'Type'),
         coords={
-            'Time': years,
+            'time': years,
             'Region': [str(r) for r in regions],
             'Type': [str(r) for r in techs]
         },

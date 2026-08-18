@@ -175,13 +175,13 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
 
     # storage energy capacity (MWh) --------------------------------------------------------------------
     storage_energy = storage_energy.iloc[:, :26]
-    storage_energy.index.name = "Time"
+    storage_energy.index.name = "time"
     storage_energy.columns.name = "Region"
     storage_energy_da = xr.DataArray(
         storage_energy.values,
-        dims=["Time", "Region"],
+        dims=["time", "Region"],
         coords={
-            "Time": storage_energy.index,
+            "time": storage_energy.index,
             "Region": [("region_" + str(r)) for r in storage_energy.columns]
         }
     )
@@ -190,13 +190,13 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
 
     # storage power capacity (MW) ----------------------------------------------------------------------
     storage_power = storage_power.iloc[:, :26]
-    storage_power.index.name = "Time"
+    storage_power.index.name = "time"
     storage_power.columns.name = "Region"
     storage_power_da = xr.DataArray(
         storage_power.values,
-        dims=["Time", "Region"],
+        dims=["time", "Region"],
         coords={
-            "Time": storage_power.index,
+            "time": storage_power.index,
             "Region": [("region_" + str(r)) for r in storage_power.columns]
         }
     )
@@ -282,8 +282,8 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
 
     data_phs = [df_data1, df_data2, df_data3, df_shares_adjustment_2030, storage_energy_da]
     phs_power, phs_energy = derive_phs_installed_capacity(data_phs, factor_phs_growth_rel_demand, mean_discharge_duration, flag_phs_scenario) #mean_discharge_duration
-    phs_energy = phs_energy.sel(Time=slice(year_start, year_end)) # make sure to only keep the years in the requested time range
-    phs_energy = phs_energy.expand_dims({"Type": ["PHS"]}).transpose("Time", "Region", "Type")
+    phs_energy = phs_energy.sel(time=slice(year_start, year_end)) # make sure to only keep the years in the requested time range
+    phs_energy = phs_energy.expand_dims({"Type": ["PHS"]}).transpose("time", "Region", "Type")
 
     ####################################################################################################
     # 2. Behind-the-meter storage 
