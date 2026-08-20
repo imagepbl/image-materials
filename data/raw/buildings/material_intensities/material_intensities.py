@@ -101,7 +101,8 @@ material_list_rasmi = ["steel", "concrete", "wood", "copper", "aluminum", "glass
 mis_list_target = ["steel", "concrete", "wood", "copper", "aluminium", "glass", "brick"]
 
 # regions where total steel consumption is higher than what is estimated by image-materials sectors buildings & vehicles
-steel_regions_adapt = [4, 8, 9, 22, 25, 26]
+STEEL_REGIONS_ADAPT_ENABLED = True
+steel_regions_adapt = [4, 8, 9, 22, 25, 26] if STEEL_REGIONS_ADAPT_ENABLED else []
 
 
 def load_mi_rasmi():
