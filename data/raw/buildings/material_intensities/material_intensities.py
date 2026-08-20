@@ -94,7 +94,7 @@ housing_type_to_rasmi_building_structure = {
     1: ['C', 'M', 'S', 'T'],  # assumption that detached housing are average all structures
     2: ['C', 'M', 'S', 'T'],  # assumption that semi detached housing are average all structures
     3: ['C', 'S'],  # assumption that appartement are only made out of cement and steel structures
-    4: ['S']  # assumption that high-rise only steel structures
+    4: ['C', 'S']  # assumption that high-rise are made out of cement and steel structures
 }
 
 material_list_rasmi = ["steel", "concrete", "wood", "copper", "aluminum", "glass", "brick"]
@@ -191,22 +191,68 @@ structure_code_to_share_name = {
 }
 
 
+def effective_structure_weights(structure_shares: pd.DataFrame, allowed_structures: list,
+                                 nonzero_structures_by_region: pd.DataFrame = None):
+    """
+    Effective weight per allowed structure type, for every region in structure_shares, renormalized
+    over allowed_structures. Mirrors the fallback used in weighted_structure_mi: if the allowed
+    structures have zero combined share in a region, falls back to an equal-weight average over
+    whichever allowed structures have non-zero RASMI data in that region (nonzero_structures_by_region,
+    a region-indexed DataFrame of bools per structure code); if that's not supplied, falls back to an
+    equal-weight average over all allowed_structures.
+    """
+    share_names = [structure_code_to_share_name[s] for s in allowed_structures]
+    weights = structure_shares[share_names].copy()
+    weights.columns = allowed_structures
+
+    row_sums = weights.sum(axis=1)
+    zero_mask = (row_sums == 0) | row_sums.isna()
+
+    normalized = weights.div(row_sums, axis=0)
+
+    if zero_mask.any():
+        for region in weights.index[zero_mask]:
+            if nonzero_structures_by_region is not None and region in nonzero_structures_by_region.index:
+                available = [s for s in allowed_structures if nonzero_structures_by_region.loc[region, s]]
+            else:
+                available = allowed_structures
+            if not available:
+                normalized.loc[region, :] = np.nan
+                continue
+            normalized.loc[region, :] = 0.0
+            normalized.loc[region, available] = 1.0 / len(available)
+
+    return normalized
+
+
 def weighted_structure_mi(filtered_mis: pd.Series, structure_shares: pd.DataFrame, image_region: int,
                            allowed_structures: list):
     """
     Weight a structure-indexed MI series by each structure type's relative GFA share in image_region,
     renormalized over only the structures allowed for the housing type (housing_type_to_rasmi_building_structure).
-    Falls back to a plain mean if shares aren't available (e.g. region missing from material_cities_image).
+    Falls back to a plain mean if shares aren't available (e.g. region missing from material_cities_image),
+    or if the allowed structures have zero combined GFA share in the region (renormalizes over whichever
+    allowed structures do have non-zero share instead).
     """
-    share_names = [structure_code_to_share_name[s] for s in allowed_structures]
+    mi_by_structure = filtered_mis.groupby(filtered_mis.index.get_level_values("structure")).mean()
 
     if image_region not in structure_shares.index:
-        return filtered_mis.mean()
+        nonzero = mi_by_structure[mi_by_structure != 0]
+        return nonzero.mean() if not nonzero.empty else np.nan
 
+    share_names = [structure_code_to_share_name[s] for s in allowed_structures]
     weights = structure_shares.loc[image_region, share_names]
-    weights = weights / weights.sum()
 
-    mi_by_structure = filtered_mis.groupby(filtered_mis.index.get_level_values("structure")).mean()
+    if weights.sum() == 0 or pd.isna(weights.sum()):
+        # none of the allowed structures have GFA in this region: fall back to a plain
+        # mean over whichever allowed structures have non-zero RASMI data
+        available = [s for s in allowed_structures
+                     if s in mi_by_structure.index and pd.notna(mi_by_structure[s]) and mi_by_structure[s] != 0]
+        if not available:
+            return np.nan
+        return mi_by_structure[available].mean()
+
+    weights = weights / weights.sum()
 
     weighted_sum = 0.0
     for structure_code, share_name in zip(allowed_structures, share_names):
