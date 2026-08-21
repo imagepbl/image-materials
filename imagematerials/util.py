@@ -344,6 +344,47 @@ def flag_enabled(resource_efficiency_flags: dict, sector: str, flag_name: str) -
     return bool(resource_efficiency_flags.get(sector, {}).get(flag_name, False))
 
 
+def resolve_circular_economy_scenario(circular_economy_scenarios_dir: Union[Path, str],
+                                       scenario_name: Union[str, None]) -> Path:
+    """Resolve a named circular economy scenario to its data folder.
+
+    Each named scenario is a self-contained subfolder of
+    circular_economy_scenarios_dir holding its own
+    'resource_efficiency_flags.toml' and 'circular_economy_data.toml', e.g.
+    '<circular_economy_scenarios_dir>/narrow_product/'.
+
+    Parameters
+    ----------
+    circular_economy_scenarios_dir
+        The base 'circular_economy_scenarios' directory (containing one
+        subfolder per named scenario).
+    scenario_name
+        Name of the scenario subfolder. If None, returns
+        circular_economy_scenarios_dir unchanged.
+
+    Returns
+    -------
+        Path to the resolved scenario folder, suitable for passing as both
+        circular_economy_data_file and resource_efficiency_flags_file.
+
+    Raises
+    ------
+    FileNotFoundError
+        If scenario_name is given but the corresponding folder doesn't exist.
+
+    """
+    circular_economy_scenarios_dir = Path(circular_economy_scenarios_dir)
+    if scenario_name is None:
+        return circular_economy_scenarios_dir
+
+    scenario_dir = circular_economy_scenarios_dir / scenario_name
+    if not scenario_dir.is_dir():
+        raise FileNotFoundError(
+            f"No circular economy scenario folder found at {scenario_dir}"
+        )
+    return scenario_dir
+
+
 def _read_config(scenario_folder) -> dict:
     """Extract data from a .toml-file.
 
