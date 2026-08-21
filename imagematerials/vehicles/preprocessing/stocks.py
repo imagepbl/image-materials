@@ -76,6 +76,7 @@ def get_vehicle_stocks(data_path: str, standard_data_path, climate_data_path, cl
     ).interpolate(limit_direction='both')
 
     if flag_enabled(resource_efficiency_flags, "vehicles", "FlagIntensityOfUse"):
+        print("Implementing FlagIntensityOfUse for Vehicles")
         flag_config = circular_economy_config['vehicles']['FlagIntensityOfUse']
         target_year = flag_config['target_year']
         base_year = flag_config['base_year']
@@ -337,6 +338,7 @@ def _calculate_buses_cars_stocks(total_nr_vehicles_simple, data_path, climate_da
 
     # increase mileages\kilometrages
     if flag_enabled(resource_efficiency_flags, "vehicles", "FlagMileageIncrease"):
+        print("Implementing FlagMileageIncrease for Vehicles (increase mileage)")
         flag_config = circular_economy_config['vehicles']['FlagMileageIncrease']
         target_year = flag_config['target_year']
         base_year = flag_config['base_year']

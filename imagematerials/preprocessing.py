@@ -83,8 +83,10 @@ def _get_buildings_prep_data(base_dir, climate_policy_scenario_dir, circular_eco
     return prep_data
 
 
-def _get_rest_prep_data(base_dir, climate_policy_scenario_dir, scenario_name):
-    prep_data = prep_rest(base_dir, climate_policy_scenario_dir, scenario_name)
+def _get_rest_prep_data(base_dir, climate_policy_scenario_dir, scenario_name,
+                        resource_efficiency_flags_file=None):
+    prep_data = prep_rest(base_dir, climate_policy_scenario_dir, scenario_name,
+                          resource_efficiency_flags_file)
     sector_rest = Sector("rest_of", prep_data)
     return sector_rest
 
@@ -221,7 +223,7 @@ def get_preprocessing_data(
                                                    resource_efficiency_flags_file)
         elif sector == "rest_of":
             prep_data = _get_rest_prep_data(base_dir, climate_policy_scenario_dir,
-                                            scenario_name)
+                                            scenario_name, resource_efficiency_flags_file)
 
         elif sector == "eol":
             prep_data = _get_end_of_life_prep_data(base_dir, circular_economy_data_file,
@@ -243,7 +245,7 @@ def get_preprocessing_data(
     elif sector == "ev_battery":
         return _get_ev_battery_sector(prep_data)
     elif sector == "rest_of":
-        return _get_rest_prep_data(base_dir, climate_policy_scenario_dir, scenario_name)
+        return prep_data
     elif sector == "eol":
         return _get_end_of_life_sector(prep_data)
     raise ValueError(f"Unknown sector {sector}")

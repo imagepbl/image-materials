@@ -102,6 +102,7 @@ def get_lifetimes(data_path: str, circular_economy_config: dict, resource_effici
 
     # Calculate extended lifetime per mode
     if flag_enabled(resource_efficiency_flags, "vehicles", "FlagLifetimeExtension"):
+        print("Implementing FlagLifetimeExtension for Vehicles (extend lifetimes)")
         flag_config = circular_economy_config['vehicles']['FlagLifetimeExtension']
         target_year = flag_config['target_year']
         base_year = flag_config['base_year']

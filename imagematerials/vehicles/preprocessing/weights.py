@@ -58,6 +58,7 @@ def get_weights(data_path: str, general_data_path: str, circular_economy_config:
 
     # Apply lightweighting if the flag is enabled
     if flag_enabled(resource_efficiency_flags, "vehicles", "FlagLightweighting"):
+        print("Implementing FlagLightweighting for Vehicles (lightweighting)")
         config = circular_economy_config['vehicles']['FlagLightweighting']
 
         # Verify both are defined, otherwise raise error
