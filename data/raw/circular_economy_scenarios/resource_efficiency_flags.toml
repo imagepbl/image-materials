@@ -21,8 +21,8 @@ FlagLightweightingGrid = true
 FlagLifetimeExtensionGrid = true
 
 [end_of_life]
-FlagLifetimeExtension = false
-FlagRecycling = false
+FlagLifetimeExtension = true
+FlagRecycling = true
 
 [rest_of]
 FlagResourceEfficiency = true
