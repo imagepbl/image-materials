@@ -525,7 +525,8 @@ def compute_housing_residential(population: xr.DataArray,
     total_m2_housing_per_cap = prism.Q_(total_m2_housing_per_cap, "m^2/person")
 
     # Implement circular economy measures if configuration is provided
-    if flag_enabled(resource_efficiency_flags, "buildings", "FlagFloorSpaceCalibrationResidential"):
+    if flag_enabled(resource_efficiency_flags, "buildings", "FlagFloorSpaceCalibrationResidential") or \
+            flag_enabled(resource_efficiency_flags, "buildings", "FlagFloorSpaceReductionResidential"):
         total_m2_housing_per_cap = ce_measures_residential_housing(total_m2_housing_per_cap, population,
                                                                    circular_economy_config,
                                                                    resource_efficiency_flags)

@@ -69,6 +69,7 @@ def compute_mat_intensities_residential(database_dir: Path,
 
     # applying material intensity changes for residential buildings
     if flag_enabled(resource_efficiency_flags, "buildings", "FlagLightweightingResidential"):
+        print("Applied using lightweighting building materials intensities for residential buildings.")
         xr_mat_res_intensities = circular_economy_measures_material_intensities_residential(xr_mat_res_intensities,
                                                                                             circular_economy_config)
 
@@ -133,6 +134,7 @@ def compute_mat_intensities_commercial(
 
     # apply CE changes (per material, per region)
     if flag_enabled(resource_efficiency_flags, "buildings", "FlagLightweightingCommercial"):
+        print("Applied using lightweighting building materials intensities for commercial buildings.")
         xr_mat_comm_intensities = circular_economy_measures_material_intensities_commercial(xr_mat_comm_intensities_update_chn, circular_economy_config, model_regions)
 
     xr_mat_comm_intensities = prism.Q_(xr_mat_comm_intensities_update_chn, "kg/m^2") # assign unit

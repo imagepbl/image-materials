@@ -32,66 +32,75 @@ def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray, popu
     region_knowledge_graph = create_region_graph()
     regions = total_m2_housing_per_cap.coords["Region"].values
 
-    buildings_config = circular_economy_config["buildings"]["FlagFloorSpaceCalibrationResidential"]
-    base_year = buildings_config["base_year"]
-    floor_pc_2020 = buildings_config["residential"]["2020"]["useful_floor_pc"]
-
-    floor_pc_2020_xr = xr.DataArray(
-        list(floor_pc_2020.values()),
-        coords={"Region": list(floor_pc_2020.keys())},
-        dims=["Region"],
-        name="floor_pc_2020",
-    )
-
-    regions_mapped = list(region_knowledge_graph.find_relations_inverse(regions,
-                                                                        floor_pc_2020.keys()))
-    floor_pc_2020_mapped = region_knowledge_graph.rebroadcast_xarray(
-    floor_pc_2020_xr, output_coords=regions_mapped, dim="Region")
-    floor_pc_2020_mapped = prism.Q_(floor_pc_2020_mapped, "m^2/person")
-    target_vals = floor_pc_2020_mapped
-
     population_rururb = population.sel(Area=["Rural", "Urban"])
     population_total = population.sel(Area="Total")
 
-    # Population-weighted current per-capita total at base_year
-    # We use the 2020 anchor to compute the scaling factor, which is then applied to all years.
-    current_vals = (
-        (total_m2_housing_per_cap * population_rururb).sel(time=2020).sum(dim=["Area", "Type"]) 
-        / population_total.sel(time=2020)
-    ).drop_vars(["Area"])
+    calibration_enabled = flag_enabled(
+        resource_efficiency_flags, "buildings", "FlagFloorSpaceCalibrationResidential")
 
-    scaling_factors  = target_vals / current_vals   # (Region,) dimensionless
+    if calibration_enabled:
+        print("Applying FlagFloorSpaceCalibrationResidential for Residential Buildings")
+        buildings_config = circular_economy_config["buildings"]["FlagFloorSpaceCalibrationResidential"]
+        base_year = buildings_config["base_year"]
+        floor_pc_2020 = buildings_config["residential"]["2020"]["useful_floor_pc"]
 
-    # --- Time-decaying correction for large scaling factors only ---
-    # Factors at/below 'threshold' stay constant across all years.
-    # Factors above 'threshold' ramp linearly from their base_year value down to
-    # 'threshold' by 'decay_end_year' (we trust the 2020 anchor, but don't
-    # let a scaling factor compound into the far future).
-    # this was implemented because for China the scaling factor is very high in 2020, which would lead to ~70m2/cap results in 2100
-    # This implementation allows for floorspace 'harmonisation' (base scenario) to material studies in 2020, while  avoiding unrealistic results in 2100
+        floor_pc_2020_xr = xr.DataArray(
+            list(floor_pc_2020.values()),
+            coords={"Region": list(floor_pc_2020.keys())},
+            dims=["Region"],
+            name="floor_pc_2020",
+        )
 
-    threshold = 1.5
-    decay_end_year = 2100
+        regions_mapped = list(region_knowledge_graph.find_relations_inverse(regions,
+                                                                            floor_pc_2020.keys()))
+        floor_pc_2020_mapped = region_knowledge_graph.rebroadcast_xarray(
+        floor_pc_2020_xr, output_coords=regions_mapped, dim="Region")
+        floor_pc_2020_mapped = prism.Q_(floor_pc_2020_mapped, "m^2/person")
+        target_vals = floor_pc_2020_mapped
 
-    # The floor_region is the value that the scaling factor will converge to by decay_end_year
-    floor_region = xr.where(scaling_factors > threshold, threshold, scaling_factors)  # (Region,)
+        # Population-weighted current per-capita total at base_year
+        # We use the 2020 anchor to compute the scaling factor, which is then applied to all years.
+        current_vals = (
+            (total_m2_housing_per_cap * population_rururb).sel(time=2020).sum(dim=["Area", "Type"])
+            / population_total.sel(time=2020)
+        ).drop_vars(["Area"])
 
-    # The weight ramps linearly from 0 at base_year to 1 at decay_end_year, and is clipped to [0,1].
-    all_times = total_m2_housing_per_cap.time.values
-    weight = np.clip((all_times - base_year) / (decay_end_year - base_year), 0.0, 1.0)
-    weight = xr.DataArray(weight, dims=["time"], coords={"time": all_times})
+        scaling_factors  = target_vals / current_vals   # (Region,) dimensionless
 
-    # The factor_t is a linear interpolation between the scaling_factors and the floor_region, based on the weight.
-    factor_t = scaling_factors * (1 - weight) + floor_region * weight        # (Region, Time)
-    factor_t = xr.where(all_times <= base_year, scaling_factors, factor_t)  # full correction up to 2020
+        # --- Time-decaying correction for large scaling factors only ---
+        # Factors at/below 'threshold' stay constant across all years.
+        # Factors above 'threshold' ramp linearly from their base_year value down to
+        # 'threshold' by 'decay_end_year' (we trust the 2020 anchor, but don't
+        # let a scaling factor compound into the far future).
+        # this was implemented because for China the scaling factor is very high in 2020, which would lead to ~70m2/cap results in 2100
+        # This implementation allows for floorspace 'harmonisation' (base scenario) to material studies in 2020, while  avoiding unrealistic results in 2100
 
-    # Multiplying the regional total by one factor scales every Type/Area identically,
-    # preserving the within-region type mix.
-    total_m2_housing_per_cap.loc[{"Region": regions_mapped}] = (
-        total_m2_housing_per_cap.sel(Region=regions_mapped)
-        * factor_t.sel(Region=regions_mapped)
-    )
-    
+        threshold = 1.5
+        decay_end_year = 2100
+
+        # The floor_region is the value that the scaling factor will converge to by decay_end_year
+        floor_region = xr.where(scaling_factors > threshold, threshold, scaling_factors)  # (Region,)
+
+        # The weight ramps linearly from 0 at base_year to 1 at decay_end_year, and is clipped to [0,1].
+        all_times = total_m2_housing_per_cap.time.values
+        weight = np.clip((all_times - base_year) / (decay_end_year - base_year), 0.0, 1.0)
+        weight = xr.DataArray(weight, dims=["time"], coords={"time": all_times})
+
+        # The factor_t is a linear interpolation between the scaling_factors and the floor_region, based on the weight.
+        factor_t = scaling_factors * (1 - weight) + floor_region * weight        # (Region, Time)
+        factor_t = xr.where(all_times <= base_year, scaling_factors, factor_t)  # full correction up to 2020
+
+        # Multiplying the regional total by one factor scales every Type/Area identically,
+        # preserving the within-region type mix.
+        total_m2_housing_per_cap.loc[{"Region": regions_mapped}] = (
+            total_m2_housing_per_cap.sel(Region=regions_mapped)
+            * factor_t.sel(Region=regions_mapped)
+        )
+        logging.debug("implemented FlagFloorSpaceCalibrationResidential for Residential Buildings")
+    else:
+        logging.debug("FlagFloorSpaceCalibrationResidential not enabled for Residential Buildings")
+
+
 # narrow implementation for: 
 #---> regions unchanged under 'base' --> 1) take per capita floorspace directly from IMAGE 
 #---> regions changed under 'base' --> 1) take original reduction (SSP2 by 2060 vs narrow_act by 2060) in % terms and apply that to per capita 
@@ -103,14 +112,13 @@ def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray, popu
         resource_efficiency_flags, "buildings", "FlagFloorSpaceReductionResidential")
 
     if floorspace_reduction_enabled:
+        print("Applying FlagFloorSpaceReductionResidential for Residential Buildings")
         nbuild = circular_economy_config["buildings"]["FlagFloorSpaceReductionResidential"]
         narrow_base_year = nbuild["base_year"]
         target_year = nbuild["target_year"]          # 2060
         implementation_rate = nbuild["implementation_rate"]
         convergence_cap = 36.0                        # m²/cap (population-weighted total)
         convergence_year_end = 2100
-
-        base_region_set = set(regions_mapped)
 
         # --- Phase 1: percentage reduction until target_year (2060) -----------
         # Only base regions get a reduction; build a full-coverage change array
@@ -127,6 +135,8 @@ def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray, popu
         settings_mapped = region_knowledge_graph.rebroadcast_xarray(
             settings_xr, output_coords=settings_regions, dim="Region")
 
+        base_region_set = set(settings_regions)
+
         all_regions = list(total_m2_housing_per_cap.coords["Region"].values)
         narrow_regions = [r for r in all_regions if r in base_region_set]
 
@@ -135,6 +145,18 @@ def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray, popu
             total_m2_housing_per_cap = total_m2_housing_per_cap.pint.dequantify()
         pr = population_rururb.pint.dequantify() if prism.U_(population_rururb) is not None else population_rururb
         pt = population_total.pint.dequantify() if prism.U_(population_total) is not None else population_total
+
+        # Apply the Phase 1 percentage reduction (base_year -> target_year) to the
+        # narrow (base) regions only; other regions pass through unchanged.
+        narrow_slice = total_m2_housing_per_cap.sel(Region=narrow_regions)
+        narrow_slice_reduced = apply_change_per_region(
+            narrow_slice, narrow_base_year, target_year,
+            settings_mapped.sel(Region=narrow_regions), implementation_rate)
+        if prism.U_(narrow_slice_reduced) is not None:
+            narrow_slice_reduced = narrow_slice_reduced.pint.dequantify()
+        total_m2_housing_per_cap.loc[{"Region": narrow_regions}] = (
+            narrow_slice_reduced.reindex_like(total_m2_housing_per_cap.sel(Region=narrow_regions))
+        )
 
         all_times = total_m2_housing_per_cap.time.values
         post_mask = all_times > target_year
@@ -150,16 +172,19 @@ def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray, popu
         ramp = xr.DataArray(smooth, dims=["time"], coords={"time": all_times})
 
         def _region_pc(reg, t):
-            """Population-weighted per-capita total (rural+urban) for region at time t."""
-            fs = total_m2_housing_per_cap.sel(time=t, Region=reg)        # (Area, Type)
-            tot = (fs * pr.sel(time=t, Region=reg)).sum(dim=["Area", "Type"])
-            return float(tot / pt.sel(time=t, Region=reg))
+            """Population-weighted per-capita total (rural+urban, quintile-averaged) for region at time t."""
+            fs = total_m2_housing_per_cap.sel(time=t, Region=reg)        # (Area, Quintile, Type)
+            fs_mean_q = fs.mean(dim="Quintile")                          # equal population shares per quintile
+            pr_reg = pr.sel(time=t, Region=reg).isel(Quintile=0, drop=True)  # identical across quintiles
+            pt_reg = pt.sel(time=t, Region=reg).isel(Quintile=0, drop=True)  # identical across quintiles
+            tot = (fs_mean_q * pr_reg).sum(dim=["Area", "Type"])
+            return float(tot / pt_reg)
 
         # --- Phase 2: converge every reduced base region to 36 by 2100 --------
-        # Take the 2060 (Area, Type) distribution, scale it so its
+        # Take the 2060 (Area, Quintile, Type) distribution, scale it so its
         # population-weighted total equals 36 -> that's the 2100 endpoint.
         for reg in narrow_regions:
-            fs_2060 = total_m2_housing_per_cap.sel(time=target_year, Region=reg)   # (Area, Type)
+            fs_2060 = total_m2_housing_per_cap.sel(time=target_year, Region=reg)   # (Area, Quintile, Type)
             pc_2060 = _region_pc(reg, target_year)
             if pc_2060 <= 0:
                 continue
@@ -206,6 +231,7 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
     # floorspace_commercial in m^2/cap
 
     if flag_enabled(resource_efficiency_flags, "buildings", "FlagFloorSpaceCalibrationCommercial"):
+        print("Applying FlagFloorSpaceCalibrationCommercial for Commercial Buildings")
         buildings_config = circular_economy_config["buildings"]["FlagFloorSpaceCalibrationCommercial"]
 
         base_year = buildings_config["base_year"]
@@ -236,6 +262,7 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
         resource_efficiency_flags, "buildings", "FlagFloorSpaceReductionCommercial")
 
     if floorspace_reduction_enabled:
+        print("Applying FlagFloorSpaceReductionCommercial for Commercial Buildings")
         flag_config = circular_economy_config["buildings"]["FlagFloorSpaceReductionCommercial"]
         commercial_ce_mode = flag_config.get("commercial_ce_mode", "relative")
         implementation_rate = flag_config['implementation_rate']
