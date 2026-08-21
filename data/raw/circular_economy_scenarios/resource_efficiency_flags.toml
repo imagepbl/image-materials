@@ -1,0 +1,25 @@
+[buildings]
+FlagFloorSpaceCalibrationResidential = true
+FlagFloorSpaceCalibrationCommercial = true
+FlagFloorSpaceReductionResidential = true
+FlagFloorSpaceReductionCommercial = true
+FlagLifetimeExtension = true
+FlagLightweightingResidential = true
+FlagLightweightingCommercial = true
+FlagResourceEfficientMaterials = true
+
+[vehicles]
+FlagLifetimeExtension = true
+FlagLightweighting = true
+FlagIntensityOfUse = true
+FlagMileageIncrease = true
+
+[electricity]
+FlagLightweightingGeneration = true
+FlagLifetimeExtensionGeneration = true
+FlagLightweightingGrid = true
+FlagLifetimeExtensionGrid = true
+
+[end_of_life]
+FlagLifetimeExtension = true
+FlagRecycling = true

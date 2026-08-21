@@ -1,0 +1,510 @@
+# Circular economy / resource efficiency measure data.
+# One block per flag from resource_efficiency_flags.toml, keyed identically
+# ([sector.FlagName]) so a flag's data is always self-contained and easy to find.
+
+[buildings.FlagFloorSpaceCalibrationResidential]
+base_year = 2025
+target_year = 2060
+
+[buildings.FlagFloorSpaceCalibrationResidential.residential."2020".useful_floor_pc]
+"Central Europe" = 27.7
+China = 39
+Japan = 39.7
+"Western Europe" = 39.7
+"Northern Africa" = 31.6
+"Middle East" = 31.3
+
+[buildings.FlagFloorSpaceCalibrationCommercial]
+base_year = 2025
+target_year = 2060
+
+[buildings.FlagFloorSpaceCalibrationCommercial.commercial."2020".useful_floor_pc]
+"Central Europe" = 8.7
+"Western Europe" = 14.1
+
+[buildings.FlagFloorSpaceCalibrationCommercial.commercial."2060".useful_floor_pc]
+"Central Europe" = 41.2
+"Western Europe" = 14.1
+
+[buildings.FlagFloorSpaceReductionResidential]
+base_year = 2025
+target_year = 2060
+implementation_rate = "linear"
+convergence_year_start = 2025
+convergence_year_end = 2100
+convergence_cap = 14.0
+low_threshold = 5.0
+commercial_ce_mode = "relative"
+
+[buildings.FlagFloorSpaceReductionResidential.residential.m2_change_pc]
+"Central Europe" = -10.0
+China = -15.0
+Japan = -15.0
+"Western Europe" = -23.3
+"Northern Africa" = -15.0
+"Middle East" = -23.3
+
+[buildings.FlagFloorSpaceReductionCommercial]
+base_year = 2025
+target_year = 2060
+implementation_rate = "linear"
+convergence_year_start = 2025
+convergence_year_end = 2100
+convergence_cap = 14.0
+low_threshold = 5.0
+commercial_ce_mode = "relative"
+
+[buildings.FlagFloorSpaceReductionCommercial.commercial.m2_change_pc]
+Asian-Stan = -15.0
+Brazil = -16.7
+Canada = -35.0
+"Central Europe" = -10.0
+"China +" = -19.2
+"Eastern Africa" = -15.0
+"India +" = -12.5
+"Indonesia +" = -12.5
+Japan = -20.0
+Korea = -15.0
+Mexico = -20.0
+"Middle East" = -23.3
+"Northern Africa" = -15.0
+Oceania = -40.0
+"Rest of Central America" = -12.5
+"Rest of South America" = -12.5
+"Rest of South Asia" = -15.0
+"Rest of Southern Africa" = -15.0
+"Russia +" = -13.3
+"South Africa" = -20.0
+"Southeastern Asia" = -12.5
+Turkey = -20.0
+"Ukraine +" = -5.0
+USA = -35.0
+"Western Africa" = -15.0
+"Western Europe" = -23.3
+
+[buildings.FlagLifetimeExtension]
+base_year = 2025
+target_year = 2060
+
+[buildings.FlagLifetimeExtension.residential.lifetime_2020]
+Canada = 51
+"Central Europe" = 70
+China = 40
+India = 50
+Japan = 36
+USA = 77
+"Western Europe" = 63
+"Latin America" = 50
+"Middle East and North Africa" = 50
+"Other Asia" = 50
+"Other OECD" = 50
+"Reforming Economies" = 60
+"Sub-Saharan Africa" = 50
+
+[buildings.FlagLifetimeExtension.residential.lifetime_increase_percent]
+Canada = 90
+"Central Europe" = 30
+China = 90
+India = 60
+Japan = 90
+USA = 30
+"Western Europe" = 30
+"Latin America" = 60
+"Middle East and North Africa" = 60
+"Other Asia" = 60
+"Other OECD" = 60
+"Reforming Economies" = 30
+"Sub-Saharan Africa" = 60
+
+[buildings.FlagLifetimeExtension.non_residential.lifetime_2020]
+Canada = 45
+"Central Europe" = 45
+China = 30
+India = 45
+Japan = 38
+USA = 45
+"Western Europe" = 45
+"Latin America" = 45
+"Middle East and North Africa" = 45
+"Other Asia" = 45
+"Other OECD" = 45
+"Reforming Economies" = 45
+"Sub-Saharan Africa" = 45
+
+[buildings.FlagLifetimeExtension.non_residential.lifetime_increase_percent]
+Canada = 90
+"Central Europe" = 90
+China = 90
+India = 90
+Japan = 90
+USA = 90
+"Western Europe" = 90
+"Latin America" = 90
+"Middle East and North Africa" = 90
+"Other Asia" = 90
+"Other OECD" = 60
+"Reforming Economies" = 90
+"Sub-Saharan Africa" = 60
+
+[buildings.FlagLifetimeExtension.eol_reuse_rate_2060]
+steel = 0.29
+concrete = 0.13
+wood = 0.25
+copper = 0.33
+glass = 0.35
+aluminium = 0.5
+
+[buildings.FlagLightweightingResidential]
+base_year = 2025
+target_year = 2060
+implementation_rate = "linear"
+
+[buildings.FlagLightweightingResidential.material_intensity_change.steel]
+Asian-Stan = -8.5
+Brazil = -8.5
+Canada = -15.7
+"Central Europe" = -8.5
+"China +" = -8.5
+"Eastern Africa" = -8.5
+"India +" = -8.5
+"Indonesia +" = -8.5
+Japan = -14.5
+Korea = -8.5
+Mexico = -8.5
+"Middle East" = -8.5
+"Northern Africa" = -8.5
+Oceania = -8.5
+"Rest of Central America" = -8.5
+"Rest of South America" = -8.5
+"Rest of South Asia" = -8.5
+"Rest of Southern Africa" = -8.5
+"Russia +" = -8.5
+"South Africa" = -8.5
+"Southeastern Asia" = -8.5
+Turkey = -8.5
+"Ukraine +" = -8.5
+USA = -15.7
+"Western Africa" = -8.5
+"Western Europe" = -8.5
+
+[buildings.FlagLightweightingResidential.material_intensity_change.concrete]
+Asian-Stan = -7.5
+Brazil = -7.5
+Canada = -13.9
+"Central Europe" = -7.5
+"China +" = -7.5
+"Eastern Africa" = -7.5
+"India +" = -7.5
+"Indonesia +" = -7.5
+Japan = -12.8
+Korea = -7.5
+Mexico = -7.5
+"Middle East" = -7.5
+"Northern Africa" = -7.5
+Oceania = -7.5
+"Rest of Central America" = -7.5
+"Rest of South America" = -7.5
+"Rest of South Asia" = -7.5
+"Rest of Southern Africa" = -7.5
+"Russia +" = -7.5
+"South Africa" = -7.5
+"Southeastern Asia" = -7.5
+Turkey = -7.5
+"Ukraine +" = -7.5
+USA = -13.9
+"Western Africa" = -7.5
+"Western Europe" = -7.5
+
+[buildings.FlagLightweightingResidential.material_intensity_change.aluminium]
+Asian-Stan = -9.5
+Brazil = -9.5
+Canada = -17.6
+"Central Europe" = -9.5
+"China +" = -9.5
+"Eastern Africa" = -9.5
+"India +" = -9.5
+"Indonesia +" = -9.5
+Japan = -16.2
+Korea = -9.5
+Mexico = -9.5
+"Middle East" = -9.5
+"Northern Africa" = -9.5
+Oceania = -9.5
+"Rest of Central America" = -9.5
+"Rest of South America" = -9.5
+"Rest of South Asia" = -9.5
+"Rest of Southern Africa" = -9.5
+"Russia +" = -9.5
+"South Africa" = -9.5
+"Southeastern Asia" = -9.5
+Turkey = -9.5
+"Ukraine +" = -9.5
+USA = -17.6
+"Western Africa" = -9.5
+"Western Europe" = -9.5
+
+[buildings.FlagLightweightingCommercial]
+base_year = 2025
+target_year = 2060
+implementation_rate = "linear"
+
+[buildings.FlagLightweightingCommercial.material_intensity_change.steel]
+Asian-Stan = -8.5
+Brazil = -8.5
+Canada = -15.7
+"Central Europe" = -8.5
+"China +" = -8.5
+"Eastern Africa" = -8.5
+"India +" = -8.5
+"Indonesia +" = -8.5
+Japan = -14.5
+Korea = -8.5
+Mexico = -8.5
+"Middle East" = -8.5
+"Northern Africa" = -8.5
+Oceania = -8.5
+"Rest of Central America" = -8.5
+"Rest of South America" = -8.5
+"Rest of South Asia" = -8.5
+"Rest of Southern Africa" = -8.5
+"Russia +" = -8.5
+"South Africa" = -8.5
+"Southeastern Asia" = -8.5
+Turkey = -8.5
+"Ukraine +" = -8.5
+USA = -15.7
+"Western Africa" = -8.5
+"Western Europe" = -8.5
+
+[buildings.FlagLightweightingCommercial.material_intensity_change.cement]
+Asian-Stan = -7.5
+Brazil = -7.5
+Canada = -13.9
+"Central Europe" = -7.5
+"China +" = -7.5
+"Eastern Africa" = -7.5
+"India +" = -7.5
+"Indonesia +" = -7.5
+Japan = -12.8
+Korea = -7.5
+Mexico = -7.5
+"Middle East" = -7.5
+"Northern Africa" = -7.5
+Oceania = -7.5
+"Rest of Central America" = -7.5
+"Rest of South America" = -7.5
+"Rest of South Asia" = -7.5
+"Rest of Southern Africa" = -7.5
+"Russia +" = -7.5
+"South Africa" = -7.5
+"Southeastern Asia" = -7.5
+Turkey = -7.5
+"Ukraine +" = -7.5
+USA = -13.9
+"Western Africa" = -7.5
+"Western Europe" = -7.5
+
+[buildings.FlagLightweightingCommercial.material_intensity_change.aluminium]
+Asian-Stan = -9.5
+Brazil = -9.5
+Canada = -17.6
+"Central Europe" = -9.5
+"China +" = -9.5
+"Eastern Africa" = -9.5
+"India +" = -9.5
+"Indonesia +" = -9.5
+Japan = -16.2
+Korea = -9.5
+Mexico = -9.5
+"Middle East" = -9.5
+"Northern Africa" = -9.5
+Oceania = -9.5
+"Rest of Central America" = -9.5
+"Rest of South America" = -9.5
+"Rest of South Asia" = -9.5
+"Rest of Southern Africa" = -9.5
+"Russia +" = -9.5
+"South Africa" = -9.5
+"Southeastern Asia" = -9.5
+Turkey = -9.5
+"Ukraine +" = -9.5
+USA = -17.6
+"Western Africa" = -9.5
+"Western Europe" = -9.5
+
+[buildings.FlagResourceEfficientMaterials]
+base_year = 2020
+target_year = 2060
+implementation_rate = "linear"
+
+[vehicles.FlagLifetimeExtension]
+base_year = 2025
+target_year = 2060
+implementation_rate = "linear"
+
+[vehicles.FlagLifetimeExtension.lifetime_increase_percent]
+"Passenger Planes" = 10
+"Freight Planes" = 10
+Trains = 38
+"High Speed Trains" = 38
+"Freight Trains" = 38
+"Small Ships" = 33
+"Medium Ships" = 33
+"Large Ships" = 33
+"Very Large Ships" = 33
+"Light Commercial Vehicles" = 10
+"Medium Freight Trucks" = 10
+"Heavy Freight Trucks" = 10
+"Midi Buses" = 20
+"Regular Buses" = 20
+"Inland Ships" = 33
+Bikes = 20
+Cars = 22.5
+
+[vehicles.FlagLifetimeExtension.eol_reuse_rate_2060]
+steel = 0.2
+copper = 0.28
+glass = 0.68
+aluminium = 0.29
+
+[vehicles.FlagLightweighting]
+base_year = 2025
+target_year = 2060
+implementation_rate = "linear"
+
+[vehicles.FlagLightweighting.non-road.weight_change_pc]
+"Passenger Planes" = -4.2
+"Freight Planes" = -4.2
+Trains = -4.2
+"High Speed Trains" = -4.2
+"Freight Trains" = -4.2
+"Inland Ships" = -4.2
+Bikes = -4.2
+
+[vehicles.FlagLightweighting.road.weight_change_pc]
+"Light Commercial Vehicles" = -8.2
+"Medium Freight Trucks" = -8.2
+"Heavy Freight Trucks" = -8.2
+"Midi Buses" = -8.2
+"Regular Buses" = -8.2
+Cars = -8.2
+
+[vehicles.FlagIntensityOfUse]
+base_year = 2025
+target_year = 2060
+implementation_rate = "linear"
+
+[vehicles.FlagIntensityOfUse.mileage]
+"Midi Buses" = 10
+"Regular Buses" = 10
+Trains = 10
+"High Speed Trains" = 10
+"Freight Trains" = 10
+Bikes = 10
+"Light Commercial Vehicles" = 10
+"Inland Ships" = 10
+
+[vehicles.FlagIntensityOfUse.region_mileage]
+Cars = 20
+
+[vehicles.FlagMileageIncrease]
+base_year = 2025
+target_year = 2060
+implementation_rate = "linear"
+
+[vehicles.FlagMileageIncrease.region_mileage]
+Cars = 20
+
+[vehicles.FlagMileageIncrease.mileage]
+"Midi Buses" = 10
+"Regular Buses" = 10
+
+[electricity.FlagLightweightingGeneration]
+base_year = 2025
+target_year = 2060
+implementation_rate = "linear"
+
+[electricity.FlagLightweightingGeneration.weight_change_pc]
+SPV = -20
+SPVR = -10
+CSP = -30
+WON = -20
+WOFF = -10
+WAVE = -30
+HYD = 0
+
+[electricity.FlagLifetimeExtensionGeneration]
+base_year = 2025
+target_year = 2060
+implementation_rate = "linear"
+
+[electricity.FlagLifetimeExtensionGeneration.lifetime_increase_percent]
+SPV = 32
+SPVR = 32
+CSP = 10
+WON = 20
+WOFF = 20
+WAVE = 0
+HYD = 6
+
+[electricity.FlagLightweightingGrid]
+base_year = 2025
+target_year = 2060
+implementation_rate = "linear"
+
+[electricity.FlagLightweightingGrid.weight_change_pc]
+Transformers = -10
+Substations = -10
+
+[electricity.FlagLifetimeExtensionGrid]
+base_year = 2025
+target_year = 2060
+implementation_rate = "linear"
+
+[electricity.FlagLifetimeExtensionGrid.lifetime_increase_percent]
+Transformers = 10
+Substations = 10
+
+[end_of_life.FlagLifetimeExtension.buildings.eol_reuse_rate_2060]
+steel = 0.29
+concrete = 0.13
+wood = 0.25
+copper = 0.33
+glass = 0.35
+aluminium = 0.5
+
+[end_of_life.FlagLifetimeExtension.vehicles.eol_reuse_rate_2060]
+steel = 0.2
+copper = 0.28
+glass = 0.68
+aluminium = 0.29
+
+[end_of_life.FlagLifetimeExtension.electricity.eol_reuse_rate_2060]
+steel = 0.238
+concrete = 0.21
+wood = 0.455
+copper = 0.33
+glass = 0.68
+aluminium = 0.345
+
+[end_of_life.FlagRecycling.buildings.eol_recycling_rate_2060]
+steel = 0.92
+concrete = 0.37
+wood = 0.3
+copper = 0.92
+glass = 0.95
+aluminium = 0.95
+
+[end_of_life.FlagRecycling.vehicles.eol_recycling_rate_2060]
+steel = 0.94
+copper = 0.86
+glass = 0.95
+aluminium = 0.95
+
+[end_of_life.FlagRecycling.electricity.eol_recycling_rate_2060]
+steel = 0.93
+concrete = 0.37
+copper = 0.91
+glass = 0.95
+aluminium = 0.95
+wood = 0.3

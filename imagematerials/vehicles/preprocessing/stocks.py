@@ -21,6 +21,7 @@ from imagematerials.vehicles.constants import (
     mile_adjustment,
     years_range
 )
+from imagematerials.util import flag_enabled
 from imagematerials.vehicles.modelling_functions import (
     apply_change_per_region,
     interpolate,
@@ -37,7 +38,7 @@ from imagematerials.vehicles.preprocessing.util import (
 
 
 def get_vehicle_stocks(data_path: str, standard_data_path, climate_data_path, climate_policy_config,
-                       circular_economy_config, knowledge_graph_vehicle):
+                       circular_economy_config, knowledge_graph_vehicle, resource_efficiency_flags: dict = None):
     shares = get_vehicle_shares(climate_data_path, climate_policy_config,
                                 knowledge_graph_vehicle)
     tonkms_Mtkms = get_tonkms(climate_data_path, climate_policy_config)
@@ -74,21 +75,18 @@ def get_vehicle_stocks(data_path: str, standard_data_path, climate_data_path, cl
         years_range
     ).interpolate(limit_direction='both')
 
-    ce_scen = None  # INITIALIZE ce_scen
-    if "narrow_product" in circular_economy_config.keys():
-        ce_scen = "narrow_product"
-
-    if ce_scen == "narrow_product":
-        target_year = circular_economy_config[ce_scen]['vehicles']['target_year']
-        base_year = circular_economy_config[ce_scen]['vehicles']['base_year']
-        mileage_increase = circular_economy_config[ce_scen]['vehicles']['mileage']
-        implementation_rate = circular_economy_config[ce_scen]['vehicles']['implementation_rate']
+    if flag_enabled(resource_efficiency_flags, "vehicles", "FlagIntensityOfUse"):
+        flag_config = circular_economy_config['vehicles']['FlagIntensityOfUse']
+        target_year = flag_config['target_year']
+        base_year = flag_config['base_year']
+        mileage_increase = flag_config['mileage']
+        implementation_rate = flag_config['implementation_rate']
 
         mileages = scenario_change(
-            mileages, base_year, target_year, 
+            mileages, base_year, target_year,
             mileage_increase, implementation_rate)
-        
-        logging.debug(f"implemented '{ce_scen}' for Vehicles (mileage/kilometrage increase)")
+
+        logging.debug("implemented FlagIntensityOfUse for Vehicles (mileage/kilometrage increase)")
 
     # TODO
     # TODO: exchange for proper region labels defined elsewhere
@@ -155,7 +153,8 @@ def get_vehicle_stocks(data_path: str, standard_data_path, climate_data_path, cl
     # Adding cars and buses
     total_nr_vehicles_simple = _calculate_buses_cars_stocks(
         total_nr_vehicles_simple, data_path, climate_data_path, climate_policy_config,
-        circular_economy_config, load, loadfactor, market_share, passengerkms_Tpkms
+        circular_economy_config, load, loadfactor, market_share, passengerkms_Tpkms,
+        resource_efficiency_flags
     )
 
     # Adding ships
@@ -272,7 +271,7 @@ def _calculate_ships_stocks(total_nr_vehicles_simple, standard_data_path, tonkms
 
 def _calculate_buses_cars_stocks(total_nr_vehicles_simple, data_path, climate_data_path,
                                  climate_policy_config, circular_economy_config, load, loadfactor,
-                                 market_share, passengerkms_Tpkms):
+                                 market_share, passengerkms_Tpkms, resource_efficiency_flags: dict = None):
     # Average End-of-Life of vehicles in years, this file also contains
     # the setting for the choice of distribution and other lifetime
     # related settings (standard devition, or alternative
@@ -337,29 +336,30 @@ def _calculate_buses_cars_stocks(total_nr_vehicles_simple, data_path, climate_da
     car_loadfactor.columns = region_list
 
     # increase mileages\kilometrages
-    if 'narrow' in circular_economy_config.keys():
-        target_year = circular_economy_config['narrow']['vehicles']['target_year']
-        base_year = circular_economy_config['narrow']['vehicles']['base_year']
-        mileage_increase = circular_economy_config['narrow']['vehicles']['mileage']
-        region_mileage = circular_economy_config['narrow']['vehicles']['region_mileage']
-        implementation_rate = circular_economy_config['narrow']['vehicles']['implementation_rate']
+    if flag_enabled(resource_efficiency_flags, "vehicles", "FlagMileageIncrease"):
+        flag_config = circular_economy_config['vehicles']['FlagMileageIncrease']
+        target_year = flag_config['target_year']
+        base_year = flag_config['base_year']
+        mileage_increase = flag_config['mileage']
+        region_mileage = flag_config['region_mileage']
+        implementation_rate = flag_config['implementation_rate']
 
         # Cars are saved seperatly since they are not defined in the
         # general kilometrage dataframe
         kilometrage = apply_change_per_region(
-            kilometrage, base_year, target_year, 
+            kilometrage, base_year, target_year,
             region_mileage['Cars'], implementation_rate
         )
         kilometrage_bus = apply_change_per_region(
-            kilometrage_bus, base_year, target_year, 
+            kilometrage_bus, base_year, target_year,
             mileage_increase['Midi Buses'], implementation_rate
         )
         kilometrage_midi_bus = apply_change_per_region(
-            kilometrage_midi_bus, base_year, target_year, 
+            kilometrage_midi_bus, base_year, target_year,
             mileage_increase['Regular Buses'], implementation_rate
         )
 
-        logging.debug("implemented 'narrow' for Vehicles (increase mileage)")
+        logging.debug("implemented FlagMileageIncrease for Vehicles (increase mileage)")
 
     # Buses are adjusted to account for the higher material intensity of
     # mini-buses. All in tera pkms.
