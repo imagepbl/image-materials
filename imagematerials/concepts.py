@@ -366,9 +366,8 @@ class KnowledgeGraph():
                            dim_shares: Optional[str] = None):
         """Disaggregate supertypes into subtypes.
 
-        If shares for the subtypes are provided,
-        the values of the input_array data is adjusted accordingly
-        (value of supertype * shares = values of subtypes).
+        If shares for the subtypes are provided, the values of the input_array data is adjusted 
+        accordingly (value of supertype * shares = values of subtypes).
         If no shares are provided, the value of the supertype is taken for all subtypes.
 
         Parameters
@@ -583,6 +582,155 @@ def create_vehicle_graph():
         for sub_type in vehicle_subtypes:
             vehicle_knowledge_graph.add(
                 Node(f"{super_type} - {sub_type}", inherits_from=super_type))
+    return vehicle_knowledge_graph
+
+
+def create_vehicle_graph_2():
+    """Create the knowledge graph for the vehicle/transport sector (including type synonyms)."""
+    vehicle_knowledge_graph = KnowledgeGraph(Node("Vehicles"))
+
+    # Bikes
+    vehicle_knowledge_graph.add(Node("Bikes", synonyms=["bikes", "bicycle"], inherits_from="Vehicles"))
+
+    # Airplanes
+    vehicle_knowledge_graph.add(Node("Airplanes", synonyms=["airplanes"], inherits_from="Vehicles"))
+    for subtype, synonyms in {
+        "Freight Planes": ["freight planes", "air_freight"],
+        "Passenger Planes": ["passenger planes", "air_pas"]
+    }.items():
+        vehicle_knowledge_graph.add(Node(subtype, synonyms=synonyms, inherits_from="Airplanes"))
+
+    # Ships
+    vehicle_knowledge_graph.add(Node("Ships", inherits_from="Vehicles"))
+    for subtype, synonyms in {
+        "Small Ships": ["small ships", "sea_shipping_small"],
+        "Medium Ships": ["medium ships", "sea_shipping_med"],
+        "Large Ships": ["large ships", "sea_shipping_large"],
+        "Very Large Ships": ["very large ships", "sea_shipping_vl"],
+        "Inland Ships": ["inland ships", "inland_shipping"]
+    }.items():
+        vehicle_knowledge_graph.add(Node(subtype, synonyms=synonyms, inherits_from="Ships"))
+
+    # Trains
+    vehicle_knowledge_graph.add(Node("Railway", inherits_from="Vehicles"))
+    for subtype, synonyms in {
+        "Freight Trains": ["freight trains", "rail_freight"],
+        "Trains": ["rail_reg", "Regular Trains"], #
+        "High Speed Trains": ["high speed trains", "rail_hst"]
+    }.items():
+        vehicle_knowledge_graph.add(Node(subtype, synonyms=synonyms, inherits_from="Railway"))
+        # vehicle_knowledge_graph.add(Node(subtype, synonyms=synonyms, inherits_from="Vehicles"))
+
+    # Trucks
+    vehicle_knowledge_graph.add(Node("Trucks", inherits_from="Vehicles"))
+    for super_type, synonyms in {
+        "Heavy Freight Trucks": ["heavy freight trucks", "HFT"],
+        "Light Commercial Vehicles": ["light commercial vehicles", "LCV"],
+        "Medium Freight Trucks": ["medium freight trucks", "MFT"]
+    }.items():
+        vehicle_knowledge_graph.add(Node(name=super_type, synonyms=synonyms, inherits_from="Trucks"))
+
+    # Buses
+    vehicle_knowledge_graph.add(Node("Buses", inherits_from="Vehicles"))
+    for super_type, synonyms in {
+        "Regular Buses": ["regular buses", "reg_bus"],
+        "Midi Buses": ["midi buses", "midi_bus"]
+    }.items():
+        vehicle_knowledge_graph.add(Node(name=super_type, synonyms=synonyms, inherits_from="Buses"))
+
+    # Cars
+    vehicle_knowledge_graph.add(Node("Cars", inherits_from="Vehicles"))
+
+    # Engines
+    for engine, synonyms in {
+        "BEV": ["battery electric vehicle"],
+        "FCV": ["fuel cell vehicle"],
+        "HEV": ["hybrid electric vehicle"],
+        "ICE": ["internal combustion engine vehicle"],
+        "PHEV": ["plug-in hybrid electric vehicle"],
+        "Trolley": []
+        }.items():
+        vehicle_knowledge_graph.add(Node(name=engine, synonyms=synonyms, inherits_from="Vehicles"))
+
+    road_vehicles = {
+        "HFT - BEV": ["Heavy Freight Trucks - BEV"],
+        "HFT - FCV": ["Heavy Freight Trucks - FCV"],
+        "HFT - HEV": ["Heavy Freight Trucks - HEV"],
+        "HFT - ICE": ["Heavy Freight Trucks - ICE"],
+        "HFT - PHEV": ["Heavy Freight Trucks - PHEV"],
+        "HFT - Trolley": ["Heavy Freight Trucks - Trolley"],
+        "LCV - BEV": ["Light Commercial Vehicles - BEV"],
+        "LCV - FCV": ["Light Commercial Vehicles - FCV"],
+        "LCV - HEV": ["Light Commercial Vehicles - HEV"],
+        "LCV - ICE": ["Light Commercial Vehicles - ICE"],
+        "LCV - PHEV": ["Light Commercial Vehicles - PHEV"],
+        "LCV - Trolley": ["Light Commercial Vehicles - Trolley"],
+        "MFT - BEV": ["Medium Freight Trucks - BEV"],
+        "MFT - FCV": ["Medium Freight Trucks - FCV"],
+        "MFT - HEV": ["Medium Freight Trucks - HEV"],
+        "MFT - ICE": ["Medium Freight Trucks - ICE"],
+        "MFT - PHEV": ["Medium Freight Trucks - PHEV"],
+        "MFT - Trolley": ["Medium Freight Trucks - Trolley"],
+        "Cars - BEV": ["car - BEV", "cars - BEV"],
+        "Cars - FCV": ["car - FCV", "cars - FCV"],
+        "Cars - HEV": ["car - HEV", "cars - HEV"],
+        "Cars - ICE": ["car - ICE", "cars - ICE"],
+        "Cars - PHEV": ["car - PHEV", "cars - PHEV"],
+        "Cars - Trolley": ["car - Trolley"],
+        "midi_bus - BEV": ["Midi Buses - BEV"],
+        "midi_bus - FCV": ["Midi Buses - FCV"],
+        "midi_bus - HEV": ["Midi Buses - HEV"],
+        "midi_bus - ICE": ["Midi Buses - ICE"],
+        "midi_bus - PHEV": ["Midi Buses - PHEV"],
+        "midi_bus - Trolley": ["Midi Buses - Trolley"],
+        "reg_bus - BEV": ["Regular Buses - BEV"],
+        "reg_bus - FCV": ["Regular Buses - FCV"],
+        "reg_bus - HEV": ["Regular Buses - HEV"],
+        "reg_bus - ICE": ["Regular Buses - ICE"],
+        "reg_bus - PHEV": ["Regular Buses - PHEV"],
+        "reg_bus - Trolley": ["Regular Buses - Trolley"],
+    }
+    engine_mapping = {
+        "HFT - BEV": ["Heavy Freight Trucks", "BEV"],
+        "HFT - FCV": ["Heavy Freight Trucks", "FCV"],
+        "HFT - HEV": ["Heavy Freight Trucks", "HEV"],
+        "HFT - ICE": ["Heavy Freight Trucks", "ICE"],
+        "HFT - PHEV": ["Heavy Freight Trucks", "PHEV"],
+        "HFT - Trolley": ["Heavy Freight Trucks", "Trolley"],
+        "LCV - BEV": ["Light Commercial Vehicles", "BEV"],
+        "LCV - FCV": ["Light Commercial Vehicles", "FCV"],
+        "LCV - HEV": ["Light Commercial Vehicles", "HEV"],
+        "LCV - ICE": ["Light Commercial Vehicles", "ICE"],
+        "LCV - PHEV": ["Light Commercial Vehicles", "PHEV"],
+        "LCV - Trolley": ["Light Commercial Vehicles", "Trolley"],
+        "MFT - BEV": ["Medium Freight Trucks", "BEV"],
+        "MFT - FCV": ["Medium Freight Trucks", "FCV"],
+        "MFT - HEV": ["Medium Freight Trucks", "HEV"],
+        "MFT - ICE": ["Medium Freight Trucks", "ICE"],
+        "MFT - PHEV": ["Medium Freight Trucks", "PHEV"],
+        "MFT - Trolley": ["Medium Freight Trucks", "Trolley"],
+        "Cars - BEV": ["Cars", "BEV"],
+        "Cars - FCV": ["Cars", "FCV"],
+        "Cars - HEV": ["Cars", "HEV"],
+        "Cars - ICE": ["Cars", "ICE"],
+        "Cars - PHEV": ["Cars", "PHEV"],
+        "Cars - Trolley": ["Cars", "Trolley"],
+        "midi_bus - BEV": ["Midi Buses", "BEV"],
+        "midi_bus - FCV": ["Midi Buses", "FCV"],
+        "midi_bus - HEV": ["Midi Buses", "HEV"],
+        "midi_bus - ICE": ["Midi Buses", "ICE"],
+        "midi_bus - PHEV": ["Midi Buses", "PHEV"],
+        "midi_bus - Trolley": ["Midi Buses", "Trolley"],
+        "reg_bus - BEV": ["Regular Buses", "BEV"],
+        "reg_bus - FCV": ["Regular Buses", "FCV"],
+        "reg_bus - HEV": ["Regular Buses", "HEV"],
+        "reg_bus - ICE": ["Regular Buses", "ICE"],
+        "reg_bus - PHEV": ["Regular Buses", "PHEV"],
+        "reg_bus - Trolley": ["Regular Buses", "Trolley"],
+    }
+    for sub_type, synonyms in road_vehicles.items():
+        vehicle_knowledge_graph.add(Node(name=sub_type, synonyms=synonyms, inherits_from=engine_mapping[sub_type]))
+
     return vehicle_knowledge_graph
 
 
@@ -998,6 +1146,209 @@ def create_electricity_graph():
     
     return electricity_knowledge_graph
 
+def create_materials_graph():
+    materials_knowledge_graph = KnowledgeGraph(Node("Materials"))
+
+    materials_knowledge_graph.add(Node("bulk_materials", inherits_from="Materials"))
+    materials_knowledge_graph.add(Node("speciality_materials", inherits_from="Materials"))
+    materials_knowledge_graph.add(Node("strategic_raw_materials", synonyms=["SRM"], inherits_from="Materials"))
+    materials_knowledge_graph.add(Node("critical_raw_materials", synonyms=["CRM"], inherits_from="Materials"))
+
+    materials = {
+        "aggregate":  [],
+        "alumina": ["Al2O3", "aluminium oxide"],
+        "aluminium": ["Al", "aluminum"],
+        "antimony": ["Sb"],
+        "arsenic": ["As"],
+        "asphalt": [],
+        "baryte": ["barite", "BaSO4", "barium sulfate"],
+        "bauxite": ["aluminium ore"],
+        "beryllium": ["Be"],
+        "bismuth": ["Bi"],
+        "boron": ["B"],
+        "brick": [],
+        "bronze": ["CuSn", "copper-tin alloy"],
+        "cadmium": ["Cd"],
+        "carbon": ["C"],
+        "cement": [],
+        "chromium": ["Cr"],
+        "cobalt": ["Co"],
+        "coking_coal": ["metallurgical coal"],
+        "concrete": [],
+        "copper": ["Cu"],
+        "feldspar": [],
+        "fluorspar": ["fluorite", "CaF2", "calcium fluoride"],
+        "gallium": ["Ga"],
+        "germanium": ["Ge"],
+        "glass": [],
+        "graphite": [],
+        "hafnium": ["Hf"],
+        "helium": ["He"],
+        "indium": ["In"],
+        "lead": ["Pb"],
+        "lithium": ["Li"],
+        "magnesium": ["Mg"],
+        "manganese": ["Mn"],
+        "molybdenum": ["Mo"],
+        "nickel": ["Ni"],
+        "niobium": ["Nb"],
+        "phosphate_rock": ["rock phosphate"],
+        "phosphorous": ["P", "phosphorus"],
+        "plastics": ["polymers"],
+        "rubber": [],
+        "selenium": ["Se"],
+        "silicon": ["Si"],
+        "silver": ["Ag"],
+        "sodium": ["Na"],
+        "steel": [],
+        "stone": [],
+        "strontium": ["Sr"],
+        "tantalum": ["Ta"],
+        "tellurium": ["Te"],
+        "tin": ["Sn"],
+        "titanium": ["Ti"],
+        "tungsten": ["W", "wolfram"],
+        "vanadium": ["V"],
+        "wood": ["timber"],
+        "zinc": ["Zn"],
+        "zirconium": ["Zr"],
+
+        # group nodes ------------------------------------------------------------------------------
+        # since later we loop over the materials and add them to the graph, we need to add the group 
+        # nodes first, so that they are available when we add the individual materials
+        "rare_earth_elements": ["REE"],  # group node
+        "light_rare_earth_elements": ["LREE"],  # group node
+        "heavy_rare_earth_elements": ["HREE"],  # group node
+        "scandium": ["Sc"],
+        "lanthanum": ["La"],
+        "cerium": ["Ce"],
+        "praseodymium": ["Pr"],
+        "neodymium": ["Nd"],
+        "promethium": ["Pm"],
+        "samarium": ["Sm"],
+        "europium": ["Eu"],
+        "gadolinium": ["Gd"],
+        "yttrium": ["Yt"],
+        "terbium": ["Tb"],
+        "dysprosium": ["Dy"],
+        "holmium": ["Ho"],
+        "erbium": ["Er"],
+        "thulium": ["Tm"],
+        "ytterbium": ["Yb"],
+        "lutetium": ["Lu"],
+
+        "platinum_group_metals": ["PGM"],  # group node
+        "ruthenium": ["Ru"],
+        "rhodium": ["Rh"],
+        "palladium": ["Pd"],
+        "osmium": ["Os"],
+        "iridium": ["Ir"],
+        "platinum": ["Pt"],
+
+    }
+ 
+    materials_mapping = {
+        "aggregate": ["bulk_materials"],
+        "alumina": ["critical_raw_materials", "strategic_raw_materials"],
+        "aluminium": ["bulk_materials", "critical_raw_materials", "strategic_raw_materials"],
+        "antimony": ["speciality_materials", "critical_raw_materials"],
+        "arsenic": ["speciality_materials", "critical_raw_materials"],
+        "asphalt": ["bulk_materials"],
+        "baryte": ["speciality_materials", "critical_raw_materials"],
+        "bauxite": ["critical_raw_materials", "strategic_raw_materials"],
+        "beryllium": ["speciality_materials", "critical_raw_materials"],
+        "bismuth": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"],
+        "boron": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"],  # SRM = metallurgy grade only
+        "brick": ["bulk_materials"],
+        "bronze": ["bulk_materials"],
+        "cadmium": ["speciality_materials"],
+        "carbon": ["speciality_materials"],
+        "cement": ["bulk_materials"],
+        "chromium": ["speciality_materials"],
+        "cobalt": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"],
+        "coking_coal": ["bulk_materials", "critical_raw_materials"],
+        "concrete": ["bulk_materials"],
+        "copper": ["bulk_materials", "critical_raw_materials", "strategic_raw_materials"],
+        # "dysprosium": see group node below
+        "feldspar": ["speciality_materials", "critical_raw_materials"],
+        "fluorspar": ["speciality_materials", "critical_raw_materials"],
+        "gallium": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"],
+        "germanium": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"],
+        "glass": ["bulk_materials"],
+        "graphite": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"],  # SRM = battery grade only
+        "hafnium": ["speciality_materials", "critical_raw_materials"],
+        "helium": ["speciality_materials", "critical_raw_materials"],
+        "indium": ["speciality_materials"],
+        "lead": ["speciality_materials"],
+        "lithium": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"],  # SRM = battery grade only
+        "magnesium": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"],  # SRM = magnesium metal
+        "manganese": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"],  # SRM = battery grade only
+        "molybdenum": ["speciality_materials"],
+        # "neodymium":  see group node below
+        "nickel": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"],  # both = battery grade only
+        "niobium": ["speciality_materials", "critical_raw_materials"],
+        "phosphate_rock": ["speciality_materials", "critical_raw_materials"],
+        "phosphorous": ["speciality_materials", "critical_raw_materials"],
+        "plastics": ["bulk_materials"],
+        "platinum_group_metals": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"],
+        # "praseodymium": see group node below
+        "rubber": ["bulk_materials"],
+        "selenium": ["speciality_materials"],
+        "silicon": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"], #silicon metal
+        "silver": ["speciality_materials"],
+        "sodium": ["speciality_materials"],
+        "steel": ["bulk_materials"],
+        "stone": ["bulk_materials"],
+        "strontium": ["speciality_materials", "critical_raw_materials"],
+        "tantalum": ["speciality_materials", "critical_raw_materials"],
+        "tellurium": ["speciality_materials"],
+        # "terbium": see group node below
+        "tin": ["speciality_materials"],
+        "titanium": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"],
+        "tungsten": ["speciality_materials", "critical_raw_materials", "strategic_raw_materials"],
+        "vanadium": ["speciality_materials", "critical_raw_materials"],
+        "wood": ["bulk_materials"],
+        "zinc": ["speciality_materials"],
+        "zirconium": ["speciality_materials"],
+
+        # group nodes ------------------------------------------------------------------------------
+        "rare_earth_elements": ["speciality_materials", "critical_raw_materials"],
+        "light_rare_earth_elements": ["rare_earth_elements"],
+        "heavy_rare_earth_elements": ["rare_earth_elements"],
+        "scandium": ["rare_earth_elements"],
+        "lanthanum": ["light_rare_earth_elements"],
+        "cerium": ["light_rare_earth_elements"],
+        "praseodymium": ["light_rare_earth_elements"],
+        "neodymium": ["light_rare_earth_elements"],
+        "promethium": ["light_rare_earth_elements"],
+        "samarium": ["light_rare_earth_elements"],
+        "europium": ["light_rare_earth_elements"],
+        "gadolinium": ["light_rare_earth_elements"],
+        "yttrium": ["heavy_rare_earth_elements"],
+        "terbium": ["heavy_rare_earth_elements"],
+        "dysprosium": ["heavy_rare_earth_elements"],
+        "holmium": ["heavy_rare_earth_elements"],
+        "erbium": ["heavy_rare_earth_elements"],
+        "thulium": ["heavy_rare_earth_elements"],
+        "ytterbium": ["heavy_rare_earth_elements"],
+        "lutetium": ["heavy_rare_earth_elements"],
+
+        "platinum_group_metals": ["speciality_materials", "critical_raw_materials"],
+        "ruthenium": ["platinum_group_metals"],
+        "rhodium": ["platinum_group_metals"],
+        "palladium": ["platinum_group_metals"],
+        "osmium": ["platinum_group_metals"],
+        "iridium": ["platinum_group_metals"],
+        "platinum": ["platinum_group_metals"]
+
+    }
+
+
+    for id, synonyms in materials.items():
+            parent = materials_mapping.get(id)
+            materials_knowledge_graph.add(Node(id, synonyms=synonyms, inherits_from=parent))
+
+    return materials_knowledge_graph
 
 knowledge_graph = KnowledgeGraph(*create_building_graph()._items, *create_vehicle_graph()._items, *create_electricity_graph()._items)
 

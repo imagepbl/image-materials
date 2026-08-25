@@ -102,12 +102,12 @@ def get_preprocessing_data_gen(path_base: str,
                             usecols=["Time","technology","sub_technology","value"])        
 
     # material compositions of electricity generation tecnologies (kg/MW)
-    material_intensities = pd.read_csv(path_external_data_standard / "generation_material_intensities.csv",
-                            usecols=["Time","technology","sub_technology","material","value"], comment="#")#.transpose()
+    material_intensities = pd.read_csv(path_external_data_standard / "generation_material_intensities_long.csv",
+                            usecols=["Time","technology","sub_technology","material","value"], comment="#")
 
     # market shares
     market_shares = pd.read_csv(path_external_data_standard / "generation_market_shares.csv",
-                            usecols=["Time","sub_technology","value"]) #"technology",
+                            usecols=["Time","technology","sub_technology","value"])
 
     # 2. IMAGE/TIMER files -----------------------------------------
     # Generation capacity (stock demand per generation technology) in MW peak capacity
@@ -148,7 +148,10 @@ def get_preprocessing_data_gen(path_base: str,
 
     # material intensities (kg/MW) -----------------------------------------------------------------
     # create new column with sub-technology name if available, otherwise technology name
-    material_intensities["Type"] = material_intensities["sub_technology"].fillna(material_intensities["technology"])
+    # material_intensities["Type"] = material_intensities["sub_technology"].fillna(material_intensities["technology"])
+    material_intensities["Type"] = (
+            material_intensities["technology"] + "_" + material_intensities["sub_technology"]
+        )
     material_intensities_da = (
         material_intensities.set_index(["Time", "Type", "material"])["value"]
         .to_xarray()
@@ -159,17 +162,22 @@ def get_preprocessing_data_gen(path_base: str,
     material_intensities_da = knowledge_graph_electr.rebroadcast_xarray(material_intensities_da, output_coords=EPG_SUB_TECHNOLOGIES, dim="Type")
 
     # market shares (%) ----------------------------------------------------------------------------
+    market_shares["Type"] = (
+                market_shares["technology"] + "_" + market_shares["sub_technology"]
+            )
     market_shares_da = (
-        market_shares.set_index(["Time", "sub_technology"])["value"]
+        market_shares.set_index(["Time", "Type"])["value"]
         .to_xarray()
-        .rename({"sub_technology": "Type", "Time": "Cohort"})
+        .rename({"Time": "Cohort"})
     )
     market_shares_da = prism.Q_(market_shares_da, "dimensionless")
     market_shares_da.name = "GenerationMarketShares"
 
     # lifetimes (yr) -------------------------------------------------------------------------------
     # create new column with sub-technology name if available, otherwise technology name
-    lifetimes["Type"] = lifetimes["sub_technology"].fillna(lifetimes["technology"])
+    lifetimes["Type"] = (
+                lifetimes["technology"] + "_" + lifetimes["sub_technology"]
+            )
     lifetimes_da = (
         lifetimes.set_index(["Time", "Type"])["value"]
         .to_xarray()

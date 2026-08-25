@@ -128,8 +128,8 @@ EPG_SUB_TECHNOLOGIES = [
     "SPVR_CdTe",
     "SPVR_CIGS",
     "SPVR_a-Si",
-    "parabolic trough",
-    "solar tower",
+    "CSP_parabolic trough",
+    "CSP_solar tower",
     "WON_GB-DFIG",
     "WON_GB-PMSG",
     "WON_DD-PMSG",
@@ -137,7 +137,7 @@ EPG_SUB_TECHNOLOGIES = [
     "WOFF_GB-DFIG",
     "WOFF_GB-PMSG",
     "WOFF_DD-PMSG",
-    "WOFF_DD-EESG",
+    # "WOFF_DD-EESG",
     "WAVE_tech1",
     "HYD_tech1",
     "OREN_tech1",
@@ -180,8 +180,8 @@ EPG_TECHNOLOGIES_FINAL = [
     "SPVR_CdTe",
     "SPVR_CIGS",
     "SPVR_a-Si",
-    "parabolic trough",
-    "solar tower",
+    "CSP_parabolic trough",
+    "CSP_solar tower",
     "WON_GB-DFIG",
     "WON_GB-PMSG",
     "WON_DD-PMSG",
@@ -189,7 +189,7 @@ EPG_TECHNOLOGIES_FINAL = [
     "WOFF_GB-DFIG",
     "WOFF_GB-PMSG",
     "WOFF_DD-PMSG",
-    "WOFF_DD-EESG",
+    # "WOFF_DD-EESG",
     "WAVE",
     "HYD",
     "OREN",
@@ -229,9 +229,9 @@ EPG_SUBTECH_TO_TECH = {
     "WOFF_GB-DFIG": ["WOFF"],
     "WOFF_GB-PMSG": ["WOFF"],
     "WOFF_DD-PMSG": ["WOFF"],
-    "WOFF_DD-EESG": ["WOFF"],
-    "parabolic trough": ["CSP"],
-    "solar tower": ["CSP"],
+    # "WOFF_DD-EESG": ["WOFF"],
+    "CSP_parabolic trough": ["CSP"],
+    "CSP_solar tower": ["CSP"],
     "SPV_c-Si": ["SPV"],
     "SPV_AsGa": ["SPV"],
     "SPV_CdTe": ["SPV"],
@@ -332,7 +332,7 @@ LIGHT_COMMERCIAL_VEHICLE_SHARE = 0.04 # TODO: is this even used somewhere?
 BEV_CAPACITY_CURRENT  = 59.6    #kWh current battery capacity of full electric vehicles, see current_specs.xlsx
 PHEV_CAPACITY_CURRENT = 11.2    #kWh current battery capacity of plugin electric vehicles, see current_specs.xlsx
 
-EV_BATTERIES = ['NiMH', 'LMO', 'NMC', 'NCA', 'LFP', 'Lithium Sulfur', 'Lithium Ceramic', 'Lithium-air']
+# EV_BATTERIES see definition in imagematerials/vehicles/constants.py
 
 
 ####################################################################################################
