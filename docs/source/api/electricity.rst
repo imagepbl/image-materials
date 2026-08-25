@@ -1,5 +1,5 @@
 imagematerials electricity package
-===============================
+===================================
 
 .. currentmodule:: imagematerials.electricity
 

@@ -48,7 +48,7 @@ Documentation Outline
 This documentation is designed to help you easily navigate and find the information you need. It is organized into the following four sections:
 
 :doc:`whatisimagematerials`
-^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The :doc:`whatisimagematerials` shortly explains what IMAGE-materials is 
 
 :doc:`sectors/overview`
