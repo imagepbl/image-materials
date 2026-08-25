@@ -1,6 +1,6 @@
 [buildings]
-FlagFloorSpaceCalibrationResidential = false
-FlagFloorSpaceCalibrationCommercial = false
+FlagFloorSpaceCalibrationResidential = true
+FlagFloorSpaceCalibrationCommercial = true
 FlagFloorSpaceReductionResidential = true
 FlagFloorSpaceReductionCommercial = true
 FlagLifetimeExtension = false

@@ -296,17 +296,17 @@ def read_circular_economy_data(data_file: Union[Path, str, None]) -> dict:
         return tomllib.load(f)
 
 
-# Pairs of flags that must never both be True at the same time, because the second
-# measure would be applied on top of the (already adjusted) output of the first,
-# e.g. floorspace reduction assumes it starts from the uncalibrated IMAGE trajectory.
-MUTUALLY_EXCLUSIVE_FLAGS = (
-    ("buildings", "FlagFloorSpaceCalibrationResidential", "FlagFloorSpaceReductionResidential"),
-    ("buildings", "FlagFloorSpaceCalibrationCommercial", "FlagFloorSpaceReductionCommercial"),
+# Flags that may only be enabled if another flag is also enabled, because the
+# dependent measure builds on the output of the flag it depends on, e.g. floorspace
+# reduction assumes the floorspace trajectory has already been calibrated.
+DEPENDENT_FLAGS = (
+    ("buildings", "FlagFloorSpaceReductionResidential", "FlagFloorSpaceCalibrationResidential"),
+    ("buildings", "FlagFloorSpaceReductionCommercial", "FlagFloorSpaceCalibrationCommercial"),
 )
 
 
 def validate_resource_efficiency_flags(resource_efficiency_flags: dict) -> None:
-    """Check that no mutually-exclusive resource-efficiency flags are enabled together.
+    """Check that dependent resource-efficiency flags aren't enabled without their prerequisite.
 
     Parameters
     ----------
@@ -316,17 +316,17 @@ def validate_resource_efficiency_flags(resource_efficiency_flags: dict) -> None:
     Raises
     ------
     ValueError
-        If two flags that are defined as mutually exclusive are both True.
+        If a flag is True while a flag it depends on (see DEPENDENT_FLAGS) is not.
 
     """
     if not resource_efficiency_flags:
         return
-    for sector, flag_a, flag_b in MUTUALLY_EXCLUSIVE_FLAGS:
-        if flag_enabled(resource_efficiency_flags, sector, flag_a) and \
-                flag_enabled(resource_efficiency_flags, sector, flag_b):
+    for sector, dependent_flag, required_flag in DEPENDENT_FLAGS:
+        if flag_enabled(resource_efficiency_flags, sector, dependent_flag) and not \
+                flag_enabled(resource_efficiency_flags, sector, required_flag):
             raise ValueError(
-                f"'{flag_a}' and '{flag_b}' are mutually exclusive and cannot both be "
-                f"True in [{sector}] of resource_efficiency_flags.toml."
+                f"'{dependent_flag}' requires '{required_flag}' to also be True "
+                f"in [{sector}] of resource_efficiency_flags.toml."
             )
 
 
@@ -348,7 +348,7 @@ def read_resource_efficiency_flags(flags_file: Union[Path, str, None]) -> dict:
     Raises
     ------
     ValueError
-        If two mutually-exclusive flags (see MUTUALLY_EXCLUSIVE_FLAGS) are both True.
+        If a dependent flag is True without its prerequisite (see DEPENDENT_FLAGS).
 
     """
     if flags_file is None:

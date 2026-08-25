@@ -152,7 +152,9 @@ Resource efficiency and circular economy (CE) measures (e.g. floorspace reductio
 A measure only takes effect if its flag is `true` **and** its data block exists in `circular_economy_data.toml`, so keep both files pointed at the same scenario folder. Selecting a scenario is optional — passing `None` for both `circular_economy_data_file` and `resource_efficiency_flags_file` (the default) disables all measures (it will automatically point to the base CE scneario). 
 For a standard run it's thus clearer to point at the `base` preset, which sets every flag to `false` explicitly.
 
-Ready-made presets are provided: `base` (nothing enabled), `full_ce` (everything enabled (important the FlagFloorSpaceCalibration and FlagFloorSpaceReduction are mutually exclusive - thus one has to be turned off)), and single-measure presets from the CIRCOMOD project `narrow_product` (lightweighting), `narrow_activity` (floorspace/activity reduction), `slow` (lifetime extension), and `close` (recycling). Use `imagematerials.util.resolve_circular_economy_scenario` to resolve a scenario name to its folder, as shown in the example notebooks.
+Ready-made presets are provided: `base` (nothing enabled), `full_ce` (everything enabled), and single-measure presets from the CIRCOMOD project `narrow_product` (lightweighting), `narrow_activity` (floorspace/activity reduction), `slow` (lifetime extension), and `close` (recycling). Use `imagematerials.util.resolve_circular_economy_scenario` to resolve a scenario name to its folder, as shown in the example notebooks.
+
+Note that `FlagFloorSpaceReductionResidential`/`Commercial` can only be enabled together with `FlagFloorSpaceCalibrationResidential`/`Commercial` — reduction is applied on top of the calibrated floorspace trajectory, so its calibration flag must also be `true`. This is enforced automatically when flags are loaded.
 
 See the [Resource Efficiency and Circular Economy](docs/source/resource_efficiency_and_circular_economy.rst) documentation page for the full details, including how to add a new measure.
 

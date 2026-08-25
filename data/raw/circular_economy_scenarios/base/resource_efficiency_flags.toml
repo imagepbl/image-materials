@@ -1,6 +1,7 @@
 [buildings]
-FlagFloorSpaceCalibrationResidential = false
-FlagFloorSpaceCalibrationCommercial = false
+# set true as Calibration is for base (best if TIMER data would be changed accordingly) 
+FlagFloorSpaceCalibrationResidential = true 
+FlagFloorSpaceCalibrationCommercial = true
 FlagFloorSpaceReductionResidential = false
 FlagFloorSpaceReductionCommercial = false
 FlagLifetimeExtension = false

@@ -104,15 +104,17 @@ Inside each sector's preprocessing module, :func:`imagematerials.util.flag_enabl
 
 ``flag_enabled`` returns ``False`` (rather than raising) if ``resource_efficiency_flags`` is ``None`` or the flag/sector is missing, so measures are opt-in by default.
 
-Mutually exclusive flags
---------------------------
+Dependent flags
+-----------------
 
-Some flag pairs must never both be enabled at the same time, because the second measure would be applied on top of the (already adjusted) output of the first rather than on the base IMAGE trajectory it assumes. Currently this applies to:
+Some flags may only be enabled together with another flag, because the dependent measure builds on the output of the flag it depends on rather than on the raw IMAGE trajectory. Currently this applies to:
 
-- ``FlagFloorSpaceCalibrationResidential`` and ``FlagFloorSpaceReductionResidential``
-- ``FlagFloorSpaceCalibrationCommercial`` and ``FlagFloorSpaceReductionCommercial``
+- ``FlagFloorSpaceReductionResidential`` requires ``FlagFloorSpaceCalibrationResidential``
+- ``FlagFloorSpaceReductionCommercial`` requires ``FlagFloorSpaceCalibrationCommercial``
 
-This is enforced automatically: :func:`imagematerials.util.read_resource_efficiency_flags` calls :func:`imagematerials.util.validate_resource_efficiency_flags` on every flags file it reads, and raises a ``ValueError`` if a mutually-exclusive pair is both ``True``. The pairs are defined in ``imagematerials.util.MUTUALLY_EXCLUSIVE_FLAGS``; add new pairs there if a future measure has the same kind of conflict.
+In other words, floorspace reduction can only be turned on if floorspace calibration is also turned on — reduction is applied on top of the calibrated floorspace trajectory, not the uncalibrated one.
+
+This is enforced automatically: :func:`imagematerials.util.read_resource_efficiency_flags` calls :func:`imagematerials.util.validate_resource_efficiency_flags` on every flags file it reads, and raises a ``ValueError`` if a dependent flag is ``True`` while its prerequisite is not. The pairs are defined in ``imagematerials.util.DEPENDENT_FLAGS``; add new pairs there if a future measure has the same kind of dependency.
 
 Provided scenario presets
 ---------------------------
@@ -120,9 +122,9 @@ Provided scenario presets
 ``data/raw/circular_economy_scenarios/`` ships with several ready-made presets, each a directory containing matching ``resource_efficiency_flags.toml`` and ``circular_economy_data.toml`` files:
 
 - ``base`` — every flag ``false``; no resource efficiency or circular economy measures applied.
-- ``full_ce`` — every applicable flag ``true``; all compatible measures applied simultaneously. Note that ``FlagFloorSpaceCalibration*`` and ``FlagFloorSpaceReduction*`` are mutually exclusive (see below), so ``full_ce`` enables the reduction flags, not the calibration ones.
+- ``full_ce`` — every applicable flag ``true``; all compatible measures applied simultaneously. Note that ``FlagFloorSpaceReduction*`` requires ``FlagFloorSpaceCalibration*`` (see above), so ``full_ce`` enables both.
 - ``narrow_product`` — lightweighting measures only (building material intensities, vehicle weight, generation/grid component weight).
-- ``narrow_activity`` — floorspace/activity reduction measures only (residential and commercial floorspace).
+- ``narrow_activity`` — floorspace/activity reduction measures only (residential and commercial floorspace), with the required floorspace calibration flags also enabled.
 - ``slow`` — lifetime extension measures only (buildings, vehicles, electricity generation/grid, and the matching end-of-life reuse rates).
 - ``close`` — end-of-life recycling rate measures only.
 
