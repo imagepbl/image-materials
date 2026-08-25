@@ -25,4 +25,4 @@ FlagLifetimeExtension = false
 FlagRecycling = false
 
 [rest_of]
-FlagResourceEfficiency = false
+FlagResourceEfficiency = true

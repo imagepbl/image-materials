@@ -40,6 +40,7 @@ Documentation Outline
    installation
    quickstart
    models
+   resource_efficiency_and_circular_economy
    api/modules
    api/models_detail
    licence
@@ -65,7 +66,11 @@ The :doc:`quickstart` contains detailed, step-by-step instructions, as well as b
 
 :doc:`models`
 ^^^^^^^^^^^^^
-The :doc:`models` section provides an overview of the models implemented in IMAGE materials. 
+The :doc:`models` section provides an overview of the models implemented in IMAGE materials.
+
+:doc:`resource_efficiency_and_circular_economy`
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The :doc:`resource_efficiency_and_circular_economy` section explains the flag-based system used to enable and configure resource efficiency and circular economy measures.
 
 :doc:`api/modules`
 ^^^^^^^^^^^^^^^^^^

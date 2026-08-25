@@ -296,6 +296,40 @@ def read_circular_economy_data(data_file: Union[Path, str, None]) -> dict:
         return tomllib.load(f)
 
 
+# Pairs of flags that must never both be True at the same time, because the second
+# measure would be applied on top of the (already adjusted) output of the first,
+# e.g. floorspace reduction assumes it starts from the uncalibrated IMAGE trajectory.
+MUTUALLY_EXCLUSIVE_FLAGS = (
+    ("buildings", "FlagFloorSpaceCalibrationResidential", "FlagFloorSpaceReductionResidential"),
+    ("buildings", "FlagFloorSpaceCalibrationCommercial", "FlagFloorSpaceReductionCommercial"),
+)
+
+
+def validate_resource_efficiency_flags(resource_efficiency_flags: dict) -> None:
+    """Check that no mutually-exclusive resource-efficiency flags are enabled together.
+
+    Parameters
+    ----------
+    resource_efficiency_flags
+        Nested dictionary as returned by read_resource_efficiency_flags.
+
+    Raises
+    ------
+    ValueError
+        If two flags that are defined as mutually exclusive are both True.
+
+    """
+    if not resource_efficiency_flags:
+        return
+    for sector, flag_a, flag_b in MUTUALLY_EXCLUSIVE_FLAGS:
+        if flag_enabled(resource_efficiency_flags, sector, flag_a) and \
+                flag_enabled(resource_efficiency_flags, sector, flag_b):
+            raise ValueError(
+                f"'{flag_a}' and '{flag_b}' are mutually exclusive and cannot both be "
+                f"True in [{sector}] of resource_efficiency_flags.toml."
+            )
+
+
 def read_resource_efficiency_flags(flags_file: Union[Path, str, None]) -> dict:
     """Read the resource-efficiency on/off flags from a flags TOML file.
 
@@ -311,6 +345,11 @@ def read_resource_efficiency_flags(flags_file: Union[Path, str, None]) -> dict:
         Nested dictionary keyed by sector then flag name, e.g.
         flags["buildings"]["FlagLifetimeExtension"].
 
+    Raises
+    ------
+    ValueError
+        If two mutually-exclusive flags (see MUTUALLY_EXCLUSIVE_FLAGS) are both True.
+
     """
     if flags_file is None:
         return {}
@@ -318,7 +357,9 @@ def read_resource_efficiency_flags(flags_file: Union[Path, str, None]) -> dict:
     if flags_file.is_dir():
         flags_file = flags_file / "resource_efficiency_flags.toml"
     with open(flags_file, "rb") as f:
-        return tomllib.load(f)
+        flags = tomllib.load(f)
+    validate_resource_efficiency_flags(flags)
+    return flags
 
 
 def flag_enabled(resource_efficiency_flags: dict, sector: str, flag_name: str) -> bool:
@@ -359,8 +400,8 @@ def resolve_circular_economy_scenario(circular_economy_scenarios_dir: Union[Path
         The base 'circular_economy_scenarios' directory (containing one
         subfolder per named scenario).
     scenario_name
-        Name of the scenario subfolder. If None, returns
-        circular_economy_scenarios_dir unchanged.
+        Name of the scenario subfolder. If None, resolves to the 'base'
+        scenario (every flag disabled).
 
     Returns
     -------
@@ -370,12 +411,12 @@ def resolve_circular_economy_scenario(circular_economy_scenarios_dir: Union[Path
     Raises
     ------
     FileNotFoundError
-        If scenario_name is given but the corresponding folder doesn't exist.
+        If the corresponding scenario folder doesn't exist.
 
     """
     circular_economy_scenarios_dir = Path(circular_economy_scenarios_dir)
     if scenario_name is None:
-        return circular_economy_scenarios_dir
+        scenario_name = "base"
 
     scenario_dir = circular_economy_scenarios_dir / scenario_name
     if not scenario_dir.is_dir():
