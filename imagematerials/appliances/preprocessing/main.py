@@ -1,13 +1,13 @@
 # Appliances preprocessing
 
-from imagematerials.appliances.preprocessing.stocks import calculate_stocks_applainces
+from imagematerials.appliances.preprocessing.stocks import calculate_stocks_appliances
 from imagematerials.appliances.preprocessing.materials import define_material_intensities
 from imagematerials.appliances.preprocessing.lifetimes import define_lifetimes
 
 
 def appliances_preprocessing(image_directory):
 
-    stock_appliances = calculate_stocks_applainces(image_directory = image_directory)
+    stock_appliances = calculate_stocks_appliances(image_directory = image_directory)
     material_intensities_appliances = define_material_intensities(stock_appliances)
     lifetimes = define_lifetimes(stock_appliances, stock_appliances.Type.values)
 

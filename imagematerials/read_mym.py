@@ -9,9 +9,9 @@ from csv import Sniffer as Sniffer
 from pathlib import Path
 from string import whitespace as whitespace
 
-# Default location of the dimension label lookup file, relative to the
-# package root (imagematerials/../data/raw/dimensions.yaml).
-DEFAULT_DIMENSIONS_YAML = Path(__file__).resolve().parent.parent / 'data' / 'raw' / 'dimensions.yaml'
+# Default location of the dimension label lookup file, which lives next to
+# this module in the package directory (imagematerials/dimensions.yaml).
+DEFAULT_DIMENSIONS_YAML = Path(__file__).resolve().parent / 'dimensions.yaml'
 
 
 @functools.lru_cache(maxsize=None)
@@ -35,7 +35,7 @@ def mymarray_to_xarray(mym_array, dim_prefix='dim', dimensions_yaml=DEFAULT_DIME
     dimensions_yaml : str or pathlib.Path, optional
         Path to a YAML file mapping dimension names to their coordinate
         labels, e.g. ``FOSSIL: [coal, oil, natural gas]``. Defaults to
-        ``data/raw/dimensions.yaml`` in the repository. Dimension names
+        ``imagematerials/dimensions.yaml`` in the package. Dimension names
         resolved via ``dim_prefix``/``dimension_overrides`` (or parsed from
         file annotations) are looked up in this file to fill in coordinate
         labels.

@@ -8,7 +8,7 @@ from imagematerials.read_mym import mymarray_to_xarray
 from imagematerials.appliances.constants import energy_use_per_appliance
 
 
-def calculate_stocks_applainces(image_directory: Path,
+def calculate_stocks_appliances(image_directory: Path,
                                   energy_use_per_appliance=energy_use_per_appliance):
     """Calculate regional appliance stocks (counts) from IMAGE model output.
 
@@ -50,7 +50,10 @@ def calculate_stocks_applainces(image_directory: Path,
     # unit for cooling is share of households that have this appliances, while for other is number of appliances per household
     cooling_appliances = appliances_diffusion.sel(Appliances=['Fan', 'Air Cooler', 'Air Conditioner'])
     # unit: share of households with appliance
-    cooling_appliances = prism.Q_(cooling_appliances, "share/household")
+    # TODO: atm cooling apliances not further used as number of cooling appliances is calculated via energy use per appliance 
+    # and total energy use, we only know share of households with ACCESS to cooling, so not number of units
+    # if not needed we can remove this
+    cooling_appliances = prism.Q_(cooling_appliances, "share/households")
 
     # Other appliances are already in number of appliances per household, so we just need to select these and add the unit 
     other_appliances = appliances_diffusion.sel(Appliances=['Refrigerator', 'Microwave',
