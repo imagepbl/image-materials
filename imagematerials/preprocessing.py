@@ -4,6 +4,7 @@ from typing import Optional, Union
 
 import numpy as np
 
+from imagematerials.appliances.preprocessing.main import appliances_preprocessing
 from imagematerials.buildings.preprocessing.main import buildings_preprocessing as prep_bld
 from imagematerials.rest_of.preprocessing.main import rest_of_preprocessing as prep_rest
 from imagematerials.vehicles.preprocessing.main import vehicles_preprocessing as prep_vhc
@@ -114,6 +115,10 @@ def _get_buildings_sector(prep_data):
     return Sector("buildings", prep_data)
 
 
+def _get_appliances_sector(prep_data):
+    return Sector("appliances", prep_data)
+
+
 def _get_end_of_life_prep_data(base_dir, circular_economy_scenario_dirs):
     prep_data = prep_eol(base_dir, circular_economy_scenario_dirs)
     return prep_data
@@ -194,18 +199,18 @@ def get_preprocessing_data(
         elif sector == "buildings":
             prep_data = _get_buildings_prep_data(base_dir, climate_policy_scenario_dir,
                                                  circular_economy_scenario_dirs)
-            
         elif sector == "electricity":
             prep_data = _get_electricity_prep_data(base_dir, climate_policy_scenario_dir,
                                                    circular_economy_scenario_dirs)
-            
         elif sector == "ev_battery":
             prep_data = _get_ev_battery_prep_data(base_dir, climate_policy_scenario_dir,
                                                    circular_economy_scenario_dirs)
+        elif sector == "appliances":
+            prep_data = appliances_preprocessing(base_dir)
+            
         elif sector == "rest_of":
             prep_data = _get_rest_prep_data(base_dir, climate_policy_scenario_dir,
                                             scenario_name)
-
         elif sector == "eol": 
             prep_data = _get_end_of_life_prep_data(base_dir,circular_economy_scenario_dirs)
 
@@ -224,6 +229,8 @@ def get_preprocessing_data(
         return _get_electricity_sector(prep_data)
     elif sector == "ev_battery":
         return _get_ev_battery_sector(prep_data)
+    elif sector == "appliances":
+        return _get_appliances_sector(prep_data)
     elif sector == "rest_of":
         return _get_rest_prep_data(base_dir, climate_policy_scenario_dir, scenario_name)
     elif sector == "eol":

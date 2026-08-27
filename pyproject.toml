@@ -32,7 +32,8 @@ dependencies = [
     "scipy",
     "scikit-learn",
     "pint-xarray>=0.6",
-    "matplotlib"
+    "matplotlib",
+    "pyyaml"
 ]
 
 dynamic = ["version"]
