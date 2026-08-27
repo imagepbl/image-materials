@@ -50,13 +50,23 @@ def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray, popu
     floor_pc_2020_mapped = prism.Q_(floor_pc_2020_mapped, "m^2/person")
     target_vals = floor_pc_2020_mapped
 
+    # `population` has both an Area (Total/Urban/Rural) and a Quintile dimension.
+    # For Urban/Rural the Quintile dim is a genuine split - the five quintile
+    # populations sum to the area total. For Area="Total" the regional total is
+    # simply broadcast into every quintile slot (each slice is the full total),
+    # so it must be reduced with .isel(Quintile=0), NOT summed.
     population_rururb = population.sel(Area=["Rural", "Urban"])
-    population_total = population.sel(Area="Total")
+    population_total = population.sel(Area="Total").isel(Quintile=0, drop=True)
 
-    # Population-weighted current per-capita total at base_year
+    # Population-weighted current per-capita total at base_year.
+    # total_m2_housing_per_cap is m2/person of each individual (Area, Quintile)
+    # group, so every quintile must be weighted by its own population and the
+    # Quintile dim collapsed here. Forgetting to sum "Quintile" leaves one
+    # quintile's (~1/5) floorspace divided by the full regional population,
+    # making the scaling factor ~5x too large and blowing floorspace up.
     # We use the 2020 anchor to compute the scaling factor, which is then applied to all years.
     current_vals = (
-        (total_m2_housing_per_cap * population_rururb).sel(time=2020).sum(dim=["Area", "Type"]) 
+        (total_m2_housing_per_cap * population_rururb).sel(time=2020).sum(dim=["Area", "Quintile", "Type"])
         / population_total.sel(time=2020)
     ).drop_vars(["Area"])
 
@@ -82,8 +92,9 @@ def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray, popu
     weight = xr.DataArray(weight, dims=["time"], coords={"time": all_times})
 
     # The factor_t is a linear interpolation between the scaling_factors and the floor_region, based on the weight.
-    factor_t = scaling_factors * (1 - weight) + floor_region * weight        # (Region, Time)
-    factor_t = xr.where(all_times <= base_year, scaling_factors, factor_t)  # full correction up to 2020
+    # weight is already clipped to 0 for time <= base_year, so factor_t == scaling_factors there
+    # (full correction up to the base year) without needing a separate override.
+    factor_t = scaling_factors * (1 - weight) + floor_region * weight        # (Region, time)
 
     # Multiplying the regional total by one factor scales every Type/Area identically,
     # preserving the within-region type mix.
@@ -154,8 +165,8 @@ def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray, popu
 
         def _region_pc(reg, t):
             """Population-weighted per-capita total (rural+urban) for region at time t."""
-            fs = total_m2_housing_per_cap.sel(time=t, Region=reg)        # (Area, Type)
-            tot = (fs * pr.sel(time=t, Region=reg)).sum(dim=["Area", "Type"])
+            fs = total_m2_housing_per_cap.sel(time=t, Region=reg)        # (Area, Quintile, Type)
+            tot = (fs * pr.sel(time=t, Region=reg)).sum(dim=["Area", "Quintile", "Type"])
             return float(tot / pt.sel(time=t, Region=reg))
 
         # --- Phase 2: converge every reduced base region to 36 by 2100 --------
