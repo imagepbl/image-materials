@@ -56,8 +56,8 @@ def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray, popu
     # Population-weighted current per-capita total at base_year
     # We use the 2020 anchor to compute the scaling factor, which is then applied to all years.
     current_vals = (
-        (total_m2_housing_per_cap * population_rururb).sel(Time=2020).sum(dim=["Area", "Type"]) 
-        / population_total.sel(Time=2020)
+        (total_m2_housing_per_cap * population_rururb).sel(time=2020).sum(dim=["Area", "Type"]) 
+        / population_total.sel(time=2020)
     ).drop_vars(["Area"])
 
     scaling_factors  = target_vals / current_vals   # (Region,) dimensionless
@@ -77,9 +77,9 @@ def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray, popu
     floor_region = xr.where(scaling_factors > threshold, threshold, scaling_factors)  # (Region,)
 
     # The weight ramps linearly from 0 at base_year to 1 at decay_end_year, and is clipped to [0,1].
-    all_times = total_m2_housing_per_cap.Time.values
+    all_times = total_m2_housing_per_cap.time.values
     weight = np.clip((all_times - base_year) / (decay_end_year - base_year), 0.0, 1.0)
-    weight = xr.DataArray(weight, dims=["Time"], coords={"Time": all_times})
+    weight = xr.DataArray(weight, dims=["time"], coords={"time": all_times})
 
     # The factor_t is a linear interpolation between the scaling_factors and the floor_region, based on the weight.
     factor_t = scaling_factors * (1 - weight) + floor_region * weight        # (Region, Time)
@@ -139,7 +139,7 @@ def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray, popu
         pr = population_rururb.pint.dequantify() if prism.U_(population_rururb) is not None else population_rururb
         pt = population_total.pint.dequantify() if prism.U_(population_total) is not None else population_total
 
-        all_times = total_m2_housing_per_cap.Time.values
+        all_times = total_m2_housing_per_cap.time.values
         post_mask = all_times > target_year
 
         # Smootherstep (6x^5 - 15x^4 + 10x^3) ramp 0 -> 1 across target_year -> convergence_year_end to the cap
@@ -150,27 +150,27 @@ def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray, popu
         # the stock -> flow series). 
         lin = np.clip((all_times - target_year) / (convergence_year_end - target_year), 0.0, 1.0)
         smooth = 6 * lin**5 - 15 * lin**4 + 10 * lin**3
-        ramp = xr.DataArray(smooth, dims=["Time"], coords={"Time": all_times})
+        ramp = xr.DataArray(smooth, dims=["time"], coords={"time": all_times})
 
         def _region_pc(reg, t):
             """Population-weighted per-capita total (rural+urban) for region at time t."""
-            fs = total_m2_housing_per_cap.sel(Time=t, Region=reg)        # (Area, Type)
-            tot = (fs * pr.sel(Time=t, Region=reg)).sum(dim=["Area", "Type"])
-            return float(tot / pt.sel(Time=t, Region=reg))
+            fs = total_m2_housing_per_cap.sel(time=t, Region=reg)        # (Area, Type)
+            tot = (fs * pr.sel(time=t, Region=reg)).sum(dim=["Area", "Type"])
+            return float(tot / pt.sel(time=t, Region=reg))
 
         # --- Phase 2: converge every reduced base region to 36 by 2100 --------
         # Take the 2060 (Area, Type) distribution, scale it so its
         # population-weighted total equals 36 -> that's the 2100 endpoint.
         for reg in narrow_regions:
-            fs_2060 = total_m2_housing_per_cap.sel(Time=target_year, Region=reg)   # (Area, Type)
+            fs_2060 = total_m2_housing_per_cap.sel(time=target_year, Region=reg)   # (Area, Type)
             pc_2060 = _region_pc(reg, target_year)
             if pc_2060 <= 0:
                 continue
             fs_end = fs_2060 * (convergence_cap / pc_2060)   # scaled so weighted total = 36
 
             for t in all_times[post_mask]:
-                r = float(ramp.sel(Time=t))
-                total_m2_housing_per_cap.loc[{"Time": t, "Region": reg}] = (
+                r = float(ramp.sel(time=t))
+                total_m2_housing_per_cap.loc[{"time": t, "Region": reg}] = (
                     fs_2060.values * (1 - r) + fs_end.values * r
                 )
 

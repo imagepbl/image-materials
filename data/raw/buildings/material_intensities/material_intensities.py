@@ -100,13 +100,6 @@ housing_type_to_rasmi_building_structure = {
 material_list_rasmi = ["steel", "concrete", "wood", "copper", "aluminum", "glass", "brick"]
 mis_list_target = ["steel", "concrete", "wood", "copper", "aluminium", "glass", "brick"]
 
-# regions where total steel consumption is higher than what is estimated by image-materials sectors buildings & vehicles
-STEEL_REGIONS_ADAPT_ENABLED = False
-
-if STEEL_REGIONS_ADAPT_ENABLED == True:
-    steel_regions_adapt = [4, 8, 9, 22, 25, 26] 
-if STEEL_REGIONS_ADAPT_ENABLED == False:
-    steel_regions_adapt = []
 
 def load_mi_rasmi():
     """Read in RASMI material intensity data."""
@@ -302,9 +295,7 @@ def replace_old_mis_with_rasmi(mi_image_mat: pd.DataFrame, mi_rasmi: pd.DataFram
             # loop through IMAGE regions and get the mean concrete mi value for each region for RS and RM (housing types)
             for housingtype_image, housingtype_rasmi in housing_type_image_to_rasmi.items():
 
-                if image_region in steel_regions_adapt and material_name == "steel":
-                    data_value = "p_5"
-                elif image_region in [20] and material_name == "concrete":  # China concrete adaptation to highest value
+                if image_region in [20] and material_name == "concrete":  # China concrete adaptation to highest value
                     data_value = "p_100"
                     print("done")
                 else:
@@ -374,15 +365,12 @@ def replace_old_mis_with_rasmi_resource_efficient(mi_image_mat: pd.DataFrame,
                 # loop through IMAGE regions and get the mean concrete mi value for each region for RS and RM (housing types)
                 for housingtype_image, housingtype_rasmi in housing_type_image_to_rasmi.items():
 
-                    if image_region in steel_regions_adapt and material_name == "steel":
-                        data_value = "p_5"
-                    else:
-                        if year in [start_year] and image_region not in steel_regions_adapt and material_name != "steel":
-                            print('switch back')
-                            data_value = "p_50"
-                        if year in [switch_year] and image_region not in steel_regions_adapt and material_name != "steel":
-                            print('switch to more efficient')
-                            data_value = "p_25"
+                    if year in [start_year] and material_name != "steel":
+                        print('switch back')
+                        data_value = "p_50"
+                    if year in [switch_year] and material_name != "steel":
+                        print('switch to more efficient')
+                        data_value = "p_25"
 
                     filtered_mis = material_intensities[material_intensities.index.get_level_values('R5_32').isin(rasmi_region)  # filter for the right region
                                             & material_intensities.index.get_level_values('function').isin([housingtype_rasmi])  # filter for the right housing type of rasmi
