@@ -1,6 +1,6 @@
 import warnings
 from pathlib import Path
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 
@@ -19,43 +19,52 @@ from imagematerials.factory import Sector
 from imagematerials.util import (
     export_to_netcdf,
     import_from_netcdf,
-    read_circular_economy_config,
+    read_circular_economy_data,
     read_climate_policy_config,
+    read_resource_efficiency_flags,
     rebroadcast_prep_data,
 )
 from imagematerials.constants import IMAGE_REGIONS
 
 
-def _get_vehicles_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_scenario_dirs):
+def _get_vehicles_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_data_file,
+                            resource_efficiency_flags_file=None):
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
-        circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
-        prep_data = prep_vhc(base_dir, climate_policy_config, circular_economy_config)
+        circular_economy_config = read_circular_economy_data(circular_economy_data_file)
+        resource_efficiency_flags = read_resource_efficiency_flags(resource_efficiency_flags_file)
+        prep_data = prep_vhc(base_dir, climate_policy_config, circular_economy_config,
+                             resource_efficiency_flags)
 
     return prep_data
 
-def _get_ev_battery_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_scenario_dirs):
+def _get_ev_battery_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_data_file,
+                              resource_efficiency_flags_file=None):
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
-        circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
+        circular_economy_config = read_circular_economy_data(circular_economy_data_file)
         prep_data = prep_battery(base_dir, climate_policy_config, circular_economy_config)
 
     return prep_data
 
-def _get_electricity_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_scenario_dirs):
+def _get_electricity_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_data_file,
+                               resource_efficiency_flags_file=None):
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
-        circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
-        prep_data_gen = prep_elc_gen(base_dir, climate_policy_config, circular_economy_config)
-        prep_data_grid_lines, prep_data_grid_add = prep_elc_grid(base_dir, climate_policy_config, circular_economy_config)
+        circular_economy_config = read_circular_economy_data(circular_economy_data_file)
+        resource_efficiency_flags = read_resource_efficiency_flags(resource_efficiency_flags_file)
+        prep_data_gen = prep_elc_gen(base_dir, climate_policy_config, circular_economy_config,
+                                     resource_efficiency_flags)
+        prep_data_grid_lines, prep_data_grid_add = prep_elc_grid(base_dir, climate_policy_config, circular_economy_config,
+                                                                  resource_efficiency_flags)
         prep_data_stor_phs, prep_data_stor_other = prep_elc_stor(base_dir, climate_policy_config, circular_economy_config)
-        
+
         prep_data = {
             "prep_data_gen": prep_data_gen,
             "prep_data_grid_lines": prep_data_grid_lines,
@@ -65,15 +74,20 @@ def _get_electricity_prep_data(base_dir, climate_policy_scenario_dir, circular_e
         }
     return prep_data
 
-def _get_buildings_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_scenario_dirs):
+def _get_buildings_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_data_file,
+                             resource_efficiency_flags_file=None):
     climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
-    circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
-    prep_data = prep_bld(base_dir, climate_policy_config, circular_economy_config)
+    circular_economy_config = read_circular_economy_data(circular_economy_data_file)
+    resource_efficiency_flags = read_resource_efficiency_flags(resource_efficiency_flags_file)
+    prep_data = prep_bld(base_dir, climate_policy_config, circular_economy_config,
+                         resource_efficiency_flags=resource_efficiency_flags)
     return prep_data
 
 
-def _get_rest_prep_data(base_dir, climate_policy_scenario_dir, scenario_name):
-    prep_data = prep_rest(base_dir, climate_policy_scenario_dir, scenario_name)
+def _get_rest_prep_data(base_dir, climate_policy_scenario_dir, scenario_name,
+                        resource_efficiency_flags_file=None):
+    prep_data = prep_rest(base_dir, climate_policy_scenario_dir, scenario_name,
+                          resource_efficiency_flags_file)
     sector_rest = Sector("rest_of", prep_data)
     return sector_rest
 
@@ -115,21 +129,22 @@ def _get_buildings_sector(prep_data):
     return Sector("buildings", prep_data)
 
 
+def _get_end_of_life_prep_data(base_dir, circular_economy_data_file, resource_efficiency_flags_file=None):
+    prep_data = prep_eol(base_dir, circular_economy_data_file, resource_efficiency_flags_file)
+    
+    
 def _get_appliances_sector(prep_data):
     return Sector("appliances", prep_data)
 
-
-def _get_end_of_life_prep_data(base_dir, circular_economy_scenario_dirs):
-    prep_data = prep_eol(base_dir, circular_economy_scenario_dirs)
-    return prep_data
-
+  
 def _get_end_of_life_sector(prep_data):
     return Sector("eol", prep_data)
 
 def get_preprocessing_data(
         sector, base_dir=None,
         climate_policy_scenario_dir: Union[str, Path, None] = None,
-        circular_economy_scenario_dirs: Optional[dict[str, Union[Path, str]]] = None,
+        circular_economy_data_file: Union[str, Path, None] = None,
+        resource_efficiency_flags_file: Union[str, Path, None] = None,
         scenario_name=None,
         cache: Union[bool, Path, str] = False,
         standard_scenario: str = "SSP2",
@@ -146,8 +161,14 @@ def get_preprocessing_data(
         Base directory in which to find the SSP2/slow scenario, by default None
     climate_policy_scenario_dir, optional
         The climate policy scenario directory, by default None
-    circular_economy_scenario_dirs, optional
-        The circular economy scenario directories, by default None
+    circular_economy_data_file, optional
+        Path to a circular_economy_data.toml file (or a directory containing one),
+        holding the parameter values for circular economy / resource efficiency
+        measures, by default None (no measure data available).
+    resource_efficiency_flags_file, optional
+        Path to a resource_efficiency_flags.toml file (or a directory containing one),
+        controlling which circular economy / resource efficiency measures are applied,
+        by default None (no measures applied).
     scenario_name, optional
         The scenario name for the rest_of sector, by default None
     cache, optional
@@ -181,38 +202,37 @@ def get_preprocessing_data(
         If the sector is unknown or the wrong arguments are supplied.
 
     """
-    if climate_policy_scenario_dir is None and circular_economy_scenario_dirs is None:
+    if climate_policy_scenario_dir is None:
+        if circular_economy_data_file is not None:
+            raise ValueError("if circular_economy_data_file is set, climate_policy_scenario_dir has to be set too")
         climate_policy_scenario_dir = base_dir / standard_scenario
-        circular_economy_scenario_dirs = {}
-    elif circular_economy_scenario_dirs is None and climate_policy_scenario_dir is not None:
-        climate_policy_scenario_dir = climate_policy_scenario_dir
-        circular_economy_scenario_dirs = {}
-    elif climate_policy_scenario_dir is not None and circular_economy_scenario_dirs is not None:
-        pass
-    elif climate_policy_scenario_dir is None and circular_economy_scenario_dirs is not None:
-        raise ValueError("if circular_economy_scenario_dirs is set, climate_policy_scenario_dir has to be set too")
 
     if cache is False or not Path(cache).is_file():
         if sector == "vehicles":
             prep_data = _get_vehicles_prep_data(base_dir, climate_policy_scenario_dir,
-                                                circular_economy_scenario_dirs)
+                                                circular_economy_data_file,
+                                                resource_efficiency_flags_file)
         elif sector == "buildings":
             prep_data = _get_buildings_prep_data(base_dir, climate_policy_scenario_dir,
-                                                 circular_economy_scenario_dirs)
+                                                 circular_economy_data_file,
+                                                 resource_efficiency_flags_file)
+
         elif sector == "electricity":
             prep_data = _get_electricity_prep_data(base_dir, climate_policy_scenario_dir,
-                                                   circular_economy_scenario_dirs)
+                                                   circular_economy_data_file,
+                                                   resource_efficiency_flags_file)
+
         elif sector == "ev_battery":
             prep_data = _get_ev_battery_prep_data(base_dir, climate_policy_scenario_dir,
-                                                   circular_economy_scenario_dirs)
-        elif sector == "appliances":
-            prep_data = appliances_preprocessing(base_dir)
-            
+                                                   circular_economy_data_file,
+                                                   resource_efficiency_flags_file)
         elif sector == "rest_of":
             prep_data = _get_rest_prep_data(base_dir, climate_policy_scenario_dir,
-                                            scenario_name)
-        elif sector == "eol": 
-            prep_data = _get_end_of_life_prep_data(base_dir,circular_economy_scenario_dirs)
+                                            scenario_name, resource_efficiency_flags_file)
+
+        elif sector == "eol":
+            prep_data = _get_end_of_life_prep_data(base_dir, circular_economy_data_file,
+                                                    resource_efficiency_flags_file)
 
         else:
             raise ValueError(f"Unknown sector {sector}")
@@ -232,7 +252,7 @@ def get_preprocessing_data(
     elif sector == "appliances":
         return _get_appliances_sector(prep_data)
     elif sector == "rest_of":
-        return _get_rest_prep_data(base_dir, climate_policy_scenario_dir, scenario_name)
+        return prep_data
     elif sector == "eol":
         return _get_end_of_life_sector(prep_data)
     raise ValueError(f"Unknown sector {sector}")

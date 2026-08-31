@@ -28,9 +28,10 @@ from imagematerials.electricity.constants import (
     STD_LIFETIMES_ELECTR,
 )
 
-def get_preprocessing_data_gen(path_base: str, 
-                               climate_policy_config: dict, 
-                               circular_economy_config: dict
+def get_preprocessing_data_gen(path_base: str,
+                               climate_policy_config: dict,
+                               circular_economy_config: dict,
+                               resource_efficiency_flags: dict = None
                                ):
     """Prepare preprocessing input data for the electricity generation sub-module including gen. sub-technologies.
 
@@ -199,7 +200,8 @@ def get_preprocessing_data_gen(path_base: str,
     if circular_economy_config is not None:
         material_intensities_da_interp, lifetimes_da_interp = apply_ce_measures_to_elc_generation(material_intensities_da_interp,
                                                                                                 lifetimes_da_interp,
-                                                                                                circular_economy_config)
+                                                                                                circular_economy_config,
+                                                                                                resource_efficiency_flags)
 
     ###########################################################################################################
     # Prep_data File #

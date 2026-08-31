@@ -28,7 +28,7 @@ from imagematerials.buildings.preprocessing.circular_economy_measures import (
     ce_measures_residential_housing,
 )
 from imagematerials.read_mym import read_mym_df
-from imagematerials.util import dataset_to_array, merge_dims
+from imagematerials.util import dataset_to_array, flag_enabled, merge_dims
 
 prism.unit_registry.load_definitions(files("imagematerials") / "units.txt")
 
@@ -494,7 +494,8 @@ def compute_housing_residential(population: xr.DataArray,
                                 average_m2_capita: xr.DataArray,
                                 housing_type: xr.DataArray,
                                 floorspace_rururb: xr.DataArray,
-                                circular_economy_config: dict) -> xr.DataArray:
+                                circular_economy_config: dict,
+                                resource_efficiency_flags: dict = None) -> xr.DataArray:
     """Compute the total residential floorspace.
 
     Parameters
@@ -524,9 +525,11 @@ def compute_housing_residential(population: xr.DataArray,
     total_m2_housing_per_cap = prism.Q_(total_m2_housing_per_cap, "m^2/person")
 
     # Implement circular economy measures if configuration is provided
-    if 'base' in circular_economy_config.keys():
+    if flag_enabled(resource_efficiency_flags, "buildings", "FlagFloorSpaceCalibrationResidential") or \
+            flag_enabled(resource_efficiency_flags, "buildings", "FlagFloorSpaceReductionResidential"):
         total_m2_housing_per_cap = ce_measures_residential_housing(total_m2_housing_per_cap, population,
-                                                                   circular_economy_config)
+                                                                   circular_economy_config,
+                                                                   resource_efficiency_flags)
 
     # Align Area labels/order with the split residential floorspace coordinates.
     population_urbrur = population.sel(Area=total_m2_housing_per_cap.coords["Area"])

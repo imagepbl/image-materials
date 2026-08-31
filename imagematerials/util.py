@@ -1,7 +1,7 @@
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 import netCDF4
 import numpy as np
@@ -272,24 +272,158 @@ def read_climate_policy_config(scenario_folder) -> dict:
     return _read_config(scenario_folder)
 
 
-def read_circular_economy_config(scenario_folders: dict) -> dict:
-    """Extract data from multiple .toml-files and joins it together.
+def read_circular_economy_data(data_file: Union[Path, str, None]) -> dict:
+    """Read circular economy / resource efficiency parameter data from one TOML file.
 
     Parameters
     ----------
-    scenario_folders
-        Dictionary with labelled paths to the files that must be read.
+    data_file
+        Path to a circular_economy_data.toml file, or a directory containing one named
+        'circular_economy_data.toml'. If None, returns an empty dict.
 
     Returns
     -------
-        Dictionary containing the contents of all toml-file, accessible
-        under the specified labels.
+        Nested dictionary keyed by sector, then flag name, e.g.
+        data["buildings"]["FlagLifetimeExtension"]["eol_reuse_rate_2060"].
 
     """
-    config_dict = {}
-    for key, scenario_folder in scenario_folders.items():
-        config_dict[key] = _read_config(scenario_folder)
-    return config_dict
+    if data_file is None:
+        return {}
+    data_file = Path(data_file)
+    if data_file.is_dir():
+        data_file = data_file / "circular_economy_data.toml"
+    with open(data_file, "rb") as f:
+        return tomllib.load(f)
+
+
+# Flags that may only be enabled if another flag is also enabled, because the
+# dependent measure builds on the output of the flag it depends on, e.g. floorspace
+# reduction assumes the floorspace trajectory has already been calibrated.
+DEPENDENT_FLAGS = (
+    ("buildings", "FlagFloorSpaceReductionResidential", "FlagFloorSpaceCalibrationResidential"),
+    ("buildings", "FlagFloorSpaceReductionCommercial", "FlagFloorSpaceCalibrationCommercial"),
+)
+
+
+def validate_resource_efficiency_flags(resource_efficiency_flags: dict) -> None:
+    """Check that dependent resource-efficiency flags aren't enabled without their prerequisite.
+
+    Parameters
+    ----------
+    resource_efficiency_flags
+        Nested dictionary as returned by read_resource_efficiency_flags.
+
+    Raises
+    ------
+    ValueError
+        If a flag is True while a flag it depends on (see DEPENDENT_FLAGS) is not.
+
+    """
+    if not resource_efficiency_flags:
+        return
+    for sector, dependent_flag, required_flag in DEPENDENT_FLAGS:
+        if flag_enabled(resource_efficiency_flags, sector, dependent_flag) and not \
+                flag_enabled(resource_efficiency_flags, sector, required_flag):
+            raise ValueError(
+                f"'{dependent_flag}' requires '{required_flag}' to also be True "
+                f"in [{sector}] of resource_efficiency_flags.toml."
+            )
+
+
+def read_resource_efficiency_flags(flags_file: Union[Path, str, None]) -> dict:
+    """Read the resource-efficiency on/off flags from a flags TOML file.
+
+    Parameters
+    ----------
+    flags_file
+        Path to a resource_efficiency_flags.toml file, or a directory containing one
+        named 'resource_efficiency_flags.toml'. If None, all flags default to False
+        (no circular economy / resource efficiency measures applied).
+
+    Returns
+    -------
+        Nested dictionary keyed by sector then flag name, e.g.
+        flags["buildings"]["FlagLifetimeExtension"].
+
+    Raises
+    ------
+    ValueError
+        If a dependent flag is True without its prerequisite (see DEPENDENT_FLAGS).
+
+    """
+    if flags_file is None:
+        return {}
+    flags_file = Path(flags_file)
+    if flags_file.is_dir():
+        flags_file = flags_file / "resource_efficiency_flags.toml"
+    with open(flags_file, "rb") as f:
+        flags = tomllib.load(f)
+    validate_resource_efficiency_flags(flags)
+    return flags
+
+
+def flag_enabled(resource_efficiency_flags: dict, sector: str, flag_name: str) -> bool:
+    """Check whether a named resource-efficiency flag is enabled for a sector.
+
+    Parameters
+    ----------
+    resource_efficiency_flags
+        Nested dictionary as returned by read_resource_efficiency_flags. May be None,
+        in which case every flag is considered disabled.
+    sector
+        Sector the flag belongs to, e.g. 'buildings', 'vehicles', 'electricity', 'end_of_life'.
+    flag_name
+        Name of the flag, e.g. 'FlagLifetimeExtension'.
+
+    Returns
+    -------
+        True if the flag is present and set to True, False otherwise.
+
+    """
+    if not resource_efficiency_flags:
+        return False
+    return bool(resource_efficiency_flags.get(sector, {}).get(flag_name, False))
+
+
+def resolve_circular_economy_scenario(circular_economy_scenarios_dir: Union[Path, str],
+                                       scenario_name: Union[str, None]) -> Path:
+    """Resolve a named circular economy scenario to its data folder.
+
+    Each named scenario is a self-contained subfolder of
+    circular_economy_scenarios_dir holding its own
+    'resource_efficiency_flags.toml' and 'circular_economy_data.toml', e.g.
+    '<circular_economy_scenarios_dir>/narrow_product/'.
+
+    Parameters
+    ----------
+    circular_economy_scenarios_dir
+        The base 'circular_economy_scenarios' directory (containing one
+        subfolder per named scenario).
+    scenario_name
+        Name of the scenario subfolder. If None, resolves to the 'base'
+        scenario (every flag disabled).
+
+    Returns
+    -------
+        Path to the resolved scenario folder, suitable for passing as both
+        circular_economy_data_file and resource_efficiency_flags_file.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the corresponding scenario folder doesn't exist.
+
+    """
+    circular_economy_scenarios_dir = Path(circular_economy_scenarios_dir)
+    if scenario_name is None:
+        scenario_name = "base"
+
+    scenario_dir = circular_economy_scenarios_dir / scenario_name
+    if not scenario_dir.is_dir():
+        raise FileNotFoundError(
+            f"No circular economy scenario folder found at {scenario_dir}"
+        )
+    return scenario_dir
 
 
 def _read_config(scenario_folder) -> dict:

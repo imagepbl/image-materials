@@ -10,12 +10,13 @@ from imagematerials.buildings.preprocessing.circular_economy_measures import (
     circular_economy_measures_material_intensities_commercial,
     circular_economy_measures_material_intensities_residential,
 )
-from imagematerials.util import dataset_to_array
+from imagematerials.util import dataset_to_array, flag_enabled
 
 idx = pd.IndexSlice
 
 def compute_mat_intensities_residential(database_dir: Path,
                                         circular_economy_config: dict | None = None,
+                                        resource_efficiency_flags: dict | None = None,
                                         **_,) -> xr.DataArray:
     """Compute the material intensities for residential buildings.
 
@@ -38,7 +39,7 @@ def compute_mat_intensities_residential(database_dir: Path,
     building_materials = pd.read_csv(database_dir / 'Building_materials_rasmi.csv',
                                      index_col = [0,1,2])
 
-    if 'resource_efficient' in circular_economy_config.keys():
+    if flag_enabled(resource_efficiency_flags, "buildings", "FlagResourceEfficientMaterials"):
         # Building_materials; unit: kg/m2; meaning: the average material use per square meter
         # (by building type, by region & by area)
         building_materials = pd.read_csv(
@@ -67,8 +68,9 @@ def compute_mat_intensities_residential(database_dir: Path,
         str(x) for x in xr_mat_res_intensities.coords["Region"].values]
 
     # applying material intensity changes for residential buildings
-    if "narrow_product" in circular_economy_config.keys():
-        xr_mat_res_intensities = circular_economy_measures_material_intensities_residential(xr_mat_res_intensities, 
+    if flag_enabled(resource_efficiency_flags, "buildings", "FlagLightweightingResidential"):
+        print("Applied using lightweighting building materials intensities for residential buildings.")
+        xr_mat_res_intensities = circular_economy_measures_material_intensities_residential(xr_mat_res_intensities,
                                                                                             circular_economy_config)
 
     xr_mat_res_intensities = prism.Q_(xr_mat_res_intensities, "kg/m^2") # assign unit
@@ -79,6 +81,7 @@ def compute_mat_intensities_residential(database_dir: Path,
 def compute_mat_intensities_commercial(
         database_dir: Path,
         circular_economy_config: dict | None=None,
+        resource_efficiency_flags: dict | None = None,
         **_,) -> xr.DataArray:
     """Compute material intensities for commercial buildings.
 
@@ -130,7 +133,8 @@ def compute_mat_intensities_commercial(
     xr_mat_comm_intensities_update_chn.loc[dict(Region="20", material="concrete")] = china_p100_mi
 
     # apply CE changes (per material, per region)
-    if "narrow_product" in circular_economy_config.keys():
+    if flag_enabled(resource_efficiency_flags, "buildings", "FlagLightweightingCommercial"):
+        print("Applied using lightweighting building materials intensities for commercial buildings.")
         xr_mat_comm_intensities = circular_economy_measures_material_intensities_commercial(xr_mat_comm_intensities_update_chn, circular_economy_config, model_regions)
 
     xr_mat_comm_intensities = prism.Q_(xr_mat_comm_intensities_update_chn, "kg/m^2") # assign unit

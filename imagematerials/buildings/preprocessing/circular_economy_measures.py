@@ -7,11 +7,11 @@ import xarray as xr
 
 from imagematerials.concepts import create_region_graph
 from imagematerials.constants import IMAGE_REGIONS
-from imagematerials.util import apply_change_per_region
+from imagematerials.util import apply_change_per_region, flag_enabled
 
 
 def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray, population: xr.DataArray,
-                                    circular_economy_config: dict):
+                                    circular_economy_config: dict, resource_efficiency_flags: dict = None):
     """Implement circular economy measures for residential housing.
 
     Parameters
@@ -32,23 +32,73 @@ def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray, popu
     region_knowledge_graph = create_region_graph()
     regions = total_m2_housing_per_cap.coords["Region"].values
 
-    buildings_config = circular_economy_config["base"]["buildings"]
-    base_year = buildings_config["base_year"]
-    floor_pc_2020 = buildings_config["residential"]["2020"]["useful_floor_pc"]
+    population_rururb = population.sel(Area=["Rural", "Urban"])
+    population_total = population.sel(Area="Total")
 
-    floor_pc_2020_xr = xr.DataArray(
-        list(floor_pc_2020.values()),
-        coords={"Region": list(floor_pc_2020.keys())},
-        dims=["Region"],
-        name="floor_pc_2020",
-    )
+    calibration_enabled = flag_enabled(
+        resource_efficiency_flags, "buildings", "FlagFloorSpaceCalibrationResidential")
 
-    regions_mapped = list(region_knowledge_graph.find_relations_inverse(regions,
-                                                                        floor_pc_2020.keys()))
-    floor_pc_2020_mapped = region_knowledge_graph.rebroadcast_xarray(
-    floor_pc_2020_xr, output_coords=regions_mapped, dim="Region")
-    floor_pc_2020_mapped = prism.Q_(floor_pc_2020_mapped, "m^2/person")
-    target_vals = floor_pc_2020_mapped
+    if calibration_enabled:
+        print("Applying FlagFloorSpaceCalibrationResidential for Residential Buildings")
+        buildings_config = circular_economy_config["buildings"]["FlagFloorSpaceCalibrationResidential"]
+        base_year = buildings_config["base_year"]
+        floor_pc_2020 = buildings_config["residential"]["2020"]["useful_floor_pc"]
+
+        floor_pc_2020_xr = xr.DataArray(
+            list(floor_pc_2020.values()),
+            coords={"Region": list(floor_pc_2020.keys())},
+            dims=["Region"],
+            name="floor_pc_2020",
+        )
+
+        regions_mapped = list(region_knowledge_graph.find_relations_inverse(regions,
+                                                                            floor_pc_2020.keys()))
+        floor_pc_2020_mapped = region_knowledge_graph.rebroadcast_xarray(
+        floor_pc_2020_xr, output_coords=regions_mapped, dim="Region")
+        floor_pc_2020_mapped = prism.Q_(floor_pc_2020_mapped, "m^2/person")
+        target_vals = floor_pc_2020_mapped
+
+        # Population-weighted current per-capita total at base_year
+        # We use the 2020 anchor to compute the scaling factor, which is then applied to all years.
+        current_vals = (
+            (total_m2_housing_per_cap * population_rururb).sel(time=2020).sum(dim=["Area", "Type"])
+            / population_total.sel(time=2020)
+        ).drop_vars(["Area"])
+
+        scaling_factors  = target_vals / current_vals   # (Region,) dimensionless
+
+        # --- Time-decaying correction for large scaling factors only ---
+        # Factors at/below 'threshold' stay constant across all years.
+        # Factors above 'threshold' ramp linearly from their base_year value down to
+        # 'threshold' by 'decay_end_year' (we trust the 2020 anchor, but don't
+        # let a scaling factor compound into the far future).
+        # this was implemented because for China the scaling factor is very high in 2020, which would lead to ~70m2/cap results in 2100
+        # This implementation allows for floorspace 'harmonisation' (base scenario) to material studies in 2020, while  avoiding unrealistic results in 2100
+
+        threshold = 1.5
+        decay_end_year = 2100
+
+        # The floor_region is the value that the scaling factor will converge to by decay_end_year
+        floor_region = xr.where(scaling_factors > threshold, threshold, scaling_factors)  # (Region,)
+
+        # The weight ramps linearly from 0 at base_year to 1 at decay_end_year, and is clipped to [0,1].
+        all_times = total_m2_housing_per_cap.time.values
+        weight = np.clip((all_times - base_year) / (decay_end_year - base_year), 0.0, 1.0)
+        weight = xr.DataArray(weight, dims=["time"], coords={"time": all_times})
+
+        # The factor_t is a linear interpolation between the scaling_factors and the floor_region, based on the weight.
+        factor_t = scaling_factors * (1 - weight) + floor_region * weight        # (Region, Time)
+        factor_t = xr.where(all_times <= base_year, scaling_factors, factor_t)  # full correction up to 2020
+
+        # Multiplying the regional total by one factor scales every Type/Area identically,
+        # preserving the within-region type mix.
+        total_m2_housing_per_cap.loc[{"Region": regions_mapped}] = (
+            total_m2_housing_per_cap.sel(Region=regions_mapped)
+            * factor_t.sel(Region=regions_mapped)
+        )
+        logging.debug("implemented FlagFloorSpaceCalibrationResidential for Residential Buildings")
+    else:
+        logging.debug("FlagFloorSpaceCalibrationResidential not enabled for Residential Buildings")
 
     # `population` has both an Area (Total/Urban/Rural) and a Quintile dimension.
     # For Urban/Rural the Quintile dim is a genuine split - the five quintile
@@ -110,21 +160,17 @@ def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray, popu
 #                                     2) if region is >36 by 2060, implement reduction to 36 by 2100.
 #                                        if region is <36 by 2060, assume growth to 36 by 2100         
                                        
-    narrow_scen = None
-    if 'narrow' in circular_economy_config.keys():
-        narrow_scen = 'narrow'
-    if 'narrow_activity' in circular_economy_config.keys():
-        narrow_scen = 'narrow_activity'
+    floorspace_reduction_enabled = flag_enabled(
+        resource_efficiency_flags, "buildings", "FlagFloorSpaceReductionResidential")
 
-    if narrow_scen is not None:
-        nbuild = circular_economy_config[narrow_scen]["buildings"]
+    if floorspace_reduction_enabled:
+        print("Applying FlagFloorSpaceReductionResidential for Residential Buildings")
+        nbuild = circular_economy_config["buildings"]["FlagFloorSpaceReductionResidential"]
         narrow_base_year = nbuild["base_year"]
         target_year = nbuild["target_year"]          # 2060
         implementation_rate = nbuild["implementation_rate"]
         convergence_cap = 36.0                        # m²/cap (population-weighted total)
         convergence_year_end = 2100
-
-        base_region_set = set(regions_mapped)
 
         # --- Phase 1: percentage reduction until target_year (2060) -----------
         # Only base regions get a reduction; build a full-coverage change array
@@ -141,6 +187,8 @@ def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray, popu
         settings_mapped = region_knowledge_graph.rebroadcast_xarray(
             settings_xr, output_coords=settings_regions, dim="Region")
 
+        base_region_set = set(settings_regions)
+
         all_regions = list(total_m2_housing_per_cap.coords["Region"].values)
         narrow_regions = [r for r in all_regions if r in base_region_set]
 
@@ -149,6 +197,18 @@ def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray, popu
             total_m2_housing_per_cap = total_m2_housing_per_cap.pint.dequantify()
         pr = population_rururb.pint.dequantify() if prism.U_(population_rururb) is not None else population_rururb
         pt = population_total.pint.dequantify() if prism.U_(population_total) is not None else population_total
+
+        # Apply the Phase 1 percentage reduction (base_year -> target_year) to the
+        # narrow (base) regions only; other regions pass through unchanged.
+        narrow_slice = total_m2_housing_per_cap.sel(Region=narrow_regions)
+        narrow_slice_reduced = apply_change_per_region(
+            narrow_slice, narrow_base_year, target_year,
+            settings_mapped.sel(Region=narrow_regions), implementation_rate)
+        if prism.U_(narrow_slice_reduced) is not None:
+            narrow_slice_reduced = narrow_slice_reduced.pint.dequantify()
+        total_m2_housing_per_cap.loc[{"Region": narrow_regions}] = (
+            narrow_slice_reduced.reindex_like(total_m2_housing_per_cap.sel(Region=narrow_regions))
+        )
 
         all_times = total_m2_housing_per_cap.time.values
         post_mask = all_times > target_year
@@ -170,7 +230,7 @@ def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray, popu
             return float(tot / pt.sel(time=t, Region=reg))
 
         # --- Phase 2: converge every reduced base region to 36 by 2100 --------
-        # Take the 2060 (Area, Type) distribution, scale it so its
+        # Take the 2060 (Area, Quintile, Type) distribution, scale it so its
         # population-weighted total equals 36 -> that's the 2100 endpoint.
         for reg in narrow_regions:
             fs_2060 = total_m2_housing_per_cap.sel(time=target_year, Region=reg)   # (Area, Type)
@@ -189,40 +249,16 @@ def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray, popu
         total_m2_housing_per_cap.attrs.pop("units", None)
         total_m2_housing_per_cap = prism.Q_(total_m2_housing_per_cap, "m^2/person")
 
-        logging.debug(f"implemented '{narrow_scen}' for Residential Buildings (reduction + converge to 36)")
+        logging.debug("implemented FlagFloorSpaceReductionResidential for Residential Buildings (reduction + converge to 36)")
     else:
-        logging.debug("implemented 'base' for Residential Buildings")
+        logging.debug("FlagFloorSpaceReductionResidential not enabled for Residential Buildings")
 
     return total_m2_housing_per_cap
 
-# if 'narrow' in circular_economy_config.keys():
-#     building_config = circular_economy_config["narrow"]["buildings"]
-#     base_year = building_config["base_year"]
-#     target_year = building_config["target_year"]
-
-#     residential_scenario_settings = building_config['residential']['m2_change_pc']
-#     implementation_rate = building_config['implementation_rate']
-
-#     residential_scenario_settings_xr = xr.DataArray(
-#         list(residential_scenario_settings.values()),
-#         coords={"Region": list(residential_scenario_settings.keys())},
-#         dims=["Region"],
-#         name="residential_scenario_settings"
-#     )
-
-#     regions_mapped = list(region_knowledge_graph.find_relations_inverse(
-#         regions, residential_scenario_settings.keys()))
-#     residential_scenario_settings_xr_mapped = region_knowledge_graph.rebroadcast_xarray(
-#         residential_scenario_settings_xr, output_coords=regions_mapped, dim="Region")
-
-#     total_m2_housing_per_cap = apply_change_per_region(
-#         total_m2_housing_per_cap, base_year, target_year,
-#         residential_scenario_settings_xr_mapped, implementation_rate)
-#     print("implemented 'narrow' for Residential Buildings")
-
 
 def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataArray,
-                                                 circular_economy_config: dict) -> xr.DataArray:
+                                                 circular_economy_config: dict,
+                                                 resource_efficiency_flags: dict = None) -> xr.DataArray:
     """Implement circular economy measures for commercial floorspace.
 
     Parameters
@@ -239,15 +275,13 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
 
     """
 
-    print("FUNCTION CALLED")
-    print(f"ce keys: {list(circular_economy_config.keys())}")
     region_knowledge_graph = create_region_graph()
     regions = floorspace_commercial.coords["Region"].values
     # floorspace_commercial in m^2/cap
 
-    # Base scenario
-    if 'base' in circular_economy_config.keys():
-        buildings_config = circular_economy_config["base"]["buildings"]
+    if flag_enabled(resource_efficiency_flags, "buildings", "FlagFloorSpaceCalibrationCommercial"):
+        print("Applying FlagFloorSpaceCalibrationCommercial for Commercial Buildings")
+        buildings_config = circular_economy_config["buildings"]["FlagFloorSpaceCalibrationCommercial"]
 
         base_year = buildings_config["base_year"]
         target_year = buildings_config["target_year"]
@@ -271,29 +305,21 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
         scaling_factors = xr.where(current_vals > 0, target_vals / current_vals, 1.0)
 
         floorspace_commercial.loc[{"Region": regions_mapped}] *= scaling_factors
-        logging.debug("implemented 'base' for Commercial Buildings")
+        logging.debug("implemented FlagFloorSpaceCalibrationCommercial for Commercial Buildings")
 
-    ce_scen = None  # INITIALIZE ce_scen
-    # Right after ce_scen is set
-    print(f"ce_scen = {ce_scen}")
+    floorspace_reduction_enabled = flag_enabled(
+        resource_efficiency_flags, "buildings", "FlagFloorSpaceReductionCommercial")
 
-    if "narrow" in circular_economy_config.keys():
-        ce_scen = "narrow"
-    if "narrow_activity" in circular_economy_config.keys():
-        ce_scen = "narrow_activity"
-    # narrow_activity scenario
-    if ce_scen in circular_economy_config.keys():
-        commercial_ce_mode = circular_economy_config[ce_scen]["buildings"].get(
-            "commercial_ce_mode", "relative")
-        implementation_rate = circular_economy_config[ce_scen]['buildings']['implementation_rate']
-        base_year = circular_economy_config[ce_scen]["buildings"]["base_year"]
-        target_year = circular_economy_config[ce_scen]["buildings"]["target_year"]
+    if floorspace_reduction_enabled:
+        print("Applying FlagFloorSpaceReductionCommercial for Commercial Buildings")
+        flag_config = circular_economy_config["buildings"]["FlagFloorSpaceReductionCommercial"]
+        commercial_ce_mode = flag_config.get("commercial_ce_mode", "relative")
+        implementation_rate = flag_config['implementation_rate']
+        base_year = flag_config["base_year"]
+        target_year = flag_config["target_year"]
 
         # --- Build the region-mapped relative-change array (shared by both modes) ---
-        commercial_scenario_settings = circular_economy_config[ce_scen]["buildings"]\
-            ['commercial']['m2_change_pc']
-
-        print(f"mode = {commercial_ce_mode}")
+        commercial_scenario_settings = flag_config['commercial']['m2_change_pc']
 
         commercial_scenario_settings_xr = xr.DataArray(
             list(commercial_scenario_settings.values()),
@@ -318,17 +344,13 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
                 floorspace_commercial, base_year, target_year,
                 commercial_scenario_settings_xr_mapped, implementation_rate)
 
-            logging.debug(f"implemented '{ce_scen}' for Commercial Buildings (relative only)")
+            logging.debug("implemented FlagFloorSpaceReductionCommercial for Commercial Buildings (relative only)")
 
         elif commercial_ce_mode == "convergence":
-            print(f"Called with ce keys: {list(circular_economy_config.keys())}")
             # ── Relative reductions + three-category convergence toward cap ──
-            convergence_cap = float(circular_economy_config[ce_scen]["buildings"].get(
-                "convergence_cap", 14.0))
-            convergence_year_end = int(circular_economy_config[ce_scen]["buildings"].get(
-                "convergence_year_end", 2100))
-            low_threshold = float(circular_economy_config[ce_scen]["buildings"].get(
-                "low_threshold", 5.0))
+            convergence_cap = float(flag_config.get("convergence_cap", 14.0))
+            convergence_year_end = int(flag_config.get("convergence_year_end", 2100))
+            low_threshold = float(flag_config.get("low_threshold", 5.0))
 
             # Dequantify to plain floats upfront — .loc item-assignment strips pint units,
             # so working with plain floats throughout avoids the DimensionalityError at the end.
@@ -477,7 +499,7 @@ def apply_circular_economy_commercial_floorspace(floorspace_commercial: xr.DataA
             )
 
             logging.debug(
-                f"implemented '{ce_scen}' for Commercial Buildings (relative + convergence)")
+                "implemented FlagFloorSpaceReductionCommercial for Commercial Buildings (relative + convergence)")
 
         else:
             raise ValueError(
@@ -516,16 +538,12 @@ def circular_economy_measures_material_intensities_residential(
     if "Cohort" in xr_mat_res_intensities.dims:
         xr_mat_res_intensities = xr_mat_res_intensities.rename({"Cohort": "time"})
 
-    ce_scen = None  # INITIALIZE ce_scen
-
-    if "narrow_product" in circular_economy_config.keys():
-        ce_scen = "narrow_product"
-
     # import parameters from config file
-    target_year = circular_economy_config[ce_scen]['buildings']['target_year']
-    base_year = circular_economy_config[ce_scen]['buildings']['base_year']
-    implementation_rate = circular_economy_config[ce_scen]['buildings']['implementation_rate']
-    mat_changes = circular_economy_config[ce_scen]['buildings']['material_intensity_change']
+    flag_config = circular_economy_config["buildings"]["FlagLightweightingResidential"]
+    target_year = flag_config['target_year']
+    base_year = flag_config['base_year']
+    implementation_rate = flag_config['implementation_rate']
+    mat_changes = flag_config['material_intensity_change']
 
     region_knowledge_graph = create_region_graph()
     model_regions = list(xr_mat_res_intensities.coords["Region"].values) # regions in model
@@ -562,7 +580,7 @@ def circular_economy_measures_material_intensities_residential(
     if "time" in xr_mat_res_intensities.dims:
         xr_mat_res_intensities = xr_mat_res_intensities.rename({"time": "Cohort"})
 
-    logging.debug(f"implemented '{ce_scen}' for Residential Buildings (lightweighting)")
+    logging.debug("implemented FlagLightweightingResidential for Residential Buildings (lightweighting)")
     return xr_mat_res_intensities
 
 
@@ -590,16 +608,11 @@ def circular_economy_measures_material_intensities_commercial(xr_mat_comm_intens
     xr_mat_comm_intensities = (xr_mat_comm_intensities.rename({"Cohort": "time"})
               if "Cohort" in xr_mat_comm_intensities.dims else xr_mat_comm_intensities)
     
-    ce_scen = None  # INITIALIZE ce_scen
-    if "narrow" in circular_economy_config.keys():
-        ce_scen = "narrow"
-    if "narrow_product" in circular_economy_config.keys():
-        ce_scen = "narrow_product"
-
-    base_year = circular_economy_config[ce_scen]['buildings']['base_year']
-    target_year = circular_economy_config[ce_scen]['buildings']['target_year']
-    implementation_rate = circular_economy_config[ce_scen]['buildings']['implementation_rate']
-    mat_changes = circular_economy_config[ce_scen]['buildings']['material_intensity_change']
+    flag_config = circular_economy_config["buildings"]["FlagLightweightingCommercial"]
+    base_year = flag_config['base_year']
+    target_year = flag_config['target_year']
+    implementation_rate = flag_config['implementation_rate']
+    mat_changes = flag_config['material_intensity_change']
 
     region_graph = create_region_graph()
     materials_all = list(xr_mat_comm_intensities.coords["material"].values) #
@@ -645,5 +658,5 @@ def circular_economy_measures_material_intensities_commercial(xr_mat_comm_intens
     xr_mat_comm_intensities = (xr_mat_updated.rename({"time": "Cohort"})
                                if "time" in xr_mat_updated.dims else xr_mat_updated)
 
-    logging.debug("implemented 'narrow_product' for Commercial Buildings (lightweighting)")
+    logging.debug("implemented FlagLightweightingCommercial for Commercial Buildings (lightweighting)")
     return xr_mat_comm_intensities
