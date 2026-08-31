@@ -131,8 +131,9 @@ def _get_buildings_sector(prep_data):
 
 def _get_end_of_life_prep_data(base_dir, circular_economy_data_file, resource_efficiency_flags_file=None):
     prep_data = prep_eol(base_dir, circular_economy_data_file, resource_efficiency_flags_file)
-    
-    
+    return prep_data
+
+
 def _get_appliances_sector(prep_data):
     return Sector("appliances", prep_data)
 
@@ -226,6 +227,12 @@ def get_preprocessing_data(
             prep_data = _get_ev_battery_prep_data(base_dir, climate_policy_scenario_dir,
                                                    circular_economy_data_file,
                                                    resource_efficiency_flags_file)
+
+        elif sector == "appliances":
+            prep_data = appliances_preprocessing(base_dir, 
+                                                 climate_policy_scenario_dir,
+                                                 circular_economy_data_file,
+                                                 resource_efficiency_flags_file)
         elif sector == "rest_of":
             prep_data = _get_rest_prep_data(base_dir, climate_policy_scenario_dir,
                                             scenario_name, resource_efficiency_flags_file)
