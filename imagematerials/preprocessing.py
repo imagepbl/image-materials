@@ -4,6 +4,7 @@ from typing import Union
 
 import numpy as np
 
+from imagematerials.appliances.preprocessing.main import appliances_preprocessing
 from imagematerials.buildings.preprocessing.main import buildings_preprocessing as prep_bld
 from imagematerials.rest_of.preprocessing.main import rest_of_preprocessing as prep_rest
 from imagematerials.vehicles.preprocessing.main import vehicles_preprocessing as prep_vhc
@@ -130,8 +131,12 @@ def _get_buildings_sector(prep_data):
 
 def _get_end_of_life_prep_data(base_dir, circular_economy_data_file, resource_efficiency_flags_file=None):
     prep_data = prep_eol(base_dir, circular_economy_data_file, resource_efficiency_flags_file)
-    return prep_data
+    
+    
+def _get_appliances_sector(prep_data):
+    return Sector("appliances", prep_data)
 
+  
 def _get_end_of_life_sector(prep_data):
     return Sector("eol", prep_data)
 
@@ -244,6 +249,8 @@ def get_preprocessing_data(
         return _get_electricity_sector(prep_data)
     elif sector == "ev_battery":
         return _get_ev_battery_sector(prep_data)
+    elif sector == "appliances":
+        return _get_appliances_sector(prep_data)
     elif sector == "rest_of":
         return prep_data
     elif sector == "eol":
