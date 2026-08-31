@@ -5,7 +5,10 @@ from imagematerials.appliances.preprocessing.materials import define_material_in
 from imagematerials.appliances.preprocessing.lifetimes import define_lifetimes
 
 
-def appliances_preprocessing(image_directory):
+def appliances_preprocessing(image_directory, 
+                             climate_policy_scenario_dir,
+                             circular_economy_data_file,
+                             resource_efficiency_flags_file):
 
     stock_appliances = calculate_stocks_appliances(image_directory = image_directory)
     material_intensities_appliances = define_material_intensities(stock_appliances)
