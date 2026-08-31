@@ -1,5 +1,22 @@
+from pathlib import Path
+
 import pandas as pd
 import numpy as np
+
+# The preprocessing reads the MI tables from data/raw/buildings/<scenario>/, so the
+# generated CSVs are written straight into every scenario subfolder.
+SCENARIO_DIRS = [
+    Path(__file__).resolve().parent.parent / "SSP2_CP",
+    Path(__file__).resolve().parent.parent / "SSP2_2D_RE",
+]
+
+
+def _write_to_scenario_dirs(df: pd.DataFrame, filename: str):
+    """Write ``df`` as ``filename`` into every scenario subfolder under data/raw/buildings/."""
+    for scenario_dir in SCENARIO_DIRS:
+        out_path = scenario_dir / filename
+        df.to_csv(out_path)
+        print(f"wrote {out_path}")
 
 
 # dictionary that maps RASMI R32 Regions to IMAGE R26 Regions
@@ -97,8 +114,9 @@ housing_type_to_rasmi_building_structure = {
     4: ['C', 'S']  # assumption that high-rise are made out of cement and steel structures
 }
 
-material_list_rasmi = ["steel", "concrete", "wood", "copper", "aluminum", "glass", "brick"]
-mis_list_target = ["steel", "concrete", "wood", "copper", "aluminium", "glass", "brick"]
+# RASMI sheet names (aluminum) and their IMAGE-Materials column names (aluminium).
+material_list_rasmi = ["steel", "concrete", "wood", "copper", "aluminum", "glass", "brick", "plastics"]
+mis_list_target = ["steel", "concrete", "wood", "copper", "aluminium", "glass", "brick", "plastics"]
 
 
 def load_mi_rasmi():
@@ -109,11 +127,24 @@ def load_mi_rasmi():
     )
 
 
-def load_mi_image_mat():
-    """Read in old IMAGE-Materials CP material intensities and clear the data."""
-    mi_image_mat = pd.read_csv("Building_materials_old.csv", index_col=[0, 1, 2])
-    mi_image_mat.loc[:, :] = np.nan
-    return mi_image_mat
+# IMAGE R26 regions and the 4 residential building types the MI table is defined over.
+image_regions = list(image_to_rasmi.keys())
+image_housing_types = list(housing_type_image_to_rasmi.keys())
+
+
+def build_mi_image_mat(years=(2020, 2050), materials=mis_list_target):
+    """Build an empty IMAGE-Materials residential MI table (all NaN).
+
+    Indexed by (Year, Region, Building_type) over the given ``years``, the 26 IMAGE
+    regions and the 4 residential building types, with one column per material. The
+    values are filled in from RASMI by ``replace_old_mis_with_rasmi`` / its resource
+    efficient variant.
+    """
+    index = pd.MultiIndex.from_product(
+        [list(years), image_regions, image_housing_types],
+        names=["Year", "Region", "Building_type"],
+    )
+    return pd.DataFrame(np.nan, index=index, columns=list(materials))
 
 
 def load_mi_image_mat_commercial():
@@ -161,23 +192,6 @@ def structure_type_shares(material_cities_image: pd.DataFrame, housing_prefix: s
     shares = gfa.div(gfa.sum(axis=1), axis=0)
     shares = shares.rename(columns={v: k for k, v in structure_cols.items()})
     return shares
-
-
-def expand_image_mat_mi(mi_image_mat: pd.DataFrame):
-    # also get 2030 data in there
-    # Get all unique index values for Region and HousingType
-    regions = mi_image_mat.index.get_level_values(1).unique()
-    housing_types = mi_image_mat.index.get_level_values(2).unique()
-
-    # Create new index tuples for 2030
-    new_index = pd.MultiIndex.from_product([[2030], regions, housing_types], names=mi_image_mat.index.names)
-
-    # Add missing 2030 rows if not present
-    mi_image_mat = mi_image_mat.reindex(mi_image_mat.index.union(new_index))
-
-    # Now you can safely assign values for 2030
-    mi_image_mat.loc[(2030, slice(None), slice(None)), :] = mi_image_mat.loc[(2020, slice(None), slice(None)), :].values
-    return mi_image_mat
 
 
 structure_code_to_share_name = {
@@ -264,7 +278,7 @@ def replace_old_mis_with_rasmi(mi_image_mat: pd.DataFrame, mi_rasmi: pd.DataFram
                                 rs_structure_shares: pd.DataFrame, rm_structure_shares: pd.DataFrame,
                                 start_year: int = 2020, target_year: int = 2050, data_value="p_50"):
     """
-    Replace old material intensities in IMAGE-Materials with RASMI values for concrete.
+    Fill the (empty) IMAGE-Materials MI table from build_mi_image_mat() with RASMI values.
 
     material_name: str, non capitalised from rasmi
     mis_list_target_name: str, material intensity in IMAGE-Materials
@@ -272,8 +286,6 @@ def replace_old_mis_with_rasmi(mi_image_mat: pd.DataFrame, mi_rasmi: pd.DataFram
     rs_structure_shares / rm_structure_shares: per-region structure type shares from structure_type_shares(),
         used to weight the MI values instead of taking a plain mean across structures.
     """
-    # standardize column names at the top of the function
-    mi_image_mat.columns = [c.lower().replace("aluminum", "aluminium") for c in mi_image_mat.columns]
     mi_image_mat_update = mi_image_mat.copy()
 
     for material_name in material_list_rasmi:
@@ -311,7 +323,7 @@ def replace_old_mis_with_rasmi(mi_image_mat: pd.DataFrame, mi_rasmi: pd.DataFram
                 # replace old values with new values
                 mi_image_mat_update.loc[([start_year, target_year], image_region, housingtype_image), material_name_image] = mean_mi_value
                 # save as csv
-    mi_image_mat_update.to_csv("Building_materials_rasmi.csv")
+    _write_to_scenario_dirs(mi_image_mat_update, "Building_materials_rasmi.csv")
     print("done")
     return mi_image_mat_update
 
@@ -326,7 +338,8 @@ def replace_old_mis_with_rasmi_resource_efficient(mi_image_mat: pd.DataFrame,
                                                     target_year: int = 2050,
                                                     data_value="p_50"):
     """
-    Replace old material intensities in IMAGE-Materials with RASMI values for concrete.
+    Fill the (empty) IMAGE-Materials MI table from build_mi_image_mat() with resource
+    efficient RASMI values (lower percentiles in later years).
 
     material_name: str, non capitalised from rasmi
     mis_list_target_name: str, name of the material intensity in IMAGE-Materials
@@ -334,9 +347,6 @@ def replace_old_mis_with_rasmi_resource_efficient(mi_image_mat: pd.DataFrame,
     rs_structure_shares / rm_structure_shares: per-region structure type shares from structure_type_shares(),
         used to weight the MI values instead of taking a plain mean across structures.
     """
-    # standardize column names at the top of the function
-    mi_image_mat.columns = [c.lower().replace("aluminum", "aluminium") for c in mi_image_mat.columns]
-
     for material_name in material_list_rasmi:
         # ensure lower case
         if material_name.lower() == "aluminum":
@@ -347,15 +357,14 @@ def replace_old_mis_with_rasmi_resource_efficient(mi_image_mat: pd.DataFrame,
         print(material_name_image, material_name)
         material_intensities = mi_rasmi.get(material_name)
 
-        # loop through all years
+        # loop through all years; p_50 until the switch year, p_25 from the target year on,
+        # applied uniformly to every material and region
         for year in [start_year, switch_year, target_year]:
             print(year)
-            if year == start_year:
-                data_value = "p_50"
-            if year == switch_year:
-                data_value = "p_50"
             if year == target_year:
                 data_value = "p_25"
+            else:
+                data_value = "p_50"
             # loop through all IMAGE classes and the according rasmi regions
             for image_region, rasmi_region in image_to_rasmi.items():
                 # convert str to list is necessary:
@@ -364,13 +373,6 @@ def replace_old_mis_with_rasmi_resource_efficient(mi_image_mat: pd.DataFrame,
 
                 # loop through IMAGE regions and get the mean concrete mi value for each region for RS and RM (housing types)
                 for housingtype_image, housingtype_rasmi in housing_type_image_to_rasmi.items():
-
-                    if year in [start_year] and material_name != "steel":
-                        print('switch back')
-                        data_value = "p_50"
-                    if year in [switch_year] and material_name != "steel":
-                        print('switch to more efficient')
-                        data_value = "p_25"
 
                     filtered_mis = material_intensities[material_intensities.index.get_level_values('R5_32').isin(rasmi_region)  # filter for the right region
                                             & material_intensities.index.get_level_values('function').isin([housingtype_rasmi])  # filter for the right housing type of rasmi
@@ -383,6 +385,6 @@ def replace_old_mis_with_rasmi_resource_efficient(mi_image_mat: pd.DataFrame,
                     mi_image_mat.loc[([year], image_region, housingtype_image), material_name_image] = mean_mi_value
 
                 # save as csv
-    mi_image_mat.to_csv("Building_materials_rasmi_resource_efficient.csv")
+    _write_to_scenario_dirs(mi_image_mat, "Building_materials_rasmi_resource_efficient.csv")
     print("done")
     return mi_image_mat
