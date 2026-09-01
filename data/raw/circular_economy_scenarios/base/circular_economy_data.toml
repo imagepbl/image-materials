@@ -6,6 +6,8 @@
 base_year = 2025
 target_year = 2060
 
+# unit: m2/person ("_pc" here = per capita, confirmed via
+# prism.Q_(..., "m^2/person") in circular_economy_measures.py:58)
 [buildings.FlagFloorSpaceCalibrationResidential.residential."2020".useful_floor_pc]
 "Central Europe" = 27.7
 China = 39
@@ -18,10 +20,12 @@ Japan = 39.7
 base_year = 2025
 target_year = 2060
 
+# unit: m2/person (absolute useful floor area per capita, see note above)
 [buildings.FlagFloorSpaceCalibrationCommercial.commercial."2020".useful_floor_pc]
 "Central Europe" = 8.7
 "Western Europe" = 14.1
 
+# unit: m2/person
 [buildings.FlagFloorSpaceCalibrationCommercial.commercial."2060".useful_floor_pc]
 "Central Europe" = 41.2
 "Western Europe" = 14.1
@@ -36,6 +40,8 @@ convergence_cap = 14.0
 low_threshold = 5.0
 commercial_ce_mode = "relative"
 
+# unit: % change vs. baseline (NOT per capita despite "_pc" suffix - applied as
+# value * (1 + x/100), util.py:689)
 [buildings.FlagFloorSpaceReductionResidential.residential.m2_change_pc]
 "Central Europe" = -10.0
 China = -15.0
@@ -54,6 +60,8 @@ convergence_cap = 14.0
 low_threshold = 5.0
 commercial_ce_mode = "relative"
 
+# unit: % change vs. baseline (NOT per capita despite "_pc" suffix - applied as
+# value * (1 + x/100), util.py:689)
 [buildings.FlagFloorSpaceReductionCommercial.commercial.m2_change_pc]
 Asian-Stan = -15.0
 Brazil = -16.7
@@ -86,6 +94,9 @@ USA = -35.0
 base_year = 2025
 target_year = 2060
 
+# unit: years (NOTE: currently unused by code - buildings/preprocessing/lifetimes.py
+# only switches the input CSV scenario folder when this flag is enabled; these
+# values are not read anywhere in the codebase)
 [buildings.FlagLifetimeExtension.residential.lifetime_2020]
 Canada = 51
 "Central Europe" = 70
@@ -101,6 +112,7 @@ USA = 77
 "Reforming Economies" = 60
 "Sub-Saharan Africa" = 50
 
+# unit: % change (NOTE: currently unused by code, same reason as lifetime_2020 above)
 [buildings.FlagLifetimeExtension.residential.lifetime_increase_percent]
 Canada = 90
 "Central Europe" = 30
@@ -116,6 +128,7 @@ USA = 30
 "Reforming Economies" = 30
 "Sub-Saharan Africa" = 60
 
+# unit: years (NOTE: currently unused by code, see note above)
 [buildings.FlagLifetimeExtension.non_residential.lifetime_2020]
 Canada = 45
 "Central Europe" = 45
@@ -131,6 +144,7 @@ USA = 45
 "Reforming Economies" = 45
 "Sub-Saharan Africa" = 45
 
+# unit: % change (NOTE: currently unused by code, see note above)
 [buildings.FlagLifetimeExtension.non_residential.lifetime_increase_percent]
 Canada = 90
 "Central Europe" = 90
@@ -146,19 +160,12 @@ USA = 90
 "Reforming Economies" = 90
 "Sub-Saharan Africa" = 60
 
-[buildings.FlagLifetimeExtension.eol_reuse_rate_2060]
-steel = 0.29
-concrete = 0.13
-wood = 0.25
-copper = 0.33
-glass = 0.35
-aluminium = 0.5
-
 [buildings.FlagLightweightingResidential]
 base_year = 2025
 target_year = 2060
 implementation_rate = "linear"
 
+# unit: % change vs. baseline material intensity (value * (1 + x/100), util.py:689)
 [buildings.FlagLightweightingResidential.material_intensity_change.steel]
 Asian-Stan = -8.5
 Brazil = -8.5
@@ -187,6 +194,7 @@ USA = -15.7
 "Western Africa" = -8.5
 "Western Europe" = -8.5
 
+# unit: % change vs. baseline material intensity
 [buildings.FlagLightweightingResidential.material_intensity_change.concrete]
 Asian-Stan = -7.5
 Brazil = -7.5
@@ -215,6 +223,7 @@ USA = -13.9
 "Western Africa" = -7.5
 "Western Europe" = -7.5
 
+# unit: % change vs. baseline material intensity
 [buildings.FlagLightweightingResidential.material_intensity_change.aluminium]
 Asian-Stan = -9.5
 Brazil = -9.5
@@ -248,6 +257,7 @@ base_year = 2025
 target_year = 2060
 implementation_rate = "linear"
 
+# unit: % change vs. baseline material intensity
 [buildings.FlagLightweightingCommercial.material_intensity_change.steel]
 Asian-Stan = -8.5
 Brazil = -8.5
@@ -276,6 +286,7 @@ USA = -15.7
 "Western Africa" = -8.5
 "Western Europe" = -8.5
 
+# unit: % change vs. baseline material intensity
 [buildings.FlagLightweightingCommercial.material_intensity_change.cement]
 Asian-Stan = -7.5
 Brazil = -7.5
@@ -304,6 +315,7 @@ USA = -13.9
 "Western Africa" = -7.5
 "Western Europe" = -7.5
 
+# unit: % change vs. baseline material intensity
 [buildings.FlagLightweightingCommercial.material_intensity_change.aluminium]
 Asian-Stan = -9.5
 Brazil = -9.5
@@ -332,6 +344,9 @@ USA = -17.6
 "Western Africa" = -9.5
 "Western Europe" = -9.5
 
+# NOTE: base_year/target_year/implementation_rate below are currently unused -
+# this flag only swaps in Building_materials_rasmi_resource_efficient.csv
+# (materials.py:42-49); no numeric parameters are read from this block
 [buildings.FlagResourceEfficientMaterials]
 base_year = 2020
 target_year = 2060
@@ -342,6 +357,7 @@ base_year = 2025
 target_year = 2060
 implementation_rate = "linear"
 
+# unit: % change vs. baseline lifetime (value * (1 + x/100), vehicles/preprocessing/util.py:109)
 [vehicles.FlagLifetimeExtension.lifetime_increase_percent]
 "Passenger Planes" = 10
 "Freight Planes" = 10
@@ -361,17 +377,12 @@ Trains = 38
 Bikes = 20
 Cars = 22.5
 
-[vehicles.FlagLifetimeExtension.eol_reuse_rate_2060]
-steel = 0.2
-copper = 0.28
-glass = 0.68
-aluminium = 0.29
-
 [vehicles.FlagLightweighting]
 base_year = 2025
 target_year = 2060
 implementation_rate = "linear"
 
+# unit: % change vs. baseline weight (value * (1 + x/100), vehicles/preprocessing/util.py:109)
 [vehicles.FlagLightweighting.non-road.weight_change_pc]
 "Passenger Planes" = -4.2
 "Freight Planes" = -4.2
@@ -381,6 +392,7 @@ Trains = -4.2
 "Inland Ships" = -4.2
 Bikes = -4.2
 
+# unit: % change vs. baseline weight
 [vehicles.FlagLightweighting.road.weight_change_pc]
 "Light Commercial Vehicles" = -8.2
 "Medium Freight Trucks" = -8.2
@@ -394,6 +406,7 @@ base_year = 2025
 target_year = 2060
 implementation_rate = "linear"
 
+# unit: % change vs. baseline mileage (same mechanism as weight_change_pc)
 [vehicles.FlagIntensityOfUse.mileage]
 "Midi Buses" = 10
 "Regular Buses" = 10
@@ -404,6 +417,7 @@ Bikes = 10
 "Light Commercial Vehicles" = 10
 "Inland Ships" = 10
 
+# unit: % change vs. baseline mileage
 [vehicles.FlagIntensityOfUse.region_mileage]
 Cars = 20
 
@@ -412,9 +426,11 @@ base_year = 2025
 target_year = 2060
 implementation_rate = "linear"
 
+# unit: % change vs. baseline mileage
 [vehicles.FlagMileageIncrease.region_mileage]
 Cars = 20
 
+# unit: % change vs. baseline mileage
 [vehicles.FlagMileageIncrease.mileage]
 "Midi Buses" = 10
 "Regular Buses" = 10
@@ -424,6 +440,7 @@ base_year = 2025
 target_year = 2060
 implementation_rate = "linear"
 
+# unit: % change vs. baseline weight (value * (1 + x/100), electricity/utils.py:1494)
 [electricity.FlagLightweightingGeneration.weight_change_pc]
 SPV = -20
 SPVR = -10
@@ -438,6 +455,7 @@ base_year = 2025
 target_year = 2060
 implementation_rate = "linear"
 
+# unit: % change vs. baseline lifetime (applied to 'mean' distribution param, electricity/utils.py:1477-1494)
 [electricity.FlagLifetimeExtensionGeneration.lifetime_increase_percent]
 SPV = 32
 SPVR = 32
@@ -452,6 +470,7 @@ base_year = 2025
 target_year = 2060
 implementation_rate = "linear"
 
+# unit: % change vs. baseline weight
 [electricity.FlagLightweightingGrid.weight_change_pc]
 Transformers = -10
 Substations = -10
@@ -461,10 +480,13 @@ base_year = 2025
 target_year = 2060
 implementation_rate = "linear"
 
+# unit: % change vs. baseline lifetime
 [electricity.FlagLifetimeExtensionGrid.lifetime_increase_percent]
 Transformers = 10
 Substations = 10
 
+# unit: fraction (0-1) of EoL material reused (overwrites reuse rate array,
+# clipped to [0,1] in eol/preprocessing.py:45)
 [end_of_life.FlagLifetimeExtension.buildings.eol_reuse_rate_2060]
 steel = 0.29
 concrete = 0.13
@@ -473,12 +495,14 @@ copper = 0.33
 glass = 0.35
 aluminium = 0.5
 
+# unit: fraction (0-1) of EoL material reused
 [end_of_life.FlagLifetimeExtension.vehicles.eol_reuse_rate_2060]
 steel = 0.2
 copper = 0.28
 glass = 0.68
 aluminium = 0.29
 
+# unit: fraction (0-1) of EoL material reused
 [end_of_life.FlagLifetimeExtension.electricity.eol_reuse_rate_2060]
 steel = 0.238
 concrete = 0.21
@@ -487,6 +511,8 @@ copper = 0.33
 glass = 0.68
 aluminium = 0.345
 
+# unit: fraction (0-1) of EoL material recycled (same overwrite mechanism as
+# eol_reuse_rate_2060 above, eol/preprocessing.py:148-158)
 [end_of_life.FlagRecycling.buildings.eol_recycling_rate_2060]
 steel = 0.92
 concrete = 0.37
@@ -495,12 +521,14 @@ copper = 0.92
 glass = 0.95
 aluminium = 0.95
 
+# unit: fraction (0-1) of EoL material recycled
 [end_of_life.FlagRecycling.vehicles.eol_recycling_rate_2060]
 steel = 0.94
 copper = 0.86
 glass = 0.95
 aluminium = 0.95
 
+# unit: fraction (0-1) of EoL material recycled
 [end_of_life.FlagRecycling.electricity.eol_recycling_rate_2060]
 steel = 0.93
 concrete = 0.37

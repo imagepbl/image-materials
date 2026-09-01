@@ -146,14 +146,6 @@ USA = 90
 "Reforming Economies" = 90
 "Sub-Saharan Africa" = 60
 
-[buildings.FlagLifetimeExtension.eol_reuse_rate_2060]
-steel = 0.29
-concrete = 0.13
-wood = 0.25
-copper = 0.33
-glass = 0.35
-aluminium = 0.5
-
 [buildings.FlagLightweightingResidential]
 base_year = 2025
 target_year = 2060
@@ -360,12 +352,6 @@ Trains = 38
 "Inland Ships" = 33
 Bikes = 20
 Cars = 22.5
-
-[vehicles.FlagLifetimeExtension.eol_reuse_rate_2060]
-steel = 0.2
-copper = 0.28
-glass = 0.68
-aluminium = 0.29
 
 [vehicles.FlagLightweighting]
 base_year = 2025
