@@ -126,6 +126,19 @@ commercial_type_to_rasmi_building_structure = {
 material_list_rasmi = ["steel", "concrete", "wood", "copper", "aluminum", "glass", "brick", "plastics"]
 mis_list_target = ["steel", "concrete", "wood", "copper", "aluminium", "glass", "brick", "plastics"]
 
+# RASMI has almost no empirical building records for aluminium and copper (93 and 30
+# datapoints across 384 region/structure/function cells), so its imputation collapses
+# p_50 to a near-constant global prior (~0.49 kg/m2 for aluminium, ~0.18 for copper)
+# with no regional or typological signal. That drives building aluminium/copper stocks
+# well below the material-flow literature. These two materials are therefore taken from
+# the older Deetman et al. dataset instead; everything else stays on RASMI.
+MATERIALS_FROM_DEETMAN = ["aluminium", "copper"]
+
+# Deetman residential type 2 (semi-detached) and type 4 (high-rise) copper/aluminium rows
+# are unpopulated placeholders (Cu 0.01, Al 0.23, flat across all regions), so they are
+# filled from the nearest building type that has real regional data: 2 <- 1, 4 <- 3.
+DEETMAN_RESIDENTIAL_TYPE_FALLBACK = {2: 1, 4: 3}
+
 
 def load_mi_rasmi():
     """Read in RASMI material intensity data."""
@@ -133,6 +146,65 @@ def load_mi_rasmi():
         "MI_ranges_20230905.xlsx", index_col=[0, 1, 2, 3, 4],
         sheet_name=["concrete", "brick", "wood", "steel", "glass", "plastics", "aluminum", "copper"]
     )
+
+
+def load_mi_deetman_residential():
+    """Read the Deetman et al. residential MI table (kg/m2), indexed by (Year, Region, Building_type).
+
+    Column names are title-case in the file (Aluminium, Copper, ...); they are lower-cased
+    here to match the IMAGE-Materials material naming.
+    """
+    df = pd.read_csv("Building_materials_deetman.csv", index_col=[0, 1, 2])
+    df.columns = [c.lower() for c in df.columns]
+    df.index.names = ["Year", "Region", "Building_type"]
+    return df
+
+
+def load_mi_deetman_commercial():
+    """Read the Deetman et al. commercial MI table (kg/m2), indexed by (Year, Material),
+    one column per commercial building type (Offices / Retail+ / Hotels+ / Govt+)."""
+    df = pd.read_csv("materials_commercial_old.csv", index_col=[0, 1])
+    df.index.names = ["Year", "Material"]
+    return df
+
+
+def _fill_residential_deetman_al_cu(mi_image_mat: pd.DataFrame, years: list) -> pd.DataFrame:
+    """Overwrite the aluminium/copper columns of a residential MI table with Deetman values.
+
+    ``mi_image_mat`` is indexed by (Year, Region, Building_type). Deetman only provides
+    2020 and 2050 (identical, no trend), so the 2020 value is used for every year in
+    ``years``. Placeholder type 2 / type 4 rows fall back to types 1 / 3
+    (see DEETMAN_RESIDENTIAL_TYPE_FALLBACK).
+    """
+    deetman = load_mi_deetman_residential()
+    deetman_2020 = deetman.xs(2020, level="Year")  # (Region, Building_type) x material
+
+    for material in MATERIALS_FROM_DEETMAN:
+        for region in image_regions:
+            for building_type in image_housing_types:
+                src_type = DEETMAN_RESIDENTIAL_TYPE_FALLBACK.get(building_type, building_type)
+                value = deetman_2020.loc[(region, src_type), material]
+                for year in years:
+                    mi_image_mat.loc[(year, region, building_type), material] = value
+    return mi_image_mat
+
+
+def _fill_commercial_deetman_al_cu(mi_image_mat_commercial: pd.DataFrame, years: list) -> pd.DataFrame:
+    """Overwrite the aluminium/copper rows of a commercial MI table with Deetman values.
+
+    ``mi_image_mat_commercial`` is indexed by (Year, Region, Material) with one column per
+    commercial building type. The Deetman commercial MI is not regionalised, so the same
+    per-type value is written to every IMAGE region.
+    """
+    deetman = load_mi_deetman_commercial()
+    deetman_2020 = deetman.xs(2020, level="Year")  # Material x building type
+
+    for material in MATERIALS_FROM_DEETMAN:
+        row = deetman_2020.loc[material]  # one value per commercial building type
+        for year in years:
+            for region in image_regions:
+                mi_image_mat_commercial.loc[(year, region, material), :] = row.values
+    return mi_image_mat_commercial
 
 
 # IMAGE R26 regions and the 4 residential building types the MI table is defined over.
@@ -304,6 +376,9 @@ def replace_old_mis_with_rasmi(mi_image_mat: pd.DataFrame, mi_rasmi: pd.DataFram
     data_value: str, can also be 0, 25, 75 or 100 percentile
     rs_structure_shares / rm_structure_shares: per-region structure type shares from structure_type_shares(),
         used to weight the MI values instead of taking a plain mean across structures.
+
+    Aluminium and copper are not taken from RASMI (its data is too sparse for these two;
+    see MATERIALS_FROM_DEETMAN) but filled from the Deetman et al. table afterwards.
     """
     mi_image_mat_update = mi_image_mat.copy()
 
@@ -313,6 +388,9 @@ def replace_old_mis_with_rasmi(mi_image_mat: pd.DataFrame, mi_rasmi: pd.DataFram
             material_name_image = "aluminium"
         else:
             material_name_image = material_name.lower()
+
+        if material_name_image in MATERIALS_FROM_DEETMAN:
+            continue  # filled from Deetman below
 
         print(material_name_image, material_name)
         material_intensities = mi_rasmi.get(material_name)
@@ -338,6 +416,11 @@ def replace_old_mis_with_rasmi(mi_image_mat: pd.DataFrame, mi_rasmi: pd.DataFram
                 # replace old values with new values
                 mi_image_mat_update.loc[([start_year, target_year], image_region, housingtype_image), material_name_image] = mean_mi_value
                 # save as csv
+
+    # aluminium & copper from Deetman (RASMI too sparse for these)
+    mi_image_mat_update = _fill_residential_deetman_al_cu(
+        mi_image_mat_update, [start_year, target_year])
+
     _write_to_scenario_dirs(mi_image_mat_update, "Building_materials_rasmi.csv")
     print("done")
     return mi_image_mat_update
@@ -355,12 +438,18 @@ def replace_commercial_mis_with_rasmi(mi_image_mat_commercial: pd.DataFrame, mi_
     written to every commercial building type. The value is weighted over the C/M/S/T
     structure types by their per-region non-residential GFA share from MaterialCities
     (nr_structure_shares), mirroring the residential approach in replace_old_mis_with_rasmi.
+
+    Aluminium and copper are not taken from RASMI (its data is too sparse for these two;
+    see MATERIALS_FROM_DEETMAN) but filled from the Deetman et al. commercial table afterwards.
     """
     mi_image_mat_commercial_update = mi_image_mat_commercial.copy()
     allowed_structures = ['C', 'M', 'S', 'T']
 
     for material_name in material_list_rasmi:
         material_name_image = "aluminium" if material_name.lower() == "aluminum" else material_name.lower()
+
+        if material_name_image in MATERIALS_FROM_DEETMAN:
+            continue  # filled from Deetman below
 
         print(material_name_image, material_name)
         material_intensities = mi_rasmi.get(material_name)
@@ -381,6 +470,10 @@ def replace_commercial_mis_with_rasmi(mi_image_mat_commercial: pd.DataFrame, mi_
             # same regionalised NR value for every commercial building type
             mi_image_mat_commercial_update.loc[
                 ([start_year, target_year], image_region, material_name_image), :] = mean_mi_value
+
+    # aluminium & copper from Deetman (RASMI too sparse for these)
+    mi_image_mat_commercial_update = _fill_commercial_deetman_al_cu(
+        mi_image_mat_commercial_update, [start_year, target_year])
 
     # Written under a distinct name so it sits alongside (does not overwrite) the
     # legacy non-regionalised materials_commercial_rasmi.csv. The buildings
@@ -410,6 +503,10 @@ def replace_old_mis_with_rasmi_resource_efficient(mi_image_mat: pd.DataFrame,
     data_value: str, can also be 0, 25, 75 or 100 percentile
     rs_structure_shares / rm_structure_shares: per-region structure type shares from structure_type_shares(),
         used to weight the MI values instead of taking a plain mean across structures.
+
+    Aluminium and copper are not taken from RASMI (its data is too sparse for these two;
+    see MATERIALS_FROM_DEETMAN) but filled from the Deetman et al. table afterwards. Deetman
+    has no resource-efficiency trajectory for these, so the same value is used in every year.
     """
     for material_name in material_list_rasmi:
         # ensure lower case
@@ -417,6 +514,9 @@ def replace_old_mis_with_rasmi_resource_efficient(mi_image_mat: pd.DataFrame,
             material_name_image = "aluminium"
         else:
             material_name_image = material_name.lower()
+
+        if material_name_image in MATERIALS_FROM_DEETMAN:
+            continue  # filled from Deetman below
 
         print(material_name_image, material_name)
         material_intensities = mi_rasmi.get(material_name)
@@ -449,6 +549,11 @@ def replace_old_mis_with_rasmi_resource_efficient(mi_image_mat: pd.DataFrame,
                     mi_image_mat.loc[([year], image_region, housingtype_image), material_name_image] = mean_mi_value
 
                 # save as csv
+
+    # aluminium & copper from Deetman (RASMI too sparse for these)
+    mi_image_mat = _fill_residential_deetman_al_cu(
+        mi_image_mat, [start_year, switch_year, target_year])
+
     _write_to_scenario_dirs(mi_image_mat, "Building_materials_rasmi_resource_efficient.csv")
     print("done")
     return mi_image_mat

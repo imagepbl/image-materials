@@ -14,16 +14,17 @@ from imagematerials.util import dataset_to_array, flag_enabled
 
 idx = pd.IndexSlice
 
-# TODO: decide whether to adopt the region-resolved commercial material intensities.
-# False -> legacy behaviour: read the non-regionalised materials_commercial_rasmi.csv
-#          (one MI per building type) and broadcast it identically to all 26 regions,
-#          with the hard-coded China (region 20) concrete p100 override.
+# Region-resolved commercial material intensities.
 # True  -> read materials_commercial_rasmi_regionalized.csv, built by
 #          data/raw/buildings/material_intensities/material_intensities.py from RASMI
 #          (non-residential function) weighted by the per-region non-residential
-#          structure-type mix from MaterialCities. No China override.
-# Both code paths are kept below until this is settled.
-USE_REGIONALIZED_COMMERCIAL_MI = False
+#          structure-type mix from MaterialCities. Aluminium and copper come from the
+#          Deetman et al. table (RASMI is too sparse for those). No China override.
+# False -> legacy behaviour: read the non-regionalised materials_commercial_rasmi.csv
+#          (one MI per building type) and broadcast it identically to all 26 regions,
+#          with the hard-coded China (region 20) concrete p100 override.
+# Both code paths are kept below.
+USE_REGIONALIZED_COMMERCIAL_MI = True
 
 def compute_mat_intensities_residential(database_dir: Path,
                                         circular_economy_config: dict | None = None,
