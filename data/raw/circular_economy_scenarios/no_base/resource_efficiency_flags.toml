@@ -1,0 +1,29 @@
+[buildings]
+# set true as Calibration is for base (best if TIMER data would be changed accordingly) 
+FlagFloorSpaceCalibrationResidential = false 
+FlagFloorSpaceCalibrationCommercial = false
+FlagFloorSpaceReductionResidential = false
+FlagFloorSpaceReductionCommercial = false
+FlagLifetimeExtension = false
+FlagLightweightingResidential = false
+FlagLightweightingCommercial = false
+FlagResourceEfficientMaterials = false
+
+[vehicles]
+FlagLifetimeExtension = false
+FlagLightweighting = false
+FlagIntensityOfUse = false
+FlagMileageIncrease = false
+
+[electricity]
+FlagLightweightingGeneration = false
+FlagLifetimeExtensionGeneration = false
+FlagLightweightingGrid = false
+FlagLifetimeExtensionGrid = false
+
+[end_of_life]
+FlagLifetimeExtension = false
+FlagRecycling = false
+
+[rest_of]
+FlagResourceEfficiency = false

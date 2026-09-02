@@ -114,6 +114,14 @@ housing_type_to_rasmi_building_structure = {
     4: ['C', 'S']  # assumption that high-rise are made out of cement and steel structures
 }
 
+# IMAGE-Materials commercial building types. RASMI resolves only a single
+# non-residential function ("NR"), so every commercial type is assigned the same
+# regionalised NR material intensity, weighted over all four structure types.
+commercial_types_image = ["Offices", "Retail+", "Hotels+", "Govt+"]
+commercial_type_to_rasmi_building_structure = {
+    building_type: ['C', 'M', 'S', 'T'] for building_type in commercial_types_image
+}
+
 # RASMI sheet names (aluminum) and their IMAGE-Materials column names (aluminium).
 material_list_rasmi = ["steel", "concrete", "wood", "copper", "aluminum", "glass", "brick", "plastics"]
 mis_list_target = ["steel", "concrete", "wood", "copper", "aluminium", "glass", "brick", "plastics"]
@@ -147,8 +155,18 @@ def build_mi_image_mat(years=(2020, 2050), materials=mis_list_target):
     return pd.DataFrame(np.nan, index=index, columns=list(materials))
 
 
-def load_mi_image_mat_commercial():
-    return pd.read_csv("materials_commercial_old.csv", index_col=[0, 1, 2])
+def build_mi_image_mat_commercial(years=(2020, 2050), materials=mis_list_target):
+    """Build an empty IMAGE-Materials commercial MI table (all NaN).
+
+    Indexed by (Year, Region, Material) over the given ``years``, the 26 IMAGE regions
+    and the RASMI materials, with one column per commercial building type. The values
+    are filled in from RASMI by ``replace_commercial_mis_with_rasmi``.
+    """
+    index = pd.MultiIndex.from_product(
+        [list(years), image_regions, list(materials)],
+        names=["Year", "Region", "Material"],
+    )
+    return pd.DataFrame(np.nan, index=index, columns=list(commercial_types_image))
 
 
 def load_material_cities():
@@ -179,7 +197,8 @@ def structure_type_shares(material_cities_image: pd.DataFrame, housing_prefix: s
     Share of concrete (C), masonry (M), steel (S) and timber (T) structure types per IMAGE region,
     based on GFA_<housing_prefix>_* columns. The U (unknown) column is excluded from the shares.
 
-    housing_prefix: "RS" (residential single-family) or "RM" (residential multi-family)
+    housing_prefix: "RS" (residential single-family), "RM" (residential multi-family) or
+        "NR" (non-residential / commercial)
     """
     structure_cols = {
         "concrete": f"GFA_{housing_prefix}_C",
@@ -307,11 +326,7 @@ def replace_old_mis_with_rasmi(mi_image_mat: pd.DataFrame, mi_rasmi: pd.DataFram
             # loop through IMAGE regions and get the mean concrete mi value for each region for RS and RM (housing types)
             for housingtype_image, housingtype_rasmi in housing_type_image_to_rasmi.items():
 
-                if image_region in [20] and material_name == "concrete":  # China concrete adaptation to highest value
-                    data_value = "p_100"
-                    print("done")
-                else:
-                    data_value = "p_50"
+                data_value = "p_50"
 
                 filtered_mis = material_intensities[material_intensities.index.get_level_values('R5_32').isin(rasmi_region)  # filter for the right region
                                         & material_intensities.index.get_level_values('function').isin([housingtype_rasmi])  # filter for the right housing type of rasmi
@@ -326,6 +341,55 @@ def replace_old_mis_with_rasmi(mi_image_mat: pd.DataFrame, mi_rasmi: pd.DataFram
     _write_to_scenario_dirs(mi_image_mat_update, "Building_materials_rasmi.csv")
     print("done")
     return mi_image_mat_update
+
+
+def replace_commercial_mis_with_rasmi(mi_image_mat_commercial: pd.DataFrame, mi_rasmi: pd.DataFrame,
+                                       material_list_rasmi: list, nr_structure_shares: pd.DataFrame,
+                                       start_year: int = 2020, target_year: int = 2050,
+                                       data_value: str = "p_50"):
+    """
+    Fill the (empty) IMAGE-Materials commercial MI table from build_mi_image_mat_commercial()
+    with regionalised RASMI values for the non-residential ("NR") function.
+
+    RASMI resolves only a single non-residential function, so the same regionalised MI is
+    written to every commercial building type. The value is weighted over the C/M/S/T
+    structure types by their per-region non-residential GFA share from MaterialCities
+    (nr_structure_shares), mirroring the residential approach in replace_old_mis_with_rasmi.
+    """
+    mi_image_mat_commercial_update = mi_image_mat_commercial.copy()
+    allowed_structures = ['C', 'M', 'S', 'T']
+
+    for material_name in material_list_rasmi:
+        material_name_image = "aluminium" if material_name.lower() == "aluminum" else material_name.lower()
+
+        print(material_name_image, material_name)
+        material_intensities = mi_rasmi.get(material_name)
+
+        # loop through all IMAGE regions and the according RASMI regions
+        for image_region, rasmi_region in image_to_rasmi.items():
+            if isinstance(rasmi_region, str):
+                rasmi_region = [rasmi_region]
+
+            filtered_mis = material_intensities[
+                material_intensities.index.get_level_values('R5_32').isin(rasmi_region)  # filter for the right region
+                & material_intensities.index.get_level_values('function').isin(['NR'])  # non-residential function
+                & material_intensities.index.get_level_values('structure').isin(allowed_structures)  # all structure types
+            ].loc[:, data_value]
+
+            mean_mi_value = weighted_structure_mi(filtered_mis, nr_structure_shares, image_region,
+                                                  allowed_structures)
+            # same regionalised NR value for every commercial building type
+            mi_image_mat_commercial_update.loc[
+                ([start_year, target_year], image_region, material_name_image), :] = mean_mi_value
+
+    # Written under a distinct name so it sits alongside (does not overwrite) the
+    # legacy non-regionalised materials_commercial_rasmi.csv. The buildings
+    # preprocessing switches between the two via USE_REGIONALIZED_COMMERCIAL_MI in
+    # imagematerials/buildings/preprocessing/materials.py.
+    _write_to_scenario_dirs(mi_image_mat_commercial_update,
+                            "materials_commercial_rasmi_regionalized.csv")
+    print("done")
+    return mi_image_mat_commercial_update
 
 
 def replace_old_mis_with_rasmi_resource_efficient(mi_image_mat: pd.DataFrame,
