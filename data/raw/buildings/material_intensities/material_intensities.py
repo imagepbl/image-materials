@@ -307,11 +307,7 @@ def replace_old_mis_with_rasmi(mi_image_mat: pd.DataFrame, mi_rasmi: pd.DataFram
             # loop through IMAGE regions and get the mean concrete mi value for each region for RS and RM (housing types)
             for housingtype_image, housingtype_rasmi in housing_type_image_to_rasmi.items():
 
-                if image_region in [20] and material_name == "concrete":  # China concrete adaptation to highest value
-                    data_value = "p_100"
-                    print("done")
-                else:
-                    data_value = "p_50"
+                data_value = "p_50"
 
                 filtered_mis = material_intensities[material_intensities.index.get_level_values('R5_32').isin(rasmi_region)  # filter for the right region
                                         & material_intensities.index.get_level_values('function').isin([housingtype_rasmi])  # filter for the right housing type of rasmi
