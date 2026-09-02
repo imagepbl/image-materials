@@ -134,11 +134,12 @@ mis_list_target = ["steel", "concrete", "wood", "copper", "aluminium", "glass", 
 MATERIALS_FROM_DEETMAN = ["aluminium"]
 
 # Deetman aluminium intensities (residential and commercial) are themselves on the high
-# side - the raw Deetman values put the aluminium building stock ~1.5-1.6x above
-# independent estimates (USA 2009 ~155 kg/cap; Europe 2013 ~49 Mt). A single global
-# calibration factor is applied to every Deetman aluminium value to reconcile the stock
-# with those benchmarks (USA benchmark implies ~0.61, Europe ~0.68; 0.65 is the midpoint).
-DEETMAN_ALUMINIUM_CALIBRATION = 0.65
+# side - the raw Deetman values put the aluminium building stock well above independent
+# estimates. A single global calibration factor is applied to every Deetman aluminium
+# value to reconcile the stock with two benchmarks: USA buildings 2009 ~155 kg/cap and
+# Europe (WEU+CEU) 2013 ~49 Mt. 0.64 lands both within a few percent
+# (USA ~159 kg/cap, Europe ~49 Mt).
+DEETMAN_ALUMINIUM_CALIBRATION = 0.64
 
 # Copper is equally data-poor in RASMI (~30 datapoints), so its p_50 is also a flat
 # ~0.18 kg/m2 prior. Deetman copper is not a good alternative either (detached ~1.7-2.4
@@ -147,10 +148,11 @@ DEETMAN_ALUMINIUM_CALIBRATION = 0.65
 # methodology, but away from the degenerate median. p_75 ~ 0.27 kg/m2.
 COPPER_RASMI_PERCENTILE = "p_75"
 
-# Deetman residential type 2 (semi-detached) and type 4 (high-rise) aluminium rows are
-# unpopulated placeholders (Al 0.23, flat across all regions), so they are filled from the
-# nearest building type that has real regional data: 2 <- 1, 4 <- 3.
-DEETMAN_RESIDENTIAL_TYPE_FALLBACK = {2: 1, 4: 3}
+# Deetman residential type 2 (semi-detached) aluminium is an unpopulated placeholder -
+# a single value (0.23) flat across all 26 regions, unlike the regionally differentiated
+# type 1/3/4 values - so it is taken from the nearest real building type, detached (type 1).
+# Type 4 (high-rise) has genuine regionalised Deetman aluminium and is left as-is.
+DEETMAN_RESIDENTIAL_TYPE_FALLBACK = {2: 1}
 
 
 def load_mi_rasmi():
