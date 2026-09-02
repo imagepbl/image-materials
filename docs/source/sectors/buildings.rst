@@ -253,11 +253,19 @@ the material-flow literature.
   intensities are themselves on the high side (they put the aluminium stock ~1.5-1.6× above
   independent estimates), so a single global calibration factor
   (``DEETMAN_ALUMINIUM_CALIBRATION = 0.64``) is applied to every Deetman aluminium value. It
-  is fitted to two benchmarks — USA buildings 2009 ≈ 155 kg/capita and Europe (WEU+CEU) 2013
-  ≈ 49 Mt — which the calibrated stock reproduces to within ~3 %. Deetman's semi-detached
-  (type 2) aluminium is a placeholder (one value, flat across all 26 regions), so it is taken
-  from detached (type 1); the other three residential types keep their own regionalised
-  Deetman values.
+  is fitted to two independent in-use aluminium stock benchmarks:
+
+  - **USA buildings, 2009 ≈ 155 kg/capita** — from Chen & Graedel, *Dynamic analysis of
+    aluminum stocks and flows in the United States: 1900-2009*
+    (building & construction end-use, in-use stock divided by 2009 US population).
+  - **Europe (WEU + CEU), 2013 ≈ 49 Mt** — total in-use aluminium in the building stock,
+    from Passarini et al. (JRC), *Material Flow Analysis of Aluminium, Copper, and Iron in
+    the EU-28* (2018).
+
+  The calibrated stock reproduces both to within ~3 %. Deetman's semi-detached (type 2)
+  aluminium is a placeholder (one value, flat across all 26 regions), so it is taken from
+  detached (type 1); the other three residential types keep their own regionalised Deetman
+  values.
 * **Plastics** is also thin in RASMI (~123 datapoints, near-constant ``p_50`` ≈ 1.2 kg/m²) and
   is currently kept on RASMI as-is — a known limitation.
 
@@ -368,6 +376,15 @@ References
   global material stocks and flows for residential and service sector buildings towards 2050.
   *Journal of Cleaner Production* 245, 118658. Source for the aluminium MI (calibrated by a
   global factor of 0.64 to match independent stock estimates).
+- **Chen & Graedel (USA aluminium benchmark).** Chen, W.-Q. & Graedel, T. E. (2012). Dynamic
+  analysis of aluminum stocks and flows in the United States: 1900-2009. *Ecological
+  Economics* 81, 92-102. Used to benchmark the modelled USA building aluminium stock
+  (≈ 155 kg/capita in 2009).
+- **Passarini et al. / JRC (EU aluminium benchmark).** Passarini, F., et al. (2018).
+  *Material Flow Analysis of Aluminium, Copper, and Iron in the EU-28.* JRC Technical Report,
+  Publications Office of the European Union.
+  https://rmis.jrc.ec.europa.eu/uploads/MFA_Report_June2018_FINAL.pdf. Used to benchmark the
+  modelled European building aluminium stock (≈ 49 Mt in 2013).
 - **IRP "Bend the Trend".** International Resource Panel (2024). Resource efficiency and
   climate change: material efficiency strategies for a low-carbon future — used as a
   reference for lightweighting and sufficiency penetration rates in the ``narrow_product``
