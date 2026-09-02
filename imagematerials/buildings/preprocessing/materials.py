@@ -99,44 +99,43 @@ def compute_mat_intensities_commercial(
 
     """
      # 7 building materials in 4 commercial building types; unit: kg/m2; meaning:
-     # the average material use per square meter (by commercial building type)
+     # the average material use per square meter (by region & by commercial building type).
+     # Regionalised from RASMI (non-residential function) weighted by the per-region
+     # non-residential structure-type mix from MaterialCities.
     materials_commercial = pd.read_csv(database_dir / 'materials_commercial_rasmi.csv',
-                                       index_col = [0,1])
+                                       index_col = [0,1,2])
 
     #First: interpolate the dynamic material intensity data
     materials_commercial_dynamic = pd.DataFrame(index=pd.MultiIndex.from_product(
-        [list(range(HIST_YEAR, END_YEAR + 1)), list(materials_commercial.index.levels[1])]),
+        [list(range(HIST_YEAR, END_YEAR + 1)), list(range(1, 27)),
+         list(materials_commercial.index.levels[2])]),
                                                 columns=materials_commercial.columns)
-
 
     # interpolate material intensity data from files (commercial buildings)
     for building in materials_commercial.columns:
-        selection = materials_commercial.loc[idx[:,:], building].unstack()
-        selection.loc[HIST_YEAR,:] = selection.loc[selection.first_valid_index(),:]
-        selection.loc[END_YEAR + 1,:] = selection.loc[selection.last_valid_index(),:]
-        selection = selection.reindex(list(range(HIST_YEAR, END_YEAR + 1))).interpolate()
-        materials_commercial_dynamic.loc[idx[:,:], building] = selection.stack()
+        for material in list(materials_commercial.index.levels[2]):
+            selection = materials_commercial.loc[idx[:,:,material], building].droplevel(
+                2, axis=0).unstack()
+            selection.loc[HIST_YEAR,:] = selection.loc[selection.first_valid_index(),:]
+            selection.loc[END_YEAR + 1,:] = selection.loc[selection.last_valid_index(),:]
+            selection = selection.reindex(list(range(HIST_YEAR, END_YEAR + 1))).interpolate()
+            materials_commercial_dynamic.loc[idx[:,:,material], building] = selection.stack()
 
     xr_mat_comm_intensities = dataset_to_array(materials_commercial_dynamic.to_xarray(),
-                                               ["Cohort", "material"], ["Type"])
+                                               ["Cohort", "Region", "material"], ["Type"])
     xr_mat_comm_intensities.coords["Type"] = ["Office", "Retail+", "Hotels+", "Govt+"]
+    xr_mat_comm_intensities.coords["Region"] = [
+        str(x) for x in xr_mat_comm_intensities.coords["Region"].values]
 
-    # broadcast to Regions and order dims
     model_regions = [str(i) for i in range(1, 27)]
-    xr_mat_comm_intensities = xr_mat_comm_intensities.expand_dims(Region=model_regions)
     xr_mat_comm_intensities = xr_mat_comm_intensities.transpose("Cohort", "Region",
                                                                 "Type", "material")
-    
-    china_p100_mi = prism.Q_(2685, 'kg / m**2')
-    xr_mat_comm_intensities_update_chn = xr_mat_comm_intensities.copy()
-    
-    xr_mat_comm_intensities_update_chn.loc[dict(Region="20", material="concrete")] = china_p100_mi
 
     # apply CE changes (per material, per region)
     if flag_enabled(resource_efficiency_flags, "buildings", "FlagLightweightingCommercial"):
         print("Applied using lightweighting building materials intensities for commercial buildings.")
-        xr_mat_comm_intensities = circular_economy_measures_material_intensities_commercial(xr_mat_comm_intensities_update_chn, circular_economy_config, model_regions)
+        xr_mat_comm_intensities = circular_economy_measures_material_intensities_commercial(xr_mat_comm_intensities, circular_economy_config, model_regions)
 
-    xr_mat_comm_intensities = prism.Q_(xr_mat_comm_intensities_update_chn, "kg/m^2") # assign unit
+    xr_mat_comm_intensities = prism.Q_(xr_mat_comm_intensities, "kg/m^2") # assign unit
 
     return xr_mat_comm_intensities
