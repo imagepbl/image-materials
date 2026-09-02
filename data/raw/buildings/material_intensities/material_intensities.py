@@ -382,7 +382,12 @@ def replace_commercial_mis_with_rasmi(mi_image_mat_commercial: pd.DataFrame, mi_
             mi_image_mat_commercial_update.loc[
                 ([start_year, target_year], image_region, material_name_image), :] = mean_mi_value
 
-    _write_to_scenario_dirs(mi_image_mat_commercial_update, "materials_commercial_rasmi.csv")
+    # Written under a distinct name so it sits alongside (does not overwrite) the
+    # legacy non-regionalised materials_commercial_rasmi.csv. The buildings
+    # preprocessing switches between the two via USE_REGIONALIZED_COMMERCIAL_MI in
+    # imagematerials/buildings/preprocessing/materials.py.
+    _write_to_scenario_dirs(mi_image_mat_commercial_update,
+                            "materials_commercial_rasmi_regionalized.csv")
     print("done")
     return mi_image_mat_commercial_update
 

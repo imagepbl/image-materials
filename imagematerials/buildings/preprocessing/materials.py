@@ -14,6 +14,17 @@ from imagematerials.util import dataset_to_array, flag_enabled
 
 idx = pd.IndexSlice
 
+# TODO: decide whether to adopt the region-resolved commercial material intensities.
+# False -> legacy behaviour: read the non-regionalised materials_commercial_rasmi.csv
+#          (one MI per building type) and broadcast it identically to all 26 regions,
+#          with the hard-coded China (region 20) concrete p100 override.
+# True  -> read materials_commercial_rasmi_regionalized.csv, built by
+#          data/raw/buildings/material_intensities/material_intensities.py from RASMI
+#          (non-residential function) weighted by the per-region non-residential
+#          structure-type mix from MaterialCities. No China override.
+# Both code paths are kept below until this is settled.
+USE_REGIONALIZED_COMMERCIAL_MI = False
+
 def compute_mat_intensities_residential(database_dir: Path,
                                         circular_economy_config: dict | None = None,
                                         resource_efficiency_flags: dict | None = None,
@@ -98,44 +109,96 @@ def compute_mat_intensities_commercial(
         Material intensities in kg/m^2 for commercial buildings.
 
     """
-     # 7 building materials in 4 commercial building types; unit: kg/m2; meaning:
-     # the average material use per square meter (by region & by commercial building type).
-     # Regionalised from RASMI (non-residential function) weighted by the per-region
-     # non-residential structure-type mix from MaterialCities.
-    materials_commercial = pd.read_csv(database_dir / 'materials_commercial_rasmi.csv',
-                                       index_col = [0,1,2])
-
-    #First: interpolate the dynamic material intensity data
-    materials_commercial_dynamic = pd.DataFrame(index=pd.MultiIndex.from_product(
-        [list(range(HIST_YEAR, END_YEAR + 1)), list(range(1, 27)),
-         list(materials_commercial.index.levels[2])]),
-                                                columns=materials_commercial.columns)
-
-    # interpolate material intensity data from files (commercial buildings)
-    for building in materials_commercial.columns:
-        for material in list(materials_commercial.index.levels[2]):
-            selection = materials_commercial.loc[idx[:,:,material], building].droplevel(
-                2, axis=0).unstack()
-            selection.loc[HIST_YEAR,:] = selection.loc[selection.first_valid_index(),:]
-            selection.loc[END_YEAR + 1,:] = selection.loc[selection.last_valid_index(),:]
-            selection = selection.reindex(list(range(HIST_YEAR, END_YEAR + 1))).interpolate()
-            materials_commercial_dynamic.loc[idx[:,:,material], building] = selection.stack()
-
-    xr_mat_comm_intensities = dataset_to_array(materials_commercial_dynamic.to_xarray(),
-                                               ["Cohort", "Region", "material"], ["Type"])
-    xr_mat_comm_intensities.coords["Type"] = ["Office", "Retail+", "Hotels+", "Govt+"]
-    xr_mat_comm_intensities.coords["Region"] = [
-        str(x) for x in xr_mat_comm_intensities.coords["Region"].values]
-
     model_regions = [str(i) for i in range(1, 27)]
+
+    if USE_REGIONALIZED_COMMERCIAL_MI:
+        xr_mat_comm_intensities = _compute_mat_intensities_commercial_regionalized(database_dir)
+    else:
+        xr_mat_comm_intensities = _compute_mat_intensities_commercial_broadcast(database_dir)
+
     xr_mat_comm_intensities = xr_mat_comm_intensities.transpose("Cohort", "Region",
                                                                 "Type", "material")
 
     # apply CE changes (per material, per region)
     if flag_enabled(resource_efficiency_flags, "buildings", "FlagLightweightingCommercial"):
         print("Applied using lightweighting building materials intensities for commercial buildings.")
-        xr_mat_comm_intensities = circular_economy_measures_material_intensities_commercial(xr_mat_comm_intensities, circular_economy_config, model_regions)
+        xr_mat_comm_intensities = circular_economy_measures_material_intensities_commercial(
+            xr_mat_comm_intensities, circular_economy_config, model_regions)
 
-    xr_mat_comm_intensities = prism.Q_(xr_mat_comm_intensities, "kg/m^2") # assign unit
+    xr_mat_comm_intensities = prism.Q_(xr_mat_comm_intensities, "kg/m^2")  # assign unit
+
+    return xr_mat_comm_intensities
+
+
+def _compute_mat_intensities_commercial_broadcast(database_dir: Path) -> xr.DataArray:
+    """Legacy path: one MI per building type, broadcast to every region.
+
+    Reads the non-regionalised ``materials_commercial_rasmi.csv`` (indexed by
+    Year x Material, one column per building type) and applies the same values to
+    all 26 IMAGE regions, with the hard-coded China (region 20) concrete p100
+    override. Used when ``USE_REGIONALIZED_COMMERCIAL_MI`` is False.
+    """
+    # 7 building materials in 4 commercial building types; unit: kg/m2; meaning:
+    # the average material use per square meter (by commercial building type)
+    materials_commercial = pd.read_csv(database_dir / 'materials_commercial_rasmi.csv',
+                                       index_col=[0, 1])
+
+    materials_commercial_dynamic = pd.DataFrame(index=pd.MultiIndex.from_product(
+        [list(range(HIST_YEAR, END_YEAR + 1)), list(materials_commercial.index.levels[1])]),
+        columns=materials_commercial.columns)
+
+    for building in materials_commercial.columns:
+        selection = materials_commercial.loc[idx[:, :], building].unstack()
+        selection.loc[HIST_YEAR, :] = selection.loc[selection.first_valid_index(), :]
+        selection.loc[END_YEAR + 1, :] = selection.loc[selection.last_valid_index(), :]
+        selection = selection.reindex(list(range(HIST_YEAR, END_YEAR + 1))).interpolate()
+        materials_commercial_dynamic.loc[idx[:, :], building] = selection.stack()
+
+    xr_mat_comm_intensities = dataset_to_array(materials_commercial_dynamic.to_xarray(),
+                                               ["Cohort", "material"], ["Type"])
+    xr_mat_comm_intensities.coords["Type"] = ["Office", "Retail+", "Hotels+", "Govt+"]
+
+    model_regions = [str(i) for i in range(1, 27)]
+    xr_mat_comm_intensities = xr_mat_comm_intensities.expand_dims(Region=model_regions)
+    xr_mat_comm_intensities = xr_mat_comm_intensities.transpose("Cohort", "Region",
+                                                                "Type", "material")
+
+    china_p100_mi = prism.Q_(2685, 'kg / m**2')
+    xr_mat_comm_intensities = xr_mat_comm_intensities.copy()
+    xr_mat_comm_intensities.loc[dict(Region="20", material="concrete")] = china_p100_mi
+
+    return xr_mat_comm_intensities
+
+
+def _compute_mat_intensities_commercial_regionalized(database_dir: Path) -> xr.DataArray:
+    """Region-resolved path: per-region MI from RASMI x MaterialCities.
+
+    Reads ``materials_commercial_rasmi_regionalized.csv`` (indexed by
+    Year x Region x Material, one column per building type), built by
+    data/raw/buildings/material_intensities/material_intensities.py. No China
+    override. Used when ``USE_REGIONALIZED_COMMERCIAL_MI`` is True.
+    """
+    materials_commercial = pd.read_csv(
+        database_dir / 'materials_commercial_rasmi_regionalized.csv', index_col=[0, 1, 2])
+
+    materials_commercial_dynamic = pd.DataFrame(index=pd.MultiIndex.from_product(
+        [list(range(HIST_YEAR, END_YEAR + 1)), list(range(1, 27)),
+         list(materials_commercial.index.levels[2])]),
+        columns=materials_commercial.columns)
+
+    for building in materials_commercial.columns:
+        for material in list(materials_commercial.index.levels[2]):
+            selection = materials_commercial.loc[idx[:, :, material], building].droplevel(
+                2, axis=0).unstack()
+            selection.loc[HIST_YEAR, :] = selection.loc[selection.first_valid_index(), :]
+            selection.loc[END_YEAR + 1, :] = selection.loc[selection.last_valid_index(), :]
+            selection = selection.reindex(list(range(HIST_YEAR, END_YEAR + 1))).interpolate()
+            materials_commercial_dynamic.loc[idx[:, :, material], building] = selection.stack()
+
+    xr_mat_comm_intensities = dataset_to_array(materials_commercial_dynamic.to_xarray(),
+                                               ["Cohort", "Region", "material"], ["Type"])
+    xr_mat_comm_intensities.coords["Type"] = ["Office", "Retail+", "Hotels+", "Govt+"]
+    xr_mat_comm_intensities.coords["Region"] = [
+        str(x) for x in xr_mat_comm_intensities.coords["Region"].values]
 
     return xr_mat_comm_intensities
