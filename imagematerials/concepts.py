@@ -706,7 +706,9 @@ def create_region_graph():
 
     region_knowledge_graph = KnowledgeGraph()
 
-    # Add target regions as main nodes (non-numeric)
+    # Add target regions as main nodes (non-numeric). Config files that use these
+    # aggregate regions (e.g. the buildings circular-economy lifetime data) must
+    # spell them exactly as below so the keys broadcast to the IMAGE regions.
     target_regions = [
         "Latin America", "Middle East and Northern Africa",
         "Other Asia", "Other OECD", "Reforming Economies", "Subsaharan Africa"

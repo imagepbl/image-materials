@@ -304,9 +304,19 @@ DEPENDENT_FLAGS = (
     ("buildings", "FlagFloorSpaceReductionCommercial", "FlagFloorSpaceCalibrationCommercial"),
 )
 
+# Groups of flags within one sector of which at most one may be True at a time,
+# because they are two implementations of the same measure.
+# FlagLifetimeExtensionSlow applies the regional lifetime targets from
+# circular_economy_data.toml on top of the SSP2_CP database;
+# FlagLifetimeExtension2D_RE instead swaps in the pre-built SSP2_2D_RE lifetime
+# database. Enabling both would double-count.
+MUTUALLY_EXCLUSIVE_FLAGS = (
+    ("buildings", ("FlagLifetimeExtensionSlow", "FlagLifetimeExtension2D_RE")),
+)
+
 
 def validate_resource_efficiency_flags(resource_efficiency_flags: dict) -> None:
-    """Check that dependent resource-efficiency flags aren't enabled without their prerequisite.
+    """Check resource-efficiency flag combinations are valid.
 
     Parameters
     ----------
@@ -316,7 +326,9 @@ def validate_resource_efficiency_flags(resource_efficiency_flags: dict) -> None:
     Raises
     ------
     ValueError
-        If a flag is True while a flag it depends on (see DEPENDENT_FLAGS) is not.
+        If a flag is True while a flag it depends on (see DEPENDENT_FLAGS) is not,
+        or if more than one flag in a mutually exclusive group (see
+        MUTUALLY_EXCLUSIVE_FLAGS) is True.
 
     """
     if not resource_efficiency_flags:
@@ -327,6 +339,13 @@ def validate_resource_efficiency_flags(resource_efficiency_flags: dict) -> None:
             raise ValueError(
                 f"'{dependent_flag}' requires '{required_flag}' to also be True "
                 f"in [{sector}] of resource_efficiency_flags.toml."
+            )
+    for sector, group in MUTUALLY_EXCLUSIVE_FLAGS:
+        enabled = [f for f in group if flag_enabled(resource_efficiency_flags, sector, f)]
+        if len(enabled) > 1:
+            raise ValueError(
+                f"Flags {enabled} in [{sector}] of resource_efficiency_flags.toml are "
+                f"mutually exclusive; enable at most one of {list(group)}."
             )
 
 
