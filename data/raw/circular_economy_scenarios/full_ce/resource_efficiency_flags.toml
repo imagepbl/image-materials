@@ -3,13 +3,15 @@ FlagFloorSpaceCalibrationResidential = true
 FlagFloorSpaceCalibrationCommercial = true
 FlagFloorSpaceReductionResidential = true
 FlagFloorSpaceReductionCommercial = true
-FlagLifetimeExtension = true
+FlagLifetimeExtensionSlow = true
+FlagLifetimeExtension2D_RE = false
 FlagLightweightingResidential = true
 FlagLightweightingCommercial = true
 FlagResourceEfficientMaterials = true
 
 [vehicles]
-FlagLifetimeExtension = true
+FlagLifetimeExtensionSlow = true
+FlagLifetimeExtension2D_RE = false
 FlagLightweighting = true
 FlagIntensityOfUse = true
 FlagMileageIncrease = true
@@ -21,7 +23,8 @@ FlagLightweightingGrid = true
 FlagLifetimeExtensionGrid = true
 
 [end_of_life]
-FlagLifetimeExtension = true
+FlagLifetimeExtensionSlow = true
+FlagLifetimeExtension2D_RE = false
 FlagRecycling = true
 
 [rest_of]

@@ -116,6 +116,16 @@ In other words, floorspace reduction can only be turned on if floorspace calibra
 
 This is enforced automatically: :func:`imagematerials.util.read_resource_efficiency_flags` calls :func:`imagematerials.util.validate_resource_efficiency_flags` on every flags file it reads, and raises a ``ValueError`` if a dependent flag is ``True`` while its prerequisite is not. The pairs are defined in ``imagematerials.util.DEPENDENT_FLAGS``; add new pairs there if a future measure has the same kind of dependency.
 
+Mutually exclusive flags
+------------------------
+
+Some flags are two alternative implementations of the *same* measure, so at most one of a group may be ``True`` at a time. Currently this applies to the two building lifetime-extension flags:
+
+- ``FlagLifetimeExtensionSlow`` keeps the ``SSP2_CP`` Weibull lifetime database unchanged (so the 2020 lifetimes are always the ``SSP2_CP`` values) and scales the ``Scale`` parameter — and hence the mean lifetime, since ``Shape`` is untouched — up by the regional ``lifetime_increase_percent`` in ``[buildings.FlagLifetimeExtensionSlow]`` of ``circular_economy_data.toml``, ramped linearly from 0 % in 2020 to the full percentage at ``target_year`` and held flat afterwards.
+- ``FlagLifetimeExtension2D_RE`` instead swaps in the pre-built ``SSP2_2D_RE`` lifetime database wholesale and ignores the config block.
+
+Enabling both would double-count the lifetime extension, so :func:`imagematerials.util.validate_resource_efficiency_flags` raises a ``ValueError`` if more than one flag in a group is ``True``. The groups are defined in ``imagematerials.util.MUTUALLY_EXCLUSIVE_FLAGS``.
+
 Provided scenario presets
 ---------------------------
 
@@ -125,7 +135,7 @@ Provided scenario presets
 - ``full_ce`` — every applicable flag ``true``; all compatible measures applied simultaneously. Note that ``FlagFloorSpaceReduction*`` requires ``FlagFloorSpaceCalibration*`` (see above), so ``full_ce`` enables both.
 - ``narrow_product`` — lightweighting measures only (building material intensities, vehicle weight, generation/grid component weight).
 - ``narrow_activity`` — floorspace/activity reduction measures only (residential and commercial floorspace), with the required floorspace calibration flags also enabled.
-- ``slow`` — lifetime extension measures only (buildings, vehicles, electricity generation/grid, and the matching end-of-life reuse rates).
+- ``slow`` — lifetime extension measures only (buildings via ``FlagLifetimeExtensionSlow``, vehicles, electricity generation/grid, and the matching end-of-life reuse rates).
 - ``close`` — end-of-life recycling rate measures only.
 
 These four presets reproduce the behaviour of the legacy ``narrow_product``, ``narrow_activity``, ``slow`` and ``close`` scenario folders from before the flag-based refactor, expressed in the new format. Combinations beyond these presets can be created by copying a ``resource_efficiency_flags.toml`` and toggling the flags you need — the ``circular_economy_data.toml`` file can usually be reused unchanged, since it defines parameters for every measure.

@@ -82,26 +82,16 @@ USA = -35.0
 "Western Africa" = -15.0
 "Western Europe" = -23.3
 
-[buildings.FlagLifetimeExtension]
+[buildings.FlagLifetimeExtensionSlow]
 base_year = 2025
 target_year = 2060
 
-[buildings.FlagLifetimeExtension.residential.lifetime_2020]
-Canada = 51
-"Central Europe" = 70
-China = 40
-India = 50
-Japan = 36
-USA = 77
-"Western Europe" = 63
-"Latin America" = 50
-"Middle East and North Africa" = 50
-"Other Asia" = 50
-"Other OECD" = 50
-"Reforming Economies" = 60
-"Sub-Saharan Africa" = 50
+# The 2020 lifetimes always come from the SSP2_CP Weibull database
+# (data/raw/buildings/files_lifetimes/SSP2_CP/). This block only scales the
+# regional mean lifetime up by lifetime_increase_percent, ramped linearly from
+# 2020 to target_year and held flat afterwards.
 
-[buildings.FlagLifetimeExtension.residential.lifetime_increase_percent]
+[buildings.FlagLifetimeExtensionSlow.residential.lifetime_increase_percent]
 Canada = 90
 "Central Europe" = 30
 China = 90
@@ -110,28 +100,13 @@ Japan = 90
 USA = 30
 "Western Europe" = 30
 "Latin America" = 60
-"Middle East and North Africa" = 60
+"Middle East and Northern Africa" = 60
 "Other Asia" = 60
 "Other OECD" = 60
 "Reforming Economies" = 30
-"Sub-Saharan Africa" = 60
+"Subsaharan Africa" = 60
 
-[buildings.FlagLifetimeExtension.non_residential.lifetime_2020]
-Canada = 45
-"Central Europe" = 45
-China = 30
-India = 45
-Japan = 38
-USA = 45
-"Western Europe" = 45
-"Latin America" = 45
-"Middle East and North Africa" = 45
-"Other Asia" = 45
-"Other OECD" = 45
-"Reforming Economies" = 45
-"Sub-Saharan Africa" = 45
-
-[buildings.FlagLifetimeExtension.non_residential.lifetime_increase_percent]
+[buildings.FlagLifetimeExtensionSlow.non_residential.lifetime_increase_percent]
 Canada = 90
 "Central Europe" = 90
 China = 90
@@ -140,13 +115,13 @@ Japan = 90
 USA = 90
 "Western Europe" = 90
 "Latin America" = 90
-"Middle East and North Africa" = 90
+"Middle East and Northern Africa" = 90
 "Other Asia" = 90
 "Other OECD" = 60
 "Reforming Economies" = 90
-"Sub-Saharan Africa" = 60
+"Subsaharan Africa" = 60
 
-[buildings.FlagLifetimeExtension.eol_reuse_rate_2060]
+[buildings.FlagLifetimeExtensionSlow.eol_reuse_rate_2060]
 steel = 0.29
 concrete = 0.13
 wood = 0.25

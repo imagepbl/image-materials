@@ -9,6 +9,18 @@ from imagematerials.concepts import create_region_graph
 from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.util import apply_change_per_region, flag_enabled
 
+# Residential building types carry an " - Urban"/" - Rural" area suffix once the
+# Type and Area dims have been merged; commercial types do not. This splits the
+# merged Type coordinate into the two groups so the residential / non_residential
+# blocks of FlagLifetimeExtensionSlow can be applied separately.
+_RESIDENTIAL_BASE_TYPES = ("Detached", "Semi-detached", "Appartment", "High-rise")
+
+# FlagLifetimeExtensionSlow ramps the lifetime increase from 0 % at this year to
+# the full 'lifetime_increase_percent' at the block's 'target_year'. The SSP2_CP
+# Weibull parameters read from the CSV are kept untouched at (and before) this
+# year, so the 2020 lifetimes are always the SSP2_CP values.
+_LIFETIME_ANCHOR_YEAR = 2020
+
 
 def ce_measures_residential_housing(total_m2_housing_per_cap: xr.DataArray, population: xr.DataArray,
                                     circular_economy_config: dict, resource_efficiency_flags: dict = None):
@@ -617,3 +629,90 @@ def circular_economy_measures_material_intensities_commercial(xr_mat_comm_intens
 
     logging.debug("implemented FlagLightweightingCommercial for Commercial Buildings (lightweighting)")
     return xr_mat_comm_intensities
+
+
+def apply_lifetime_extension_buildings(lifetimes_array: xr.DataArray,
+                                       flag_config: dict) -> xr.DataArray:
+    """Apply the regional building-lifetime increases from circular_economy_data.toml.
+
+    Implements ``FlagLifetimeExtensionSlow``: the Weibull mean lifetime is
+    ``scale * gamma(1 + 1/shape)``, and holding ``shape`` fixed the mean is
+    proportional to ``scale``. The SSP2_CP ``Shape`` and ``Scale`` read from the
+    lifetime CSV are the starting point and are kept unchanged at (and before)
+    2020, so the 2020 lifetimes are always the SSP2_CP values. The ``Scale`` is
+    then multiplied per region and building type by a factor that
+
+    * is ``1`` at (and before) 2020;
+    * reaches ``1 + lifetime_increase_percent / 100`` at ``target_year``;
+    * follows a linear ramp between 2020 and ``target_year``, held flat afterwards.
+
+    ``residential`` config keys apply to the four residential building types
+    (``Detached``/``Semi-detached``/``Appartment``/``High-rise``, each with an
+    " - Urban"/" - Rural" suffix); ``non_residential`` keys apply to every other
+    (commercial) type. Regions absent from a config block are left unchanged.
+
+    Parameters
+    ----------
+    lifetimes_array:
+        Weibull parameters, dims ``(time, Region, Type, Parameter)`` with
+        ``Parameter`` in ``{"Shape", "Scale"}`` and numeric ``Region`` coords.
+    flag_config:
+        ``circular_economy_config["buildings"]["FlagLifetimeExtensionSlow"]``.
+
+    Returns
+    -------
+    lifetimes_array:
+        The input array with the ``Scale`` parameter adjusted.
+
+    """
+    target_year = int(flag_config["target_year"])
+    anchor_year = _LIFETIME_ANCHOR_YEAR
+
+    region_graph = create_region_graph()
+    # Region coords are numeric at this point (str codes come later); map each to
+    # its string form for the region-graph lookup, keep the originals for .loc.
+    code_to_coord = {str(r): r for r in lifetimes_array.coords["Region"].values}
+
+    all_types = [str(t) for t in lifetimes_array.coords["Type"].values]
+    residential_types = [t for t in all_types
+                         if t.split(" - ", 1)[0] in _RESIDENTIAL_BASE_TYPES]
+    non_residential_types = [t for t in all_types if t not in residential_types]
+
+    times = lifetimes_array.coords["time"].values
+    # linear ramp: 0 at/before anchor_year, 1 at/after target_year
+    ramp = xr.DataArray(
+        np.clip((times - anchor_year) / (target_year - anchor_year), 0.0, 1.0),
+        dims=["time"], coords={"time": times})
+
+    shape = lifetimes_array.sel(Parameter="Shape")
+    scale = lifetimes_array.sel(Parameter="Scale")
+
+    new_scale = scale.copy()
+
+    for group_types, block_name in ((residential_types, "residential"),
+                                    (non_residential_types, "non_residential")):
+        if not group_types or block_name not in flag_config:
+            continue
+        increase_pct = flag_config[block_name]["lifetime_increase_percent"]
+
+        for config_region, pct in increase_pct.items():
+            codes = region_graph.find_relations_inverse(list(code_to_coord), [config_region])
+            region_sel = [code_to_coord[c] for c in codes if c in code_to_coord]
+            if not region_sel:
+                logging.warning(
+                    "FlagLifetimeExtensionSlow: config region %r (%s) maps to no model "
+                    "region, skipping.", config_region, block_name)
+                continue
+
+            sel = {"Region": region_sel, "Type": group_types}
+            # Scale the SSP2_CP Weibull scale (and hence the mean lifetime, since
+            # shape is untouched) up by pct % over the 2020 -> target_year ramp.
+            factor = 1.0 + (float(pct) / 100.0) * ramp
+            new_scale.loc[sel] = (scale.sel(**sel) * factor).transpose(*scale.sel(**sel).dims)
+
+    out = xr.concat(
+        [new_scale.assign_coords(Parameter="Scale"), shape.assign_coords(Parameter="Shape")],
+        dim="Parameter",
+    )
+    return out.reindex(Parameter=lifetimes_array.coords["Parameter"].values).transpose(
+        *lifetimes_array.dims)
