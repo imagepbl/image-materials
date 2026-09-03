@@ -11,8 +11,7 @@ FlagLightweightingCommercial = false
 FlagResourceEfficientMaterials = false
 
 [vehicles]
-FlagLifetimeExtensionSlow = false
-FlagLifetimeExtension2D_RE = false
+FlagLifetimeExtension = false
 FlagLightweighting = false
 FlagIntensityOfUse = false
 FlagMileageIncrease = false
@@ -24,8 +23,7 @@ FlagLightweightingGrid = false
 FlagLifetimeExtensionGrid = false
 
 [end_of_life]
-FlagLifetimeExtensionSlow = false
-FlagLifetimeExtension2D_RE = false
+FlagLifetimeExtension = false
 FlagRecycling = false
 
 [rest_of]

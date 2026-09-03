@@ -118,6 +118,7 @@ def compute_lifetimes(base_directory: Path,
     lifetimes_array = xr.concat((xr_lifetimes_commercial, xr_lifetimes_residential), dim="Type")
 
     if flag_enabled(resource_efficiency_flags, "buildings", "FlagLifetimeExtensionSlow"):
+        print("FlagLifetimeExtensionSlow is enabled for buildings.")
         if distribution_type != "weibull":
             raise NotImplementedError(
                 "FlagLifetimeExtensionSlow for buildings is only implemented for the "
