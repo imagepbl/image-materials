@@ -19,6 +19,7 @@ from imagematerials.util import (
     pandas_to_xarray
 )
 from imagematerials.vehicles.modelling_functions import (
+    idx,
     interpolate,
     scenario_change
 )
@@ -114,6 +115,22 @@ def get_lifetimes(data_path: str, circular_economy_config: dict, resource_effici
             lifetime_increase, implementation_rate, "lifetime")
 
         logging.debug("implemented FlagLifetimeExtension for Vehicles (extend lifetimes)")
+
+    # In lifetimes_years.csv the folded-normal 'stdev' is given as a fraction of
+    # the mean lifetime (see the electricity module, which multiplies the mean by
+    # STD_LIFETIMES_ELECTR before convert_lifetime). convert_lifetime /
+    # FoldedNormalDistribution.get_param, however, expects an absolute standard
+    # deviation in years. Without this conversion the scale of the folded normal
+    # collapses to ~0.2-0.3 years, turning the lifetime distribution into a near
+    # delta spike at the mean. Convert the fraction to absolute years here, after
+    # any lifetime extension has been applied to the mean, so the stdev/mean ratio
+    # stays fixed at the intended fraction.
+    stdev_modes = lifetimes_vehicles.columns.get_level_values('data') == 'stdev'
+    means = lifetimes_vehicles.loc[:, idx[:, 'mean']].rename(
+        columns={'mean': 'stdev'}, level='data')
+    lifetimes_vehicles.loc[:, stdev_modes] = (
+        lifetimes_vehicles.loc[:, stdev_modes] * means
+    )
 
     data_xarray = pandas_to_xarray(lifetimes_vehicles, unit_mapping)
     return convert_lifetime(data_xarray)
