@@ -110,8 +110,8 @@ housing_type_rasmi_to_image = {
 housing_type_to_rasmi_building_structure = {
     1: ['C', 'M', 'S', 'T'],  # assumption that detached housing are average all structures
     2: ['C', 'M', 'S', 'T'],  # assumption that semi detached housing are average all structures
-    3: ['C', 'S'],  # assumption that appartement are only made out of cement and steel structures
-    4: ['C', 'S']  # assumption that high-rise are made out of cement and steel structures
+    3: ['C', 'M', 'S', 'T'],  # assumption that appartement span the full structure type range
+    4: ['C', 'S']  # assumption that high-rise are only made out of cement and steel structures
 }
 
 # IMAGE-Materials commercial building types. RASMI resolves only a single
