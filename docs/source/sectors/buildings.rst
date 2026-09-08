@@ -163,7 +163,7 @@ Source and percentile per material:
      - "
      - "
    * - glass
-     - RASMI ``p_50``
+     - RASMI ``p_50`` (``p_75`` where ``p_50`` = 0)
      - "
      - "
      - "
@@ -242,9 +242,10 @@ too little data to say anything region-specific.
      - degenerate — flat global prior (~0.18 kg/m²)
 
 For concrete, steel, wood, glass and brick the RASMI ``p_50`` carries real regional and
-typological signal and is used directly. For aluminium, copper and plastics the ``p_50`` is
-a near-constant prior; used as-is it puts the building aluminium and copper stocks far below
-the material-flow literature.
+typological signal and is used directly (glass with a per-cell fallback where ``p_50`` = 0;
+see *Zero medians* below). For aluminium, copper and plastics the ``p_50`` is a near-constant
+prior; used as-is it puts the building aluminium and copper stocks far below the
+material-flow literature.
 
 * **Copper** is taken from RASMI's ``p_75`` (~0.27 kg/m²) rather than the degenerate ``p_50`` —
   still on the RASMI methodology, but away from the collapsed median. Because ``p_25``/``p_50``
@@ -268,6 +269,21 @@ the material-flow literature.
   values.
 * **Plastics** is also thin in RASMI (~123 datapoints, near-constant ``p_50`` ≈ 1.2 kg/m²) and
   is currently kept on RASMI as-is — a known limitation.
+
+**Zero medians (glass in NR timber buildings).** ``glass`` is the only material used
+directly from RASMI whose ``p_50`` is exactly 0 in some cells: for the non-residential /
+timber (NR-T) combination, ``p_0``–``p_50`` are 0 in every one of the 32 RASMI regions
+(``p_75`` ≈ 0.3–1.0 kg/m²). RASMI has almost no records there (one region, 6 datapoints)
+and its imputation has collapsed the median to zero — this is a data gap, not a real
+"timber commercial buildings contain no glass" statement. Left in, a zero ``p_50`` for
+NR-T dilutes the structure-weighted commercial glass intensity by each region's
+non-residential timber GFA share. When ``PERCENTILE_ZERO_FALLBACK`` is on (the default),
+any ``p_50`` of exactly 0 is stepped up per cell to the next non-zero percentile on the
+RASMI ladder (``p_75``, then ``p_95``, …); for NR-T glass ``p_75`` is always non-zero, so
+that is the value used. This lifts commercial glass intensity by ~2 % on average
+(regional maximum ≈ +0.2 kg/m²) and leaves every other material and the residential
+tables unchanged. The fallback corrects only ``p_50``; the resource-efficient variant
+reads ``p_25`` in 2050, and the NR-T glass zero there is currently left as-is.
 
 **Structure weighting.** For every material taken from RASMI, ``weighted_structure_mi``
 collapses the C/M/S/T structural dimension into a single per-region, per-type value by
@@ -306,7 +322,7 @@ Final MI ranges (2020, kg/m²) produced by this build:
      - 9.2 - 25.6
    * - glass
      - 1.5 - 5.7
-     - 1.2 - 2.5
+     - 1.3 - 2.5
    * - aluminium
      - 0.8 - 4.4
      - 1.5 - 3.7

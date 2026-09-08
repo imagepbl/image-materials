@@ -154,6 +154,27 @@ COPPER_RASMI_PERCENTILE = "p_75"
 # Type 4 (high-rise) has genuine regionalised Deetman aluminium and is left as-is.
 DEETMAN_RESIDENTIAL_TYPE_FALLBACK = {2: 1}
 
+# RASMI percentile columns, low to high. Used to step up from the median (p_50) when it
+# comes out exactly 0 for a given region/structure/function cell (see PERCENTILE_ZERO_FALLBACK).
+RASMI_PERCENTILE_LADDER = ["p_0", "p_5", "p_25", "p_50", "p_75", "p_95", "p_100"]
+
+# A RASMI cell whose median (p_50) is exactly 0 means RASMI has no empirical evidence for
+# that material in that region/structure/function combination and its imputation has
+# collapsed the median to zero. The only material where this occurs is glass in
+# non-residential timber buildings (NR-T): p_50 is 0 for all 32 RASMI regions
+# (p_75 ~ 0.3-1.0 kg/m2). A zero there is not a real "no glass" statement; left in, it
+# dilutes the structure-weighted commercial glass intensity by the timber GFA share.
+# When enabled, a p_50 that is exactly 0 for a cell is replaced by the next higher
+# non-zero percentile on RASMI_PERCENTILE_LADDER (p_75, then p_95, ...) for that same
+# cell. Only p_50 is corrected - the resource-efficient path reads p_25 in the target
+# year, and its NR-T zeros for glass (and steel/brick) are left as-is for now. No other
+# RASMI material has a zero at p_50.
+PERCENTILE_ZERO_FALLBACK = True
+
+# The percentile the zero-fallback corrects. Selecting any other percentile is passed
+# through untouched even if it is 0.
+PERCENTILE_ZERO_FALLBACK_APPLIES_TO = "p_50"
+
 
 def load_mi_rasmi():
     """Read in RASMI material intensity data."""
@@ -350,6 +371,31 @@ def effective_structure_weights(structure_shares: pd.DataFrame, allowed_structur
     return normalized
 
 
+def select_percentile(material_intensities: pd.DataFrame, percentile: str) -> pd.Series:
+    """Select one percentile column from a RASMI material sheet, per-cell.
+
+    When ``PERCENTILE_ZERO_FALLBACK`` is on and ``percentile`` is the corrected one
+    (``PERCENTILE_ZERO_FALLBACK_APPLIES_TO``, i.e. p_50), any cell whose median is
+    exactly 0 is replaced by that cell's next higher non-zero percentile on
+    ``RASMI_PERCENTILE_LADDER`` (a 0 median means RASMI has no data for that
+    region/structure/function and has collapsed it to zero; see PERCENTILE_ZERO_FALLBACK).
+    Cells that are 0 at every percentile stay 0. Any other percentile is returned as-is.
+    """
+    values = material_intensities.loc[:, percentile].copy()
+
+    if not PERCENTILE_ZERO_FALLBACK or percentile != PERCENTILE_ZERO_FALLBACK_APPLIES_TO:
+        return values
+
+    higher_percentiles = RASMI_PERCENTILE_LADDER[RASMI_PERCENTILE_LADDER.index(percentile) + 1:]
+    for higher in higher_percentiles:
+        zero_mask = values == 0
+        if not zero_mask.any():
+            break
+        values.loc[zero_mask] = material_intensities.loc[zero_mask, higher]
+
+    return values
+
+
 def weighted_structure_mi(filtered_mis: pd.Series, structure_shares: pd.DataFrame, image_region: int,
                            allowed_structures: list):
     """
@@ -403,6 +449,8 @@ def replace_old_mis_with_rasmi(mi_image_mat: pd.DataFrame, mi_rasmi: pd.DataFram
     Aluminium is not taken from RASMI (its data is too sparse; see MATERIALS_FROM_DEETMAN)
     but filled from the Deetman et al. table afterwards. Copper stays on RASMI but uses the
     p_75 percentile (see COPPER_RASMI_PERCENTILE) because its p_50 is a degenerate prior.
+    Per-cell p_50 values of exactly 0 (glass in non-residential timber buildings) are
+    stepped up to the next non-zero percentile (see PERCENTILE_ZERO_FALLBACK).
     """
     mi_image_mat_update = mi_image_mat.copy()
 
@@ -431,9 +479,10 @@ def replace_old_mis_with_rasmi(mi_image_mat: pd.DataFrame, mi_rasmi: pd.DataFram
             # loop through IMAGE regions and get the mean concrete mi value for each region for RS and RM (housing types)
             for housingtype_image, housingtype_rasmi in housing_type_image_to_rasmi.items():
 
-                filtered_mis = material_intensities[material_intensities.index.get_level_values('R5_32').isin(rasmi_region)  # filter for the right region
+                region_mis = material_intensities[material_intensities.index.get_level_values('R5_32').isin(rasmi_region)  # filter for the right region
                                         & material_intensities.index.get_level_values('function').isin([housingtype_rasmi])  # filter for the right housing type of rasmi
-                                        & material_intensities.index.get_level_values('structure').isin(housing_type_to_rasmi_building_structure[housingtype_image])].loc[:, material_data_value]  # filter for the right building structure
+                                        & material_intensities.index.get_level_values('structure').isin(housing_type_to_rasmi_building_structure[housingtype_image])]  # filter for the right building structure
+                filtered_mis = select_percentile(region_mis, material_data_value)
 
                 structure_shares = rs_structure_shares if housingtype_rasmi == "RS" else rm_structure_shares
                 mean_mi_value = weighted_structure_mi(filtered_mis, structure_shares, image_region,
@@ -466,7 +515,10 @@ def replace_commercial_mis_with_rasmi(mi_image_mat_commercial: pd.DataFrame, mi_
 
     Aluminium is not taken from RASMI (its data is too sparse; see MATERIALS_FROM_DEETMAN)
     but filled from the Deetman et al. commercial table afterwards. Copper stays on RASMI
-    but uses the p_75 percentile (see COPPER_RASMI_PERCENTILE).
+    but uses the p_75 percentile (see COPPER_RASMI_PERCENTILE). Per-cell p_50 values of
+    exactly 0 (glass in NR timber buildings) are stepped up to the next non-zero
+    percentile (see PERCENTILE_ZERO_FALLBACK); this is what makes commercial glass
+    non-zero for the timber structure share.
     """
     mi_image_mat_commercial_update = mi_image_mat_commercial.copy()
     allowed_structures = ['C', 'M', 'S', 'T']
@@ -488,11 +540,12 @@ def replace_commercial_mis_with_rasmi(mi_image_mat_commercial: pd.DataFrame, mi_
             if isinstance(rasmi_region, str):
                 rasmi_region = [rasmi_region]
 
-            filtered_mis = material_intensities[
+            region_mis = material_intensities[
                 material_intensities.index.get_level_values('R5_32').isin(rasmi_region)  # filter for the right region
                 & material_intensities.index.get_level_values('function').isin(['NR'])  # non-residential function
                 & material_intensities.index.get_level_values('structure').isin(allowed_structures)  # all structure types
-            ].loc[:, material_data_value]
+            ]
+            filtered_mis = select_percentile(region_mis, material_data_value)
 
             mean_mi_value = weighted_structure_mi(filtered_mis, nr_structure_shares, image_region,
                                                   allowed_structures)
@@ -538,6 +591,10 @@ def replace_old_mis_with_rasmi_resource_efficient(mi_image_mat: pd.DataFrame,
     trajectory, so the same value is used in every year. Copper stays on RASMI but at the
     p_75 percentile in every year (see COPPER_RASMI_PERCENTILE) - its p_50 / p_25 are
     degenerate priors, so no resource-efficiency reduction is applied to copper.
+
+    The p_50 zero-fallback (PERCENTILE_ZERO_FALLBACK) only corrects p_50, so it applies
+    to the start / switch years here but not to the p_25 read in the target year; the
+    NR-timber glass zero in the resource-efficient target year is left as-is for now.
     """
     for material_name in material_list_rasmi:
         # ensure lower case
@@ -571,9 +628,10 @@ def replace_old_mis_with_rasmi_resource_efficient(mi_image_mat: pd.DataFrame,
                 # loop through IMAGE regions and get the mean concrete mi value for each region for RS and RM (housing types)
                 for housingtype_image, housingtype_rasmi in housing_type_image_to_rasmi.items():
 
-                    filtered_mis = material_intensities[material_intensities.index.get_level_values('R5_32').isin(rasmi_region)  # filter for the right region
+                    region_mis = material_intensities[material_intensities.index.get_level_values('R5_32').isin(rasmi_region)  # filter for the right region
                                             & material_intensities.index.get_level_values('function').isin([housingtype_rasmi])  # filter for the right housing type of rasmi
-                                            & material_intensities.index.get_level_values('structure').isin(housing_type_to_rasmi_building_structure[housingtype_image])].loc[:, data_value]  # filter for the right building structure
+                                            & material_intensities.index.get_level_values('structure').isin(housing_type_to_rasmi_building_structure[housingtype_image])]  # filter for the right building structure
+                    filtered_mis = select_percentile(region_mis, data_value)
 
                     structure_shares = rs_structure_shares if housingtype_rasmi == "RS" else rm_structure_shares
                     mean_mi_value = weighted_structure_mi(filtered_mis, structure_shares, image_region,
