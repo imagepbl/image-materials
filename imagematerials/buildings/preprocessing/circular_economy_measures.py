@@ -573,59 +573,50 @@ def circular_economy_measures_material_intensities_commercial(xr_mat_comm_intens
         Updated commercial material intensities.
 
     """
-    # work array with Time dim
-    xr_mat_comm_intensities = (xr_mat_comm_intensities.rename({"Cohort": "time"})
-              if "Cohort" in xr_mat_comm_intensities.dims else xr_mat_comm_intensities)
-    
+    # rename Cohort to Time for compatibility with apply_change_per_region function
+    if "Cohort" in xr_mat_comm_intensities.dims:
+        xr_mat_comm_intensities = xr_mat_comm_intensities.rename({"Cohort": "time"})
+
+    # import parameters from config file
     flag_config = circular_economy_config["buildings"]["FlagLightweightingCommercial"]
-    base_year = flag_config['base_year']
     target_year = flag_config['target_year']
+    base_year = flag_config['base_year']
     implementation_rate = flag_config['implementation_rate']
     mat_changes = flag_config['material_intensity_change']
 
-    region_graph = create_region_graph()
-    materials_all = list(xr_mat_comm_intensities.coords["material"].values) #
+    region_knowledge_graph = create_region_graph()
+    materials_all = set(xr_mat_comm_intensities.coords["material"].values) # all materials in data
 
-    updated_slices = []
-
-    for mat in ("steel", "cement", "aluminium"):                    # in commercial buildings we apply lightweighting to cement instead of concrete
+    for mat in ("steel", "concrete", "aluminium"):
         if mat not in mat_changes or mat not in materials_all:
             continue
+
+        # 1) TOML -> 1-D DA over region names
+        change_dict = mat_changes[mat]
+        raw = xr.DataArray(
+            list(change_dict.values()),
+            coords={"Region": list(change_dict.keys())},
+            dims=["Region"],
+            name=f"material_intensity_change_{mat}",
+        )
+
+        # 2) map region names -> region codes, then align to model order
+        regions_mapped = list(region_knowledge_graph.find_relations_inverse(
+            model_regions, raw.coords["Region"].values))
+        changes_mapped = region_knowledge_graph.rebroadcast_xarray(
+            raw, output_coords=regions_mapped, dim="Region")
+        changes_mapped = changes_mapped.sel(Region=model_regions).astype(float)
+
+        # 3) apply once per material
         cur = xr_mat_comm_intensities.sel(material=mat)
+        updated = apply_change_per_region(cur, base_year, target_year, changes_mapped,
+                                          implementation_rate)
+        updated = updated.reindex(Region=cur.coords["Region"])
+        xr_mat_comm_intensities.loc[dict(material=mat)] = updated
 
-        # only apply for those present in TOML; others pass through unchanged
-        if mat in mat_changes:
-            change_dict = mat_changes[mat]
-            raw = xr.DataArray(
-                list(change_dict.values()),
-                coords={"Region": list(change_dict.keys())},
-                dims=["Region"],
-                name=f"mi_change_pc_{mat}",
-            )
-
-            # map region names -> region codes; align to model order
-            regions_mapped = list(region_graph.find_relations_inverse(model_regions,
-                                                                      raw.coords["Region"].values))
-            changes_mapped = region_graph.rebroadcast_xarray(raw, output_coords=regions_mapped,
-                                                             dim="Region")
-            changes_mapped = changes_mapped.sel(Region=model_regions).astype(float)
-
-            # apply once per material
-            updated = apply_change_per_region(cur, base_year, target_year, changes_mapped,
-                                              implementation_rate)
-            # keep Region order & dim order identical to cur
-            updated = updated.reindex(Region=cur.coords["Region"]).transpose(*cur.dims)
-        else:
-            updated = cur
-
-        # attach the material coord and collect
-        updated_slices.append(updated.expand_dims(material=[mat]))
-
-    xr_mat_updated = xr.concat(updated_slices, dim="material")
-
-    # rename back to Cohort if needed
-    xr_mat_comm_intensities = (xr_mat_updated.rename({"time": "Cohort"})
-                               if "time" in xr_mat_updated.dims else xr_mat_updated)
+    # rename back
+    if "time" in xr_mat_comm_intensities.dims:
+        xr_mat_comm_intensities = xr_mat_comm_intensities.rename({"time": "Cohort"})
 
     logging.debug("implemented FlagLightweightingCommercial for Commercial Buildings (lightweighting)")
     return xr_mat_comm_intensities
