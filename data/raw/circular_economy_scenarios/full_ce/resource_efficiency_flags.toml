@@ -7,7 +7,7 @@ FlagLifetimeExtensionSlow = true
 FlagLifetimeExtension2D_RE = false
 FlagLightweightingResidential = true
 FlagLightweightingCommercial = true
-FlagResourceEfficientMaterials = true
+FlagResourceEfficientMaterials = false
 
 [vehicles]
 FlagLifetimeExtension = true

@@ -702,7 +702,7 @@ def scenario_change(arr: xr.DataArray, base_year: int, target_year: int, change:
                 # ramp progress: 0 at base_year, 1 at target_year, held at 1 after
                 span = max(1, target_year - base_year)
                 # apply to each year explicitly to preserve structure
-                for year in range(base_year + 1, target_year + 1):
+                for year in range(base_year, target_year + 1):
                     progress = (year - base_year) / span
                     result.loc[{"time": year, "Region": region}] = (
                         arr.loc[{"time": year, "Region": region}] * (1 + (increase / 100.0) * progress)

@@ -251,7 +251,7 @@ USA = -15.7
 "Western Africa" = -8.5
 "Western Europe" = -8.5
 
-[buildings.FlagLightweightingCommercial.material_intensity_change.cement]
+[buildings.FlagLightweightingCommercial.material_intensity_change.concrete]
 Asian-Stan = -7.5
 Brazil = -7.5
 Canada = -13.9
