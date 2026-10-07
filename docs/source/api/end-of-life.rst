@@ -13,7 +13,7 @@ eol.constants module
 	:show-inheritance:
 
 eol.preprocessing module
------------------------
+------------------------
 
 .. automodule:: imagematerials.eol.preprocessing
 	:members:

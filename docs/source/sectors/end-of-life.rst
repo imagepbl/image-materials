@@ -42,7 +42,7 @@ Data Input
 - **recycling.csv**: Recycling rates, which are the proportion of collected, non-reusable materials that are processed into secondary materials. Range between 0-1 for each material, sector, region, and year.
 
 Preprocessing Structure
-----------------------
+-----------------------
 
 The preprocessing function - :py:func:`~imagematerials.eol.preprocessing.eol_preprocessing` - performs the following steps:
 
@@ -71,7 +71,7 @@ Output Data
 - ``losses``: Non-collected, non-reusable and non-recyclable material that is lost to landfill, or other disposal methods
 
 Integration with :py:class:`~imagematerials.model.GenericStocks`
-------------------------------
+------------------------------------------------------------------
 
 The eol module's output rates are applied in the stock outflow calculations:
 

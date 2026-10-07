@@ -15,9 +15,11 @@ from imagematerials.vehicles.constants import (
 from imagematerials.util import (
     dataset_to_array,
     convert_lifetime,
+    flag_enabled,
     pandas_to_xarray
 )
 from imagematerials.vehicles.modelling_functions import (
+    idx,
     interpolate,
     scenario_change
 )
@@ -72,7 +74,7 @@ def get_ship_capacity(general_data_path: str):
     return cap_of_boats_yrs.mul(cap_adjustment, axis=1)
 
 
-def get_lifetimes(data_path: str, circular_economy_config: dict):
+def get_lifetimes(data_path: str, circular_economy_config: dict, resource_efficiency_flags: dict = None):
     """Get vehicle lifetimes from CSV and squeeze it in the right format.
 
     Parameters
@@ -98,20 +100,37 @@ def get_lifetimes(data_path: str, circular_economy_config: dict):
     lifetimes_vehicles = lifetimes_vehicles[(lifetimes_vehicles.T != 0)]
     lifetimes_vehicles = lifetimes_vehicles.unstack(['mode', 'data'])
     lifetimes_vehicles = interpolate(pd.DataFrame(lifetimes_vehicles))
-    
+
     # Calculate extended lifetime per mode
-    if 'slow' in circular_economy_config.keys():
-        target_year = circular_economy_config['slow']['vehicles']['target_year']
-        base_year = circular_economy_config['slow']['vehicles']['base_year']
-        lifetime_increase = \
-            circular_economy_config['slow']['vehicles']['lifetime_increase_percent_slow']
-        implementation_rate = circular_economy_config['slow']['vehicles']['implementation_rate']
+    if flag_enabled(resource_efficiency_flags, "vehicles", "FlagLifetimeExtension"):
+        print("Implementing FlagLifetimeExtension for Vehicles (extend lifetimes)")
+        flag_config = circular_economy_config['vehicles']['FlagLifetimeExtension']
+        target_year = flag_config['target_year']
+        base_year = flag_config['base_year']
+        lifetime_increase = flag_config['lifetime_increase_percent']
+        implementation_rate = flag_config['implementation_rate']
         # possibilities for implementation rate are: linear, immediate, s-curve
 
         lifetimes_vehicles = scenario_change(lifetimes_vehicles, base_year, target_year,
             lifetime_increase, implementation_rate, "lifetime")
-        
-        logging.debug("implemented 'slow' for Vehicles (extend lifetimes)")
+
+        logging.debug("implemented FlagLifetimeExtension for Vehicles (extend lifetimes)")
+
+    # In lifetimes_years.csv the folded-normal 'stdev' is given as a fraction of
+    # the mean lifetime (see the electricity module, which multiplies the mean by
+    # STD_LIFETIMES_ELECTR before convert_lifetime). convert_lifetime /
+    # FoldedNormalDistribution.get_param, however, expects an absolute standard
+    # deviation in years. Without this conversion the scale of the folded normal
+    # collapses to ~0.2-0.3 years, turning the lifetime distribution into a near
+    # delta spike at the mean. Convert the fraction to absolute years here, after
+    # any lifetime extension has been applied to the mean, so the stdev/mean ratio
+    # stays fixed at the intended fraction.
+    stdev_modes = lifetimes_vehicles.columns.get_level_values('data') == 'stdev'
+    means = lifetimes_vehicles.loc[:, idx[:, 'mean']].rename(
+        columns={'mean': 'stdev'}, level='data')
+    lifetimes_vehicles.loc[:, stdev_modes] = (
+        lifetimes_vehicles.loc[:, stdev_modes] * means
+    )
 
     data_xarray = pandas_to_xarray(lifetimes_vehicles, unit_mapping)
     return convert_lifetime(data_xarray)

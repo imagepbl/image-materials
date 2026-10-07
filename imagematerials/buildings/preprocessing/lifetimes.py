@@ -5,12 +5,16 @@ import pandas as pd
 import xarray as xr
 
 from imagematerials.buildings.constants import ALL_YEARS
-from imagematerials.util import dataset_to_array, merge_dims
+from imagematerials.buildings.preprocessing.circular_economy_measures import (
+    apply_lifetime_extension_buildings,
+)
+from imagematerials.util import dataset_to_array, flag_enabled, merge_dims
 
 
 def compute_lifetimes(base_directory: Path,
                       commercial_types: list[str],
                       circular_economy_config: dict,
+                      resource_efficiency_flags: dict = None,
                       distribution_type="weibull") -> xr.DataArray:
     """Compute the residential and commercial lifetimes.
 
@@ -31,10 +35,17 @@ def compute_lifetimes(base_directory: Path,
         Array that contains the scipy parameters to generate the lifetime distributions.
 
     """
-    if 'slow' in circular_economy_config.keys():
-        # TODO make this dynamic in the long run, for now simple solution chosen
+    # Two mutually exclusive building lifetime-extension measures (the exclusion is
+    # enforced in validate_resource_efficiency_flags):
+    #   FlagLifetimeExtension2D_RE - swap in the pre-built SSP2_2D_RE Weibull
+    #       parameter database (assumes slower stock turnover / longer lives).
+    #   FlagLifetimeExtensionSlow  - keep the SSP2_CP database unchanged at 2020
+    #       and scale the future Weibull Scale up by the regional
+    #       lifetime_increase_percent from circular_economy_data.toml
+    #       (see apply_lifetime_extension_buildings).
+    if flag_enabled(resource_efficiency_flags, "buildings", "FlagLifetimeExtension2D_RE"):
         scenario = "SSP2_2D_RE"
-        print("implemented 'slow' for Buildings")
+        print("implemented FlagLifetimeExtension2D_RE for Buildings")
     else:
         scenario = "SSP2_CP"
 
@@ -105,7 +116,20 @@ def compute_lifetimes(base_directory: Path,
     xr_lifetimes_residential = xr_lifetimes_residential.transpose("time", "Region",
                                                                   "Type", "Parameter")
     lifetimes_array = xr.concat((xr_lifetimes_commercial, xr_lifetimes_residential), dim="Type")
+
+    if flag_enabled(resource_efficiency_flags, "buildings", "FlagLifetimeExtensionSlow"):
+        print("FlagLifetimeExtensionSlow is enabled for buildings.")
+        if distribution_type != "weibull":
+            raise NotImplementedError(
+                "FlagLifetimeExtensionSlow for buildings is only implemented for the "
+                "'weibull' distribution type."
+            )
+        print("implemented FlagLifetimeExtensionSlow for Buildings")
+        lifetimes_array = apply_lifetime_extension_buildings(
+            lifetimes_array, circular_economy_config["buildings"]["FlagLifetimeExtensionSlow"])
+
     return convert_lifetimes_buildings(lifetimes_array, distribution_type)
+
 
 def convert_lifetimes_buildings(lifetimes: xr.DataArray,
                                 distribution_type: str = "folded_norm") -> dict[str, xr.DataArray]:

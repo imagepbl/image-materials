@@ -4,7 +4,12 @@ import numpy as np
 from pathlib import Path
 from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.eol.constants import SCENARIO_SELECT, start_year, end_year, full_time
-from imagematerials.util import overwrite_future_rates, read_circular_economy_config
+from imagematerials.util import (
+    flag_enabled,
+    overwrite_future_rates,
+    read_circular_economy_data,
+    read_resource_efficiency_flags,
+)
 from imagematerials.concepts import create_region_graph
 
 
@@ -40,12 +45,9 @@ def interpolate_eol_rates(
     return ds.clip(min=min_value, max=max_value)
 
 
-def eol_preprocessing(base_dir, circular_economy_scenario_dirs=None):
-    # Only read config if dirs are provided
-    if circular_economy_scenario_dirs is not None:
-        circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
-    else:
-        circular_economy_config = {}
+def eol_preprocessing(base_dir, circular_economy_data_file=None, resource_efficiency_flags_file=None):
+    circular_economy_config = read_circular_economy_data(circular_economy_data_file)
+    resource_efficiency_flags = read_resource_efficiency_flags(resource_efficiency_flags_file)
 
     collection_in = pd.read_csv(Path(base_dir, "end_of_life","SSP2_2D_RE", "collection.csv"))
     reuse_in = pd.read_csv(Path(base_dir, "end_of_life", "SSP2_CP", "reuse.csv"))
@@ -130,29 +132,31 @@ def eol_preprocessing(base_dir, circular_economy_scenario_dirs=None):
     vehicles_supertypes = ["passenger", "freight"]
     electricity_supertypes = ["generation", "grid", "storage"]
 
-    if "slow" in circular_economy_config.keys():
-        reuse_rate_buildings = circular_economy_config["slow"]["buildings"]["eol_reuse_rate_2060"]
-        reuse_rate_vehicles = circular_economy_config["slow"]["vehicles"]["eol_reuse_rate_2060"]
-        reuse_rate_electricity = circular_economy_config["slow"]["electricity"]["eol_reuse_rate_2060"]
+    if flag_enabled(resource_efficiency_flags, "end_of_life", "FlagLifetimeExtension"):
+        eol_lifetime_extension = circular_economy_config["end_of_life"]["FlagLifetimeExtension"]
+        reuse_rate_buildings = eol_lifetime_extension["buildings"]["eol_reuse_rate_2060"]
+        reuse_rate_vehicles = eol_lifetime_extension["vehicles"]["eol_reuse_rate_2060"]
+        reuse_rate_electricity = eol_lifetime_extension["electricity"]["eol_reuse_rate_2060"]
 
         xr_reuse = overwrite_future_rates(xr_reuse,2060,building_supertypes,reuse_rate_buildings)
-        print("implemented 'slow' for Buildings EoL")
+        print("implemented FlagLifetimeExtension for Buildings EoL")
         xr_reuse = overwrite_future_rates(xr_reuse,2060,vehicles_supertypes,reuse_rate_vehicles)
-        print("implemented 'slow' for Vehicles EoL")
+        print("implemented FlagLifetimeExtension for Vehicles EoL")
         xr_reuse = overwrite_future_rates(xr_reuse,2060,electricity_supertypes,reuse_rate_electricity)
-        print("implemented 'slow' for Electricity EoL")
+        print("implemented FlagLifetimeExtension for Electricity EoL")
 
-    if "close" in circular_economy_config.keys():
-        recycling_rate_buildings = circular_economy_config["close"]["buildings"]["eol_recycling_rate_2060"]
-        recycling_rate_vehicles = circular_economy_config["close"]["vehicles"]["eol_recycling_rate_2060"]
-        recycling_rate_electricity = circular_economy_config["close"]["electricity"]["eol_recycling_rate_2060"]
-        
+    if flag_enabled(resource_efficiency_flags, "end_of_life", "FlagRecycling"):
+        eol_recycling = circular_economy_config["end_of_life"]["FlagRecycling"]
+        recycling_rate_buildings = eol_recycling["buildings"]["eol_recycling_rate_2060"]
+        recycling_rate_vehicles = eol_recycling["vehicles"]["eol_recycling_rate_2060"]
+        recycling_rate_electricity = eol_recycling["electricity"]["eol_recycling_rate_2060"]
+
         xr_recycling = overwrite_future_rates(xr_recycling,2060,building_supertypes,recycling_rate_buildings)
-        print("implemented 'close' for Buildings EoL")   
+        print("implemented FlagRecycling for Buildings EoL")
         xr_recycling = overwrite_future_rates(xr_recycling,2060,vehicles_supertypes,recycling_rate_vehicles)
-        print("implemented 'close' for Vehicles EoL")
+        print("implemented FlagRecycling for Vehicles EoL")
         xr_recycling = overwrite_future_rates(xr_recycling,2060,electricity_supertypes,recycling_rate_electricity)
-        print("implemented 'close' for Electricity EoL")
+        print("implemented FlagRecycling for Electricity EoL")
 
     # inter and extrapolated collection, reuse and recycling xr 
     collection = interpolate_eol_rates(xr_collection, anchor_year=2020, target_year=2060, min_value=0, max_value=1, full_time=full_time)

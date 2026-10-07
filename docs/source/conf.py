@@ -44,6 +44,17 @@ extensions = [
 # Mock optional heavy dependencies that are not required to render docs.
 autodoc_mock_imports = ["prism"]
 
+# "prism" is faked above since it's not installed, so it's just an empty
+# stand-in object. Sphinx normally tries to peek at real source code, which
+# breaks on this fake object. This turns that step off so the build doesn't
+# crash. Safe to do since our code doesn't rely on that step anyway.
+import sphinx.ext.autodoc.type_comment as _type_comment
+
+def _noop_type_comment(*args, **kwargs):
+    return None
+
+_type_comment.update_annotations_using_type_comments = _noop_type_comment
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
 

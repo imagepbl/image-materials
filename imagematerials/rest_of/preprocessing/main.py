@@ -18,8 +18,9 @@ from imagematerials.rest_of.preprocessing.regressions_all_materials import (fit_
                                                                             historic_other_fraction_consumption_to_xr)
 
 from imagematerials.rest_of.util import sum_inflows_for_all_sectors, save_sum_as_csv
+from imagematerials.util import flag_enabled, read_resource_efficiency_flags
 
-def read_gompertz_values(base_directory, scenario: str):
+def read_gompertz_values(base_directory, scenario: str, resource_efficiency_flags: dict = None):
     """
     Reads Gompertz coefficient values from a NetCDF file and adapts them according to the specified scenario.
 
@@ -32,7 +33,11 @@ def read_gompertz_values(base_directory, scenario: str):
     base_directory : Path or str
         The base directory containing the 'rest-of/gompertz_values/coefs_gompertz.nc' file.
     scenario : str
-        The scenario name. If it matches 'SSP2_VLLO_LifeTech', resource efficiency adaptation is applied.
+        The scenario name.
+    resource_efficiency_flags : dict, optional
+        Nested dictionary as returned by read_resource_efficiency_flags. If the
+        'rest_of' sector's 'FlagResourceEfficiency' flag is enabled, the Gompertz
+        coefficients adapted for resource efficiency measures are used.
 
     Returns
     -------
@@ -46,12 +51,10 @@ def read_gompertz_values(base_directory, scenario: str):
     - The function expects regions to be numeric strings for sorting.
     """
 
-    if scenario in ["SSP2_resource_efficiency", "SSP2_narrow_activity","SSP2_narrow", "SSP2_narrow_slow_close", 
-                    "SSP2_narrow_act_26_tax","SSP2_narrow_26_tax", "SSP2_narrow_slow_close_26_tax",
-                    "SSP2_narrow_slow_close_19_tax", "SSP2_VLLO_LifeTech"]:
+    if flag_enabled(resource_efficiency_flags, "rest_of", "FlagResourceEfficiency"):
         print('Using Gompertz coefficients for resource efficiency measures')
         name = "coefs_gompertz_eff.nc"
-    else: 
+    else:
         name = "coefs_gompertz.nc"
 
     xr_gompertz = xr.open_dataset(base_directory / "rest-of" / "gompertz_values" / name, engine="netcdf4")
@@ -114,14 +117,15 @@ def fit_all_materials_save_corrseponding_input_data(path_input_data, path_input_
     max_x = get_X_max_scaling_factor(results, save=True)
 
 
-def rest_of_preprocessing(base_directory, image_scenario_directory, scenario: str, 
-                          refit = False):
-    
+def rest_of_preprocessing(base_directory, image_scenario_directory, scenario: str,
+                          resource_efficiency_flags_file=None, refit = False):
+
     if refit == True:
         fit_all_materials_save_corrseponding_input_data()
         print('Materials regression refitted and preprocessing data updated.')
 
-    gompertz_values = read_gompertz_values(base_directory, scenario)
+    resource_efficiency_flags = read_resource_efficiency_flags(resource_efficiency_flags_file)
+    gompertz_values = read_gompertz_values(base_directory, scenario, resource_efficiency_flags)
     gdp_per_capita = read_image_gdp_cap_data(base_directory, image_scenario_directory)
     historic_diff_consumption_mean = read_historic_diff_cons_data_mean(base_directory)
     historic_diff_consumption_total = read_historic_diff_cons_data(base_directory)

@@ -1332,3 +1332,8 @@ class ElectricVehicleBatteries(prism.Model):
         # 3. Calculate V2G capable battery energy capacity stock (kWh) (to calculate "Other storage" only the V2G battery stock is needed)
         stock_v2g = self.stock_battery_kWh[t].sel(Type=self._types_v2g) * self.vhc_fraction_v2g
         self.stock_battery_kWh_v2g.loc[dict(time=t, Type=self._types_v2g)]  = (stock_v2g.sel(time=t).drop_vars("time") * self.capacity_fraction_v2g).sum(["Cohort"])
+
+
+@prism.interface
+class Appliances(prism.Model):
+    pass

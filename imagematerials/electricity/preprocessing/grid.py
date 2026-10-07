@@ -34,9 +34,10 @@ from imagematerials.electricity.constants import (
 #############################################################################################################
 #############################################################################################################
 
-def get_preprocessing_data_grid(path_base: str, 
-                                climate_policy_config: dict, 
-                                circular_economy_config: dict):
+def get_preprocessing_data_grid(path_base: str,
+                                climate_policy_config: dict,
+                                circular_economy_config: dict,
+                                resource_efficiency_flags: dict = None):
     """Prepare preprocessing input data for the electricity grid sub-module.
 
     This function reads static and scenario-dependent grid data (line lengths,
@@ -330,7 +331,8 @@ def get_preprocessing_data_grid(path_base: str,
 
         materials_additions_interp, grid_lifetime_interp = apply_ce_measures_to_elc_grid(materials_additions_interp,
                                                                                           grid_lifetime_interp,
-                                                                                          circular_economy_config)
+                                                                                          circular_economy_config,
+                                                                                          resource_efficiency_flags)
 
     ################################################################################################
     # Prep_data File #

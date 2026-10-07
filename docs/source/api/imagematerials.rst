@@ -87,7 +87,7 @@ imagematerials.read_mym module
    :show-inheritance:
 
 imagematerials.lifetimes module
-------------------------------
+--------------------------------
 
 .. automodule:: imagematerials.lifetimes
    :members:
