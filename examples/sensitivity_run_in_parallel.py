@@ -50,7 +50,7 @@ parser.add_argument("--n-processes", type=int, default=1, help="total number of 
 parser.add_argument("--process-index", type=int, default=0, help="index (0-based) of THIS process, must be < n-processes")
 parser.add_argument("--n-total", type=int, default=10, help="total number of Monte Carlo runs across ALL processes combined")
 parser.add_argument("--output-dir", type=Path, default=path_mc_output, help="directory to write pickled results to") #Path("mc_output")
-parser.add_argument("--checkpoint-every", type=int, default=10, help="write a partial-results checkpoint pickle every N completed runs in this process (0 = only save once, at the end)")
+parser.add_argument("--checkpoint-every", type=int, default=0, help="write a partial-results checkpoint pickle every N completed runs in this process (0 = only save once, at the end)")
 
 cli_args = parser.parse_args()
 
@@ -143,9 +143,6 @@ ranges_storage = load_material_intensities(path_data / "electricity" / "standard
 ranges_storage_other = ranges_storage[ranges_storage["Type"].isin(TECH_STATIONARY_STORAGE)]
 ranges_storage_phs = ranges_storage[ranges_storage["Type"].isin(["PHS"])]
 ranges_ev_battery = ranges_storage[ranges_storage["Type"].isin(EV_BATTERY_TYPES)]
-
-rng = np.random.default_rng(42)   # seed once for reproducibility
-
 
 # One independent, reproducible child stream PER MONTE CARLO ITERATION (not per process).
 # child_seeds depends only on --seed and --n-total, never on how many processes are splitting
