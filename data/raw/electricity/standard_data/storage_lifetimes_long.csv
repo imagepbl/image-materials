@@ -1,4 +1,4 @@
-Time,type_data,unit,Region,category,technology,sub_technology,value,min,max
+Time,type_data,unit,Region,sector,category,technology,value,min,max
 2018,lifetime,yr,World,storage,battery,LFP,10.3,,
 2018,lifetime,yr,World,storage,battery,Na-ion,10,,
 2018,lifetime,yr,World,storage,mechanical_storage,PHS,60,60,80

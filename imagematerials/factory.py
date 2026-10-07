@@ -60,8 +60,8 @@ class Sector():
                             raise ValueError(
                                 f"Mismatch in coordinates with dimension '{coord.name}'"
                                 f" with data array '{array_name}' having different coordinates"
-                                f" than previously assumed in '{coordinate_sources[coord.name]}'."
-                                f"New: {coord_list}\n\nOld:{coordinates[coord.name]}")
+                                f" than previously assumed in '{coordinate_sources[coord.name]}'.\n\n"
+                                f"New ('{array_name}'): {coord_list}\n\nOld ('{coordinate_sources[coord.name]}'):{coordinates[coord.name]}")
                         coordinate_sources[coord.name].append(array_name)
                     except ValueError as e:
                         print(e)

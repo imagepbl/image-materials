@@ -167,6 +167,9 @@ See the [Resource Efficiency and Circular Economy](docs/source/resource_efficien
 ### Example Runs
 Example test cases are included in the `examples` folder.
 
+### Sensitivity Analysis
+A sensitivity analysis can be carried out using actions defined in `sensitivity_analysis/changedata.py`. Also a Monte Carlo analysis can be run using the code in `sensitivity_analysis/monte_carlo.py`, this is currently implemented for electricity and road vehicles. For how to use, see the examples in `examples/vary_model_input.ipynb` and `examples/sensitivity_analysis.ipynb`.
+
 ## Development & Collaboration
 ### Contributing
 
