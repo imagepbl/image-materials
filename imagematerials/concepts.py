@@ -1148,6 +1148,59 @@ def create_electricity_graph():
     
     return electricity_knowledge_graph
 
+def create_h2_graph():
+    """Create the knowledge graph for the hydrogen production sector (including type synonyms)."""
+    h2_knowledge_graph = KnowledgeGraph(Node("HydrogenProduction"))
+
+    tech_types = {
+            "ClGs": ["coal gasification"],
+            "POOl": ["oil partial oxidation", "partial oxidation of oil"],
+        "SMR": ["NG steam reforming", "steam reforming of natural gas"],
+        "BioGs": ["biofuel gasification", "gasification of biofuels"],
+        "ClGsCS": ["coal gasification + CCS"],
+        "POOlCS": ["oil partial oxidation + CCS"],
+        "SMRCS": ["NG steam reforming + CCS", "steam reforming of natural gas / autothermal reforming of natural gas + CCS"],
+        "BioGsCS": ["biofuel gasification + CCS", "gasification of biofuels + CCS"],
+        "BLEl": ["electrolysis - base load", "base-load electrolysis (alkaline/SO)"],
+        "CurEl": ["electrolysis - curtailment", "curtailed electricity electrolysis (PEM)"],
+        "SPVEl": ["electrolysis + SPV", "electrolyzer (PEM) + solar PV electric power (central)"],
+        "CSPEl": ["electrolysis + CSP", "electrolyzer (PEM) + concentrated solar electric power"],
+        "WONEl": ["electrolysis - wind (onshore)", "electrolyzer (PEM) + onshore wind electric power"],
+        "WOFFEl": ["electrolysis - wind (offshore)", "electrolyzer (PEM) + offshore wind electric power"],
+        "GEOEl": ["electrolysis - geothermal", "electrolyzer (PEM) + geothermal electric power"],
+        "ssSMR": ["NG steam reforming - small-scale", "small-scale SMR"],
+        "ssEl": ["electrolysis - small-scale", "small-scale electrolysis"],
+
+
+    }
+    mapping = {
+            "ClGs": ["coal"],
+            "POOl": ["oil"],
+            "SMR": ["natural_gas"],
+            "BioGs": ["biofuel"],
+            "ClGsCS": ["coal", "CCS"],
+            "POOlCS": ["oil", "CCS"],
+            "SMRCS": ["natural_gas", "CCS"],
+            "BioGsCS": ["biofuel", "CCS"],
+            "BLEl": ["electrolysis"],
+            "CurEl": ["electrolysis"],
+            "SPVEl": ["electrolysis"],
+            "CSPEl": ["electrolysis"],
+            "WONEl": ["electrolysis"],
+            "WOFFEl": ["electrolysis"],
+            "GEOEl": ["electrolysis"],
+            "ssSMR": ["natural_gas"],
+            "ssEl": ["electrolysis"],
+    }
+
+    for source_type in ["coal", "oil", "natural_gas", "biofuel", "CCS", "electrolysis"]:
+            h2_knowledge_graph.add(Node(name=source_type, inherits_from="HydrogenProduction"))
+
+    for sub_type, synonyms in tech_types.items():
+            h2_knowledge_graph.add(Node(name=sub_type, synonyms=synonyms, inherits_from=mapping[sub_type]))
+
+    return h2_knowledge_graph
+
 def create_materials_graph():
     materials_knowledge_graph = KnowledgeGraph(Node("Materials"))
 

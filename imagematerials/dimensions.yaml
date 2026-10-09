@@ -346,3 +346,5 @@ plastic_sectors: [Packaging, Transportation, Building & Construction, Electrical
 TURQ: [total, urban total, rural total, urban 1, urban 2, urban 3, urban 4, urban 5, rural 1, rural 2, rural 3, rural 4, rural 5]
 Appliances: [Fan, Air Cooler, Air Conditioner, Refrigerator, Microwave, Washing Machine, Clothes Dryer, Dish Washer, TV, VCR/DVD, PC/Other]
 AppliancesOther: [Fan, Air Cooler, Air Conditioner, Refrigerator, Microwave, Washing Machine, Clothes Dryer, Dish Washer, TV, VCR/DVD, PC/Other, other]
+HydrogenSources: [ClGs,POOl,SMR,BioGs,ClGsCS,POOlCS,SMRCS,BioGsCS,BLEl,CurEl,SPVEl,CSPEl,WONEl,WOFFEl,GEOEl,ssSMR,ssEl]
+HydrogenSourcesTotal: [ClGs,POOl,SMR,BioGs,ClGsCS,POOlCS,SMRCS,BioGsCS,BLEl,CurEl,SPVEl,CSPEl,WONEl,WOFFEl,GEOEl,ssSMR,ssEl,total]
