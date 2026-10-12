@@ -1,8 +1,9 @@
 [data_files]
+gdp_pc = 'Socioeconomic/gdp_pc.scn'
 GCap = 'EnergyServices/GCap.out'
 StorCapTot = 'EnergyServices/StorCapTot.out'
 StorResTot = 'EnergyServices/StorResTot.out'
-gdp_pc = 'Socioeconomic/gdp_pc.scn'
+H2Cap = 'EnergyServices/H2Cap.out'
 residential_floorspace = 'EnergyServices/res_FloorSpace.out'
 transport.freight.Tkm = 'EnergyServices/trp_frgt_Tkm.out'
 transport.freight.Vshare_HvyTruck = 'EnergyServices/trp_frgt_Vshare_HvyTruck.out'
