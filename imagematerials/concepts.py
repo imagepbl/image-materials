@@ -1166,7 +1166,10 @@ def create_h2_graph():
         "natural_gas": ["feedstock natural gas", "natural gas", "NG"],
         "IMAGE-energy PEMEL": [],
         "IMAGE-energy AEL/SOEL": [],
-        "AEL/SOEL": ["electrolysis (alkaline & solid oxide)"],
+        "electrolysis_AEL/SOEL": ["electrolysis (alkaline & solid oxide)", "AEL/SOEL"],
+        "electrolysis_AEL": ["AEL", "alkaline electrolysis", "alkaline"], # additional technologies (not in IMAGE-energy, only in IMAGE-materials)
+        "electrolysis_PEMEL": ["PEMEL", "proton exchange membrane electrolysis", "PEM"], # additional technologies (not in IMAGE-energy, only in IMAGE-materials)
+        "electrolysis_SOEL": ["SOEL", "solid oxide electrolysis", "SOEC", "SO"], # additional technologies (not in IMAGE-energy, only in IMAGE-materials)
         "electrolysis+RE": ["electrolysis linked to renewables", "electrolysis + renewable energy"],
         "CBF_tech1": ["carbon based fuel (tech1)"], # dummy variable for SharesInflowStocks model
         "CBF+CCS_tech1": ["carbon based fuel + CCS (tech1)"],  # dummy variable for SharesInflowStocks model
@@ -1189,11 +1192,6 @@ def create_h2_graph():
         "GEOEl": ["electrolysis - geothermal", "electrolyzer (PEM) + geothermal electric power"],
         "ssSMR": ["NG steam reforming - small-scale", "small-scale SMR"],
         "ssEl": ["electrolysis - small-scale", "small-scale electrolysis"],
-
-        # additional technologies (not in IMAGE-energy, only in IMAGE-materials)
-        "electrolysis_AEL": ["AEL", "alkaline electrolysis", "alkaline"],
-        "electrolysis_PEMEL": ["PEMEL", "proton exchange membrane electrolysis", "PEM"],
-        "electrolysis_SOEL": ["SOEL", "solid oxide electrolysis", "SOEC", "SO"]
     }
 
     mapping = { #["SMR", "biofuel", "electrolysis", ]
@@ -1207,7 +1205,7 @@ def create_h2_graph():
 
         "IMAGE-energy PEMEL": ["electrolysis"],
         "IMAGE-energy AEL/SOEL": ["electrolysis"],
-        "electrolysis+RE": ["electrolysis", "IMAGE-energy PEMEL"],
+        "electrolysis+RE": ["electrolysis", "electrolysis_PEMEL"],
         "coal": ["FF"],
         "oil": ["FF"],
         "natural_gas": ["FF"],
@@ -1222,20 +1220,20 @@ def create_h2_graph():
         "POOlCS": ["oil", "CBF+CCS"],
         "SMRCS": ["natural_gas", "CBF+CCS"],
         "BioGsCS": ["Bio", "CBF+CCS"],
-        "BLEl": ["electrolysis", "IMAGE-energy AEL/SOEL"],
-        "CurEl": ["electrolysis", "IMAGE-energy PEMEL"],
+        "BLEl": ["electrolysis", "electrolysis_AEL/SOEL"],
+        "CurEl": ["electrolysis", "electrolysis_PEMEL"],
         "SPVEl": ["electrolysis+RE"],
         "CSPEl": ["electrolysis+RE"],
         "WONEl": ["electrolysis+RE"],
         "WOFFEl": ["electrolysis+RE"],
         "GEOEl": ["electrolysis+RE"],
         "ssSMR": ["natural_gas", "CBF"],
-        "ssEl": ["electrolysis", "IMAGE-energy AEL/SOEL"],
+        "ssEl": ["electrolysis", "electrolysis_AEL/SOEL"],
         # additional technologies (not in IMAGE-energy, only in IMAGE-materials)
         "AEL/SOEL": ["electrolysis"],
-        "electrolysis_AEL": ["electrolysis", "AEL/SOEL"],
+        "electrolysis_AEL": ["electrolysis", "electrolysis_AEL/SOEL"],
         "electrolysis_PEMEL": ["electrolysis"],
-        "electrolysis_SOEL": ["electrolysis", "AEL/SOEL"]
+        "electrolysis_SOEL": ["electrolysis", "electrolysis_AEL/SOEL"]
     }
 
     # for source_type in ["coal", "oil", "natural_gas", "biofuel", "CCS", "electrolysis"]:
