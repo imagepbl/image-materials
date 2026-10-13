@@ -1,5 +1,7 @@
+#%%
 from pathlib import Path
 import pandas as pd
+import xarray as xr
 
 import prism
 import pym
@@ -25,36 +27,37 @@ from imagematerials.electricity.constants import (
     YEAR_FIRST_GRID
 )
 from imagematerials.hydrogen.constants import (
-    YEAR_FIRST_H2_PRODUCTION
+    YEAR_FIRST_H2_PRODUCTION,
+    ELECTROLYSIS_TECHNOLOGIES
 )
 
 
 # TODO absolute path of file "preprocessing.py" ? current solution can differ depending on IDE used
 path_current = Path().resolve()
-path_base = path_current.parent #.parent # base path of the project -> image-materials
+path_base = path_current.parent.parent.parent # base path of the project -> image-materials
 path_base = Path(path_base, "data", "raw")
 
 year_start = YEAR_FIRST_GRID
 year_end = 2100
 
 #===================================================================================================
-#%% Timer data
-h2cap = mymarray_to_xarray(pym.read_mym(Path(path_base, "image", "SSP2_baseline", "EnergyServices", "H2Cap.out")),
+# Timer data
+h2cap_alltypes = mymarray_to_xarray(pym.read_mym(Path(path_base, "image", "SSP2_baseline", "EnergyServices", "H2Cap.out")),
                           dim_1="NRT", dim_2="HydrogenSourcesTotal")
 
-h2cap = prism.Q_(h2cap, "GW")
-h2cap = h2cap.rename({'t': 'time','NRT': 'Region','HydrogenSourcesTotal': 'Type'})
-h2cap = h2cap.drop_sel(Type='total')
+h2cap_alltypes = prism.Q_(h2cap_alltypes, "GW")
+h2cap_alltypes = h2cap_alltypes.rename({'t': 'time','NRT': 'Region','HydrogenSourcesTotal': 'Type'})
+h2cap_alltypes = h2cap_alltypes.drop_sel(Type="total", Region="WORLD")
 
 graph_h2 = create_h2_graph()
 types = ["CBF", "CBF+CCS", "electrolysis"]
-h2cap = graph_h2.aggregate_sum(h2cap, output_coords=types)
+h2cap = graph_h2.aggregate_sum(h2cap_alltypes, output_coords=types)
 
 # TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
 h2cap_da_interp = interpolate_xr(h2cap, year_start, year_end) # fills the years before with the first value (which is 0), to align timeseries with other sectors (e.g. electricity)
 
 #===================================================================================================
-#%% external data
+# external data
 
 # material intensities (kg/MW) -----------------------------------------------------------------
 # material compositions of hydrogen production technologies (kg/MW)
@@ -92,6 +95,66 @@ market_shares_da = prism.Q_(market_shares_da, "dimensionless")
 market_shares_da.name = "HydrogenMarketShares"
 
 market_shares_da_interp = interpolate_xr(market_shares_da, year_start, year_end)
+
+#%% Calculate merged version of TIMER and CML market shares
+
+# timer
+h2cap_electrolysis = h2cap_alltypes.sel(Type=ELECTROLYSIS_TECHNOLOGIES)
+types = ["IMAGE-energy PEMEL", "IMAGE-energy AEL/SOEL"]
+test = graph_h2.aggregate_sum(h2cap_electrolysis, output_coords=types).sum(dim="Region")
+ms = test / test.sum(dim="Type")
+ms = ms.rename({"time": "Cohort"})
+mapping = {
+    "IMAGE-energy PEMEL": "PEMEL",
+    "IMAGE-energy AEL/SOEL": "AEL/SOEL",
+}
+ms = ms.assign_coords(Type=[mapping.get(t, t) for t in ms["Type"].values])
+
+# cml
+# 1. 
+shares_el = market_shares_da_interp.sel(Type=["electrolysis_AEL", "electrolysis_PEMEL", "electrolysis_SOEL"])
+# 2.
+shares_el_agg = graph_h2.aggregate_sum(shares_el, output_coords=["PEMEL", "AEL/SOEL"])
+# 3.
+shares_ael_soel = shares_el.sel(Type = ["electrolysis_AEL", "electrolysis_SOEL"])
+mapping = {
+    "electrolysis_AEL": "AEL",
+    "electrolysis_SOEL": "SOEL",
+}
+shares_ael_soel = shares_ael_soel.assign_coords(Type=[mapping.get(t, t) for t in shares_ael_soel["Type"].values])
+# shares_ael_soel = shares_ael_soel.rename({"electrolysis_AEL": "AEL", "electrolysis_SOEL": "SOEL"})
+shares_ael_soel = shares_ael_soel / shares_ael_soel.sum(dim="Type")
+
+# 4.-6
+x2 = xr.concat([shares_el_agg.sel(Cohort=slice(None,2030)), ms.sel(Cohort=slice(2040,None))], dim="Cohort")
+x2_interp = interpolate_xr(x2, year_start, year_end)
+
+# 7.
+x3 = x2_interp.copy()
+ael = (x3.sel(Type="AEL/SOEL", drop=True) * shares_ael_soel.sel(Type="AEL", drop=True)).expand_dims(Type=["AEL"])
+soel = (x3.sel(Type="AEL/SOEL", drop=True)  * shares_ael_soel.sel(Type="SOEL", drop=True)).expand_dims(Type=["SOEL"]) 
+x3 = xr.concat([x3, ael, soel], dim="Type")
+
+# 8.
+final = market_shares_da_interp.copy()
+mapping = {
+    "electrolysis_AEL": "AEL",
+    "electrolysis_SOEL": "SOEL",
+    "electrolysis_PEMEL": "PEMEL",
+}
+
+cohorts = final["Cohort"].sel(Cohort=slice(2031, None)).values  # "after 2030"; use 2030 if you want it included
+
+for target, source in mapping.items():
+    final.loc[dict(Type=target, Cohort=cohorts)] = (
+        x3.sel(Type=source, Cohort=cohorts).values
+    )
+
+
+#%%
+
+
+
 
 # lifetimes (yr) ----------------------------------------------------------------------------
 # 

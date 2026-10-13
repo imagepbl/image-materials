@@ -209,6 +209,7 @@ def interpolate_xr(data_array: xr.DataArray,
 
     # The interpolations strips the unit, so save it here and reattach later
     unit = prism.U_(data_array)
+    data_array = prism.M_(data_array)  # strip unit to avoid UnitStrippedWarning
 
     # Get the coordinate values along that dimension
     coord_values = data_array[dim].values
