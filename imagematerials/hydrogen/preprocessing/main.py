@@ -6,15 +6,6 @@ import xarray as xr
 import prism
 import pym
 
-from imagematerials.model import (
-    GenericStocks,
-    MaterialIntensities,
-    SharesInflowStocks,
-    ElectricVehicleBatteries,
-    EvBatteryLinkModule
-)
-from imagematerials.factory import ModelFactory
-from imagematerials.preprocessing import get_preprocessing_data
 from imagematerials.concepts import create_h2_graph
 from imagematerials.util import resolve_circular_economy_scenario, convert_lifetime
 from imagematerials.read_mym import read_mym_df, mymarray_to_xarray
@@ -76,6 +67,10 @@ def get_preprocessing_data_hydrogen(path_base: str,
 
     # TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
     h2cap_da_interp = interpolate_xr(h2cap, year_start, year_end) # fills the years before with the first value (which is 0), to align timeseries with other sectors (e.g. electricity)
+    # to use the module SharesInflowStocks the higher level technology types are defined as `SuperType`
+    # while the subtechnologies for which the shares are provided have the dimension `Type`
+    h2cap_da_interp = h2cap_da_interp.rename({"Type": "SuperType"})
+    h2cap_da_interp = h2cap_da_interp.transpose("time", "Region", "SuperType")
 
     #===================================================================================================
     # external data
@@ -259,6 +254,13 @@ def get_preprocessing_data_hydrogen(path_base: str,
 
     #===================================================================================================
     #%%  Prep_data File
+
+    print("h2cap_da_interp \n", h2cap_da_interp.SuperType.values)
+    print("h2cap_da_interp dims \n", h2cap_da_interp.dims)
+    print("h2cap_da_interp \n", h2cap_da_interp)
+    print("lifetimes_da_interp \n", lifetimes_da_interp)
+    print("shares_final \n", shares_final.Type.values)
+    print("material_intensities_da_interp \n", material_intensities_da_interp.Type.values)
 
     # bring preprocessing data into a generic format for the model
     prep_data = {}
