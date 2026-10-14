@@ -7,6 +7,7 @@ import prism
 import xarray as xr
 
 from imagematerials.electricity.constants import (
+    IMAGE_REGIONS,
     EPG_SUBTECH_TO_TECH,
     TECH_STATIONARY_STORAGE
 )
@@ -848,6 +849,111 @@ def create_image_region_graph() -> KnowledgeGraph:
             graph.add(Node(country["iso"], synonyms=country["synonyms"], inherits_from=region["id"]))
 
     return graph
+
+def create_R10_region_graph():
+
+    region_knowledge_graph = KnowledgeGraph()
+
+    R10_region_list = ["Africa", "China+", "Latin America", "Middle East", "India+", "Europe", 
+                       "North America", "Reforming Economies", "Rest of Asia", "Pacific OECD"]
+    region_to_R10 = {
+        # 1. Africa
+        "EAF": "Africa", "NAF": "Africa", "WAF": "Africa", "RSAF": "Africa", "SAF": "Africa",
+        # 2. China+
+        "CHN": "China+", "KOR": "China+",
+        # 3. Latin America
+        "BRA": "Latin America", "MEX": "Latin America", "RSAM": "Latin America", "RCAM": "Latin America",
+        # 4. Middle East
+        "ME": "Middle East",
+        # 5. India+
+        "INDIA": "India+", "RSAS": "India+",
+        # 6. Europe
+        "CEU": "Europe", "WEU": "Europe", "TUR": "Europe",
+        # 7. North America
+        "CAN": "North America", "USA": "North America",
+        # 8. Reforming Economies
+        "UKR": "Reforming Economies", "STAN": "Reforming Economies", "RUS": "Reforming Economies",
+        # 9. Rest of Asia
+        "SEAS": "Rest of Asia", "INDO": "Rest of Asia",
+        # 10. Pacific OECD
+        "JAP": "Pacific OECD", "OCE": "Pacific OECD"
+    }
+
+    for r10_region in R10_region_list:
+        region_knowledge_graph.add(Node(r10_region, inherits_from=None))
+    # Add country nodes 
+    for region in IMAGE_REGIONS:
+        parent = region_to_R10.get(region)
+        region_knowledge_graph.add(Node(region, inherits_from=parent))
+
+    return region_knowledge_graph
+
+def create_R9_region_graph():
+
+    region_knowledge_graph = KnowledgeGraph()
+
+    R9_region_list = ["Middle East & Africa", "China", "Latin America", "USA", "India", "European Union", 
+                       "Reforming Economies", "Other Asia", "Other OECD"]
+    region_to_R9 = {
+        # 1. Middle East & Africa
+        "EAF": "Middle East & Africa", "NAF": "Middle East & Africa", "WAF": "Middle East & Africa", 
+        "RSAF": "Middle East & Africa", "SAF": "Middle East & Africa", "ME": "Middle East & Africa",
+        # 2. China
+        "CHN": "China",
+        # 3. Latin America
+        "BRA": "Latin America", "MEX": "Latin America", "RSAM": "Latin America", "RCAM": "Latin America",
+        # 4. USA
+        "USA" : "USA",
+        # 5. India
+        "INDIA": "India",
+        # 6. European Union
+        "CEU": "European Union", "WEU": "European Union",
+        # 8. Reforming Economies
+        "UKR": "Reforming Economies", "STAN": "Reforming Economies", "RUS": "Reforming Economies",
+        # 9. Other Asia
+        "KOR": "Other Asia", "SEAS": "Other Asia", "INDO": "Other Asia", "RSAS": "Other Asia",
+        # 10. Other OECD
+        "CAN": "Other OECD", "OCE": "Other OECD", "JAP": "Other OECD", "TUR": "Other OECD"
+    }
+
+    for r9_region in R9_region_list:
+        region_knowledge_graph.add(Node(r9_region, inherits_from=None))
+    # Add country nodes 
+    for region in IMAGE_REGIONS:
+        parent = region_to_R9.get(region)
+        region_knowledge_graph.add(Node(region, inherits_from=parent))
+
+    return region_knowledge_graph
+
+def create_R5_region_graph():
+
+    region_knowledge_graph = KnowledgeGraph()
+
+    R5_region_list = ["Middle East & Africa", "Asia", "Latin America", "OECD & EU", "Reforming Economies"]
+    region_to_R5 = {
+        # 1. Middle East & Africa
+        "EAF": "Middle East & Africa", "NAF": "Middle East & Africa", "WAF": "Middle East & Africa", 
+        "RSAF": "Middle East & Africa", "SAF": "Middle East & Africa", "ME": "Middle East & Africa",
+        # 2. Asia
+        "CHN": "Asia", "STAN": "Asia", "SEAS": "Asia", "INDO": "Asia", 
+        "RSAS": "Asia", "INDIA": "Asia",
+        # 3. Latin America
+        "BRA": "Latin America", "MEX": "Latin America", "RSAM": "Latin America", "RCAM": "Latin America",
+        # 4. OECD & EU
+        "CAN": "OECD & EU", "OCE": "OECD & EU", "JAP": "OECD & EU", "TUR": "OECD & EU", 
+        "USA" : "OECD & EU", "KOR": "OECD & EU", "CEU": "OECD & EU", "WEU": "OECD & EU",
+        # 8. Reforming Economies
+        "UKR": "Reforming Economies", "RUS": "Reforming Economies"
+    }
+
+    for r5_region in R5_region_list:
+        region_knowledge_graph.add(Node(r5_region, inherits_from=None))
+    # Add country nodes 
+    for region in IMAGE_REGIONS:
+        parent = region_to_R5.get(region)
+        region_knowledge_graph.add(Node(region, inherits_from=parent))
+
+    return region_knowledge_graph
 
 def create_region_graph():
     #TODO move to seperate file
