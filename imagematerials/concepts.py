@@ -1164,8 +1164,6 @@ def create_h2_graph():
         "coal": ["feedstock coal"],
         "oil": ["feedstock oil"], 
         "natural_gas": ["feedstock natural gas", "natural gas", "NG"],
-        "IMAGE-energy PEMEL": [],
-        "IMAGE-energy AEL/SOEL": [],
         "electrolysis_AEL/SOEL": ["electrolysis (alkaline & solid oxide)", "AEL/SOEL"],
         "electrolysis_AEL": ["AEL", "alkaline electrolysis", "alkaline"], # additional technologies (not in IMAGE-energy, only in IMAGE-materials)
         "electrolysis_PEMEL": ["PEMEL", "proton exchange membrane electrolysis", "PEM"], # additional technologies (not in IMAGE-energy, only in IMAGE-materials)
@@ -1174,7 +1172,7 @@ def create_h2_graph():
         "CBF_tech1": ["carbon based fuel (tech1)"], # dummy variable for SharesInflowStocks model
         "CBF+CCS_tech1": ["carbon based fuel + CCS (tech1)"],  # dummy variable for SharesInflowStocks model
 
-        # 17 technologies:
+        # 17 technologies in IMAGE-energy:
         "ClGs": ["coal gasification"],
         "POOl": ["oil partial oxidation", "partial oxidation of oil"],
         "SMR": ["NG steam reforming", "steam reforming of natural gas"],
@@ -1194,7 +1192,7 @@ def create_h2_graph():
         "ssEl": ["electrolysis - small-scale", "small-scale electrolysis"],
     }
 
-    mapping = { #["SMR", "biofuel", "electrolysis", ]
+    mapping = {
         "CBF": ["HydrogenProduction"],
         "CBF+CCS": ["HydrogenProduction"],
         "electrolysis": ["HydrogenProduction"],     
@@ -1202,9 +1200,6 @@ def create_h2_graph():
         # "FFnoCCS": ["FF"],
         # "FF+CCS": ["FF"],
         "Bio": ["HydrogenProduction"],
-
-        "IMAGE-energy PEMEL": ["electrolysis"],
-        "IMAGE-energy AEL/SOEL": ["electrolysis"],
         "electrolysis+RE": ["electrolysis", "electrolysis_PEMEL"],
         "coal": ["FF"],
         "oil": ["FF"],
@@ -1230,18 +1225,15 @@ def create_h2_graph():
         "ssSMR": ["natural_gas", "CBF"],
         "ssEl": ["electrolysis", "electrolysis_AEL/SOEL"],
         # additional technologies (not in IMAGE-energy, only in IMAGE-materials)
-        "AEL/SOEL": ["electrolysis"],
+        "electrolysis_AEL/SOEL": ["electrolysis"],
         "electrolysis_AEL": ["electrolysis", "electrolysis_AEL/SOEL"],
         "electrolysis_PEMEL": ["electrolysis"],
         "electrolysis_SOEL": ["electrolysis", "electrolysis_AEL/SOEL"]
     }
 
-    # for source_type in ["coal", "oil", "natural_gas", "biofuel", "CCS", "electrolysis"]:
-    #         h2_knowledge_graph.add(Node(name=source_type, inherits_from="HydrogenProduction"))
-
     for sub_type, synonyms in tech_types.items():
             parent = mapping.get(sub_type)
-            h2_knowledge_graph.add(Node(name=sub_type, synonyms=synonyms, inherits_from=parent)) #mapping[sub_type]
+            h2_knowledge_graph.add(Node(name=sub_type, synonyms=synonyms, inherits_from=parent))
 
     return h2_knowledge_graph
 
