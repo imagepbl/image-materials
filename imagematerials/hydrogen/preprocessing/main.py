@@ -48,13 +48,13 @@ def get_preprocessing_data_hydrogen(path_base: str,
     year_end = 2100
 
     #===================================================================================================
-    # Timer data
+    # installed capacity of hydrogen production from IMAGE-energy (in MW)
     h2cap_alltypes = mymarray_to_xarray(pym.read_mym(
             climate_policy_config["config_file_path"] /
             climate_policy_config["data_files"]["H2Cap"]),
             dim_1="NRT", dim_2="HydrogenSourcesTotal")
 
-    h2cap_alltypes = prism.Q_(h2cap_alltypes, "GW")
+    h2cap_alltypes = prism.Q_(h2cap_alltypes, "MW")
     h2cap_alltypes = h2cap_alltypes.rename({"t": "time","NRT": "Region","HydrogenSourcesTotal": "Type"})
     h2cap_alltypes = h2cap_alltypes.drop_sel(Type="total", Region="WORLD")
 

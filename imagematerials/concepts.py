@@ -6,8 +6,8 @@ from typing import Sequence, Union, Optional
 import prism
 import xarray as xr
 
+from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.electricity.constants import (
-    IMAGE_REGIONS,
     EPG_SUBTECH_TO_TECH,
     TECH_STATIONARY_STORAGE
 )
@@ -903,7 +903,7 @@ def create_R9_region_graph():
         # 3. Latin America
         "BRA": "Latin America", "MEX": "Latin America", "RSAM": "Latin America", "RCAM": "Latin America",
         # 4. USA
-        "USA" : "USA",
+        #"USA" : "USA", # can`t inherit from itself`
         # 5. India
         "INDIA": "India",
         # 6. European Union
@@ -920,8 +920,9 @@ def create_R9_region_graph():
         region_knowledge_graph.add(Node(r9_region, inherits_from=None))
     # Add country nodes 
     for region in IMAGE_REGIONS:
-        parent = region_to_R9.get(region)
-        region_knowledge_graph.add(Node(region, inherits_from=parent))
+        if region != "USA":
+            parent = region_to_R9.get(region)
+            region_knowledge_graph.add(Node(region, inherits_from=parent))
 
     return region_knowledge_graph
 
