@@ -62,7 +62,8 @@ def get_preprocessing_data_hydrogen(path_base: str,
     h2cap_alltypes = h2cap_alltypes.drop_sel(Type="total", Region="WORLD")
 
     graph_h2 = create_h2_graph()
-    types = ["CBF", "CBF+CCS", "electrolysis"]
+    types = sorted(["CBF", "CBF+CCS", "electrolysis"])
+
     h2cap = graph_h2.aggregate_sum(h2cap_alltypes, output_coords=types)
 
     # TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
@@ -84,11 +85,12 @@ def get_preprocessing_data_hydrogen(path_base: str,
     material_intensities["Type"] = (
             material_intensities["technology"] + "_" + material_intensities["sub_technology"]
         )
+    print("material_intensities\n", material_intensities)
     material_intensities_da = (
         material_intensities.set_index(["time", "Type", "material"])["value"]
         .to_xarray()
         .rename({"time": "Cohort"})
-    )
+    ).sortby("Type")
     material_intensities_da = prism.Q_(material_intensities_da, "kg/MW")
     material_intensities_da.name = "HydrogenMaterialIntensities"
     # material_intensities_da = knowledge_graph_electr.rebroadcast_xarray(material_intensities_da, output_coords=EPG_SUB_TECHNOLOGIES, dim="Type")
@@ -179,7 +181,7 @@ def get_preprocessing_data_hydrogen(path_base: str,
     capacity_by_group = (
         graph_h2.aggregate_sum(
             electrolysis_capacity,
-            output_coords=["PEMEL", "AEL/SOEL"], #"IMAGE-energy PEMEL", "IMAGE-energy AEL/SOEL"
+            output_coords=["electrolysis_PEMEL", "electrolysis_AEL/SOEL"], #"IMAGE-energy PEMEL", "IMAGE-energy AEL/SOEL"
         )
         .sum(dim="Region")
     )
@@ -193,14 +195,14 @@ def get_preprocessing_data_hydrogen(path_base: str,
         Type=[f"electrolysis_{tech}" for tech in TECHS_ELECTROLYSIS]
     )
     shares_grouped_external = graph_h2.aggregate_sum(
-        shares_electrolysis_external, output_coords=["PEMEL", "AEL/SOEL"]
+        shares_electrolysis_external, output_coords=["electrolysis_PEMEL", "electrolysis_AEL/SOEL"]
     )
 
     # --- 3. Internal AEL vs. SOEL split (relative shares within AEL/SOEL) -----------------------------
     ael_soel_split = shares_electrolysis_external.sel(
         Type=[f"electrolysis_{tech}" for tech in TECHS_SPLIT]
     )
-    ael_soel_split = graph_h2.rebroadcast_xarray(ael_soel_split, output_coords=["AEL", "SOEL"]) # rename
+    ael_soel_split = graph_h2.rebroadcast_xarray(ael_soel_split, output_coords=["electrolysis_AEL", "electrolysis_SOEL"]) # rename
     ael_soel_split = ael_soel_split / ael_soel_split.sum(dim="Type")
 
     # --- 4. Combine external (<=2030) and IMAGE (>=2040), then interpolate the gap --------------------
@@ -214,18 +216,20 @@ def get_preprocessing_data_hydrogen(path_base: str,
     shares_combined_interp = interpolate_xr(shares_combined, year_start, year_end)
 
     # --- 5. Split AEL/SOEL back into AEL and SOEL -----------------------------------------------------
-    ael_soel_total = shares_combined_interp.sel(Type="AEL/SOEL", drop=True)
+    ael_soel_total = shares_combined_interp.sel(Type="electrolysis_AEL/SOEL", drop=True)
+    print(ael_soel_total)
     split_shares = [
-        (ael_soel_total * ael_soel_split.sel(Type=tech, drop=True)).expand_dims(Type=[tech])
+        (ael_soel_total * ael_soel_split.sel(Type=[f"electrolysis_{tech}"], drop=True)) #.expand_dims(Type=[f"electrolysis_{tech}"]) #tech
         for tech in TECHS_SPLIT
     ]
-    shares_electrolysis = xr.concat([shares_combined_interp, *split_shares], dim="Type").sel(Type=TECHS_ELECTROLYSIS)
+    shares_electrolysis = xr.concat([shares_combined_interp, *split_shares], dim="Type").sel(Type=[f"electrolysis_{tech}" for tech in TECHS_ELECTROLYSIS])
 
 
     # --- 6. Write back into the market shares ---------------------------------------------------------
 
     shares_final_non_electrolysis = market_shares_external.sel(Type=TECHS_CBF)
-    shares_final = xr.concat([shares_final_non_electrolysis, shares_electrolysis], dim="Type")
+    # merge both xarrays and sort the coordinates of the type dim alphabetically
+    shares_final = xr.concat([shares_final_non_electrolysis, shares_electrolysis], dim="Type").sortby("Type")
     # rename again to electrolysis_AEL ?
 
     ########################################################################################
@@ -242,7 +246,7 @@ def get_preprocessing_data_hydrogen(path_base: str,
         lifetimes.set_index(["time", "Type"])["value"]
         .to_xarray()
         .rename({"time": "Cohort"})
-    )
+    ).sortby("Type")
     lifetimes_da = lifetimes_da.expand_dims({"DistributionParams": ["mean", "stdev"]})
     lifetimes_da.name = "GenerationLifetime"
 
