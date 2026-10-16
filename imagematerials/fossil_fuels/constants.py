@@ -1,8 +1,9 @@
 from pathlib import Path
-import os
 import pint
 import itertools
 import matplotlib.pyplot as plt
+
+from imagematerials.constants import IMAGE_REGIONS
 
 ureg = pint.UnitRegistry(force_ndarray_like=True)
 
@@ -32,15 +33,10 @@ climate_policy_scenario_dir = CLIMATE_POLICY_SCENARIO_DIR
 
 
 ####################################################################################################
-
-# General constants
-NUM_REGIONS = 26  # 26 IMAGE regions
-FIRST_YEAR = 1900  # first year for the historically generated dataset
-START_YEAR = 1971  # first year available in IMAGE scenarios
-END_YEAR = 2100  # last year available in IMAGE scenarios
-BASE_YEAR = 2019  # last year before COVID pandemic, so realistic numbers
-
 # Unit conversions
+
+# TODO: use pint to convert units and not these conversion factors (where possible)
+
 PJ_TO_GJ = 10**6  # Peta-joule to Giga-joule
 TJ_TO_PJ = 10**3  # Tera-joule to Peta-joule
 MB_TO_M3 = 159000  # million barrels of oil to cubic meters
@@ -58,33 +54,10 @@ Bcm_To_GJ = 36000000  # billion cubic meter gas to Gj gas BP
 GJ_TO_EJ = 10**-9  # Giga-joule to Exajoule
 KG_TO_MT = 10**-9
 KG_TO_KT = 10**-6
-# Standard deviation
-SD = 0.3  # lifetimes are expressed as the mean lifetime. Lifetime (probability density) distribution is then determined using a standard deviation of 10% of the mean.
-
-
-#first_production_year = {"coal": 1880, "oil": 1900, "gas": 1920}
-#stabilisation_year = {"coal": 1920, "oil": 1970, "gas": 1970}
-YEAR_FIRST_GRID =  1970 # change this to align with FUMA (it is the file i believe) 
-#YEAR_FIRST = 1807       # first_year_vehicle.values.min()
-#YEAR_SWITCH = 1990      # year after which other batteries than lead-acid are allowed
-REGIONS = 26
-COHORTS = 50 #check what this is
-
-
-# Sensitivity Analysis - default, high_stor, high_grid
-SENS_ANALYSIS = "default" 
-
-
-# Conversion factors ---------------------------------------------
 
 MEGA_TO_TERA = 1_000_000  # 1 Tera = 1,000,000 Mega
 PKMS_TO_VKMS = 1_000_000_000_000
 TONNES_TO_KGS = 1000
-
-
-# General constants ---------------------------------------------
-
-SD_LIFETIME = 0.3 
 
 # Define the units for each dimension
 unit_mapping = {
@@ -100,34 +73,14 @@ unit_mapping = {
     'MWh': ureg.megawatthour, #added
 }
 
-REGIONS_TIMER = [ # TODO: check if this is true
-    "Canada",
-    "USA",
-    "Mexico",
-    "Rest of Central America",
-    "Brazil",
-    "Rest of South America",
-    "Northern Africa",
-    "Western Africa",
-    "Eastern Africa",
-    "South Africa",
-    "Western Europe",
-    "Central Europe",
-    "Turkey",
-    "Ukraine +",
-    "Asian-Stan",
-    "Russia +",
-    "Middle East",
-    "India +",
-    "Korea",
-    "China +",
-    "Southeastern Asia",
-    "Indonesia +",
-    "Japan",
-    "Oceania",
-    "Rest of South Asia",
-    "Rest of Southern Africa"
-]
+# General constants ################################################################################
+
+NUM_REGIONS = 26  # 26 IMAGE regions
+FIRST_YEAR = 1900  # first year for the historically generated dataset
+START_YEAR = 1971  # first year available in IMAGE scenarios
+END_YEAR = 2100  # last year available in IMAGE scenarios
+BASE_YEAR = 2019  # last year before COVID pandemic, so realistic numbers
+YEAR_FIRST_GRID =  1970 # change this to align with FUMA (it is the file i believe)
 
 
 # Electricity Generation related constants ---------------------------------------------
@@ -138,6 +91,9 @@ TECH_GEN = 27   # number of fossil  technologies -> 26 technologies + 1 empty ro
 # GEN_TYPES_FOSSIL = ["Coal", "Oil", "Gas"]
 
 FRACTION_REFINING_CAP = 0.8 # Refining capacity used
+SD_LIFETIME = 0.3 # lifetimes are expressed as the mean lifetime. Lifetime (probability density) distribution is then determined using a standard deviation of 10% of the mean.
+YEAR_FIRST_PRODUCTION = {"coal": 1880, "oil": 1900, "gas": 1920}
+YEAR_STABILISATION = {"coal": 1920, "oil": 1970, "gas": 1970}
 
 # names of fossil fuel types (check with TIMER model)
 FF_TECHNOLOGIES = [
@@ -169,34 +125,37 @@ FF_TECHNOLOGIES = [
     "Gas Transmission Pipeline"
 ]
 
+# TODO: I don't think this is used, and if it would probably better to use the knoweldge graph -> remove
 # Define mapping: technology -> category
-DICT_GENTECH_TO_CATEGORY = {
-    "Coal Opencast: coal",
-    "Coal Underground: coal",
-    "Oil Onshore Extraction: oil",
-    "Oil Offshore Extraction: oil",
-    "Gas Onshore Extraction: gas",
-    "Gas Offshore Extraction: gas",
-    "Coal Preparation: coal",
-    "Oil Storage: oil",
-    "Oil Refinery: oil",
-    "Gas Processing: gas",
-    "Coal Truck: coal",
-    "Coal Train: coal",
-    "Coal Ocean Ship: coal",
-    "Coal Inland Ship: coal",
-    "Oil Truck: oil",
-    "Oil Train: oil",
-    "Oil Ocean Ship: oil",
-    "Oil Inland Ship: oil",
-    "Gas Truck: gas",
-    "Gas Train: gas",
-    "Gas Ocean Ship: gas",
-    "Gas Inland Ship: gas",
-    "Oil Crude Composition Pipeline: oil",
-    "Oil Product Pipeline: oil",
-    "Gas Distribution Pipeline: gas",
-    "Gas Transmission Pipeline: gas"}
+# DICT_GENTECH_TO_CATEGORY = {
+#     "Coal Opencast: coal",
+#     "Coal Underground: coal",
+#     "Oil Onshore Extraction: oil",
+#     "Oil Offshore Extraction: oil",
+#     "Gas Onshore Extraction: gas",
+#     "Gas Offshore Extraction: gas",
+#     "Coal Preparation: coal",
+#     "Oil Storage: oil",
+#     "Oil Refinery: oil",
+#     "Gas Processing: gas",
+#     "Coal Truck: coal",
+#     "Coal Train: coal",
+#     "Coal Ocean Ship: coal",
+#     "Coal Inland Ship: coal",
+#     "Oil Truck: oil",
+#     "Oil Train: oil",
+#     "Oil Ocean Ship: oil",
+#     "Oil Inland Ship: oil",
+#     "Gas Truck: gas",
+#     "Gas Train: gas",
+#     "Gas Ocean Ship: gas",
+#     "Gas Inland Ship: gas",
+#     "Oil Crude Composition Pipeline: oil",
+#     "Oil Product Pipeline: oil",
+#     "Gas Distribution Pipeline: gas",
+#     "Gas Transmission Pipeline: gas"}
+
+
 
 # Constant direct from FUMA
 #primary_fuel_types_ff = ["coal", "conv oil", "unconv oil", "gas"]  # 1st 4
@@ -260,43 +219,13 @@ DICT_GENTECH_TO_CATEGORY = {
 
 # Visualization related ############################################################################
 
-# Generation technologies
-technologies = [
-    "Coal Opencast",
-    "Coal Underground",
-    "Oil Onshore",
-    "Oil Offshore",
-    "Gas Onshore",
-    "Gas Offshore",
-    "Coal Preparation",
-    "Oil Storage",
-    "Oil Refinery",
-    "Gas Processing",
-    "Coal Truck",
-    "Coal Train",
-    "Coal Ocean Ship",
-    "Coal Inland Ship",
-    "Oil Truck",
-    "Oil Train",
-    "Oil Ocean Ship",
-    "Oil Inland Ship",
-    "Gas Truck",
-    "Gas Train",
-    "Gas Ocean Ship",
-    "Gas Inland Ship",
-    "Oil Crude Composition Pipeline",
-    "Oil Product Pipeline",
-    "Gas Distribution Pipeline",
-    "Gas Transmission Pipeline"
-]
-
 # Define color and linestyle pools
 colors = plt.get_cmap('tab20').colors  # 20 distinct colors
 linestyles = ['-', '--', ':'] #'-.'
 # Create a cycle of (color, linestyle) combinations
 style_combinations = list(itertools.product(colors, linestyles))
 # Map technologies to (color, linestyle)
-DICT_GENTECH_STYLES = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
+DICT_GENTECH_STYLES = {tech: style_combinations[i] for i, tech in enumerate(FF_TECHNOLOGIES)}
 
 DICT_GEN_CATEGORY_COLORS = {
     'Coal':             "#F9564F",
@@ -321,8 +250,10 @@ DICT_MATERIALS_COLORS = {
     'Other':     '#FFD97D'
 }
 
-"""Module containing global constants
-"""
+
+####################################################################################################
+# Module containing global constants
+# TODO: check if this is needed, otherwise remove
 import numpy as np
 import prism
 from prism import Q_
@@ -344,37 +275,6 @@ T_STOP_LEARNING = Q_(2000, 'year')
 T_SUBRATE = Q_(2015, 'year')
 TRADE_YEAR = Q_(1971, 'year')
 SUBTYPE_SEPARATOR = " - "
-
-
-# Regions
-IMAGE_REGIONS = [
-    "CAN",
-    "USA",
-    "MEX",
-    "RCAM",
-    "BRA",
-    "RSAM",
-    "NAF",
-    "WAF",
-    "EAF",
-    "SAF",
-    "WEU",
-    "CEU",
-    "TUR",
-    "UKR",
-    "STAN",
-    "RUS",
-    "ME",
-    "INDIA",
-    "KOR",
-    "CHN",
-    "SEAS",
-    "INDO",
-    "JAP",
-    "OCE",
-    "RSAS",
-    "RSAF"
-]
 
 Region = prism.Dimension('region', IMAGE_REGIONS + ["World"])  # World regions
 ExtendedRegion = prism.Dimension('region', Region.coords + ["World2"])

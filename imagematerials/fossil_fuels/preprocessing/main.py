@@ -9,12 +9,30 @@ import prism
 
 from imagematerials.util import convert_lifetime
 from imagematerials.concepts import create_fossil_fuel_graph, create_region_graph
+from imagematerials.constants import IMAGE_REGIONS
 #Import xarrays from lifetimes, materials and capacity folders 
-from imagematerials.fossil_fuels.preprocessing.lifetimes import compute_extraction_lifetimes, compute_processing_lifetimes, compute_transport_lifetimes, compute_pipelines_lifetimes, compute_storage_lifetimes
-from imagematerials.fossil_fuels.preprocessing.materials import compute_extraction_materials, compute_processing_materials, compute_transport_materials, compute_pipelines_materials, compute_storage_materials
-from imagematerials.fossil_fuels.preprocessing.capacity import compute_extraction_capacity, compute_processing_capacity, compute_transport_capacity, compute_pipelines_capacity, compute_storage_capacity
+from imagematerials.fossil_fuels.preprocessing.lifetimes import (
+    compute_extraction_lifetimes,
+    compute_processing_lifetimes,
+    compute_transport_lifetimes,
+    compute_pipelines_lifetimes,
+    compute_storage_lifetimes
+)
+from imagematerials.fossil_fuels.preprocessing.materials import (
+    compute_extraction_materials,
+    compute_processing_materials,
+    compute_transport_materials,
+    compute_pipelines_materials,
+    compute_storage_materials
+)
+from imagematerials.fossil_fuels.preprocessing.capacity import (
+    compute_extraction_capacity,
+    compute_processing_capacity,
+    compute_transport_capacity,
+    compute_pipelines_capacity,
+    compute_storage_capacity
+)
 from imagematerials.fossil_fuels.constants import (
-    IMAGE_REGIONS,
     STANDARD_SCEN_EXTERNAL_DATA,
 )
 

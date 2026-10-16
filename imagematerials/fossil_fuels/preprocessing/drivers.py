@@ -10,13 +10,16 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 
-from imagematerials.fossil_fuels import constants
+from imagematerials.read_mym import read_mym_df
 from imagematerials.fossil_fuels.preprocessing.stock_demand.pipelines import pipelines_indexed_stock_growth
 from imagematerials.fossil_fuels.preprocessing.stock_demand.transport import transport
 from imagematerials.fossil_fuels.preprocessing.stock_demand.extraction import extraction_stocks
 from imagematerials.fossil_fuels.preprocessing.stock_demand.storage import storage_indexed_stocks_growth
 from imagematerials.fossil_fuels.preprocessing.stock_demand.refinery import refinery_stocks
-from imagematerials.read_mym import read_mym_df
+from imagematerials.fossil_fuels import constants
+from imagematerials.fossil_fuels.utils import (
+    generate_historic_profile,
+)
 
 path_base = Path(__file__).resolve()
 while path_base.name != "image-materials":
@@ -73,11 +76,6 @@ gas_pipeline_length = pd.read_csv(
 oil_pipeline_length = pd.read_csv(
     DATA_DIR / "DriversFiles" / "oil_pipeline_length_km_new.csv", index_col=[0]
 )  # Regional Oil Pipeline length (km) for the year 2019
-
-
-on_offshore_oil_pipeline = pd.read_csv(
-    DATA_DIR / "DriversFiles" / "onshore_offshore_oil_pipeline.csv", index_col=[0]
-)  # Share of 2 different pipeline types (onshore & offshore) global (%)
 
 
 # Storage data
@@ -160,9 +158,6 @@ oil_pipeline_composition = pd.read_csv(
     index_col=[0],
 )
 
-# infrastructure lifetime assumptions (average lifetime in years)
-lifetimes = pd.read_csv(DATA_DIR / "DriversFiles" / "lifetime.csv", index_col=[0])
-
 # A3) Prepare data files & formatting
 
 # adding index names
@@ -172,21 +167,6 @@ primpersec.set_index(
 final_energy.set_index(
     ["time", "DIM_1", "DIM_2"], inplace=True
 )  # index: time, 28 regions, 6 sectors, columns: 10 secondary fuel types (region 27 is ignored)
-
-
-# interpolation of data files
-def interpolate_pipeline_data(
-    original,
-):  # original file has 2 level multi-columns (type & region) & time as a single index
-    new = original.reindex(
-        list(range(constants.START_YEAR, constants.END_YEAR + 1))
-    ).interpolate(direction="both")
-    first_known_index = original.loc[original.first_valid_index(), :].name
-    for year in range(constants.START_YEAR, first_known_index):
-        new.loc[year, :] = original.loc[
-            first_known_index, :
-        ]  # extend first known value to startyear
-    return new
 
 
 
@@ -364,51 +344,20 @@ def select_fuel(fuel):
 # Some gas/coal to liquids happens in TIMER - In the sankey we keep track of the size of the flow
 # HOWEVER! For now we work from the assumption that the liquids consumed are supplied fully by the oil supply chain (ignoring some of the exchange/substitution between supply chains)
 # Therefore, we include it as one of the consumption categories of primary energy only in the sankey, not in the calculations (for now)
-primary_x_to_liquid = fossil_flows_primary.loc[
-    idx[:, ["gas", "coal"], "Liquids"], :
-]
-all_fossil_flows_sankey = pd.concat(
-    [all_fossil_flows, primary_x_to_liquid]
-).sort_index(level=[0, 1, 2])
+# primary_x_to_liquid = fossil_flows_primary.loc[
+#     idx[:, ["gas", "coal"], "Liquids"], :
+# ]
+# all_fossil_flows_sankey = pd.concat(
+#     [all_fossil_flows, primary_x_to_liquid]
+# ).sort_index(level=[0, 1, 2])
 
 # (Intermediate results) Fuel use data
-
-all_fossil_flows_sankey.to_csv(
-    OUTPUT_DIR / scenario / "fuel_use_GJ.csv", index=True
-)
-
-select_year = 2019
-
-# A5) Generate/prepend historic fossil fuel consumption profile (to avoid inflow shocks in the first year of 'stock-driven' dynamic stock calculations)
-first_production_year = {"coal": 1880, "oil": 1900, "gas": 1920}
-stabilisation_year = {"coal": 1920, "oil": 1970, "gas": 1970}
+# all_fossil_flows_sankey.to_csv(
+#     OUTPUT_DIR / scenario / "fuel_use_GJ.csv", index=True
+# )
 
 
-# add historic timeseries based on initial/first year of production, with the possibility to include a stabilisation period before the last know year of data
-def generate_historic_profile(fuel_use_total, fuel):
 
-    year_list = list(
-        range(first_production_year[fuel], constants.START_YEAR)
-    )
-    prepend = pd.DataFrame(
-        np.nan,
-        index=year_list,
-        columns=list(range(1, constants.NUM_REGIONS + 1)),
-    )
-
-    # set first year to 0 & latest unknown year to latest known year
-    prepend.loc[year_list[0]] = float(0)
-    prepend.loc[year_list[-1]] = fuel_use_total.loc[constants.START_YEAR]
-
-    # if the stabilisation year is within the time series, then extend the last know year first
-    if stabilisation_year[fuel] < year_list[-1]:
-        for year in range(stabilisation_year[fuel], year_list[-1]):
-            prepend.loc[year] = fuel_use_total.loc[constants.START_YEAR]
-
-    prepend = prepend.interpolate(method="index")
-    combine = pd.concat([prepend, fuel_use_total])
-
-    return combine
 
 #%% FUMA stock calculation
 # ###################################################################################################
