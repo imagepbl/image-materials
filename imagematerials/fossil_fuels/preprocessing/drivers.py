@@ -4,45 +4,19 @@
 # 3) Recieve stock calculations for each supply chain stage (to then be used in capacity.py)
 
 #%% Import FUMA model 
-#  A1) FUMA MODEL 
+#  A1) FUMA MODEL
 
 import pandas as pd
 import numpy as np
 from pathlib import Path
 
 from imagematerials.fossil_fuels import constants
-from imagematerials.fossil_fuels.preprocessing.stock_calculation.calculations.materials import cohorts_to_materials_typical_np
-from imagematerials.fossil_fuels.preprocessing.stock_calculation.calculations.pipelines import pipelines_indexed_stock_growth
-from imagematerials.fossil_fuels.preprocessing.stock_calculation.calculations.transport import transport
-from imagematerials.fossil_fuels.preprocessing.stock_calculation.calculations.extraction import extraction_stocks
-from imagematerials.fossil_fuels.preprocessing.stock_calculation.calculations.storage import storage_indexed_stocks_growth
-from imagematerials.fossil_fuels.preprocessing.stock_calculation.calculations.refinery import refinery_stocks
-from imagematerials.fossil_fuels.preprocessing.stock_calculation.prepare_output_files import merge_material, merge_total
-from imagematerials.fossil_fuels.preprocessing.stock_calculation.mym.read_mym import read_mym_df
-
-# # SET SCENARIO HERE (Select from SSP1_delayed_action, SSP1_climate_policy, SSP2, SSP2_2D, SSP2_delayed_action, SSP2_climate_policy, SSP2_climate_policy_resource_efficiency SSP3_no_policy)
-# scenario = "SSP2_baseline"
-# scen_folder = "SSP2_baseline" #SSP2_baseline is the only option right now given the existing files of primpersec and final_energy_rt
-# STANDARD_SCEN_EXTERNAL_DATA = "SSP2_baseline" #SSP2_baseline is the only option right now given the existing files of primpersec and final_energy_rt
-
-# BASE_DIR = Path(__file__).resolve()
-# while BASE_DIR.name != "image-materials":
-#     BASE_DIR = BASE_DIR.parent
-
-# DATA_DIR = BASE_DIR / "data" / "raw" / "fossil_fuels"
-# IMAGE_DIR = BASE_DIR / "data" / "raw" / "image"
-# OUTPUT_DIR = DATA_DIR / "Scenario_data"
-# CLIMATE_POLICY_SCENARIO_DIR = IMAGE_DIR / scen_folder  
-# path_base = BASE_DIR / "imagematerials"
-# climate_policy_scenario_dir = CLIMATE_POLICY_SCENARIO_DIR
-
-# BASE_DIR = Path(__file__).resolve().parent
-# DATA_DIR = Path(__file__).resolve().parents[3] / "data" / "raw" / "fossil_fuels"
-# OUTPUT_DIR = Path(__file__).resolve().parents[3] / "data" / "raw" / "fossil_fuels" / "Scenario_data"
-# IMAGE_DIR = Path(__file__).resolve().parents[3] / "data" / "raw" / "image"
-
-# (OUTPUT_DIR / scenario).mkdir(parents=True, exist_ok=True)
-# print(f"Output directory ready: {OUTPUT_DIR / scenario}")
+from imagematerials.fossil_fuels.preprocessing.stock_demand.pipelines import pipelines_indexed_stock_growth
+from imagematerials.fossil_fuels.preprocessing.stock_demand.transport import transport
+from imagematerials.fossil_fuels.preprocessing.stock_demand.extraction import extraction_stocks
+from imagematerials.fossil_fuels.preprocessing.stock_demand.storage import storage_indexed_stocks_growth
+from imagematerials.fossil_fuels.preprocessing.stock_demand.refinery import refinery_stocks
+from imagematerials.read_mym import read_mym_df
 
 path_base = Path(__file__).resolve()
 while path_base.name != "image-materials":
@@ -54,13 +28,6 @@ scenario = constants.scenario
 
 
 idx = pd.IndexSlice
-# Automatically set working directory to the script's location
-# script_dir = Path(__file__).resolve().parent
-# os.chdir(script_dir)
-# DATA_DIR = Path("data")
-# print(f" Working directory set to: {script_dir}")
-
-ref_frac = 0.8  #  refineryRefining capacity used
 
 # A2) Load input-data files
 
@@ -564,7 +531,7 @@ def oil_infra():
     )  # in m3
     refinery_stock_oil = refinery_stocks(
         fuel,
-        (oil_use_total * constants.GJ_TO_KG_OIL / ref_frac),
+        (oil_use_total * constants.GJ_TO_KG_OIL / constants.FRACTION_REFINING_CAP),
         refinery_intensity_weight_oil,
     )  # IN KG
     return {

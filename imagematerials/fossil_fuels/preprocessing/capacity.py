@@ -11,50 +11,13 @@ import xarray as xr
 import prism
 import pandas as pd
 import numpy as np
-import os
 from pathlib import Path
 
-from imagematerials.fossil_fuels.constants import (
-    # config
-    circular_economy_config,
-    climate_policy_config,
-    scenario,
-    scen_folder,
-
-    # paths
-    path_base,
-    DATA_DIR,
-    IMAGE_DIR,
-    OUTPUT_DIR,
-    CLIMATE_POLICY_SCENARIO_DIR,
-    climate_policy_scenario_dir,
-
-    # model constants
-    FF_TECHNOLOGIES,
-    IMAGE_REGIONS,
-    STANDARD_SCEN_EXTERNAL_DATA,
-    YEAR_FIRST_GRID,
-    SD_LIFETIME
-)
-
+from imagematerials.concepts import create_fossil_fuel_graph, create_region_graph
 from imagematerials.fossil_fuels.preprocessing.drivers import coal_infra, oil_infra, gas_infra
-
-extraction_stock_oil, transport_total_oil, oil_pipelines, oil_storage, refinery_stock_oil = oil_infra()
-extraction_stock_coal, preparation_stock_coal, transport_total_coal = coal_infra()
-extraction_stock_gas, transport_total_gas, gas_pipelines, processing_stock_gas = gas_infra()
-
-
-from imagematerials.read_mym import read_mym_df
-from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
-from imagematerials.concepts import KnowledgeGraph, Node, create_fossil_fuel_graph, create_region_graph
-from imagematerials.electricity.utils import (
-   MNLogit,  
-   create_prep_data, 
-   interpolate_xr, 
-   add_historic_stock, 
-   calculate_grid_growth, 
-   calculate_fraction_underground, 
-   apply_ce_measures_to_elc
+from imagematerials.fossil_fuels.constants import (
+    DATA_DIR,
+    STANDARD_SCEN_EXTERNAL_DATA,
 )
 
 year_start = 1880
@@ -127,15 +90,10 @@ def compute_extraction_capacity(path_base: str, climate_policy_config: dict, cir
     #Drop columns that are not needed for the analysis (stage, unit, type, fuel) since we have already combined the relevant information into the "Tech Type" column and we know that all rows are for the extraction stage and in kg units
     df_extraction_all = df_extraction_all.drop(columns=['stage', 'unit', 'type', 'fuel'])  
 
-# Starting stock (capacity) ------
+    # Starting stock (capacity) ------
     df_extraction_all = df_extraction_all.loc[~df_extraction_all['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
     df_extraction_all = df_extraction_all.loc[df_extraction_all['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', 'value', 'Tech Type']]  # only keep relevant years and technology columns
     df_extraction_all['DIM_1'] = df_extraction_all['DIM_1'].astype(int)   
-
-    #Extract coordinate labels for years, regions, technologies
-    years = sorted(df_extraction_all['time'].unique())
-    regions = sorted(df_extraction_all['DIM_1'].unique())
-    techtypes = sorted(df_extraction_all['Tech Type'].unique())
 
     # Convert to 3D array: (Year, Region, Fuel, Type)
     extractioncap_xr = (
@@ -178,10 +136,6 @@ def compute_processing_capacity(path_base: str, climate_policy_config: dict, cir
     # test if path_external_data_scenario exists and if not set to standard scenario
     if not path_external_data_scenario.exists():
         path_external_data_scenario = Path(path_base, "fossil_fuels", STANDARD_SCEN_EXTERNAL_DATA)
-
-    # assert path_external_data_scenario.is_dir()
-
-    #return path_external_data_scenario
 
     # 2. FUMA output  -----------------------------------------
 
@@ -251,16 +205,11 @@ def compute_processing_capacity(path_base: str, climate_policy_config: dict, cir
     # Drop columns that are not needed for the analysis
     df_processing_all = df_processing_all.drop(columns=['stage', 'unit', 'type', 'fuel'])  
 
-# Gcap ------
+    # Gcap ------
     # combine the processing data for coal, oil, gas into one df and then put it into this 
     df_processing_all = df_processing_all.loc[~df_processing_all['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
     df_processing_all = df_processing_all.loc[df_processing_all['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', 'value', 'Tech Type']]  # only keep relevant years and technology columns
     df_processing_all['DIM_1'] = df_processing_all['DIM_1'].astype(int)
-
-
-    # Extract coordinate labels for years, regions, technologies
-    regions = sorted(df_processing_all['DIM_1'].unique())
-    techtypes = sorted(df_processing_all['Tech Type'].unique())
 
     # Convert to 3D array: (Year, Region, Fuel, Type)
     processingcap_xr = (
@@ -292,10 +241,6 @@ def compute_storage_capacity(path_base: str, climate_policy_config: dict, circul
     if not path_external_data_scenario.exists():
         path_external_data_scenario = Path(path_base, "fossil_fuels", STANDARD_SCEN_EXTERNAL_DATA)
 
-    # assert path_external_data_scenario.is_dir()
-
-    #return path_external_data_scenario
-
     # 2. FUMA output  -----------------------------------------
 
     #Stock of each type of extraction infrastructure (stock demand per generation technology) per region per year
@@ -311,19 +256,6 @@ def compute_storage_capacity(path_base: str, climate_policy_config: dict, circul
     df_storage_all = oil_storage.reset_index() 
 
     df_storage_all["fuel"] = "oil"
-
-
-    #Combine the dataframes for coal, oil, and gas into one dataframe and then melt it to long format so that we have one row per combination of time, region, fuel, technology, and value (stock)
-    # df_volume_all = pd.concat(
-    #     [df_processing_oil],
-    #     ignore_index=True
-    # )
-
-    # df_storage_all = df_processing_oil.reset_index(drop=True)
-
-    # print(df_processing_all.columns)
-    # print(df_processing_all.head())
-    # print(df_processing_all['type'].unique())
 
     df_storage_all = df_storage_all.melt(
         id_vars=['type', 'time', 'fuel', 'stage', 'unit'],  
@@ -341,20 +273,15 @@ def compute_storage_capacity(path_base: str, climate_policy_config: dict, circul
         .str.strip()
         .str.title()
         )
-    
 
     # Drop columns that are not needed for the analysis
     df_storage_all = df_storage_all.drop(columns=['stage', 'unit', 'type', 'fuel'])  
-# Gcap ------
+    # Gcap ------
     # combine the processing data for coal, oil, gas into one df and then put it into this 
     df_storage_all = df_storage_all.loc[~df_storage_all['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
     df_storage_all = df_storage_all.loc[df_storage_all['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', 'value', 'Tech Type']]  # only keep relevant years and technology columns
     df_storage_all['DIM_1'] = df_storage_all['DIM_1'].astype(int)
 
-
-    # Extract coordinate labels for years, regions, technologies
-    regions = sorted(df_storage_all['DIM_1'].unique())
-    techtypes = sorted(df_storage_all['Tech Type'].unique())
 
     # Convert to 3D array: (Year, Region, Fuel, Type)
     storagecap_xr = (
@@ -393,7 +320,6 @@ def compute_transport_capacity(path_base: str, climate_policy_config: dict, circ
     if not path_external_data_scenario.exists():
         path_external_data_scenario = Path(path_base, "fossil_fuels", STANDARD_SCEN_EXTERNAL_DATA)
 
-    # assert path_external_data_scenario.is_dir()
 
      # 2. FUMA output -----------------------------------------
     #Transport capacity (stock demand per generation technology) 
@@ -467,15 +393,10 @@ def compute_transport_capacity(path_base: str, climate_policy_config: dict, circ
 
     #Drop columns that are not needed for the analysis 
     df_transport_all = df_transport_all.drop(columns=['stage', 'unit', 'type', 'fuel']) 
-# Transport capacity ------
+    # Transport capacity ------
     df_transport_all = df_transport_all.loc[~df_transport_all['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
     df_transport_all = df_transport_all.loc[df_transport_all['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', 'value', 'Tech Type']]  # only keep relevant years and technology columns
     df_transport_all['DIM_1'] = df_transport_all['DIM_1'].astype(int)
-
-    # Extract coordinate labels
-    years = sorted(df_transport_all['time'].unique())
-    regions = sorted(df_transport_all['DIM_1'].unique())
-    techtypes = sorted(df_transport_all['Tech Type'].unique())
 
     transportcap_xr = (
         df_transport_all
@@ -575,11 +496,6 @@ def compute_pipelines_capacity(path_base: str, climate_policy_config: dict, circ
     df_pipelines_all = df_pipelines_all.loc[~df_pipelines_all['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
     df_pipelines_all = df_pipelines_all.loc[df_pipelines_all['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', 'value', 'Tech Type']]  # only keep relevant years and technology columns
     df_pipelines_all['DIM_1'] = df_pipelines_all['DIM_1'].astype(int)
-
-        # Extract coordinate labels
-    years = sorted(df_pipelines_all['time'].unique())
-    regions = sorted(df_pipelines_all['DIM_1'].unique())
-    techtypes = sorted(df_pipelines_all['Tech Type'].unique())
 
     # Convert to 3D array: (Year, Region, Fuel, Type)
     pipelinecap_xr = (

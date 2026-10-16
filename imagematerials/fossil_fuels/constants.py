@@ -129,34 +129,6 @@ REGIONS_TIMER = [ # TODO: check if this is true
     "Rest of Southern Africa"
 ]
 
-#  #regions in the file kilometrage.csv are like this:
-#  region_list  = [
-#  'Canada',
-#  'US',
-#  'Mexico',
-#  'Rest C.Am.',
-#  'Brazil',
-#  'Rest S.Am.',
-#  'N.Africa',
-#  'W.Africa',
-#  'E.Africa',
-#  'South Africa',
-#  'W.Europe',
-#  'C.Europe',
-#  'Turkey',
-#  'Ukraine',
-#  'Stan',
-#  'Russia',
-#  'M.East',
-#  'India',
-#  'Korea',
-#  'China',
-#  'SE.Asia',
-#  'Indonesia',
-#  'Japan',
-#  'Oceania',
-#  'Rest S.Asia',
-#  'Rest S.Africa']
 
 # Electricity Generation related constants ---------------------------------------------
 
@@ -164,6 +136,8 @@ TECH_GEN = 27   # number of fossil  technologies -> 26 technologies + 1 empty ro
 
 # # names of generation technologies as in the input files (e.g. composition_generation.csv) from Sebastiaan - should be renamed in files to match TIMER names in the future
 # GEN_TYPES_FOSSIL = ["Coal", "Oil", "Gas"]
+
+FRACTION_REFINING_CAP = 0.8 # Refining capacity used
 
 # names of fossil fuel types (check with TIMER model)
 FF_TECHNOLOGIES = [
@@ -276,31 +250,15 @@ DICT_GENTECH_TO_CATEGORY = {
    # "bunkers",
 #]  # 1st 7, last one is total
 
-# # Vehicle related constants ---------------------------------------------
-
-# TECH_VEHICLES = 25    # number of vehicle types 
-
-# # reference loadfactor of cars in TIMER (the trp_trvl_Load.out file is
-# # relative to this BASE loadfcator (persons/car))
-# LOAD_FACTOR = 1.6
-
-# LIGHT_COMMERCIAL_VEHICLE_SHARE = 0.04 # TODO: is this even used somewhere?
-# # 0.04 is the fraction of the tkms driven by light commercial vehicles according to the IEA
-# BEV_CAPACITY_CURRENT  = 59.6    #kWh current battery capacity of full electric vehicles, see current_specs.xlsx
-# PHEV_CAPACITY_CURRENT = 11.2    #kWh current battery capacity of plugin electric vehicles, see current_specs.xlsx
-
-
-
-# Storage related constants ---------------------------------------------
-
-# TECH_STORAGE = ?
-
-#PHS_KG_PERKWH = 26.8   # kg per kWh storage capacity (as weight addition to existing hydro plants to make them pumped) 
 
 
 
 
-# Visualization related ---------------------------------------------
+
+
+
+
+# Visualization related ############################################################################
 
 # Generation technologies
 technologies = [
@@ -347,30 +305,6 @@ DICT_GEN_CATEGORY_COLORS = {
 }
 
 
-# Grid Storage technologies
-technologies = [
-    "Flywheel", "Compressed Air", "Hydrogen FC", "NiMH", "Deep-cycle Lead-Acid", "LMO",
-    "NMC", "NCA", "LFP", "LTO", "Zinc-Bromide", "Vanadium Redox", "Sodium-Sulfur", "ZEBRA",
-    "Lithium Sulfur", "Lithium Ceramic", "Lithium-air"
-]
-# Define color and linestyle pools
-colors = plt.get_cmap('tab20').colors  # 20 distinct colors
-linestyles = ['-', '--', ':'] #'-.'
-# Create a cycle of (color, linestyle) combinations
-style_combinations = list(itertools.product(colors, linestyles))
-# Map technologies to (color, linestyle)
-DICT_STOR_STYLES = {tech: style_combinations[i] for i, tech in enumerate(technologies)}
-
-DICT_STOR_CATEGORY_COLORS_SEBASTIAAN = {
-    'mechanical storage':              "#AC501A",
-    'PHS':                             "#6F4126",
-    'lithium batteries':               "#E95E0D",
-    'molten salt and flow batteries':  "#F07C32",
-    'other':                           '#F69B58'
-}
-
-
-
 DICT_MATERIALS_COLORS = {
     'Steel':     '#FF9B85',
     'Aluminium': '#B9FAF8',
@@ -386,61 +320,6 @@ DICT_MATERIALS_COLORS = {
     'Ni':        '#FCB1A6',
     'Other':     '#FFD97D'
 }
-
-# DICT_GRID_COLORS = {
-#     #'Lines Overhead': '#FF9B85',
-#     #'Lines Underground': '#FFD97D',
-#     'Lines':        '#8cb369', #'#007f5f',
-#     'Transformers': '#f4a259', #'#aacc00',
-#     'Substations':  '#bc4b51' #'#55a630'
-# }
-
-# DICT_GRID_STYLES_1 = {
-#     'HV':                           ('#ef767a', '-'),
-#     'HV - Lines - Overhead':        ('#ef767a', '-'),
-#     'HV - Lines - Underground':     ('#ef767a', '--'),
-#     'HV - Transformers':            ('#ef767a', '-'),
-#     'HV - Substations':             ('#ef767a', '--'),
-
-#     'MV':                           ('#456990', '-'),
-#     'MV - Lines - Overhead':        ('#456990', '-'),
-#     'MV - Lines - Underground':     ('#456990', '--'),
-#     'MV - Transformers':            ('#456990', '-'),
-#     'MV - Substations':             ('#456990', '--'),
-
-#     'LV':                           ('#49beaa', '-'),
-#     'LV - Lines - Overhead':        ('#49beaa', '-'),
-#     'LV - Lines - Underground':     ('#49beaa', '--'),
-#     'LV - Transformers':            ('#49beaa', '-'),
-#     'LV - Substations':             ('#49beaa', '--')
-# }
-
-# DICT_GRID_STYLES_2 = {
-#     'HV':                           ('#ef767a', '-'),
-#     'HV - Lines - Overhead':        ('#f4845f', '-'),
-#     'HV - Lines - Underground':     ('#f4845f', '--'),
-#     'HV - Transformers':            ('#f7b267', '-'),
-#     'HV - Substations':             ('#f25c54', '--'),
-
-#     'MV':                           ('#456990', '-'),
-#     'MV - Lines - Overhead':        ('#0077b6', '-'),
-#     'MV - Lines - Underground':     ('#0077b6', '--'),
-#     'MV - Transformers':            ('#c0fdff', '-'),
-#     'MV - Substations':             ('#023e8a', '--'),
-
-#     'LV':                           ('#38b000', '-'), ##49beaa
-#     'LV - Lines - Overhead':        ('#70e000', '-'),
-#     'LV - Lines - Underground':     ('#70e000', '--'),
-#     'LV - Transformers':            ('#ccff33', '-'),
-#     'LV - Substations':             ('#007200', '--')
-# }
-
-# DICT_ELECTR_COLORS = {
-#     'Generation':   '#277da1',
-#     'Storage':      '#f9844a',
-#     'Transmission': '#90be6d'
-# }
-
 
 """Module containing global constants
 """
