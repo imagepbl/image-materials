@@ -6,49 +6,18 @@
 #%% Import general modules and constants
 import pint
 import xarray as xr
-import prism
 import pandas as pd
 import numpy as np
-import os
 from pathlib import Path
 
+import prism
 
-from imagematerials.fossil_fuels.preprocessing.ffconstants import (
-    # configs & scenarios
-    circular_economy_config,
-    climate_policy_config,
-    scenario,
-    scen_folder,
-
-    # paths
-    path_base,
+from imagematerials.concepts import create_fossil_fuel_graph, create_region_graph
+from imagematerials.fossil_fuels.constants import (
     DATA_DIR,
-    IMAGE_DIR,
-    OUTPUT_DIR,
-    CLIMATE_POLICY_SCENARIO_DIR,
-    climate_policy_scenario_dir,
-
-    # model constants
-    FF_TECHNOLOGIES,
-    IMAGE_REGIONS,
     STANDARD_SCEN_EXTERNAL_DATA,
-    YEAR_FIRST_GRID,
     SD_LIFETIME,
 )
-
-from imagematerials.read_mym import read_mym_df
-from imagematerials.util import dataset_to_array, pandas_to_xarray, convert_lifetime
-from imagematerials.concepts import KnowledgeGraph, Node, create_fossil_fuel_graph, create_region_graph
-from imagematerials.electricity.utils import (
-   MNLogit, 
-   create_prep_data, 
-   interpolate_xr, 
-   add_historic_stock, 
-   calculate_grid_growth, 
-   calculate_fraction_underground, 
-   apply_ce_measures_to_elc
-)
-
 
 year_start = 1880
 year_end = 2100

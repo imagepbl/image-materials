@@ -14,7 +14,7 @@ import numpy as np
 import os
 from pathlib import Path
 
-from imagematerials.fossil_fuels.preprocessing.ffconstants import (
+from imagematerials.fossil_fuels.constants import (
     # config
     circular_economy_config,
     climate_policy_config,
