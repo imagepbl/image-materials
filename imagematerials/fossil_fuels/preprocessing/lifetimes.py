@@ -13,11 +13,7 @@ from pathlib import Path
 import prism
 
 from imagematerials.concepts import create_fossil_fuel_graph, create_region_graph
-from imagematerials.fossil_fuels.constants import (
-    DATA_DIR,
-    STANDARD_SCEN_EXTERNAL_DATA,
-    SD_LIFETIME,
-)
+from imagematerials.fossil_fuels.constants import SD_LIFETIME
 
 year_start = 1880
 year_end = 2100
@@ -26,30 +22,17 @@ year_out = 2100
 knowledge_graph_region = create_region_graph()
 fossil_fuel_knowledge_graph = create_fossil_fuel_graph()
 
+####################################################################################################
+# Extraction stage (coal, oil, gas)
+####################################################################################################
 
-# Extraction stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
+def compute_extraction_lifetimes(extraction_lifetime_data):
+    """Build the lifetime xarray (mean and stdev per cohort and technology).
+    
+    extraction_lifetime_data: lifetimes in years, index (Year, Tech Type),
+    column "Lifetime" (= inputs["lifetimes"]["extraction"] from inputs.py)
 
-###########################################################################################################
-def compute_extraction_lifetimes(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
-
-    path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
-    # test if path_external_data_scenario exists and if not set to standard scenario
-    if not path_external_data_scenario.exists():
-        path_external_data_scenario = Path(path_base, "fossil_fuels", STANDARD_SCEN_EXTERNAL_DATA)
-
-    # assert path_external_data_scenario.is_dir()
-
-###########################################################################################################
-    # Read in files #
-
-    # 1. External Data --------------------------------------------- 
-
-        # lifetimes of extraction tech in years
-    extraction_lifetime_data = pd.read_csv(DATA_DIR / "Extraction" / "Extraction_lifetimes.csv",
-        index_col=["Year", "Tech Type"]
-    ) 
-
-       # Lifetimes -------
+    """
     types = extraction_lifetime_data.index.get_level_values("Tech Type").unique().astype(str).tolist()
     values = extraction_lifetime_data["Lifetime"].unstack().reindex(columns=types).to_numpy(dtype=float)
     times = extraction_lifetime_data.index.get_level_values("Year").unique().astype(int).tolist()
@@ -91,38 +74,26 @@ def compute_extraction_lifetimes(path_base: str, climate_policy_config: dict, ci
 
     return extraction_lifetime_xr
 
-#%% Processing stage (coal preparation and oil refinery) ---------------------------------------------------------------------------------------------------------------------------------
+####################################################################################################
+#%% Processing stage
+####################################################################################################
 
-def compute_processing_lifetimes(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+# COAL preparation and OIL refinery) ---------------------------------------------------------------
+def compute_processing_lifetimes(processing_lifetime_data):
+    """Build the lifetime xarray (mean and stdev per cohort and technology).
 
-    path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
-    # test if path_external_data_scenario exists and if not set to standard scenario
-    if not path_external_data_scenario.exists():
-        path_external_data_scenario = Path(path_base, "fossil_fuels", STANDARD_SCEN_EXTERNAL_DATA)
+    processing_lifetime_data: lifetimes in years, index (Year, Tech Type),
+    column "Lifetime" (= inputs["lifetimes"]["processing"] from inputs.py)
 
-    # assert path_external_data_scenario.is_dir()
-
-    #return path_external_data_scenario
-###########################################################################################################
-    # Read in files #
-
-    # 1. External Data --------------------------------------------- 
-
-    # lifetimes of processing tech in years
-    processing_lifetime_data = pd.read_csv(DATA_DIR / "Processing" / "Processing_lifetimes_test.csv",
-        index_col=["Year", "Tech Type"]
-    ) 
-
-           # Lifetimes -------
+    """
     values = processing_lifetime_data["Lifetime"].unstack().to_numpy(dtype=float)
     #Create coordinates
     times = processing_lifetime_data.index.get_level_values("Year").unique().astype(int).tolist()
     types = processing_lifetime_data.index.get_level_values("Tech Type").unique().astype(str).tolist()
     scipy_params = ["mean", "stdev"]
-        # Build full array: shape (ScipyParam, Time, Type)
+    # Build full array: shape (ScipyParam, Time, Type)
     data_array = np.stack([values, values * SD_LIFETIME], axis=0)
-    # data_array = np.stack([values, np.full_like(values, np.nan)], axis=0)
-        # Create DataArray
+    # Create DataArray
     processing_lifetime_xr = xr.DataArray(
             data_array,
             dims=["DistributionParams", "Cohort", "Type"],
@@ -141,29 +112,15 @@ def compute_processing_lifetimes(path_base: str, climate_policy_config: dict, ci
  
     return processing_lifetime_xr
 
-#%% Processing stage (oil storage and gas processing) ---------------------------------------------------------------------------------------------------------------------------------
+# OIL storage and GAS processing) ------------------------------------------------------------------
 
-def compute_storage_lifetimes(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+def compute_storage_lifetimes(storage_lifetime_data):
+    """Build the lifetime xarray (mean and stdev per cohort and technology).
+    
+    storage_lifetime_data: lifetimes in years, index (Year, Tech Type),
+    column "Lifetime" (= inputs["lifetimes"]["storage"] from inputs.py)
 
-    path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
-    # test if path_external_data_scenario exists and if not set to standard scenario
-    if not path_external_data_scenario.exists():
-        path_external_data_scenario = Path(path_base, "fossil_fuels", STANDARD_SCEN_EXTERNAL_DATA)
-
-    # assert path_external_data_scenario.is_dir()
-
-    #return path_external_data_scenario
-###########################################################################################################
-    # Read in files #
-
-    # 1. External Data --------------------------------------------- 
-
-    # lifetimes of processing tech in years
-    storage_lifetime_data = pd.read_csv(DATA_DIR / "Processing" / "Storage_lifetimes.csv",
-        index_col=["Year", "Tech Type"]
-    ) 
-
-           # Lifetimes -------
+    """
     values = storage_lifetime_data["Lifetime"].unstack().to_numpy(dtype=float)
     #Create coordinates
     times = storage_lifetime_data.index.get_level_values("Year").unique().astype(int).tolist()
@@ -191,26 +148,17 @@ def compute_storage_lifetimes(path_base: str, climate_policy_config: dict, circu
 
     return storage_lifetime_xr
 
-#%% Transport/Vehicles stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
+####################################################################################################
+#%% Transport/Vehicles stage (coal, oil, gas)
+####################################################################################################
 
-###########################################################################################################
-def compute_transport_lifetimes(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+def compute_transport_lifetimes(transport_lifetime_data):
+    """Build the lifetime xarray (mean and stdev per cohort and technology).
 
-    path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
-    # test if path_external_data_scenario exists and if not set to standard scenario
-    if not path_external_data_scenario.exists():
-        path_external_data_scenario = Path(path_base, "fossil_fuels", STANDARD_SCEN_EXTERNAL_DATA)
+    transport_lifetime_data: lifetimes in years, index (Year, Tech Type),
+    column "Lifetime" (= inputs["lifetimes"]["transport"] from inputs.py)
 
-    # assert path_external_data_scenario.is_dir()
-###########################################################################################################
-    # Read in files #
-
-    # 1. External Data --------------------------------------------- 
-
-    # lifetimes of transport tech in years
-    transport_lifetime_data = pd.read_csv(DATA_DIR / "Transport" / "Transport_lifetimes.csv", index_col=["Year", "Tech Type"])
-
-        # Lifetimes -------
+    """
     values = transport_lifetime_data["Lifetime"].unstack().to_numpy(dtype=float)
     #Create coordinates
     times = transport_lifetime_data.index.get_level_values("Year").unique().astype(int).tolist()
@@ -218,7 +166,6 @@ def compute_transport_lifetimes(path_base: str, climate_policy_config: dict, cir
     scipy_params = ["mean", "stdev"]
     # Build full array: shape (ScipyParam, Time, Type)
     data_array = np.stack([values, values * SD_LIFETIME], axis=0)
-    # data_array = np.stack([values, np.full_like(values, np.nan)], axis=0)
     # Create DataArray
     transport_lifetime_xr = xr.DataArray(
             data_array,
@@ -239,31 +186,17 @@ def compute_transport_lifetimes(path_base: str, climate_policy_config: dict, cir
 
     return transport_lifetime_xr
 
-#%% Pipelines stage (oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
-###########################################################################################################
+####################################################################################################
+#%% Pipelines stage (oil, gas) 
+####################################################################################################
 
-def compute_pipelines_lifetimes(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+def compute_pipelines_lifetimes(pipelines_lifetime_data):
+    """Build the lifetime xarray (mean and stdev per cohort and technology).
 
-    path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
-    # test if path_external_data_scenario exists and if not set to standard scenario
-    if not path_external_data_scenario.exists():
-        path_external_data_scenario = Path(path_base, "fossil_fuels", STANDARD_SCEN_EXTERNAL_DATA)
+    pipelines_lifetime_data: lifetimes in years, index (Year, Tech Type),
+    column "Lifetime" (= inputs["lifetimes"]["pipelines"] from inputs.py)
 
-    # assert path_external_data_scenario.is_dir()
-###########################################################################################################
-    # Read in files #
-
-    # 1. External Data --------------------------------------------- 
-
-        # lifetimes of transport tech in years
-    pipelines_lifetime_data = pd.read_csv(
-        DATA_DIR / "Pipelines" / "Pipelines_lifetimes_edit.csv",
-        index_col=["Year", "Tech Type"]
-    ) 
-
-    ###########################################################################################################
-        # Lifetimes -------
-
+    """
     types = pipelines_lifetime_data.index.get_level_values("Tech Type").unique().astype(str).tolist()
     values = pipelines_lifetime_data["Lifetime"].unstack().reindex(columns=types).to_numpy(dtype=float)
     times = pipelines_lifetime_data.index.get_level_values("Year").unique().astype(int).tolist()
@@ -271,7 +204,6 @@ def compute_pipelines_lifetimes(path_base: str, climate_policy_config: dict, cir
     scipy_params = ["mean", "stdev"]
     # Build full array: shape (ScipyParam, Time, Type)
     data_array = np.stack([values, values * SD_LIFETIME], axis=0)
-    # data_array = np.stack([values, np.full_like(values, np.nan)], axis=0)
     # Create DataArray
     pipelines_lifetime_xr = xr.DataArray(
             data_array,
@@ -283,7 +215,6 @@ def compute_pipelines_lifetimes(path_base: str, climate_policy_config: dict, cir
             },
             name="PipelinesLifetime"
         )
-    
 
     # Expand 2020 across 1880-2100
     year_range = np.arange(1880, 2101)
@@ -304,5 +235,3 @@ def compute_pipelines_lifetimes(path_base: str, climate_policy_config: dict, cir
     pipelines_lifetime_xr = pipelines_lifetime_xr.reindex(Type=pipeline_order)
 
     return pipelines_lifetime_xr
-
-

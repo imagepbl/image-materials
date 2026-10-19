@@ -14,11 +14,6 @@ import numpy as np
 from pathlib import Path
 
 from imagematerials.concepts import create_fossil_fuel_graph, create_region_graph
-from imagematerials.fossil_fuels.preprocessing.drivers import coal_infra, oil_infra, gas_infra
-from imagematerials.fossil_fuels.constants import (
-    DATA_DIR,
-    STANDARD_SCEN_EXTERNAL_DATA,
-)
 
 year_start = 1880
 year_end = 2100
@@ -28,21 +23,18 @@ knowledge_graph_region = create_region_graph()
 fossil_fuel_knowledge_graph = create_fossil_fuel_graph()
 
 
-#%%Extraction stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
-def compute_extraction_capacity(path_base: str,
-                                climate_policy_config: dict,
-                                circular_economy_config: dict,
-                                scenario: str,
+####################################################################################################
+#%%Extraction stage (coal, oil, gas)
+####################################################################################################
+def compute_extraction_capacity(infra: dict,
                                 year_start: int,
-                                year_end: int,
-                                infra: dict):
+                                year_end: int):
+    """Build the extraction capacity (stock) xarray with dimensions Time, Region and Type.
 
-    path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
-    # test if path_external_data_scenario exists and if not set to standard scenario
-    if not path_external_data_scenario.exists():
-        path_external_data_scenario = Path(path_base, "fossil_fuels", STANDARD_SCEN_EXTERNAL_DATA)
+    infra: result of compute_all_infra() in drivers.py (see main.py)
+    year_start, year_end: first and last year to keep
 
-    # 2.FUMA output -----------------------------------------
+    """
     #Stock of each type of extraction infrastructure (stock demand per generation technology) per region per year
     #Load data from drivers.py
     extraction_stock_coal = infra["coal"]["extraction"]
@@ -129,22 +121,19 @@ def compute_extraction_capacity(path_base: str,
     
     return extractioncap_xr
 
-#%% Processing stage (coal preparation and oil refinery) ---------------------------------------------------------------------------------------------------------------------------------
-def compute_processing_capacity(path_base: str,
-                                climate_policy_config: dict,
-                                circular_economy_config: dict,
-                                scenario: str,
+
+####################################################################################################
+#%% Processing stage (COAL preparation and OIL refinery)
+####################################################################################################
+def compute_processing_capacity(infra: dict,
                                 year_start: int,
-                                year_end: int,
-                                infra: dict):
+                                year_end: int):
+    """Build the processing capacity (stock) xarray with dimensions Time, Region and Type.
 
-    path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
-    # test if path_external_data_scenario exists and if not set to standard scenario
-    if not path_external_data_scenario.exists():
-        path_external_data_scenario = Path(path_base, "fossil_fuels", STANDARD_SCEN_EXTERNAL_DATA)
+    infra: result of compute_all_infra() in drivers.py (see main.py)
+    year_start, year_end: first and last year to keep
 
-    # 2. FUMA output  -----------------------------------------
-
+    """
     #Stock of each type of extraction infrastructure (stock demand per generation technology) per region per year
     preparation_stock_coal = infra["coal"]["processing"]
     refinery_stock_oil  = infra["oil"]["refinery"]
@@ -233,22 +222,19 @@ def compute_processing_capacity(path_base: str,
 
     return processingcap_xr
 
-#%% Processing stage (oil storage) ---------------------------------------------------------------------------------------------------------------------------------
-def compute_storage_capacity(path_base: str,
-                             climate_policy_config: dict,
-                             circular_economy_config: dict,
-                             scenario: str,
-                             year_start: int,
-                             year_end: int,
-                             infra: dict):
 
-    path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
-    # test if path_external_data_scenario exists and if not set to standard scenario
-    if not path_external_data_scenario.exists():
-        path_external_data_scenario = Path(path_base, "fossil_fuels", STANDARD_SCEN_EXTERNAL_DATA)
+####################################################################################################
+#%% Processing stage (oil storage)
+####################################################################################################
+def compute_storage_capacity(infra: dict,
+                            year_start: int,
+                            year_end: int):
+    """Build the storage capacity (stock) xarray with dimensions Time, Region and Type.
 
-    # 2. FUMA output  -----------------------------------------
+    infra: result of compute_all_infra() in drivers.py (see main.py)
+    year_start, year_end: first and last year to keep
 
+    """
     #Stock of each type of extraction infrastructure (stock demand per generation technology) per region per year
     oil_storage  = infra["oil"]["storage"]
 
@@ -314,24 +300,19 @@ def compute_storage_capacity(path_base: str,
 
     return storagecap_xr
 
-#%% Transport/Vehicles stage (coal, oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
 
-###########################################################################################################
-def compute_transport_capacity(path_base: str,
-                               climate_policy_config: dict,
-                               circular_economy_config: dict,
-                               scenario: str,
-                               year_start: int,
-                               year_end: int,
-                               infra: dict):
+####################################################################################################
+#%% Transport/Vehicles stage (coal, oil, gas)
+####################################################################################################
+def compute_transport_capacity(infra: dict,
+                            year_start: int,
+                            year_end: int):
+    """Build the transport capacity (stock) xarray with dimensions Time, Region and Type.
 
-    path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
-    # test if path_external_data_scenario exists and if not set to standard scenario
-    if not path_external_data_scenario.exists():
-        path_external_data_scenario = Path(path_base, "fossil_fuels", STANDARD_SCEN_EXTERNAL_DATA)
+    infra: result of compute_all_infra() in drivers.py (see main.py)
+    year_start, year_end: first and last year to keep
 
-
-     # 2. FUMA output -----------------------------------------
+    """
     #Transport capacity (stock demand per generation technology) 
     transport_total_coal = infra["coal"]["transport"]
     transport_total_oil  = infra["oil"]["transport"]
@@ -423,30 +404,22 @@ def compute_transport_capacity(path_base: str,
 
     return transportcap_xr
 
-#%% Pipelines stage (oil, gas) ---------------------------------------------------------------------------------------------------------------------------------
-###########################################################################################################
-on_offshore_oil_pipeline = pd.read_csv(
-    DATA_DIR / "DriversFiles" / "onshore_offshore_oil_pipeline.csv", index_col=[0]
 
-)  # Share of 2 different pipeline types (onshore & offshore) global (%)
-
-def compute_pipelines_capacity(path_base: str,
-                               climate_policy_config: dict,
-                               circular_economy_config: dict,
-                               scenario: str,
+####################################################################################################
+#%% Pipelines stage (oil, gas) ---------------------------------------------------------------------
+####################################################################################################
+def compute_pipelines_capacity(infra: dict,
+                               on_offshore_oil_pipeline,
                                year_start: int,
-                               year_end: int,
-                               infra: dict):
+                               year_end: int):
+    """Build the pipelines capacity (stock) xarray with dimensions Time, Region and Type.
 
-    path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
-    # test if path_external_data_scenario exists and if not set to standard scenario
-    if not path_external_data_scenario.exists():
-        path_external_data_scenario = Path(path_base, "fossil_fuels", STANDARD_SCEN_EXTERNAL_DATA)
+    infra: result of compute_all_infra() in drivers.py (see main.py)
+    on_offshore_oil_pipeline: share of onshore & offshore oil pipelines, global (%)
+        (= inputs["drivers"]["on_offshore_oil_pipeline"] from inputs.py)
+    year_start, year_end: first and last year to keep
 
-    # assert path_external_data_scenario.is_dir()
-
-    # 2. FUMA output -----------------------------------------
-
+    """
     #Transport capacity (stock demand per generation technology)
     #Load data from drivers.py
     oil_pipelines  = infra["oil"]["pipelines"]
