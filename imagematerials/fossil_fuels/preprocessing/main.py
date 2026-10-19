@@ -11,6 +11,7 @@ from imagematerials.util import convert_lifetime
 from imagematerials.concepts import create_fossil_fuel_graph, create_region_graph
 from imagematerials.constants import IMAGE_REGIONS
 #Import xarrays from lifetimes, materials and capacity folders 
+from imagematerials.fossil_fuels.preprocessing.drivers import compute_all_infra, all_fossil_flows
 from imagematerials.fossil_fuels.preprocessing.lifetimes import (
     compute_extraction_lifetimes,
     compute_processing_lifetimes,
@@ -44,6 +45,10 @@ YEAR_START = 2100
 region_knowledge_graph = create_region_graph()
 fossil_fuel_knowledge_graph = create_fossil_fuel_graph()
 
+# compute the infrastructure stocks for coal, oil, gas once, then extract the rights ones from the 
+# returned dictionary in the respective functions below
+infra = compute_all_infra(all_fossil_flows)
+
 
 #%%Extraction stage
 def get_preprocessing_data_extraction(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
@@ -58,7 +63,7 @@ def get_preprocessing_data_extraction(path_base: str, climate_policy_config: dic
     extraction_lifetime_xr = convert_lifetime(extraction_lifetime_xr)
 
     extraction_materials_xr = compute_extraction_materials(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
-    extractioncap_xr = compute_extraction_capacity(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
+    extractioncap_xr = compute_extraction_capacity(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, infra)
 
     # bring preprocessing data into a generic format for the model
     prep_data_extraction = {}
@@ -95,7 +100,7 @@ def get_preprocessing_data_processing(path_base: str, climate_policy_config: dic
     processing_lifetime_xr = convert_lifetime(processing_lifetime_xr)
 
     processing_materials_xr = compute_processing_materials(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
-    processingcap_xr = compute_processing_capacity(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
+    processingcap_xr = compute_processing_capacity(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, infra)
     
     # bring preprocessing data into a generic format for the model
     prep_data_processing = {}
@@ -132,7 +137,7 @@ def get_preprocessing_data_storage(path_base: str, climate_policy_config: dict, 
     storage_lifetime_xr = convert_lifetime(storage_lifetime_xr)
 
     storage_materials_xr = compute_storage_materials(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
-    storagecap_xr = compute_storage_capacity(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
+    storagecap_xr = compute_storage_capacity(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, infra)
     # bring preprocessing data into a generic format for the model
     prep_data_storage = {}
     prep_data_storage["lifetimes"] = storage_lifetime_xr
@@ -165,7 +170,7 @@ def get_preprocessing_data_transport(path_base: str, climate_policy_config: dict
     # transport_material_fraction_xr = compute_transport_material_fraction(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
     # transport_material_weight_xr = compute_transport_material_weight(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
     transport_materials_xr = compute_transport_materials(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
-    transportcap_xr = compute_transport_capacity(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
+    transportcap_xr = compute_transport_capacity(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, infra)
 
     #  # bring preprocessing data into a generic format for the model
     prep_data_transport = {}
@@ -200,8 +205,8 @@ def get_preprocessing_data_pipelines(path_base: str, climate_policy_config: dict
     pipelines_lifetime_xr = compute_pipelines_lifetimes(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out) 
     pipelines_lifetime_xr = convert_lifetime(pipelines_lifetime_xr)
     
-    pipelinecap_xr = compute_pipelines_capacity(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
-    pipelines_materials_xr = compute_pipelines_materials(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out) 
+    pipelines_materials_xr = compute_pipelines_materials(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
+    pipelinecap_xr = compute_pipelines_capacity(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, infra)
 
     # assert path_external_data_scenario.is_dir()
     #  # bring preprocessing data into a generic format for the model

@@ -39,15 +39,12 @@ idx = pd.IndexSlice
 primpersec = read_mym_df(
     IMAGE_DIR / scenario / "EnergyFlows" / "PrimPerSec.out"
 )
-  # primary enery consumption per sector in GJ
-
+# primary enery consumption per sector in GJ
 
 final_energy = read_mym_df(
     IMAGE_DIR / scenario / "EnergyFlows" / "final_energy_rt.out"
 )  
-
 # final enery consumption per sector in PJ
-
 
 mining_type_share_coal = pd.read_csv(
     DATA_DIR / "DriversFiles" / "coal_mine_type_share.csv",
@@ -55,23 +52,18 @@ mining_type_share_coal = pd.read_csv(
 )
 # % of open-cast vs. underground mining
 
-
 extraction_type_share_gas = pd.read_csv(
     DATA_DIR / "DriversFiles" / "gas_extraction_type_share.csv", index_col=[0]
 )  # % of offshore vs. onshore extraction
 
-
 extraction_type_share_oil = pd.read_csv(
     DATA_DIR / "DriversFiles" / "oil_extraction_type_share.csv", index_col=[0]
-
-
 )  # % of offshore vs. onshore extraction
 
 # Pipeline data
 gas_pipeline_length = pd.read_csv(
     DATA_DIR / "DriversFiles" / "natural_gas_pipeline_length_km_new.csv", index_col=[0]
 )  # Regional Gas Pipeline length (km) for the year 2019
-
 
 oil_pipeline_length = pd.read_csv(
     DATA_DIR / "DriversFiles" / "oil_pipeline_length_km_new.csv", index_col=[0]
@@ -83,11 +75,10 @@ oil_storage_capacity = pd.read_csv(
     DATA_DIR / "DriversFiles" / "oil_storage_capacity_million_barrels_new.csv", index_col=[0]
 )  # Regional Oil storage capacity (million barrels, mb)
 
-
-oil_storage_materials = pd.read_csv(
-    DATA_DIR / "DriversFiles" / "material_intensity" / "oil_storage_material_intensity_kg_per_m3.csv",
-    index_col=[0],
-)  # Material intensity of oil regional oil distribution (kg material per m3 of storage capacity)
+# oil_storage_materials = pd.read_csv( # TODO: check where this is used
+#     DATA_DIR / "DriversFiles" / "material_intensity" / "oil_storage_material_intensity_kg_per_m3.csv",
+#     index_col=[0],
+# )  # Material intensity of oil regional oil distribution (kg material per m3 of storage capacity)
 
 # transport vehicle data
 transport_demand_domestic = pd.read_csv(
@@ -108,10 +99,10 @@ transport_demand_total = (
     transport_demand_domestic + transport_demand_internat
 )
 
-transport_materials_per_vehicle = pd.read_csv(
-    DATA_DIR / "DriversFiles" / "material_intensity" / "fossil_fuel_freight_vehicle_material_fraction.csv",
-    index_col=[0],
-).T  # % of the total weight by material in fossil fuel freight transport vehicles
+# transport_materials_per_vehicle = pd.read_csv( # TODO: check where this is used
+#     DATA_DIR / "DriversFiles" / "material_intensity" / "fossil_fuel_freight_vehicle_material_fraction.csv",
+#     index_col=[0],
+# ).T  # % of the total weight by material in fossil fuel freight transport vehicles
 transport_vehicle_weight_per_tkm = pd.read_csv(
     DATA_DIR / "DriversFiles" / "material_intensity" / "fossil_fuel_freight_vehicle_weight_intensity_g_per_tkm.csv",
     index_col=[0],
@@ -145,29 +136,20 @@ preparation_intensity_coal = pd.read_csv(
     index_col=[0],
 )
 # Pipeline material intensity data (kg/km)
-gas_pipeline_composition_trans = pd.read_csv(
-    DATA_DIR / "DriversFiles" / "material_intensity" / "gas_pipeline_composition_transmission_critical_kg_per_km.csv",
-    index_col=[0],
-)  # material use (kg) per km of transmission pipeline (kg/km)
-gas_pipeline_composition_distr = pd.read_csv(
-    DATA_DIR / "DriversFiles" / "material_intensity" / "gas_pipeline_composition_distribution_kg_per_km.csv",
-    index_col=[0],
-)  # material use (kg) per km of distribution pipeline (kg/km)
-oil_pipeline_composition = pd.read_csv(
-    DATA_DIR / "DriversFiles" / "material_intensity" / "oil_pipeline_composition_kg_per_km.csv",
-    index_col=[0],
-)
+# gas_pipeline_composition_trans = pd.read_csv( # TODO: check where this is used
+#     DATA_DIR / "DriversFiles" / "material_intensity" / "gas_pipeline_composition_transmission_critical_kg_per_km.csv",
+#     index_col=[0],
+# )  # material use (kg) per km of transmission pipeline (kg/km)
+# gas_pipeline_composition_distr = pd.read_csv(
+#     DATA_DIR / "DriversFiles" / "material_intensity" / "gas_pipeline_composition_distribution_kg_per_km.csv",
+#     index_col=[0],
+# )  # material use (kg) per km of distribution pipeline (kg/km)
+# oil_pipeline_composition = pd.read_csv(
+#     DATA_DIR / "DriversFiles" / "material_intensity" / "oil_pipeline_composition_kg_per_km.csv",
+#     index_col=[0],
+# )
 
 # A3) Prepare data files & formatting
-
-# adding index names
-primpersec.set_index(
-    ["time", "DIM_1", "DIM_2"], inplace=True
-)  # index: time, 11 primary fuels, 8 secondary fuels
-final_energy.set_index(
-    ["time", "DIM_1", "DIM_2"], inplace=True
-)  # index: time, 28 regions, 6 sectors, columns: 10 secondary fuel types (region 27 is ignored)
-
 
 
 production_intensity_weight_coal = production_intensity_coal.sum(axis=1)
@@ -181,25 +163,8 @@ refinery_intensity_weight_oil = refinery_intensity_oil.sum(axis=1)
 #   For now, total regional consumption (as primary or final energy) is the driver of infrastructure requirements
 #   In the future, this may be expanded
 
-time_dimension = [
-    x for x in range(constants.START_YEAR, constants.END_YEAR + 1, 1)
-]
-regions_counter = [x for x in range(1, constants.NUM_REGIONS + 1, 1)]
-
-# Add labels
+# Add labels; don't change order as they are selected later based on position
 primary_fuel_types_ff = ["coal", "conv oil", "unconv oil", "gas"]  # 1st 4
-
-final_fuel_types1 = [
-    "Solids",
-    "Liquids1",
-    "Sec gas",
-    "Hydrogen",
-    "Sec mod biomass",
-    "Sec heat",
-    "Sec trad biomass",
-    "Electricity",
-    "Liquids2",
-]
 final_fuel_types_ff1 = [
     "Solids",
     "Liquids1",
@@ -209,25 +174,12 @@ final_fuel_types_ff1 = [
     "Electricity",
     "Liquids2",
 ]
-
-final_fuel_types2 = [
-    "Solids",
-    "Liquids1",
-    "Liquids2",
-    "Sec gas",
-    "Sec mod biomass",
-    "Sec trad biomass",
-    "Hydrogen",
-    "Sec heat",
-    "Electricity",
-]  # 1st 9, last one is total
 final_fuel_types_ff2 = [
     "Solids",
     "Liquids1",
     "Liquids2",
     "Sec gas",
-]  # 1st 9, last one is total
-
+]
 sectors_ff = [
     "industry",
     "transport",
@@ -236,126 +188,131 @@ sectors_ff = [
     "other",
     "non-energy",
     "bunkers",
-]  # 1st 7, last one is total
-
-index_pps = pd.MultiIndex.from_product(
-    [time_dimension, primary_fuel_types_ff, final_fuel_types_ff1],
-    names=["time", "primary fuels", "secondary fuels"],
-)
-index_fin = pd.MultiIndex.from_product(
-    [time_dimension, regions_counter, sectors_ff],
-    names=["time", "regions", "sectors"],
-)
-
-# select fossil fuel flows only
-fossil_flows_primary = pd.DataFrame(
-    primpersec.loc[
-        idx[time_dimension, [1, 2, 3, 4], [1, 2, 3, 4, 6, 8, 9]],
-        regions_counter,
-    ].to_numpy(),
-    index=index_pps,
-    columns=regions_counter,
-)
-fossil_flows_final = pd.DataFrame(
-    final_energy.loc[
-        idx[time_dimension, regions_counter, [1, 2, 3, 4, 5, 6, 7]],
-        [1, 2, 3, 4],
-    ].to_numpy(),
-    index=index_fin,
-    columns=final_fuel_types_ff2,
-)
-
-# sum 2 liquid types as a single "liquids" category (both in primary and final energy)
-fossil_flows_final["oil"] = fossil_flows_final[
-    ["Liquids1", "Liquids2"]
-].sum(
-    axis=1
-)  # new column as sum of 2 liquid types
-fossil_flows_final = fossil_flows_final[
-    ["Solids", "Sec gas", "oil"]
-].rename(
-    columns={"Solids": "coal", "Sec gas": "gas"}
-)  # Remove original data for liquids & Rename to oil/gas/coal
-
-liquid_flows_primary = (
-    fossil_flows_primary.loc[idx[:, :, ["Liquids1", "Liquids2"]], :]
-    .groupby(level=[0, 1])
-    .sum()
-)
-liquid_flows_primary = pd.concat(
-    {"Liquids": liquid_flows_primary}, names=["secondary fuels"]
-).reorder_levels(
-    ["time", "primary fuels", "secondary fuels"]
-)  # add multi-index level for concatenation
-
-fossil_flows_primary = pd.concat(
-    [fossil_flows_primary, liquid_flows_primary]
-)
-fossil_flows_primary = fossil_flows_primary.drop(
-    ["Liquids1", "Liquids2"], level="secondary fuels"
-).sort_index(
-    level=[0, 1, 2]
-)  # and remove the 'old' conv & unconv oil multi-index level
-
-# sum unconventional & conventional oil as oil (only for primary energy)
-oil_flows_primary = (
-    fossil_flows_primary.loc[idx[:, ["conv oil", "unconv oil"], :], :]
-    .groupby(level=[0, 2])
-    .sum()
-)  # sum of conv & unconv oil
-oil_flows_primary = pd.concat(
-    {"oil": oil_flows_primary}, names=["primary fuels"]
-).reorder_levels(
-    ["time", "primary fuels", "secondary fuels"]
-)  # add multi-index level for concatenation
-
-fossil_flows_primary = pd.concat(
-    [fossil_flows_primary, oil_flows_primary]
-)  # then, append to all fossil flows (primary)
-fossil_flows_primary = fossil_flows_primary.drop(
-    ["conv oil", "unconv oil"], level="primary fuels"
-).sort_index(
-    level=[0, 1]
-)  # and remove the 'old' conv & unconv oil multi-index level
-
-# Select only the primary flows that are consumed as primary fuels (mind: X to Liquid is also consumed but added later, for the sankey)
-consumed_primary = ["Electricity", "Hydrogen", "Sec heat"]
-used_as_primary = fossil_flows_primary.loc[idx[:, :, consumed_primary], :]
-used_as_final = (
-    fossil_flows_final.stack()
-    .unstack(level=1)
-    .reorder_levels([0, 2, 1])
-    .sort_index()
-    * constants.PJ_TO_GJ
-)  # stack same as primary
-
-# Then, combine two dataframes and use a combined index name
-all_fossil_flows = pd.concat([used_as_final, used_as_primary]).sort_index(
-    level=[0, 1, 2]
-)
+]
 
 
-def select_fuel(fuel):
+def build_all_fossil_flows(primpersec, final_energy):
+    """Combine IMAGE primary- and final-energy flows into one fossil fuel use table.
+
+    Index: (time, fuel, use category), columns: regions, values in GJ.
+    """
+    time_dimension = [
+        x for x in range(constants.START_YEAR, constants.END_YEAR + 1, 1)
+    ]
+    regions_counter = [x for x in range(1, constants.NUM_REGIONS + 1, 1)]
+    index_pps = pd.MultiIndex.from_product(
+        [time_dimension, primary_fuel_types_ff, final_fuel_types_ff1],
+        names=["time", "primary fuels", "secondary fuels"],
+    )
+    index_fin = pd.MultiIndex.from_product(
+        [time_dimension, regions_counter, sectors_ff],
+        names=["time", "regions", "sectors"],
+    )
+
+    # adding index names (returns new frames instead of modifying the inputs in place)
+    primpersec = primpersec.set_index(["time", "DIM_1", "DIM_2"])
+    # index: time, 11 primary fuels, 8 secondary fuels
+    final_energy = final_energy.set_index(["time", "DIM_1", "DIM_2"])
+    # index: time, 28 regions, 6 sectors, columns: 10 secondary fuel types (region 27 is ignored)
+
+    # select fossil fuel flows only
+    fossil_flows_primary = pd.DataFrame(
+        primpersec.loc[
+            idx[time_dimension, [1, 2, 3, 4], [1, 2, 3, 4, 6, 8, 9]],
+            regions_counter,
+        ].to_numpy(),
+        index=index_pps,
+        columns=regions_counter,
+    )
+    fossil_flows_final = pd.DataFrame(
+        final_energy.loc[
+            idx[time_dimension, regions_counter, [1, 2, 3, 4, 5, 6, 7]],
+            [1, 2, 3, 4],
+        ].to_numpy(),
+        index=index_fin,
+        columns=final_fuel_types_ff2,
+    )
+
+    # sum 2 liquid types as a single "liquids" category (both in primary and final energy)
+    fossil_flows_final["oil"] = fossil_flows_final[
+        ["Liquids1", "Liquids2"]
+    ].sum(
+        axis=1
+    )  # new column as sum of 2 liquid types
+    fossil_flows_final = fossil_flows_final[
+        ["Solids", "Sec gas", "oil"]
+    ].rename(
+        columns={"Solids": "coal", "Sec gas": "gas"}
+    )  # Remove original data for liquids & Rename to oil/gas/coal
+
+    liquid_flows_primary = (
+        fossil_flows_primary.loc[idx[:, :, ["Liquids1", "Liquids2"]], :]
+        .groupby(level=[0, 1])
+        .sum()
+    )
+    liquid_flows_primary = pd.concat(
+        {"Liquids": liquid_flows_primary}, names=["secondary fuels"]
+    ).reorder_levels(
+        ["time", "primary fuels", "secondary fuels"]
+    )  # add multi-index level for concatenation
+
+    fossil_flows_primary = pd.concat(
+        [fossil_flows_primary, liquid_flows_primary]
+    )
+    fossil_flows_primary = fossil_flows_primary.drop(
+        ["Liquids1", "Liquids2"], level="secondary fuels"
+    ).sort_index(
+        level=[0, 1, 2]
+    )  # and remove the 'old' conv & unconv oil multi-index level
+
+    # sum unconventional & conventional oil as oil (only for primary energy)
+    oil_flows_primary = (
+        fossil_flows_primary.loc[idx[:, ["conv oil", "unconv oil"], :], :]
+        .groupby(level=[0, 2])
+        .sum()
+    )  # sum of conv & unconv oil
+    oil_flows_primary = pd.concat(
+        {"oil": oil_flows_primary}, names=["primary fuels"]
+    ).reorder_levels(
+        ["time", "primary fuels", "secondary fuels"]
+    )  # add multi-index level for concatenation
+
+    fossil_flows_primary = pd.concat(
+        [fossil_flows_primary, oil_flows_primary]
+    )  # then, append to all fossil flows (primary)
+    fossil_flows_primary = fossil_flows_primary.drop(
+        ["conv oil", "unconv oil"], level="primary fuels"
+    ).sort_index(
+        level=[0, 1]
+    )  # and remove the 'old' conv & unconv oil multi-index level
+
+    # Select only the primary flows that are consumed as primary fuels (mind: X to Liquid is also consumed but added later, for the sankey)
+    consumed_primary = ["Electricity", "Hydrogen", "Sec heat"]
+    used_as_primary = fossil_flows_primary.loc[idx[:, :, consumed_primary], :]
+    used_as_final = (
+        fossil_flows_final.stack()
+        .unstack(level=1)
+        .reorder_levels([0, 2, 1])
+        .sort_index()
+        * constants.PJ_TO_GJ
+    )  # stack same as primary
+
+    # Then, combine two dataframes and use a combined index name
+    all_fossil_flows = pd.concat([used_as_final, used_as_primary]).sort_index(
+        level=[0, 1, 2]
+    )
+
+    return all_fossil_flows
+
+
+all_fossil_flows = build_all_fossil_flows(primpersec, final_energy)
+
+
+def select_fuel(all_fossil_flows, fuel):
     fuel_use_total = (
         all_fossil_flows.loc[idx[:, fuel, :], :].groupby(level=[0]).sum()
     )  # GJ
     return fuel_use_total
-
-# Some gas/coal to liquids happens in TIMER - In the sankey we keep track of the size of the flow
-# HOWEVER! For now we work from the assumption that the liquids consumed are supplied fully by the oil supply chain (ignoring some of the exchange/substitution between supply chains)
-# Therefore, we include it as one of the consumption categories of primary energy only in the sankey, not in the calculations (for now)
-# primary_x_to_liquid = fossil_flows_primary.loc[
-#     idx[:, ["gas", "coal"], "Liquids"], :
-# ]
-# all_fossil_flows_sankey = pd.concat(
-#     [all_fossil_flows, primary_x_to_liquid]
-# ).sort_index(level=[0, 1, 2])
-
-# (Intermediate results) Fuel use data
-# all_fossil_flows_sankey.to_csv(
-#     OUTPUT_DIR / scenario / "fuel_use_GJ.csv", index=True
-# )
-
 
 
 
@@ -374,10 +331,10 @@ def select_fuel(fuel):
 # B6) Run supply chain & infrastructure stock models for three fossil fuel types
 
 
-def coal_infra():
+def coal_infra(all_fossil_flows):
     fuel = "coal"
     coal_use_total = generate_historic_profile(
-        select_fuel(fuel), fuel
+        select_fuel(all_fossil_flows, fuel), fuel
     )  # in GJ
     coal_use_total = coal_use_total.rolling(
         window=10, min_periods=2, center=True
@@ -406,10 +363,10 @@ def coal_infra():
     }
 
 
-def gas_infra():
+def gas_infra(all_fossil_flows):
     fuel = "gas"
     gas_use_total = generate_historic_profile(
-        select_fuel(fuel), fuel
+        select_fuel(all_fossil_flows, fuel), fuel
     )  # in GJ
     gas_use_total = gas_use_total.rolling(
         window=10, min_periods=2, center=True
@@ -446,10 +403,10 @@ def gas_infra():
     }
 
 
-def oil_infra():
+def oil_infra(all_fossil_flows):
     fuel = "oil"
     oil_use_total = generate_historic_profile(
-        select_fuel(fuel), fuel
+        select_fuel(all_fossil_flows, fuel), fuel
     )  # in GJ
     oil_use_total = oil_use_total.rolling(
         window=10, min_periods=2, center=True
@@ -491,5 +448,12 @@ def oil_infra():
         "refinery": refinery_stock_oil,
     }
 
-# print("drivers.py ran successfully!")
+
+def compute_all_infra(all_fossil_flows):
+    """Run all three supply chains once; use the results instead of calling *_infra repeatedly."""
+    return {
+        "coal": coal_infra(all_fossil_flows),
+        "gas": gas_infra(all_fossil_flows),
+        "oil": oil_infra(all_fossil_flows),
+    }
 
