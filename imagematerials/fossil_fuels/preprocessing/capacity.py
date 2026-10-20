@@ -1,38 +1,47 @@
-#
-# Outline:
-# 1) Import general modules and constants
-# 2) Define functions to get preprocessing data for stocks of each supply chain stage (extraction, processing, transport, pipelines)
-# 3) Within each step, first read in necessary file and then convert to xarray and then do necessary processing to get it into the right format for the model (e.g. rebroadcasting to standard region and technology names, adding units, etc.)
+"""
+This script defines functions to process the infrastructure stock demands for each supply  
+chain stage: extraction, processing, transport, pipelines and storage.
 
-#%% Import general modules and constants
+It gets the stock demand from the infra parameter that is a result of the compute_all_infra() in 
+drivers.py. Then it processes it to bring it into the right format for the stock model (right
+dimensions, conversion to xarray, adding units).
+"""
 
 import pint
 import xarray as xr
 import prism
 import pandas as pd
 import numpy as np
-from pathlib import Path
-
-from imagematerials.concepts import create_fossil_fuel_graph, create_region_graph
-
-year_start = 1880
-year_end = 2100
-year_out = 2100
-
-knowledge_graph_region = create_region_graph()
-fossil_fuel_knowledge_graph = create_fossil_fuel_graph()
-
 
 ####################################################################################################
 #%%Extraction stage (coal, oil, gas)
 ####################################################################################################
-def compute_extraction_capacity(infra: dict,
-                                year_start: int,
-                                year_end: int):
-    """Build the extraction capacity (stock) xarray with dimensions Time, Region and Type.
+def compute_extraction_capacity(
+        infra: dict[str, dict[str, pd.DataFrame]],
+        year_start: int,
+        year_end: int,
+    ) -> xr.DataArray:
+    """Build the extraction capacity (stock) of coal, oil and gas as one xarray.
 
-    infra: result of compute_all_infra() in drivers.py (see main.py)
-    year_start, year_end: first and last year to keep
+    Takes the extraction stock tables from compute_all_infra() (one per fuel),
+    keeps the relevant years and regions, and brings them into the format the
+    model needs: one array with dimensions Time, Region and Type, in kg.
+
+    Parameters
+    ----------
+    infra: Result of compute_all_infra() in drivers.py. Uses infra["coal"]["extraction"], 
+        infra["oil"]["extraction"] and infra["gas"]["extraction"]. Each table has the index
+        (type, time, fuel, stage, unit) and one column per region (1-28), with the total weight of 
+        the infrastructure in kg.
+    year_start: First year to keep.
+    year_end: Last year to keep (included).
+
+    Returns
+    -------
+    Extraction stock in kg (units added with prism.Q_), dimensions (Time, Region, Type).
+        Type holds the six extraction technologies in a fixed order that matches the lifetime and 
+        material intensity data: Coal Opencast, Coal Underground, Gas Offshore, Gas Onshore, 
+        Oil Offshore, Oil Onshore.
 
     """
     #Stock of each type of extraction infrastructure (stock demand per generation technology) per region per year
@@ -46,11 +55,11 @@ def compute_extraction_capacity(infra: dict,
     df_extraction_oil  = extraction_stock_oil.reset_index()
     df_extraction_gas  = extraction_stock_gas.reset_index()
 
-    #Add fuel column to each df so that we can combine them and then split them again into the different technologies (coal, oil, gas) after melting the df to long format
+    #Add fuel column to each df so that we can combine them and then split them again into the 
+    # different technologies (coal, oil, gas) after melting the df to long format
     df_extraction_coal["fuel"] = "coal"
     df_extraction_oil["fuel"] = "oil"
     df_extraction_gas["fuel"] = "gas"
-
 
     # Combine the dataframes for coal, oil, and gas into one dataframe and then melt it to long format so that we have one row per combination of time, region, fuel, technology, and value (stock)
     df_extraction_all = pd.concat(
@@ -93,11 +102,13 @@ def compute_extraction_capacity(infra: dict,
         .set_index(['time', 'DIM_1', 'Tech Type'])
         .to_xarray()['value']
         .rename({'time': 'Time', 'DIM_1': 'Region', 'Tech Type': 'Type'})
-    )
-    #Add units  
-    extractioncap_xr = prism.Q_(extractioncap_xr, "kg")
+    )  
+    extractioncap_xr = prism.Q_(extractioncap_xr, "kg") # add units
 
-    #Set order of technology coordinate to match the order in the lifetime and material intensity data, so that we can easily combine the data in the model (since they all have to be in the same order of technologies)
+    # Reorder technology coordinate in all three datasets (capacity, lifetime, material intensities) 
+    # to match the same order of technologies (coal opencast, coal underground, gas offshore, gas 
+    # onshore, oil offshore, oil onshore), so that we can easily combine the data in the model 
+    # (since they all have to be in the same order of technologies)
     extraction_order = [
         'Coal Opencast',
         'Coal Underground',
@@ -106,18 +117,7 @@ def compute_extraction_capacity(infra: dict,
         'Oil Offshore',
         'Oil Onshore'
     ]
-
-    #Reorder technology coordinate in all three datasets (capacity, lifetime, material intensities) to match the same order of technologies (coal opencast, coal underground, gas offshore, gas onshore, oil offshore, oil onshore), so that we can easily combine the data in the model (since they all have to be in the same order of technologies)
     extractioncap_xr = extractioncap_xr.reindex(Type=extraction_order)
-
-    # print("=== extractioncap_xr ===")
-    # print(extractioncap_xr)
-    # print("\nDims:", extractioncap_xr.dims)
-    # print("Sizes:", extractioncap_xr.sizes)
-    # print("\nTime labels:", extractioncap_xr['Time'].values)
-    # print("Region labels:", extractioncap_xr['Region'].values)
-    # print("Type labels:", extractioncap_xr['Type'].values)
-    # extractioncap_xr.isnull().sum()
     
     return extractioncap_xr
 
@@ -125,13 +125,31 @@ def compute_extraction_capacity(infra: dict,
 ####################################################################################################
 #%% Processing stage (COAL preparation and OIL refinery)
 ####################################################################################################
-def compute_processing_capacity(infra: dict,
-                                year_start: int,
-                                year_end: int):
-    """Build the processing capacity (stock) xarray with dimensions Time, Region and Type.
+def compute_processing_capacity(
+        infra: dict[str, dict[str, pd.DataFrame]],
+        year_start: int,
+        year_end: int,
+    ) -> xr.DataArray:
+    """Build the processing capacity (stock) of coal, oil and gas as one xarray.
 
-    infra: result of compute_all_infra() in drivers.py (see main.py)
-    year_start, year_end: first and last year to keep
+    Processing covers coal preparation plants, oil refineries and gas processing
+    plants. The stock tables from compute_all_infra() are combined, restricted to the
+    relevant years and regions, and brought into the format the model needs.
+
+    Parameters
+    ----------
+    infra: Result of compute_all_infra() in drivers.py. Uses
+        infra["coal"]["processing"], infra["oil"]["refinery"] and
+        infra["gas"]["processing"]. Each table has one column per region (1-28)
+        and the index (type, time, fuel, stage, unit); values are the total
+        weight of the infrastructure in kg.
+    year_start: First year to keep.
+    year_end: Last year to keep (included).
+
+    Returns
+    -------
+    Processing stock in kg, dimensions (Time, Region, Type). Type holds "Coal Preparation", 
+        "Gas Processing" and "Oil Refinery".
 
     """
     #Stock of each type of extraction infrastructure (stock demand per generation technology) per region per year
@@ -139,17 +157,15 @@ def compute_processing_capacity(infra: dict,
     refinery_stock_oil  = infra["oil"]["refinery"]
     processing_stock_gas  = infra["gas"]["processing"]
 
-        # --- FIX INDEX NAMES FIRST (IMPORTANT) ---
+    # --- FIX INDEX NAMES FIRST (IMPORTANT) ---
     preparation_stock_coal.index.set_names(
         ['type', 'time', 'fuel', 'stage', 'unit'],
         inplace=True
     )
-
     refinery_stock_oil.index.set_names(
         ['type', 'time', 'fuel', 'stage', 'unit'],
         inplace=True
     )
-
     processing_stock_gas.index.set_names(
         ['type', 'time', 'fuel', 'stage', 'unit'],
         inplace=True
@@ -194,7 +210,6 @@ def compute_processing_capacity(infra: dict,
     # Drop columns that are not needed for the analysis
     df_processing_all = df_processing_all.drop(columns=['stage', 'unit', 'type', 'fuel'])  
 
-    # Gcap ------
     # combine the processing data for coal, oil, gas into one df and then put it into this 
     df_processing_all = df_processing_all.loc[~df_processing_all['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
     df_processing_all = df_processing_all.loc[df_processing_all['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', 'value', 'Tech Type']]  # only keep relevant years and technology columns
@@ -207,18 +222,7 @@ def compute_processing_capacity(infra: dict,
         .to_xarray()['value']
         .rename({'time': 'Time', 'DIM_1': 'Region', 'Tech Type': 'Type'})
     )
-
-    #Add units
-    processingcap_xr = prism.Q_(processingcap_xr, "kg")
-
-    # print("=== processingcap_xr ===")
-    # print(processingcap_xr)
-    # print("\nDims:", processingcap_xr.dims)
-    # print("Sizes:", processingcap_xr.sizes)
-    # print("\nTime labels:", processingcap_xr['Time'].values)
-    # print("Region labels:", processingcap_xr['Region'].values)
-    # print("Type labels:", processingcap_xr['Type'].values)
-    # processingcap_xr.isnull().sum()
+    processingcap_xr = prism.Q_(processingcap_xr, "kg") #Add units
 
     return processingcap_xr
 
@@ -226,13 +230,28 @@ def compute_processing_capacity(infra: dict,
 ####################################################################################################
 #%% Processing stage (oil storage)
 ####################################################################################################
-def compute_storage_capacity(infra: dict,
-                            year_start: int,
-                            year_end: int):
-    """Build the storage capacity (stock) xarray with dimensions Time, Region and Type.
+def compute_storage_capacity(
+        infra: dict[str, dict[str, pd.DataFrame]],
+        year_start: int,
+        year_end: int,
+    ) -> xr.DataArray:
+    """Build the oil storage capacity (stock) as one xarray.
 
-    infra: result of compute_all_infra() in drivers.py (see main.py)
-    year_start, year_end: first and last year to keep
+    Only oil has storage in this model. The two oil storage types (crude and products) are added up 
+    into a single type, "Oil Storage".
+
+    Parameters
+    ----------
+    infra: Result of compute_all_infra() in drivers.py. Uses infra["oil"]["storage"]: one column per 
+        region (1-28), the index (type, time, fuel, stage, unit), with the types "crude" and "products".
+        The values are storage volumes in m3.
+    year_start: First year to keep.
+    year_end: Last year to keep (included).
+
+    Returns
+    -------
+        Oil storage stock in m3, dimensions (Time, Region, Type).
+        Type contains "Oil Storage" (the sum of "Oil Crude" and "Oil Products").
 
     """
     #Stock of each type of extraction infrastructure (stock demand per generation technology) per region per year
@@ -256,7 +275,9 @@ def compute_storage_capacity(infra: dict,
     #Combine fuel and type columns to one column "Tech Type"
     df_storage_all['Tech Type'] = df_storage_all['fuel'].str.strip() + ' ' + df_storage_all['type'].str.strip()
 
-    # Clean up the "Tech Type" column to have consistent formatting and naming, and to match the technology names in the lifetime and material intensity data (since we will need to combine these later in the model, so they all need to have the same technology names)
+    # Clean up the "Tech Type" column to have consistent formatting and naming, and to match the 
+    # technology names in the lifetime and material intensity data (since we will need to combine 
+    # these later in the model, so they all need to have the same technology names)
     df_storage_all['Tech Type'] = (
         df_storage_all['Tech Type']
         .str.replace(r'\s+', ' ', regex=True)
@@ -265,8 +286,8 @@ def compute_storage_capacity(infra: dict,
         )
 
     # Drop columns that are not needed for the analysis
-    df_storage_all = df_storage_all.drop(columns=['stage', 'unit', 'type', 'fuel'])  
-    # Gcap ------
+    df_storage_all = df_storage_all.drop(columns=['stage', 'unit', 'type', 'fuel']) 
+
     # combine the processing data for coal, oil, gas into one df and then put it into this 
     df_storage_all = df_storage_all.loc[~df_storage_all['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
     df_storage_all = df_storage_all.loc[df_storage_all['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', 'value', 'Tech Type']]  # only keep relevant years and technology columns
@@ -289,30 +310,37 @@ def compute_storage_capacity(infra: dict,
     #Add units
     storagecap_xr = prism.Q_(storagecap_xr, "meter**3")
 
-    # print("=== storagecap_xr ===")
-    # print(storagecap_xr)
-    # print("\nDims:", storagecap_xr.dims)
-    # print("Sizes:", storagecap_xr.sizes)
-    # print("\nTime labels:", processingcap_xr['Time'].values)
-    # print("Region labels:", processingcap_xr['Region'].values)
-    # print("Type labels:", processingcap_xr['Type'].values)
-    # processingcap_xr.isnull().sum()
-
     return storagecap_xr
 
 
 ####################################################################################################
 #%% Transport/Vehicles stage (coal, oil, gas)
 ####################################################################################################
-def compute_transport_capacity(infra: dict,
-                            year_start: int,
-                            year_end: int):
-    """Build the transport capacity (stock) xarray with dimensions Time, Region and Type.
+def compute_transport_capacity(
+        infra: dict[str, dict[str, pd.DataFrame]],
+        year_start: int,
+        year_end: int,
+    ) -> xr.DataArray:
+    """Build the transport capacity (stock) of coal, oil and gas as one xarray.
+    
+        Transport covers shipping, rail and trucks. The stock tables from compute_all_infra() are 
+        combined, restricted to the relevant years and regions, and brought into the format the model needs.
+    
+        Parameters
+        ----------
+        infra: Result of compute_all_infra() in drivers.py. Uses
+            infra["coal"]["processing"], infra["oil"]["refinery"] and
+            infra["gas"]["processing"]. Each table has one column per region (1-28)
+            and the index (type, time, fuel, stage, unit); values are the total
+            weight of the infrastructure in kg.
+        year_start: First year to keep.
+        year_end: Last year to keep (included).
+    
+        Returns
+        -------
+        Processing stock in kg, dimensions (Time, Region, Type).
 
-    infra: result of compute_all_infra() in drivers.py (see main.py)
-    year_start, year_end: first and last year to keep
-
-    """
+        """
     #Transport capacity (stock demand per generation technology) 
     transport_total_coal = infra["coal"]["transport"]
     transport_total_oil  = infra["oil"]["transport"]
@@ -340,7 +368,8 @@ def compute_transport_capacity(infra: dict,
     df_transport_oil["fuel"] = "oil"
     df_transport_gas["fuel"] = "gas"
 
-    #Combine the dataframes for coal, oil, and gas into one dataframe and then melt it to long format so that we have one row per combination of time, region, fuel, technology, and value (stock)
+    #Combine the dataframes for coal, oil, and gas into one dataframe and then melt it to long 
+    # format so that we have one row per combination of time, region, fuel, technology, and value (stock)
     df_transport_all = pd.concat(
         [df_transport_coal, df_transport_oil, df_transport_gas],
         ignore_index=True
@@ -355,7 +384,9 @@ def compute_transport_capacity(infra: dict,
     #Combine fuel and type columns to one column "Tech Type"
     df_transport_all['Tech Type'] = df_transport_all['fuel'].str.strip() + ' ' + df_transport_all['type'].str.strip()
 
-    # Clean up the "Tech Type" column to have consistent formatting and naming, and to match the technology names in the lifetime and material intensity data (since we will need to combine these later in the model, so they all need to have the same technology names)
+    # Clean up the "Tech Type" column to have consistent formatting and naming, and to match the 
+    # technology names in the lifetime and material intensity data (since we will need to combine 
+    # these later in the model, so they all need to have the same technology names)
     df_transport_all['Tech Type'] = (
         df_transport_all['Tech Type']
         .str.replace(r'\s+', ' ', regex=True)
@@ -390,17 +421,7 @@ def compute_transport_capacity(infra: dict,
         .to_xarray()['value']
         .rename({'time': 'Time', 'DIM_1': 'Region', 'Tech Type': 'Type'})
     )
-    #Add units
-    transportcap_xr = prism.Q_(transportcap_xr, "kg")
-
-    # print("=== transportcap_xr ===")
-    # print(transportcap_xr)
-    # print("\nDims:", transportcap_xr.dims)
-    # print("Sizes:", transportcap_xr.sizes)
-    # print("\nTime labels:", transportcap_xr['Time'].values)
-    # print("Region labels:", transportcap_xr['Region'].values)
-    # print("Type labels:", transportcap_xr['Type'].values)
-    # transportcap_xr.isnull().sum()
+    transportcap_xr = prism.Q_(transportcap_xr, "kg") #Add units
 
     return transportcap_xr
 
@@ -408,19 +429,42 @@ def compute_transport_capacity(infra: dict,
 ####################################################################################################
 #%% Pipelines stage (oil, gas) ---------------------------------------------------------------------
 ####################################################################################################
-def compute_pipelines_capacity(infra: dict,
-                               on_offshore_oil_pipeline,
-                               year_start: int,
-                               year_end: int):
-    """Build the pipelines capacity (stock) xarray with dimensions Time, Region and Type.
+def compute_pipelines_capacity(
+        infra: dict[str, dict[str, pd.DataFrame]],
+        on_offshore_oil_pipeline: pd.DataFrame,
+        year_start: int,
+        year_end: int,
+    ) -> xr.DataArray:
+    """Build the pipelines capacity (stock) of oil and gas as one xarray.
 
-    infra: result of compute_all_infra() in drivers.py (see main.py)
-    on_offshore_oil_pipeline: share of onshore & offshore oil pipelines, global (%)
-        (= inputs["drivers"]["on_offshore_oil_pipeline"] from inputs.py)
-    year_start, year_end: first and last year to keep
+    Gas pipelines come in two types (distribution, transmission). The oil stock is
+    given only per product type (crude, product), so it is split into onshore and
+    offshore pipelines using fixed global shares.
+
+    Parameters
+    ----------
+    infra: Result of compute_all_infra() in drivers.py. Uses
+        infra["oil"]["pipelines"] (types "crude" and "product") and
+        infra["gas"]["pipelines"] (types "distribution" and "transmission").
+        Each table has one column per region (1-28) and the index
+        (type, time, fuel, stage, unit); values are pipeline lengths in km.
+    on_offshore_oil_pipeline: Global share of onshore and offshore pipelines
+        (= inputs["drivers"]["on_offshore_oil_pipeline"] from inputs.py).
+        Columns: "Crude" and "Product". Index: the division ("offshore",
+        "onshore"). Each value is multiplied directly with the oil stock, so the
+        values must be fractions (summing to 1 per column), not percentages.
+    year_start: First year to keep.
+    year_end: Last year to keep (included).
+
+    Returns
+    -------
+    Pipeline stock in km, dimensions (Time, Region, Type).
+        Type holds six pipeline types in a fixed order that matches the lifetime and
+        material intensity data: Gas Distribution Pipeline, Gas Transmission Pipeline,
+        Oil Offshore Crude Pipeline, Oil Onshore Crude Pipeline,
+        Oil Offshore Product Pipeline, Oil Onshore Product Pipeline.
 
     """
-    #Transport capacity (stock demand per generation technology)
     #Load data from drivers.py
     oil_pipelines  = infra["oil"]["pipelines"]
     gas_pipelines  = infra["gas"]["pipelines"]
@@ -441,7 +485,8 @@ def compute_pipelines_capacity(infra: dict,
     df_pipelines_oil["fuel"] = "oil"
     df_pipelines_gas["fuel"] = "gas"
 
-    #Combine the dataframes for oil and gas into one dataframe and then melt it to long format so that we have one row per combination of time, region, fuel, technology, and value (stock)
+    #Combine the dataframes for oil and gas into one dataframe and then melt it to long format so 
+    # that we have one row per combination of time, region, fuel, technology, and value (stock)
     df_pipelines_all = pd.concat(
         [df_pipelines_oil, df_pipelines_gas],
         ignore_index=True
@@ -459,7 +504,9 @@ def compute_pipelines_capacity(infra: dict,
     #Drop columns that are not needed for the analysis
     df_pipelines_all = df_pipelines_all.drop(columns=['stage', 'unit', 'type', 'fuel'])  # drop columns that are not needed for the analysis
 
-    # Clean up the "Tech Type" column to have consistent formatting and naming, and to match the technology names in the lifetime and material intensity data (since we will need to combine these later in the model, so they all need to have the same technology names)
+    # Clean up the "Tech Type" column to have consistent formatting and naming, and to match the 
+    # technology names in the lifetime and material intensity data (since we will need to combine 
+    # these later in the model, so they all need to have the same technology names)
     df_pipelines_all['Tech Type'] = (
         df_pipelines_all['Tech Type']
         .str.replace(r'\s+', ' ', regex=True)
@@ -468,8 +515,6 @@ def compute_pipelines_capacity(infra: dict,
         .replace({
             "Gas Distribution": "Gas Distribution Pipeline",
             "Gas Transmission": "Gas Transmission Pipeline"
-            # "Oil Crude": "Oil Crude Pipeline",
-            # "Oil Product": "Oil Product Pipeline"
         })
     )
 
@@ -490,13 +535,14 @@ def compute_pipelines_capacity(infra: dict,
         Type=np.array(pipelinecap_xr.Type.values, dtype=object)
     )
 
-    # Since the oil pipelines in the data are not split into onshore and offshore pipelines, we will split them based on the fractions of onshore and offshore pipelines in the global pipeline network f
+    # Since the oil pipelines in the data are not split into onshore and offshore pipelines, we will 
+    # split them based on the fractions of onshore and offshore pipelines in the global pipeline network f
 
     # First we identify the types of oil pipelines in the capacity data (oil crude and oil products) 
     oil_types = ['Oil Crude', 'Oil Product']  
 
-
-    # Then we create new entries for onshore and offshore oil pipelines based on the fractions in the global pipeline network
+    # Then we create new entries for onshore and offshore oil pipelines based on the fractions in 
+    # the global pipeline network
     expanded_oil_arrays = []
     for oil_type in oil_types:
         key = oil_type.split()[1] 
@@ -525,16 +571,9 @@ def compute_pipelines_capacity(infra: dict,
         'Oil Onshore Product Pipeline'
     ]
 
-    #Reorder technology coordinate in all three datasets (capacity, lifetime, material intensities) to match the same order of technologies (coal opencast, coal underground, gas offshore, gas onshore, oil offshore, oil onshore), so that we can easily combine the data in the model (since they all have to be in the same order of technologies)
+    #Reorder technology coordinate in all three datasets (capacity, lifetime, material intensities) 
+    # to match the same order of technologies, so that we can easily combine the data in the model 
+    # (since they all have to be in the same order of technologies)
     pipelinecap_xr = pipelinecap_xr.reindex(Type=pipeline_order)
-
-    # print("=== pipelinecap_xr ===")
-    # print(pipelinecap_xr)
-    # print("\nDims:", pipelinecap_xr.dims)
-    # print("Sizes:", pipelinecap_xr.sizes)
-    # print("\nTime labels:", pipelinecap_xr['Time'].values)
-    # print("Region labels:", pipelinecap_xr['Region'].values)
-    # print("Type labels:", pipelinecap_xr['Type'].values)
-    # pipelinecap_xr.isnull().sum()
 
     return pipelinecap_xr

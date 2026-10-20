@@ -6,21 +6,14 @@
 #%% Import general modules and constants
 import pint
 import xarray as xr
-import pandas as pd
 import numpy as np
-from pathlib import Path
 
 import prism
 
-from imagematerials.concepts import create_fossil_fuel_graph, create_region_graph
 from imagematerials.fossil_fuels.constants import SD_LIFETIME
 
 year_start = 1880
 year_end = 2100
-year_out = 2100
-
-knowledge_graph_region = create_region_graph()
-fossil_fuel_knowledge_graph = create_fossil_fuel_graph()
 
 ####################################################################################################
 # Extraction stage (coal, oil, gas)
@@ -231,7 +224,9 @@ def compute_pipelines_lifetimes(pipelines_lifetime_data):
         'Oil Onshore Product Pipeline'
     ]
 
-    #Reorder technology coordinate in all three datasets (capacity, lifetime, material intensities) to match the same order of technologies (coal opencast, coal underground, gas offshore, gas onshore, oil offshore, oil onshore), so that we can easily combine the data in the model (since they all have to be in the same order of technologies)
+    #Reorder technology coordinate in all three datasets (capacity, lifetime, material intensities) 
+    # to match the same order of technologies, so that we can easily combine the data in the model 
+    # (since they all have to be in the same order of technologies)
     pipelines_lifetime_xr = pipelines_lifetime_xr.reindex(Type=pipeline_order)
 
     return pipelines_lifetime_xr

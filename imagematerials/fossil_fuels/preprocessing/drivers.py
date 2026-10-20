@@ -79,7 +79,8 @@ def build_all_fossil_flows(
         1. Final use: final energy consumption per sector (industry, transport, ...),
            converted from PJ to GJ.
         2. Conversion use: primary energy used to produce electricity, hydrogen and
-           secondary heat. Flows into the other secondary carriers (solids, liquids,
+           secondary heat. 
+           TODO: check this: Flows into the other secondary carriers (solids, liquids,
            secondary gas) are not taken from the primary table, because their final
            use is already counted in part 1.
 
@@ -494,10 +495,28 @@ def oil_infra(
 #%% wraper function
 ####################################################################################################
 
-def compute_all_infra(inputs_image, inputs):
-    """Run all three supply chains once; use the results instead of calling *_infra repeatedly.
+def compute_all_infra(
+        inputs_image: dict[str, dict[str, pd.DataFrame]],
+        inputs: dict[str, dict[str, pd.DataFrame | pd.Series]],
+    ) -> dict[str, dict[str, pd.DataFrame]]:
+    """Calculate the infrastructure stocks of all three supply chains, once.
 
-    inputs: the dictionary returned by load_inputs() in inputs.py
+    Call this once and pass the result on, instead of calling coal_infra(), gas_infra() and 
+    oil_infra() separately for every stage.
+
+    Parameters
+    ----------
+    inputs_image: IMAGE data. Must contain inputs_image["image"]["primpersec"] and
+        inputs_image["image"]["final_energy"] (see inputs.py).
+    inputs: Other input data as returned by load_inputs() in inputs.py. Only
+        inputs["drivers"] is used here.
+
+    Returns
+    -------
+    Dictionary with the keys "coal", "gas" and "oil". Each holds a dictionary of
+    stock tables per stage, e.g. result["oil"]["storage"]. Coal has "extraction",
+    "processing" and "transport"; gas additionally has "pipelines"; oil has
+    "extraction", "refinery", "transport", "pipelines" and "storage".
     """
     all_fossil_flows = build_all_fossil_flows(
         inputs_image["image"]["primpersec"], inputs_image["image"]["final_energy"]

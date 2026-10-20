@@ -30,8 +30,21 @@ import pandas as pd
 from imagematerials.read_mym import read_mym_df
 
 
-def load_inputs_image(climate_policy_config):
+def load_inputs_image(
+        climate_policy_config: dict,
+    ) -> dict[str, dict[str, pd.DataFrame | pd.Series]]:
+    """Read IMAGE output relevant for the fossil fuel model (PrimPerSec & final_energy_rt).
 
+    Parameters
+    ----------
+    climate_policy_config: Scenario configuration. Only
+        climate_policy_config["config_file_path"] is used, to get the scenario name.
+
+    Returns
+    -------
+    Dictionary
+
+    """
     # ------------------------------------------------------------------
     # 1. IMAGE output (depends on the IMAGE scenario run)
     # ------------------------------------------------------------------
@@ -50,7 +63,64 @@ def load_inputs_image(climate_policy_config):
     return {"image": image}
 
 
-def load_inputs(path_base, climate_policy_config):
+def load_inputs(
+        path_base: str | Path,
+        climate_policy_config: dict,
+    ) -> dict[str, dict[str, pd.DataFrame | pd.Series]]:
+    """Read all fossil fuel input files (lifetimes, material intensities, drivers).
+
+    Files are looked up in the scenario folder first,
+        <path_base>/fossil_fuels/<scenario name>/
+    and, if a file is not there, in the standard folder
+        <path_base>/fossil_fuels/standard_data/
+    so a scenario folder only has to contain the files that differ from standard.
+    The scenario name is the name of the folder given in
+    climate_policy_config["config_file_path"] (e.g. "SSP2_baseline").
+
+    IMAGE output files (PrimPerSec, final_energy_rt) are not read here, but in its own function
+    load_inputs_image().
+
+    Parameters
+    ----------
+    path_base: Folder that contains the "fossil_fuels" data folder (the same
+        path_base that is passed to the get_preprocessing_data_* functions).
+    climate_policy_config: Scenario configuration. Only
+        climate_policy_config["config_file_path"] is used, to get the scenario name.
+
+    Returns
+    -------
+    Dictionary with three groups of tables:
+
+    "lifetimes": one table per stage ("extraction", "processing", "storage",
+        "transport", "pipelines"). Index: (Year, Tech Type), column "Lifetime"
+        in years.
+    "materials": one table per stage, same keys. Index: (Year, Tech Type), one
+        column per material. The units (kg/kg, kg/m3 or kg/km, depending on the
+        stage) are added later in materials.py.
+    "drivers": other data used to calculate the capacity (stocks):
+        - "mining_type_share_coal", "extraction_type_share_gas",
+            "extraction_type_share_oil": share of the extraction types
+        - "gas_pipeline_length", "oil_pipeline_length": regional pipeline
+            length in km (2019)
+        - "on_offshore_oil_pipeline": global share of onshore vs. offshore
+            oil pipelines
+        - "oil_storage_capacity": regional oil storage capacity in million barrels
+        - "production_intensity_coal", "production_intensity_gas",
+            "production_intensity_oil": material use per unit of production capacity
+        - "processing_intensity_gas", "refinery_intensity_oil",
+            "preparation_intensity_coal": material use per unit of processing capacity
+        - "transport_vehicle_weight_per_tkm": freight vehicle weight in g per tkm,
+            per year (a Series, all others are DataFrames)
+        - "transport_demand_domestic", "transport_demand_international":
+            transport demand per fuel type in tkm/kg (tkm/m3 for gas), without
+            the "Pipeline" column
+
+    Raises
+    ------
+    FileNotFoundError: If a file exists in neither the scenario folder nor the
+        standard folder. The message names both folders.
+
+    """
     # ------------------------------------------------------------------
     # Where to look for files
     # ------------------------------------------------------------------
@@ -113,7 +183,7 @@ def load_inputs(path_base, climate_policy_config):
             # regional pipeline length (km) for the year 2019
             "gas_pipeline_length": read_input_csv("drivers/natural_gas_pipeline_length_km_new.csv", index_col=[0]),
             "oil_pipeline_length": read_input_csv("drivers/oil_pipeline_length_km_new.csv", index_col=[0]),
-            # share of the 2 oil pipeline types (onshore & offshore), global (%)
+            # share of the 2 oil pipeline types (onshore & offshore), global (fraction [0-1])
             "on_offshore_oil_pipeline": read_input_csv("drivers/onshore_offshore_oil_pipeline.csv", index_col=[0]),
             # regional oil storage capacity (million barrels)
             "oil_storage_capacity": read_input_csv("drivers/oil_storage_capacity_million_barrels_new.csv", index_col=[0]),
