@@ -34,14 +34,6 @@ from imagematerials.fossil_fuels.preprocessing.capacity import (
     compute_pipelines_capacity,
     compute_storage_capacity
 )
-from imagematerials.fossil_fuels.constants import (
-    STANDARD_SCEN_EXTERNAL_DATA,
-)
-
-year_start = 1880
-year_end = 2100
-year_out = 2100
-YEAR_START = 2100
 
 region_knowledge_graph = create_region_graph()
 fossil_fuel_knowledge_graph = create_fossil_fuel_graph()
@@ -72,14 +64,15 @@ def get_inputs_and_infra(path_base, climate_policy_config):
 ####################################################################################################
 #%%Extraction stage
 ####################################################################################################
-def get_preprocessing_data_extraction(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+def get_preprocessing_data_extraction(path_base: str,
+                                      climate_policy_config: dict,
+                                      circular_economy_config: dict,
+                                      scenario: str,
+                                      year_start: int,
+                                      year_end: int,
+                                      year_out: int):
 
     inputs_image, inputs, infra = get_inputs_and_infra(path_base, climate_policy_config)
-
-    # path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
-    # # test if path_external_data_scenario exists and if not set to standard scenario
-    # if not path_external_data_scenario.exists():
-    #     path_external_data_scenario = Path(path_base, "fossil_fuels", STANDARD_SCEN_EXTERNAL_DATA)
     
     # The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
     extraction_lifetime_xr = compute_extraction_lifetimes(inputs["lifetimes"]["extraction"])
@@ -110,16 +103,17 @@ def get_preprocessing_data_extraction(path_base: str, climate_policy_config: dic
 ####################################################################################################
 #%%Processing stage (coal preparation and oil refinery)
 ####################################################################################################
-def get_preprocessing_data_processing(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+def get_preprocessing_data_processing(path_base: str,
+                                      climate_policy_config: dict,
+                                      circular_economy_config: dict,
+                                      scenario: str,
+                                      year_start: int,
+                                      year_end: int,
+                                      year_out: int):
 
     inputs_image, inputs, infra = get_inputs_and_infra(path_base, climate_policy_config)
 
-    # path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
-    # # test if path_external_data_scenario exists and if not set to standard scenario
-    # if not path_external_data_scenario.exists():
-    #     path_external_data_scenario = Path(path_base, "fossil_fuels", STANDARD_SCEN_EXTERNAL_DATA)
-
-     # The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
+    # The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
     processing_lifetime_xr = compute_processing_lifetimes(inputs["lifetimes"]["processing"])
     processing_lifetime_xr = convert_lifetime(processing_lifetime_xr)
 
@@ -148,16 +142,17 @@ def get_preprocessing_data_processing(path_base: str, climate_policy_config: dic
 ####################################################################################################
 #%%Processing stage (gas processing and oil storage)
 ####################################################################################################
-def get_preprocessing_data_storage(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+def get_preprocessing_data_storage(path_base: str,
+                                   climate_policy_config: dict,
+                                   circular_economy_config: dict,
+                                   scenario: str,
+                                   year_start: int,
+                                   year_end: int,
+                                   year_out: int):
 
     inputs_image, inputs, infra = get_inputs_and_infra(path_base, climate_policy_config)
 
-    # path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
-    # # test if path_external_data_scenario exists and if not set to standard scenario
-    # if not path_external_data_scenario.exists():
-    #     path_external_data_scenario = Path(path_base, "fossil_fuels", STANDARD_SCEN_EXTERNAL_DATA)
-
-     # The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
+    # The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
     storage_lifetime_xr = compute_storage_lifetimes(inputs["lifetimes"]["storage"])
     storage_lifetime_xr = convert_lifetime(storage_lifetime_xr)
 
@@ -185,19 +180,18 @@ def get_preprocessing_data_storage(path_base: str, climate_policy_config: dict, 
 ####################################################################################################
 #%% Transport stage
 ####################################################################################################
-def get_preprocessing_data_transport(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+def get_preprocessing_data_transport(path_base: str,
+                                     climate_policy_config: dict,
+                                     circular_economy_config: dict,
+                                     scenario: str,
+                                     year_start: int,
+                                     year_end: int,
+                                     year_out: int):
 
     inputs_image, inputs, infra = get_inputs_and_infra(path_base, climate_policy_config)
 
-    # path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
-    # # test if path_external_data_scenario exists and if not set to standard scenario
-    # if not path_external_data_scenario.exists():
-    #     path_external_data_scenario = Path(path_base, "fossil_fuels", STANDARD_SCEN_EXTERNAL_DATA)
-
     transport_lifetime_xr = compute_transport_lifetimes(inputs["lifetimes"]["transport"])
     transport_lifetime_xr = convert_lifetime(transport_lifetime_xr)
-    # transport_material_fraction_xr = compute_transport_material_fraction(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
-    # transport_material_weight_xr = compute_transport_material_weight(path_base, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
     transport_materials_xr = compute_transport_materials(inputs["materials"]["transport"])
     transportcap_xr = compute_transport_capacity(infra, year_start, year_end)
 
@@ -205,15 +199,11 @@ def get_preprocessing_data_transport(path_base: str, climate_policy_config: dict
     prep_data_transport = {}
     prep_data_transport["lifetimes"] = transport_lifetime_xr
     prep_data_transport["stocks"] = transportcap_xr
-    # prep_data_transport["material_fractions"] = transport_material_fraction_xr
-    # prep_data_transport["weights"] = transport_material_weight_xr
     prep_data_transport["material_intensities"] = transport_materials_xr
     prep_data_transport["knowledge_graph"] = create_fossil_fuel_graph() 
 
     # add units
     prep_data_transport["stocks"] = prism.Q_(prep_data_transport["stocks"], "kg")
-    # prep_data_transport["material_fractions"] = prism.Q_(prep_data_transport["material_fractions"], "%")
-    # prep_data_transport["weights"] = prism.Q_(prep_data_transport["weights"], "kg/count")
     prep_data_transport["material_intensities"] = prism.Q_(prep_data_transport["material_intensities"], "kg/kg")
     prep_data_transport["set_unit_flexible"] = prism.U_(prep_data_transport["stocks"]) # prism.U_ gives the unit back
 
@@ -227,14 +217,15 @@ def get_preprocessing_data_transport(path_base: str, climate_policy_config: dict
 ####################################################################################################
 #%% Pipelines stage (oil, gas)
 ####################################################################################################
-def get_preprocessing_data_pipelines(path_base: str, climate_policy_config: dict, circular_economy_config: dict, scenario: str, year_start: int, year_end: int, year_out: int):
+def get_preprocessing_data_pipelines(path_base: str,
+                                     climate_policy_config: dict,
+                                     circular_economy_config: dict,
+                                     scenario: str,
+                                     year_start: int,
+                                     year_end: int,
+                                     year_out: int):
 
     inputs_image, inputs, infra = get_inputs_and_infra(path_base, climate_policy_config)
-
-    # path_external_data_scenario = Path(path_base, "fossil_fuels", "Scenario_data", scenario)
-    # # test if path_external_data_scenario exists and if not set to standard scenario
-    # if not path_external_data_scenario.exists():
-    #     path_external_data_scenario = Path(path_base, "fossil_fuels", STANDARD_SCEN_EXTERNAL_DATA)
 
     pipelines_lifetime_xr = compute_pipelines_lifetimes(inputs["lifetimes"]["pipelines"]) 
     pipelines_lifetime_xr = convert_lifetime(pipelines_lifetime_xr)

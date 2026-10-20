@@ -39,6 +39,7 @@ def load_inputs_image(climate_policy_config):
     image_dir = Path(climate_policy_config["config_file_path"])
     data_files = climate_policy_config["data_files"]
 
+    # TODO: use instead: mymarray_to_xarray(pym.read_mym()) to read in as xarrays
     image = {
         # primary energy consumption per sector (GJ)
         "primpersec": read_mym_df(image_dir / data_files["PrimPerSec"]),
@@ -61,6 +62,8 @@ def load_inputs(path_base, climate_policy_config):
 
     def read_input_csv(relative_path, **options):
         """Read one csv file: scenario-specific version if it exists, else the standard one."""
+        #TODO: check if this tiered approach is working (currently we only have standard data, so not
+        #      needed atm)
         scenario_file = scenario_dir / relative_path
         standard_file = standard_dir / relative_path
 
@@ -89,8 +92,6 @@ def load_inputs(path_base, climate_policy_config):
 
     # ------------------------------------------------------------------
     # 2. Material intensities (per stage)
-    #    The index is set while reading, so materials.py does not need its
-    #    own .set_index(['Year', 'Tech Type']) any more.
     # ------------------------------------------------------------------
     materials = {
         "extraction": read_input_csv("extraction/Extraction_materials.csv", index_col=["Year", "Tech Type"]),

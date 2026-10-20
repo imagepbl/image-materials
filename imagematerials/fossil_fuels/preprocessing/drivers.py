@@ -1,16 +1,22 @@
-# Outline:
-# 1) Import FUMA model & input data files
-# 2) Prepare data files & formatting
-# 3) Recieve stock calculations for each supply chain stage (to then be used in capacity.py)
+"""
+This file contains the calculations of the infrastructure stock in the fossil fuel supply chain for
+coal (infra_coal()), gas (infra_gas()) and oil (infra_oil()). It takes the IMAGE outout of primary
+and final energy demand for coal, gas and oil per year and transforms this into requierements in 
+terms of infrastrcuture stock (extraction, processing/refining, transport, pipelines and storage).
 
-#%% Import FUMA model 
-#  A1) FUMA MODEL
+# ##################################################################################################
+#   SUPPLY CHAIN STOCK CALCULATIONS:
+#   Supply Chain Elements:          Coal    Oil     Gas
+#   1) Extraction infrastructure     X       X       X
+#   2) transport by vehicles         X       X       X
+#   3) transport by pipelines                X       X
+#   4) Storage                               X       x
+#   5) Processing & Refining         x       X       X
+####################################################################################################
+"""
 
 import pandas as pd
-import numpy as np
-from pathlib import Path
 
-from imagematerials.read_mym import read_mym_df
 from imagematerials.fossil_fuels.preprocessing.stock_demand.pipelines import pipelines_indexed_stock_growth
 from imagematerials.fossil_fuels.preprocessing.stock_demand.transport import transport
 from imagematerials.fossil_fuels.preprocessing.stock_demand.extraction import extraction_stocks
@@ -21,142 +27,23 @@ from imagematerials.fossil_fuels.utils import (
     generate_historic_profile,
 )
 
-path_base = Path(__file__).resolve()
-while path_base.name != "image-materials":
-    path_base = path_base.parent
-DATA_DIR = Path(path_base, "data", "raw", "fossil_fuels")
-IMAGE_DIR = Path(path_base, "data", "raw", "image")
-OUTPUT_DIR = Path(DATA_DIR, "Scenario_data")
-scenario = constants.scenario
-
-
 idx = pd.IndexSlice
 
-# A2) Load input-data files
+####################################################################################################
+#%% Process IMAGE input (primary & final energy demand) to be used in stock demand calculations
+####################################################################################################
 
-# IMAGE drivers
-
-
-
-# mining_type_share_coal = pd.read_csv(
-#     DATA_DIR / "drivers" / "coal_mine_type_share.csv",
-#     index_col=[0],
-# )
-# # % of open-cast vs. underground mining
-
-# extraction_type_share_gas = pd.read_csv(
-#     DATA_DIR / "drivers" / "gas_extraction_type_share.csv", index_col=[0]
-# )  # % of offshore vs. onshore extraction
-
-# extraction_type_share_oil = pd.read_csv(
-#     DATA_DIR / "drivers" / "oil_extraction_type_share.csv", index_col=[0]
-# )  # % of offshore vs. onshore extraction
-
-# # Pipeline data
-# gas_pipeline_length = pd.read_csv(
-#     DATA_DIR / "drivers" / "natural_gas_pipeline_length_km_new.csv", index_col=[0]
-# )  # Regional Gas Pipeline length (km) for the year 2019
-
-# oil_pipeline_length = pd.read_csv(
-#     DATA_DIR / "drivers" / "oil_pipeline_length_km_new.csv", index_col=[0]
-# )  # Regional Oil Pipeline length (km) for the year 2019
-
-
-# # Storage data
-# oil_storage_capacity = pd.read_csv(
-#     DATA_DIR / "drivers" / "oil_storage_capacity_million_barrels_new.csv", index_col=[0]
-# )  # Regional Oil storage capacity (million barrels, mb)
-
-# # oil_storage_materials = pd.read_csv( # TODO: check where this is used
-# #     DATA_DIR / "drivers" / "material_intensity" / "oil_storage_material_intensity_kg_per_m3.csv",
-# #     index_col=[0],
-# # )  # Material intensity of oil regional oil distribution (kg material per m3 of storage capacity)
-
-# # transport vehicle data
-# transport_demand_domestic = pd.read_csv(
-#     DATA_DIR / "drivers" / "Transport_demand_domestic_tkm_per_kg.csv",
-#     index_col=[0],
-#     sep=";",
-# ).drop(
-#     columns="Pipeline"
-# )  # Domestic transport demand per fuel type (tkm/kg, MIND: in the case of gas it is given in tkm/m3)
-# transport_demand_internat = pd.read_csv(
-#     DATA_DIR / "drivers" / "Transport_demand_international_tkm_per_kg.csv",
-#     index_col=[0],
-#     sep=";",
-# ).drop(
-#     columns="Pipeline"
-# )  # International transport demand per fuel type(tkm/kg, MIND: in the case of gas it is given in tkm/m3)
-# transport_demand_total = (
-#     transport_demand_domestic + transport_demand_internat
-# )
-
-# # transport_materials_per_vehicle = pd.read_csv( # TODO: check where this is used
-# #     DATA_DIR / "drivers" / "material_intensity" / "fossil_fuel_freight_vehicle_material_fraction.csv",
-# #     index_col=[0],
-# # ).T  # % of the total weight by material in fossil fuel freight transport vehicles
-# transport_vehicle_weight_per_tkm = pd.read_csv(
-#     DATA_DIR / "drivers" / "fossil_fuel_freight_vehicle_weight_intensity_g_per_tkm.csv",
-#     index_col=[0],
-#     header=None,
-#     sep=";",
-# ).squeeze()  # average intensity of fossil fuel freight transport vehicles weight (g) in stock per tkm (g/tkm) per year so the stock required to continuously provide the service of transportation
-
-# # Mining data & material intensities (in kg material per unit of annual production capacity)
-# production_intensity_coal = pd.read_csv(
-#     DATA_DIR / "drivers" / "coal_production_intensity.csv", index_col=[0]
-# )  # material use per unit of production capacity (kg/kg yr-1)
-# production_intensity_gas = pd.read_csv(
-#     DATA_DIR / "drivers" / "Natural_gas_production_intensity.csv",
-#     index_col=[0],
-# )  # material use per unit of production capacity (kg/m3 yr-1)
-# production_intensity_oil = pd.read_csv(
-#     DATA_DIR / "drivers" / "oil_production_intensity.csv", index_col=[0]
-# )
-
-# # Processing & refinery material intensities (in kg material per unit of annual production capacity)
-# processing_intensity_gas = pd.read_csv(
-#     DATA_DIR / "drivers" / "gas_processing_plant_intensity_kg_per_m3.csv",
-#     index_col=[0],
-# )
-# refinery_intensity_oil = pd.read_csv(
-#     DATA_DIR / "drivers" / "oil_refinery_material_intensity_kg_per_kg.csv",
-#     index_col=[0],
-# )
-# preparation_intensity_coal = pd.read_csv(
-#     DATA_DIR / "drivers" / "coal_preparation_material_intensity_kg_per_kg.csv",
-#     index_col=[0],
-# )
-# Pipeline material intensity data (kg/km)
-# gas_pipeline_composition_trans = pd.read_csv( # TODO: check where this is used
-#     DATA_DIR / "drivers" / "material_intensity" / "gas_pipeline_composition_transmission_critical_kg_per_km.csv",
-#     index_col=[0],
-# )  # material use (kg) per km of transmission pipeline (kg/km)
-# gas_pipeline_composition_distr = pd.read_csv(
-#     DATA_DIR / "drivers" / "material_intensity" / "gas_pipeline_composition_distribution_kg_per_km.csv",
-#     index_col=[0],
-# )  # material use (kg) per km of distribution pipeline (kg/km)
-# oil_pipeline_composition = pd.read_csv(
-#     DATA_DIR / "drivers" / "material_intensity" / "oil_pipeline_composition_kg_per_km.csv",
-#     index_col=[0],
-# )
-
-# A3) Prepare data files & formatting
-
-
-# production_intensity_weight_coal = production_intensity_coal.sum(axis=1)
-# preparation_intensity_weight_coal = preparation_intensity_coal.sum(axis=1)
-# production_intensity_weight_gas = production_intensity_gas.sum(axis=1)
-# production_intensity_weight_oil = production_intensity_oil.sum(axis=1)
-# processing_intensity_weight_gas = processing_intensity_gas.sum(axis=1)
-# refinery_intensity_weight_oil = refinery_intensity_oil.sum(axis=1)
-
-# A4) Model drivers (fossil fuel use scenarios from IMAGE, by region towards 2100)
-#   For now, total regional consumption (as primary or final energy) is the driver of infrastructure requirements
-#   In the future, this may be expanded
+# Model drivers (fossil fuel use scenarios from IMAGE, by region towards 2100)
+# For now, total regional consumption (as primary or final energy) is the driver of infrastructure 
+# requirements. In the future, this may be expanded.
 
 # Add labels; don't change order as they are selected later based on position
-primary_fuel_types_ff = ["coal", "conv oil", "unconv oil", "gas"]  # 1st 4
+primary_fuel_types_ff = [
+    "coal",
+    "conv oil",
+    "unconv oil",
+    "gas"
+]
 final_fuel_types_ff1 = [
     "Solids",
     "Liquids1",
@@ -182,11 +69,50 @@ sectors_ff = [
     "bunkers",
 ]
 
+def build_all_fossil_flows(
+        primpersec: pd.DataFrame,
+        final_energy: pd.DataFrame,
+    ) -> pd.DataFrame:
+    """Combine the IMAGE energy flow tables into one table of fossil fuel use (GJ).
 
-def build_all_fossil_flows(primpersec, final_energy):
-    """Combine IMAGE primary- and final-energy flows into one fossil fuel use table.
+    Fossil fuel use (coal, gas, oil) has two parts, which are added together here:
+        1. Final use: final energy consumption per sector (industry, transport, ...),
+           converted from PJ to GJ.
+        2. Conversion use: primary energy used to produce electricity, hydrogen and
+           secondary heat. Flows into the other secondary carriers (solids, liquids,
+           secondary gas) are not taken from the primary table, because their final
+           use is already counted in part 1.
 
-    Index: (time, fuel, use category), columns: regions, values in GJ.
+    Conventional and unconventional oil, and the two liquid types, are each merged
+    into a single "oil" category.
+
+    Parameters
+    ----------
+    primpersec: pd.DataFrame
+        IMAGE output "PrimPerSec" as read by read_mym_df. Primary energy
+        consumption in GJ. Columns: time, DIM_1 (primary fuel), DIM_2 (secondary
+        carrier), and one column per region.
+    final_energy: pd.DataFrame
+        IMAGE output "final_energy_rt" as read by read_mym_df. Final
+        energy consumption in PJ. Columns: time, DIM_1 (region), DIM_2 (sector),
+        and one column per secondary fuel type.
+
+    Returns
+    -------
+    all_fossil_flows: pd.DataFrame
+        Fossil fuel use in GJ. Index: (time, fuel, use category), where fuel is "coal",
+        "gas" or "oil", and the use category is either a sector (final use) or one of
+        "Electricity", "Hydrogen", "Sec heat" (conversion use). Columns: regions
+        (1 to constants.NUM_REGIONS=26).
+
+    Notes
+    -----
+    Uses the label lists defined above this function, and the constants
+    START_YEAR, END_YEAR, NUM_REGIONS and PJ_TO_GJ. The positional selectors
+    (e.g. [1, 2, 3, 4]) must match the order of those label lists.
+    TODO: read in primpersec & final_energy with mymarray_to_xarray(pym.read_mym()) directly as 
+    xarrays and use the knowledge_graph to group categories
+
     """
     time_dimension = [
         x for x in range(constants.START_YEAR, constants.END_YEAR + 1, 1)
@@ -297,31 +223,70 @@ def build_all_fossil_flows(primpersec, final_energy):
     return all_fossil_flows
 
 
-def select_fuel(all_fossil_flows, fuel):
+def select_fuel(all_fossil_flows: pd.DataFrame,
+                fuel: str
+                ) -> pd.DataFrame:
+    """Return the total use of one fossil fuel per year and region.
+
+    Sums over all use categories (sectors and conversion carriers).
+
+    Parameters
+    ----------
+    all_fossil_flows: pd.DataFrame
+        Table from build_all_fossil_flows(), in GJ.
+    fuel: str
+        One of "coal", "gas" or "oil".
+
+    Returns
+    -------
+    fuel_use_total: pd.DataFrame
+        Fuel use in GJ. Index: time, columns: regions.
+
+    """
     fuel_use_total = (
         all_fossil_flows.loc[idx[:, fuel, :], :].groupby(level=[0]).sum()
     )  # GJ
+    
     return fuel_use_total
 
 
+####################################################################################################
+#%% Capacity/stock demand calculations
+####################################################################################################
 
-#%% FUMA stock calculation
-# ###################################################################################################
-#   B) SUPPLY CHAIN STOCK CALCULATIONS:
-#   Supply Chain Elements:          Coal    Oil     Gas
-#   B1) Extraction infrastructure     X       X       X
-#   B2) transport by vehicles         X       X       X
-#   B3) transport by pipelines                X       X
-#   B4) Storage                               X       x
-#   B5) Processing & Refining         x       X       X
-#   B1 - B5 are seperate files in the calculation folder
-#   B6) Run all supply chain steps
-########################################################################################################
-# B6) Run supply chain & infrastructure stock models for three fossil fuel types
+def coal_infra(
+        all_fossil_flows: pd.DataFrame,
+        drivers: dict[str, pd.DataFrame | pd.Series],
+        ) -> dict[str, pd.DataFrame]:
+    """Calculate the coal infrastructure stocks (extraction, preparation, transport).
 
+    Coal use is taken from the fossil fuel flows, smoothed with a 10-year centered
+    moving average, converted from GJ to kg, and then used to derive the stock of
+    each infrastructure type per region and year.
 
-def coal_infra(all_fossil_flows, drivers):
-    # drivers = inputs["drivers"] (see inputs.py)
+    Parameters
+    ----------
+    all_fossil_flows: Fossil fuel use in GJ, as built by build_all_fossil_flows().
+        Index: (time, fuel, use category), columns: regions.
+    drivers: Input tables from inputs["drivers"] (see inputs.py). The keys used here:
+        - "production_intensity_coal": material use per unit of mining capacity,
+            summed over all materials to get the total weight per unit.
+        - "preparation_intensity_coal": the same for coal preparation plants.
+        - "mining_type_share_coal": share of open-cast vs. underground mining.
+        - "transport_demand_domestic", "transport_demand_international":
+            transport demand per fuel type (tkm/kg), added up to the total demand.
+        - "transport_vehicle_weight_per_tkm": freight vehicle weight per tkm,
+            as a Series (a single column).
+
+    Returns
+    -------
+    Dictionary with one table per supply chain stage, all in kg (total weight of infrastructure):
+        - "extraction": coal mines (open cast, underground)
+        - "processing": coal preparation plants
+        - "transport": freight transport of coal
+    Each table has an index of (type, time, fuel, stage, unit) and one column per region.
+
+    """
     fuel = "coal"
     # total material weight per unit of capacity (sum over all materials)
     production_intensity_weight_coal = drivers["production_intensity_coal"].sum(axis=1)
@@ -351,6 +316,7 @@ def coal_infra(all_fossil_flows, drivers):
         transport_demand_total,
         drivers["transport_vehicle_weight_per_tkm"],
     )  # in kg
+
     return {
         "extraction": extraction_stock_coal,
         "processing": preparation_stock_coal,
@@ -358,8 +324,40 @@ def coal_infra(all_fossil_flows, drivers):
     }
 
 
-def gas_infra(all_fossil_flows, drivers):
-    # drivers = inputs["drivers"] (see inputs.py)
+def gas_infra(
+        all_fossil_flows: pd.DataFrame,
+        drivers: dict[str, pd.DataFrame | pd.Series],
+        ) -> dict[str, pd.DataFrame]:
+    """Calculate the gas infrastructure stocks (extraction, processing, pipelines, transport).
+
+    Gas use is taken from the fossil fuel flows, smoothed with a 10-year centered
+    moving average, converted from GJ to m3, and then used to derive the stock of
+    each infrastructure type per region and year.
+
+    Parameters
+    ----------
+    all_fossil_flows: Fossil fuel use in GJ, as built by build_all_fossil_flows().
+        Index: (time, fuel, use category), columns: regions.
+    drivers: Input tables from inputs["drivers"] (see inputs.py). The keys used here:
+        - "production_intensity_gas": material use per unit of extraction capacity,
+            summed over all materials to get the total weight per unit.
+        - "processing_intensity_gas": the same for gas preparation plants.
+        - "extraction_type_share_gas": share of onshore versus offshore extraction.
+        - "transport_demand_domestic", "transport_demand_international":
+            transport demand per fuel type (tkm/kg), added up to the total demand.
+        - "transport_vehicle_weight_per_tkm": freight vehicle weight per tkm,
+            as a Series (a single column).
+
+    Returns
+    -------
+    Dictionary with one table per supply chain stage, all in kg (total weight of infrastructure):
+        - "extraction": gas extraction (onshore, offshore)
+        - "processing": gas preparation plants
+        - "transport": freight transport of gas
+        - "pipelines": pipeline transport of gas
+    Each table has an index of (type, time, fuel, stage, unit) and one column per region.
+
+    """
     fuel = "gas"
     # total material weight per unit of capacity (sum over all materials)
     production_intensity_weight_gas = drivers["production_intensity_gas"].sum(axis=1)
@@ -396,6 +394,7 @@ def gas_infra(all_fossil_flows, drivers):
         (gas_use_total * constants.GJ_TO_M3_GAS),
         processing_intensity_weight_gas,
     )
+
     return {
         "extraction": extraction_stock_gas,
         "transport": transport_total_gas,
@@ -404,8 +403,42 @@ def gas_infra(all_fossil_flows, drivers):
     }
 
 
-def oil_infra(all_fossil_flows, drivers):
-    # drivers = inputs["drivers"] (see inputs.py)
+def oil_infra(
+        all_fossil_flows: pd.DataFrame,
+        drivers: dict[str, pd.DataFrame | pd.Series],
+        ) -> dict[str, pd.DataFrame]:
+    """Calculate the oil infrastructure stocks (extraction, refinery, pipelines, transport, storage).
+
+    Oil use is taken from the fossil fuel flows, smoothed with a 10-year centered
+    moving average, converted from GJ to kg (except for oil storage), 
+    and then used to derive the stock of each infrastructure type per region and year.
+
+    Parameters
+    ----------
+    all_fossil_flows: Fossil fuel use in GJ, as built by build_all_fossil_flows().
+        Index: (time, fuel, use category), columns: regions.
+    drivers: Input tables from inputs["drivers"] (see inputs.py). The keys used here:
+        - "production_intensity_oil": material use per unit of extraction capacity,
+            summed over all materials to get the total weight per unit.
+        - "refinery_intensity_oil": the same for oil preparation plants.
+        - "extraction_type_share_oil": share of onshore versus offshore extraction.
+        - "transport_demand_domestic", "transport_demand_international":
+            transport demand per fuel type (tkm/kg), added up to the total demand.
+        - "transport_vehicle_weight_per_tkm": freight vehicle weight per tkm,
+            as a Series (a single column).
+        - "oil_storage_capacity": oil storage capacity per region for crude and product
+
+    Returns
+    -------
+    Dictionary with one table per supply chain stage, all in kg (total weight of infrastructure):
+        - "extraction": oil extraction (onshore, offshore)
+        - "processing": oil preparation plants/refineries
+        - "transport": freight transport of oil
+        - "pipelines": pipeline transport of oil
+        - "storage": oil storage
+    Each table has an index of (type, time, fuel, stage, unit) and one column per region.
+
+    """
     fuel = "oil"
     # total material weight per unit of capacity (sum over all materials)
     production_intensity_weight_oil = drivers["production_intensity_oil"].sum(axis=1)
@@ -447,6 +480,7 @@ def oil_infra(all_fossil_flows, drivers):
         (oil_use_total * constants.GJ_TO_KG_OIL / constants.FRACTION_REFINING_CAP),
         refinery_intensity_weight_oil,
     )  # IN KG
+
     return {
         "extraction": extraction_stock_oil,
         "transport": transport_total_oil,
@@ -455,6 +489,10 @@ def oil_infra(all_fossil_flows, drivers):
         "refinery": refinery_stock_oil,
     }
 
+
+####################################################################################################
+#%% wraper function
+####################################################################################################
 
 def compute_all_infra(inputs_image, inputs):
     """Run all three supply chains once; use the results instead of calling *_infra repeatedly.
