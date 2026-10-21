@@ -153,11 +153,11 @@ def load_inputs(
     # 1. Lifetimes (average lifetime in years, per stage)
     # ------------------------------------------------------------------
     lifetimes = {
-        "extraction": read_input_csv("extraction/Extraction_lifetimes.csv", index_col=["Year", "Tech Type"]),
-        "processing": read_input_csv("processing/Processing_lifetimes_test.csv", index_col=["Year", "Tech Type"]),
-        "storage": read_input_csv("processing/Storage_lifetimes.csv", index_col=["Year", "Tech Type"]),
-        "transport": read_input_csv("transport/Transport_lifetimes.csv", index_col=["Year", "Tech Type"]),
-        "pipelines": read_input_csv("pipelines/Pipelines_lifetimes_edit.csv", index_col=["Year", "Tech Type"]),
+        "extraction": read_input_csv("extraction/Extraction_lifetimes.csv"),
+        "processing": read_input_csv("processing/Processing_lifetimes_test.csv"),
+        "storage": read_input_csv("processing/Storage_lifetimes.csv"),
+        "transport": read_input_csv("transport/Transport_lifetimes.csv"),
+        "pipelines": read_input_csv("pipelines/Pipelines_lifetimes_edit.csv"),
     }
 
     # ------------------------------------------------------------------

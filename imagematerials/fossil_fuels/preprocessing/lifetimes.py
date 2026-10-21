@@ -1,232 +1,258 @@
-#Outline (split into each stage (extraction, processing, transport, pipelines) for each fuel (coal, oil, gas)):
-# 1) Import general modules and constants
-# 2) read in necessary data files for lifetimes 
-# 3) create xarray
+"""
+Process lifetime data and transform to xarray DataArray for all processing stages separately.
+"""
 
-#%% Import general modules and constants
 import pint
 import xarray as xr
 import numpy as np
+import pandas as pd
 
 import prism
 
-from imagematerials.fossil_fuels.constants import SD_LIFETIME
+from imagematerials.electricity.utils import interpolate_xr
+from imagematerials.fossil_fuels.constants import (
+    SD_LIFETIME,
+    EXTRACTION_TYPES,
+    PIPELINE_TYPES,
+    YEAR_FIRST_FF,
+    END_YEAR
+)
 
-year_start = 1880
-year_end = 2100
 
 ####################################################################################################
 # Extraction stage (coal, oil, gas)
 ####################################################################################################
 
-def compute_extraction_lifetimes(extraction_lifetime_data):
-    """Build the lifetime xarray (mean and stdev per cohort and technology).
-    
-    extraction_lifetime_data: lifetimes in years, index (Year, Tech Type),
-    column "Lifetime" (= inputs["lifetimes"]["extraction"] from inputs.py)
+def compute_extraction_lifetimes(extraction_lifetime_data: pd.DataFrame) -> xr.DataArray:
+    """Build the lifetime xarray of the extraction technologies.
+
+    The lifetime of each technology is described by two parameters: the mean and the
+    standard deviation. The mean comes from the input table, and the standard
+    deviation is the mean multiplied by SD_LIFETIME (constants.py). The result is
+    given per cohort (the year in which the infrastructure was built) and technology.
+
+    Parameters
+    ----------
+    extraction_lifetime_data: Table with the columns "Year", "Tech Type" and
+        "Lifetime" (mean lifetime in years), one row per year and technology, in
+        any order (= inputs["lifetimes"]["extraction"] from inputs.py).
+
+    Returns
+    -------
+    Lifetimes in years, with dimensions (DistributionParams, Cohort, Type):
+        - DistributionParams: "mean" and "stdev"
+        - Cohort: the years from YEAR_FIRST_FF to END_YEAR, interpolated from the
+            years in the input table by interpolate_xr()
+        - Type: the extraction technologies in the fixed order EXTRACTION_TYPES,
+            which matches the capacity and material intensity data
+
+    Notes
+    -----
+    - A technology name in the table but not in EXTRACTION_TYPES is dropped, and one
+    in EXTRACTION_TYPES but missing from the table becomes NaN (effects of reindex).
 
     """
-    types = extraction_lifetime_data.index.get_level_values("Tech Type").unique().astype(str).tolist()
-    values = extraction_lifetime_data["Lifetime"].unstack().reindex(columns=types).to_numpy(dtype=float)
-    times = extraction_lifetime_data.index.get_level_values("Year").unique().astype(int).tolist()
-
-    scipy_params = ["mean", "stdev"]
-
-    # Build xarray with shape (ScipyParam, Time, Type)
-    data_array = np.stack([values, values * SD_LIFETIME], axis=0)
-    # data_array = np.stack([values, np.full_like(values, np.nan)], axis=0)
-    #create xarray with dimensions and coordinates
-    extraction_lifetime_xr = xr.DataArray(
-        data_array,
-        dims=["DistributionParams", "Cohort", "Type"],
-        coords={
-            "DistributionParams": scipy_params,
-            "Cohort": times,
-            "Type": types
-        },
-        name="ExtractionLifetime"
+    extraction_lifetime_xr = (
+        extraction_lifetime_data.set_index(["Year", "Tech Type"])["Lifetime"]
+        .to_xarray()
+        .rename({"Year": "Cohort", "Tech Type": "Type"})
     )
+    extraction_lifetime_xr.name = "ExtractionLifetime"
+    extraction_lifetime_xr = prism.Q_(extraction_lifetime_xr, "year") # add units
 
-    # Expand 2020 across 1880-2100
-    year_range = np.arange(1880, 2101)
-    value_2020 = extraction_lifetime_xr.sel(Cohort=2020)
-    extraction_lifetime_xr = value_2020.expand_dims(Cohort=year_range).transpose("DistributionParams", "Cohort", "Type")
-
-    #Add units 
-    extraction_lifetime_xr = prism.Q_(extraction_lifetime_xr, "year")
-    #Set order of technology coordinate to match the order in the lifetime and material intensity data, so that we can easily combine the data in the model (since they all have to be in the same order of technologies)
-    extraction_order = [
-        'Coal Opencast',
-        'Coal Underground',
-        'Gas Offshore',
-        'Gas Onshore',
-        'Oil Offshore',
-        'Oil Onshore'
-    ]
-    extraction_lifetime_xr = extraction_lifetime_xr.reindex(Type=extraction_order)
+    # input data contain mean lifetimes, add standard deviation by multiplying mean with relative std
+    extraction_lifetime_xr = extraction_lifetime_xr.expand_dims({"DistributionParams": ["mean", "stdev"]}).copy() # copy() needed as expand_dims only returns a read-only, broadcast view of the original array
+    extraction_lifetime_xr.loc[dict(DistributionParams="stdev")] = extraction_lifetime_xr.loc[dict(DistributionParams="mean")] * SD_LIFETIME
+    # interpolate over whole periode
+    extraction_lifetime_xr = interpolate_xr(extraction_lifetime_xr, YEAR_FIRST_FF,END_YEAR)
+    # ensure order of types is in line with material intensities
+    extraction_lifetime_xr = extraction_lifetime_xr.reindex(Type=EXTRACTION_TYPES)
 
     return extraction_lifetime_xr
+
 
 ####################################################################################################
 #%% Processing stage
 ####################################################################################################
 
-# COAL preparation and OIL refinery) ---------------------------------------------------------------
-def compute_processing_lifetimes(processing_lifetime_data):
-    """Build the lifetime xarray (mean and stdev per cohort and technology).
+def compute_processing_lifetimes(processing_lifetime_data: pd.DataFrame) -> xr.DataArray:
+    """Build the lifetime xarray of the processing technologies (coal preparation, gas processing, oil refining).
 
-    processing_lifetime_data: lifetimes in years, index (Year, Tech Type),
-    column "Lifetime" (= inputs["lifetimes"]["processing"] from inputs.py)
+    The lifetime of each technology is described by two parameters: the mean and the
+    standard deviation. The mean comes from the input table, and the standard
+    deviation is the mean multiplied by SD_LIFETIME (constants.py). The result is
+    given per cohort (the year in which the infrastructure was built) and technology.
+
+    Parameters
+    ----------
+    processing_lifetime_data: Table with the columns "Year", "Tech Type" and
+        "Lifetime" (mean lifetime in years), one row per year and technology, in
+        any order (= inputs["lifetimes"]["extraction"] from inputs.py).
+
+    Returns
+    -------
+    Lifetimes in years, with dimensions (DistributionParams, Cohort, Type):
+        - DistributionParams: "mean" and "stdev"
+        - Cohort: the years from YEAR_FIRST_FF to END_YEAR, interpolated from the
+            years in the input table by interpolate_xr()
+        - Type: the processing types/technologies
 
     """
-    values = processing_lifetime_data["Lifetime"].unstack().to_numpy(dtype=float)
-    #Create coordinates
-    times = processing_lifetime_data.index.get_level_values("Year").unique().astype(int).tolist()
-    types = processing_lifetime_data.index.get_level_values("Tech Type").unique().astype(str).tolist()
-    scipy_params = ["mean", "stdev"]
-    # Build full array: shape (ScipyParam, Time, Type)
-    data_array = np.stack([values, values * SD_LIFETIME], axis=0)
-    # Create DataArray
-    processing_lifetime_xr = xr.DataArray(
-            data_array,
-            dims=["DistributionParams", "Cohort", "Type"],
-            coords={
-                "DistributionParams": scipy_params,
-                "Cohort": times,
-                "Type": types
-            },
-            name="ProcessingLifetime"
-        )
-    # Expand 2020 across 1880-2100
-    year_range = np.arange(1880, 2101)
-    value_2020 = processing_lifetime_xr.sel(Cohort=2020)
-    processing_lifetime_xr = value_2020.expand_dims(Cohort=year_range).transpose("DistributionParams", "Cohort", "Type")
-    processing_lifetime_xr = prism.Q_(processing_lifetime_xr, "year")
+    processing_lifetime_xr = (
+        processing_lifetime_data.set_index(["Year", "Tech Type"])["Lifetime"]
+        .to_xarray()
+        .rename({"Year": "Cohort", "Tech Type": "Type"})
+    )
+    processing_lifetime_xr.name = "ProcessingLifetime"
+    processing_lifetime_xr = prism.Q_(processing_lifetime_xr, "year") # add units
+
+    # input data contain mean lifetimes, add standard deviation by multiplying mean with relative std
+    processing_lifetime_xr = processing_lifetime_xr.expand_dims({"DistributionParams": ["mean", "stdev"]}).copy() # copy() needed as expand_dims only returns a read-only, broadcast view of the original array
+    processing_lifetime_xr.loc[dict(DistributionParams="stdev")] = processing_lifetime_xr.loc[dict(DistributionParams="mean")] * SD_LIFETIME
+    # interpolate over whole periode
+    processing_lifetime_xr = interpolate_xr(processing_lifetime_xr, YEAR_FIRST_FF,END_YEAR)
  
     return processing_lifetime_xr
 
-# OIL storage and GAS processing) ------------------------------------------------------------------
 
-def compute_storage_lifetimes(storage_lifetime_data):
-    """Build the lifetime xarray (mean and stdev per cohort and technology).
-    
-    storage_lifetime_data: lifetimes in years, index (Year, Tech Type),
-    column "Lifetime" (= inputs["lifetimes"]["storage"] from inputs.py)
+####################################################################################################
+#%% Storage stage
+####################################################################################################
+
+def compute_storage_lifetimes(storage_lifetime_data: pd.DataFrame) -> xr.DataArray:
+    """Build the lifetime xarray of the storage technologies (oil storage).
+
+    The lifetime of each technology is described by two parameters: the mean and the
+    standard deviation. The mean comes from the input table, and the standard
+    deviation is the mean multiplied by SD_LIFETIME (constants.py). The result is
+    given per cohort (the year in which the infrastructure was built) and technology.
+
+    Parameters
+    ----------
+    processing_lifetime_data: Table with the columns "Year", "Tech Type" and
+        "Lifetime" (mean lifetime in years), one row per year and technology, in
+        any order (= inputs["lifetimes"]["extraction"] from inputs.py).
+
+    Returns
+    -------
+    Lifetimes in years, with dimensions (DistributionParams, Cohort, Type):
+        - DistributionParams: "mean" and "stdev"
+        - Cohort: the years from YEAR_FIRST_FF to END_YEAR, interpolated from the
+            years in the input table by interpolate_xr()
+        - Type: the storage type/tech
 
     """
-    values = storage_lifetime_data["Lifetime"].unstack().to_numpy(dtype=float)
-    #Create coordinates
-    times = storage_lifetime_data.index.get_level_values("Year").unique().astype(int).tolist()
-    types = storage_lifetime_data.index.get_level_values("Tech Type").unique().astype(str).tolist()
-    scipy_params = ["mean", "stdev"]
-        # Build full array: shape (ScipyParam, Time, Type)
-    data_array = np.stack([values, values * SD_LIFETIME], axis=0)
-    # data_array = np.stack([values, np.full_like(values, np.nan)], axis=0)
-        # Create DataArray
-    storage_lifetime_xr = xr.DataArray(
-            data_array,
-            dims=["DistributionParams", "Cohort", "Type"],
-            coords={
-                "DistributionParams": scipy_params,
-                "Cohort": times,
-                "Type": types
-            },
-            name="ProcessingStorageLifetime"
-        )
-    # Expand 2020 across 1880-2100
-    year_range = np.arange(1880, 2101)
-    value_2020 = storage_lifetime_xr.sel(Cohort=2020)
-    storage_lifetime_xr = value_2020.expand_dims(Cohort=year_range).transpose("DistributionParams", "Cohort", "Type")
-    storage_lifetime_xr = prism.Q_(storage_lifetime_xr, "year")
+    storage_lifetime_xr = (
+        storage_lifetime_data.set_index(["Year", "Tech Type"])["Lifetime"]
+        .to_xarray()
+        .rename({"Year": "Cohort", "Tech Type": "Type"})
+    )
+    storage_lifetime_xr.name = "ProcessingLifetime"
+    storage_lifetime_xr = prism.Q_(storage_lifetime_xr, "year") # add units
+
+    # input data contain mean lifetimes, add standard deviation by multiplying mean with relative std
+    storage_lifetime_xr = storage_lifetime_xr.expand_dims({"DistributionParams": ["mean", "stdev"]}).copy() # copy() needed as expand_dims only returns a read-only, broadcast view of the original array
+    storage_lifetime_xr.loc[dict(DistributionParams="stdev")] = storage_lifetime_xr.loc[dict(DistributionParams="mean")] * SD_LIFETIME
+    # interpolate over whole periode
+    storage_lifetime_xr = interpolate_xr(storage_lifetime_xr, YEAR_FIRST_FF,END_YEAR)
 
     return storage_lifetime_xr
+
 
 ####################################################################################################
 #%% Transport/Vehicles stage (coal, oil, gas)
 ####################################################################################################
 
-def compute_transport_lifetimes(transport_lifetime_data):
-    """Build the lifetime xarray (mean and stdev per cohort and technology).
+def compute_transport_lifetimes(transport_lifetime_data: pd.DataFrame) -> xr.DataArray:
+    """Build the lifetime xarray of the transport technologies (rail, ship, truck for coal, oil, gas).
 
-    transport_lifetime_data: lifetimes in years, index (Year, Tech Type),
-    column "Lifetime" (= inputs["lifetimes"]["transport"] from inputs.py)
+    The lifetime of each technology is described by two parameters: the mean and the
+    standard deviation. The mean comes from the input table, and the standard
+    deviation is the mean multiplied by SD_LIFETIME (constants.py). The result is
+    given per cohort (the year in which the infrastructure was built) and technology.
+
+    Parameters
+    ----------
+    processing_lifetime_data: Table with the columns "Year", "Tech Type" and
+        "Lifetime" (mean lifetime in years), one row per year and technology, in
+        any order (= inputs["lifetimes"]["extraction"] from inputs.py).
+
+    Returns
+    -------
+    Lifetimes in years, with dimensions (DistributionParams, Cohort, Type):
+        - DistributionParams: "mean" and "stdev"
+        - Cohort: the years from YEAR_FIRST_FF to END_YEAR, interpolated from the
+            years in the input table by interpolate_xr()
+        - Type: the transport types/techs
 
     """
-    values = transport_lifetime_data["Lifetime"].unstack().to_numpy(dtype=float)
-    #Create coordinates
-    times = transport_lifetime_data.index.get_level_values("Year").unique().astype(int).tolist()
-    types = transport_lifetime_data.index.get_level_values("Tech Type").unique().astype(str).tolist()
-    scipy_params = ["mean", "stdev"]
-    # Build full array: shape (ScipyParam, Time, Type)
-    data_array = np.stack([values, values * SD_LIFETIME], axis=0)
-    # Create DataArray
-    transport_lifetime_xr = xr.DataArray(
-            data_array,
-            dims=["DistributionParams", "Cohort", "Type"],
-            coords={
-                "DistributionParams": scipy_params,
-                "Cohort": times,
-                "Type": types
-            },
-            name="TransportLifetime"
-        )
+    transport_lifetime_xr = (
+        transport_lifetime_data.set_index(["Year", "Tech Type"])["Lifetime"]
+        .to_xarray()
+        .rename({"Year": "Cohort", "Tech Type": "Type"})
+    )
+    transport_lifetime_xr.name = "ProcessingLifetime"
+    transport_lifetime_xr = prism.Q_(transport_lifetime_xr, "year") # add units
 
-    # Expand 2020 across 1880-2100
-    year_range = np.arange(1880, 2101)
-    value_2020 = transport_lifetime_xr.sel(Cohort=2020)
-    transport_lifetime_xr = value_2020.expand_dims(Cohort=year_range).transpose("DistributionParams", "Cohort", "Type")
-    transport_lifetime_xr = prism.Q_(transport_lifetime_xr, "year")
+    # input data contain mean lifetimes, add standard deviation by multiplying mean with relative std
+    transport_lifetime_xr = transport_lifetime_xr.expand_dims({"DistributionParams": ["mean", "stdev"]}).copy() # copy() needed as expand_dims only returns a read-only, broadcast view of the original array
+    transport_lifetime_xr.loc[dict(DistributionParams="stdev")] = transport_lifetime_xr.loc[dict(DistributionParams="mean")] * SD_LIFETIME
+    # interpolate over whole periode
+    transport_lifetime_xr = interpolate_xr(transport_lifetime_xr, YEAR_FIRST_FF,END_YEAR)
 
     return transport_lifetime_xr
+
 
 ####################################################################################################
 #%% Pipelines stage (oil, gas) 
 ####################################################################################################
 
-def compute_pipelines_lifetimes(pipelines_lifetime_data):
-    """Build the lifetime xarray (mean and stdev per cohort and technology).
+def compute_pipelines_lifetimes(pipelines_lifetime_data: pd.DataFrame) -> xr.DataArray:
+    """Build the lifetime xarray of pipelines (oil, gas).
 
-    pipelines_lifetime_data: lifetimes in years, index (Year, Tech Type),
-    column "Lifetime" (= inputs["lifetimes"]["pipelines"] from inputs.py)
+    The lifetime of each technology is described by two parameters: the mean and the
+    standard deviation. The mean comes from the input table, and the standard
+    deviation is the mean multiplied by SD_LIFETIME (constants.py). The result is
+    given per cohort (the year in which the infrastructure was built) and technology.
+
+    Parameters
+    ----------
+    processing_lifetime_data: Table with the columns "Year", "Tech Type" and
+        "Lifetime" (mean lifetime in years), one row per year and technology, in
+        any order (= inputs["lifetimes"]["extraction"] from inputs.py).
+
+    Returns
+    -------
+    Lifetimes in years, with dimensions (DistributionParams, Cohort, Type):
+        - DistributionParams: "mean" and "stdev"
+        - Cohort: the years from YEAR_FIRST_FF to END_YEAR, interpolated from the
+            years in the input table by interpolate_xr()
+        - Type: the pipeline types
+
+    Notes
+    -----
+    - A technology name in the table but not in PIPELINE_TYPES is dropped, and one
+    in PIPELINE_TYPES but missing from the table becomes NaN (effects of reindex).
+    
 
     """
-    types = pipelines_lifetime_data.index.get_level_values("Tech Type").unique().astype(str).tolist()
-    values = pipelines_lifetime_data["Lifetime"].unstack().reindex(columns=types).to_numpy(dtype=float)
-    times = pipelines_lifetime_data.index.get_level_values("Year").unique().astype(int).tolist()
+    pipelines_lifetime_xr = (
+        pipelines_lifetime_data.set_index(["Year", "Tech Type"])["Lifetime"]
+        .to_xarray()
+        .rename({"Year": "Cohort", "Tech Type": "Type"})
+    )
+    pipelines_lifetime_xr.name = "ProcessingLifetime"
+    pipelines_lifetime_xr = prism.Q_(pipelines_lifetime_xr, "year") # add units
 
-    scipy_params = ["mean", "stdev"]
-    # Build full array: shape (ScipyParam, Time, Type)
-    data_array = np.stack([values, values * SD_LIFETIME], axis=0)
-    # Create DataArray
-    pipelines_lifetime_xr = xr.DataArray(
-            data_array,
-            dims=["DistributionParams", "Cohort", "Type"],
-            coords={
-                "DistributionParams": scipy_params,
-                "Cohort": times,
-                "Type": types
-            },
-            name="PipelinesLifetime"
-        )
-
-    # Expand 2020 across 1880-2100
-    year_range = np.arange(1880, 2101)
-    value_2020 = pipelines_lifetime_xr.sel(Cohort=2020)
-    pipelines_lifetime_xr = value_2020.expand_dims(Cohort=year_range).transpose("DistributionParams", "Cohort", "Type")
-    pipelines_lifetime_xr = prism.Q_(pipelines_lifetime_xr, "year")
-
-    pipeline_order = [
-        'Gas Distribution Pipeline',
-        'Gas Transmission Pipeline',
-        'Oil Offshore Crude Pipeline',
-        'Oil Onshore Crude Pipeline',
-        'Oil Offshore Product Pipeline',
-        'Oil Onshore Product Pipeline'
-    ]
-
+    # input data contain mean lifetimes, add standard deviation by multiplying mean with relative std
+    pipelines_lifetime_xr = pipelines_lifetime_xr.expand_dims({"DistributionParams": ["mean", "stdev"]}).copy() # copy() needed as expand_dims only returns a read-only, broadcast view of the original array
+    pipelines_lifetime_xr.loc[dict(DistributionParams="stdev")] = pipelines_lifetime_xr.loc[dict(DistributionParams="mean")] * SD_LIFETIME
+    # interpolate over whole periode
+    pipelines_lifetime_xr = interpolate_xr(pipelines_lifetime_xr, YEAR_FIRST_FF,END_YEAR)
+    
     #Reorder technology coordinate in all three datasets (capacity, lifetime, material intensities) 
     # to match the same order of technologies, so that we can easily combine the data in the model 
     # (since they all have to be in the same order of technologies)
-    pipelines_lifetime_xr = pipelines_lifetime_xr.reindex(Type=pipeline_order)
+    pipelines_lifetime_xr = pipelines_lifetime_xr.reindex(Type=PIPELINE_TYPES)
 
     return pipelines_lifetime_xr

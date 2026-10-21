@@ -13,6 +13,8 @@ import prism
 import pandas as pd
 import numpy as np
 
+from imagematerials.fossil_fuels.constants import EXTRACTION_TYPES, PIPELINE_TYPES
+
 ####################################################################################################
 #%%Extraction stage (coal, oil, gas)
 ####################################################################################################
@@ -109,15 +111,7 @@ def compute_extraction_capacity(
     # to match the same order of technologies (coal opencast, coal underground, gas offshore, gas 
     # onshore, oil offshore, oil onshore), so that we can easily combine the data in the model 
     # (since they all have to be in the same order of technologies)
-    extraction_order = [
-        'Coal Opencast',
-        'Coal Underground',
-        'Gas Offshore',
-        'Gas Onshore',
-        'Oil Offshore',
-        'Oil Onshore'
-    ]
-    extractioncap_xr = extractioncap_xr.reindex(Type=extraction_order)
+    extractioncap_xr = extractioncap_xr.reindex(Type=EXTRACTION_TYPES)
     
     return extractioncap_xr
 
@@ -323,24 +317,24 @@ def compute_transport_capacity(
     ) -> xr.DataArray:
     """Build the transport capacity (stock) of coal, oil and gas as one xarray.
     
-        Transport covers shipping, rail and trucks. The stock tables from compute_all_infra() are 
-        combined, restricted to the relevant years and regions, and brought into the format the model needs.
-    
-        Parameters
-        ----------
-        infra: Result of compute_all_infra() in drivers.py. Uses
-            infra["coal"]["processing"], infra["oil"]["refinery"] and
-            infra["gas"]["processing"]. Each table has one column per region (1-28)
-            and the index (type, time, fuel, stage, unit); values are the total
-            weight of the infrastructure in kg.
-        year_start: First year to keep.
-        year_end: Last year to keep (included).
-    
-        Returns
-        -------
-        Processing stock in kg, dimensions (Time, Region, Type).
+    Transport covers shipping, rail and trucks. The stock tables from compute_all_infra() are 
+    combined, restricted to the relevant years and regions, and brought into the format the model needs.
 
-        """
+    Parameters
+    ----------
+    infra: Result of compute_all_infra() in drivers.py. Uses
+        infra["coal"]["processing"], infra["oil"]["refinery"] and
+        infra["gas"]["processing"]. Each table has one column per region (1-28)
+        and the index (type, time, fuel, stage, unit); values are the total
+        weight of the infrastructure in kg.
+    year_start: First year to keep.
+    year_end: Last year to keep (included).
+
+    Returns
+    -------
+    Processing stock in kg, dimensions (Time, Region, Type).
+
+    """
     #Transport capacity (stock demand per generation technology) 
     transport_total_coal = infra["coal"]["transport"]
     transport_total_oil  = infra["oil"]["transport"]
@@ -561,19 +555,9 @@ def compute_pipelines_capacity(
     # Add units
     pipelinecap_xr = prism.Q_(pipelinecap_xr, "km")
 
-    #Correct the order
-    pipeline_order = [
-        'Gas Distribution Pipeline',
-        'Gas Transmission Pipeline',
-        'Oil Offshore Crude Pipeline',
-        'Oil Onshore Crude Pipeline',
-        'Oil Offshore Product Pipeline',
-        'Oil Onshore Product Pipeline'
-    ]
-
     #Reorder technology coordinate in all three datasets (capacity, lifetime, material intensities) 
     # to match the same order of technologies, so that we can easily combine the data in the model 
     # (since they all have to be in the same order of technologies)
-    pipelinecap_xr = pipelinecap_xr.reindex(Type=pipeline_order)
+    pipelinecap_xr = pipelinecap_xr.reindex(Type=PIPELINE_TYPES)
 
     return pipelinecap_xr

@@ -3,6 +3,7 @@ import pandas as pd
 
 from imagematerials.fossil_fuels import constants
 
+# TODO: chekc if this can be substituted with add_historic_stock() from electricity/utils
 
 # Generate/prepend historic fossil fuel consumption profile (to avoid inflow shocks in the first year of 'stock-driven' dynamic stock calculations)
 # add historic timeseries based on initial/first year of production, with the possibility to include a stabilisation period before the last know year of data

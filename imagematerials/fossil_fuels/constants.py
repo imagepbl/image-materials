@@ -76,14 +76,13 @@ unit_mapping = {
 # General constants ################################################################################
 
 NUM_REGIONS = 26  # 26 IMAGE regions
-FIRST_YEAR = 1900  # first year for the historically generated dataset
 START_YEAR = 1971  # first year available in IMAGE scenarios
 END_YEAR = 2100  # last year available in IMAGE scenarios
 BASE_YEAR = 2019  # last year before COVID pandemic, so realistic numbers
-YEAR_FIRST_GRID =  1970 # change this to align with FUMA (it is the file i believe)
+YEAR_FIRST_FF = 1880 # start of coal in 1880
 
 
-# Electricity Generation related constants ---------------------------------------------
+# Fossil Fuels related constants ---------------------------------------------
 
 TECH_GEN = 27   # number of fossil  technologies -> 26 technologies + 1 empty row
 
@@ -123,6 +122,24 @@ FF_TECHNOLOGIES = [
     "Oil Product Pipeline",
     "Gas Distribution Pipeline",
     "Gas Transmission Pipeline"
+]
+
+EXTRACTION_TYPES = [
+    'Coal Opencast',
+    'Coal Underground',
+    'Gas Offshore',
+    'Gas Onshore',
+    'Oil Offshore',
+    'Oil Onshore'
+]
+
+PIPELINE_TYPES = [
+    'Gas Distribution Pipeline',
+    'Gas Transmission Pipeline',
+    'Oil Offshore Crude Pipeline',
+    'Oil Onshore Crude Pipeline',
+    'Oil Offshore Product Pipeline',
+    'Oil Onshore Product Pipeline'
 ]
 
 # TODO: I don't think this is used, and if it would probably better to use the knoweldge graph -> remove
@@ -284,18 +301,6 @@ ReducedRegion = prism.Dimension("region", IMAGE_REGIONS)
 ReducedImportRegion = prism.Dimension("import_region", IMAGE_REGIONS)
 ReducedExportRegion = prism.Dimension("export_region", IMAGE_REGIONS)
 
-
-#def region_diag(
-   # matrix: prism.Array[ExportRegion, ImportRegion],
-  #  dim: str = "region"
-#) -> prism.Array[Region]:
-#    unit = matrix.pint.units if prism.USE_PINT else None
-#    return prism.array(
-#        np.diagonal(matrix),
-#        dims={dim: Region.coords},
-#        unit=unit)
-
-
 # Energy carriers
 EnergyCarrier = prism.Dimension("carrier", [
     "solid fuel",
@@ -377,27 +382,6 @@ _ENERGY_CARRIERS = [
 # Energy carriers in secondary fuel use
 EnergyCarriers = prism.Dimension('energycarrier', _ENERGY_CARRIERS)
 
-# Travel modes
-_MODE_TRVL = [
-    "Walk",
-    "Bike",
-    "Bus",
-    "Train",
-    "Car",
-    "High-Speed Train",
-    "Air"
-]
-TravelModes = prism.Dimension('mode', _MODE_TRVL)  # Travel modes
-_MODE_FRGT = [
-    "National Shipping",
-    "Train",
-    "Medium Truck",
-    "Heavy Truck",
-    "Air Cargo",
-    "International Shipping",
-    "Pipeline"
-]
-FreightModes = prism.Dimension('mode', _MODE_FRGT)  # Freight
 
 
 
