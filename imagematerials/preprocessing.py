@@ -40,17 +40,17 @@ def _get_vehicles_prep_data(base_dir, climate_policy_scenario_dir, circular_econ
 
     return prep_data
 
-def _get_fossilfuels_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_scenario_dirs, scenario, year_start, year_end, year_out):
+def _get_fossilfuels_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_scenario_dirs):
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
         circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
-        prep_data_extraction = prep_ff_extr(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
-        prep_data_processing = prep_ff_proc(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
-        prep_data_pipelines = prep_ff_pipe(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
-        prep_data_transport = prep_ff_trp(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
-        prep_data_storage = prep_ff_str(base_dir, climate_policy_config, circular_economy_config, scenario, year_start, year_end, year_out)
+        prep_data_extraction = prep_ff_extr(base_dir, climate_policy_config, circular_economy_config)
+        prep_data_processing = prep_ff_proc(base_dir, climate_policy_config, circular_economy_config)
+        prep_data_pipelines = prep_ff_pipe(base_dir, climate_policy_config, circular_economy_config)
+        prep_data_transport = prep_ff_trp(base_dir, climate_policy_config, circular_economy_config)
+        prep_data_storage = prep_ff_str(base_dir, climate_policy_config, circular_economy_config)
             
         prep_data = {
             "prep_data_extraction": prep_data_extraction,
@@ -241,11 +241,7 @@ def get_preprocessing_data(
                                                    circular_economy_scenario_dirs)
         elif sector == "fossil_fuels":
             prep_data = _get_fossilfuels_prep_data(base_dir, climate_policy_scenario_dir,
-                                                   circular_economy_scenario_dirs,
-                                                   standard_scenario,
-                                                   year_start,
-                                                   year_end,
-                                                   year_out)
+                                                   circular_economy_scenario_dirs)
         elif sector == "rest_of":
             prep_data = _get_rest_prep_data(base_dir, climate_policy_scenario_dir,
                                             scenario_name)

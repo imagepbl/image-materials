@@ -2,11 +2,8 @@
 Process material intensity data and transform to xarray DataArray for all processing stages separately.
 """
 
-import pint
 import xarray as xr
 import pandas as pd
-import numpy as np
-from pathlib import Path
 
 import prism
 

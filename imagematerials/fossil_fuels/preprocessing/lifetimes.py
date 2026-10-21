@@ -2,9 +2,7 @@
 Process lifetime data and transform to xarray DataArray for all processing stages separately.
 """
 
-import pint
 import xarray as xr
-import numpy as np
 import pandas as pd
 
 import prism

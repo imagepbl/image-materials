@@ -7,13 +7,17 @@ drivers.py. Then it processes it to bring it into the right format for the stock
 dimensions, conversion to xarray, adding units).
 """
 
-import pint
 import xarray as xr
-import prism
 import pandas as pd
 import numpy as np
 
+import prism
+
+from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.fossil_fuels.constants import EXTRACTION_TYPES, PIPELINE_TYPES
+from imagematerials.concepts import create_region_graph
+
+region_knowledge_graph = create_region_graph()
 
 ####################################################################################################
 #%%Extraction stage (coal, oil, gas)
@@ -96,7 +100,7 @@ def compute_extraction_capacity(
     # Starting stock (capacity) ------
     df_extraction_all = df_extraction_all.loc[~df_extraction_all['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
     df_extraction_all = df_extraction_all.loc[df_extraction_all['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', 'value', 'Tech Type']]  # only keep relevant years and technology columns
-    df_extraction_all['DIM_1'] = df_extraction_all['DIM_1'].astype(int)   
+    df_extraction_all['DIM_1'] = df_extraction_all['DIM_1'].astype(str)   
 
     # Convert to 3D array: (Year, Region, Fuel, Type)
     extractioncap_xr = (
@@ -106,6 +110,8 @@ def compute_extraction_capacity(
         .rename({'time': 'Time', 'DIM_1': 'Region', 'Tech Type': 'Type'})
     )  
     extractioncap_xr = prism.Q_(extractioncap_xr, "kg") # add units
+    extractioncap_xr.name = "ExtractionStockDemand"
+    extractioncap_xr = region_knowledge_graph.rebroadcast_xarray(extractioncap_xr, output_coords=IMAGE_REGIONS, dim="Region")
 
     # Reorder technology coordinate in all three datasets (capacity, lifetime, material intensities) 
     # to match the same order of technologies (coal opencast, coal underground, gas offshore, gas 
@@ -207,7 +213,7 @@ def compute_processing_capacity(
     # combine the processing data for coal, oil, gas into one df and then put it into this 
     df_processing_all = df_processing_all.loc[~df_processing_all['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
     df_processing_all = df_processing_all.loc[df_processing_all['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', 'value', 'Tech Type']]  # only keep relevant years and technology columns
-    df_processing_all['DIM_1'] = df_processing_all['DIM_1'].astype(int)
+    df_processing_all['DIM_1'] = df_processing_all['DIM_1'].astype(str)
 
     # Convert to 3D array: (Year, Region, Fuel, Type)
     processingcap_xr = (
@@ -217,6 +223,8 @@ def compute_processing_capacity(
         .rename({'time': 'Time', 'DIM_1': 'Region', 'Tech Type': 'Type'})
     )
     processingcap_xr = prism.Q_(processingcap_xr, "kg") #Add units
+    processingcap_xr.name = "ProcessingStockDemand"
+    processingcap_xr = region_knowledge_graph.rebroadcast_xarray(processingcap_xr, output_coords=IMAGE_REGIONS, dim="Region")
 
     return processingcap_xr
 
@@ -285,7 +293,7 @@ def compute_storage_capacity(
     # combine the processing data for coal, oil, gas into one df and then put it into this 
     df_storage_all = df_storage_all.loc[~df_storage_all['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
     df_storage_all = df_storage_all.loc[df_storage_all['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', 'value', 'Tech Type']]  # only keep relevant years and technology columns
-    df_storage_all['DIM_1'] = df_storage_all['DIM_1'].astype(int)
+    df_storage_all['DIM_1'] = df_storage_all['DIM_1'].astype(str)
 
 
     # Convert to 3D array: (Year, Region, Fuel, Type)
@@ -303,6 +311,8 @@ def compute_storage_capacity(
 
     #Add units
     storagecap_xr = prism.Q_(storagecap_xr, "meter**3")
+    storagecap_xr.name = "StorageStockDemand"
+    storagecap_xr = region_knowledge_graph.rebroadcast_xarray(storagecap_xr, output_coords=IMAGE_REGIONS, dim="Region")
 
     return storagecap_xr
 
@@ -407,7 +417,7 @@ def compute_transport_capacity(
     # Transport capacity ------
     df_transport_all = df_transport_all.loc[~df_transport_all['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
     df_transport_all = df_transport_all.loc[df_transport_all['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', 'value', 'Tech Type']]  # only keep relevant years and technology columns
-    df_transport_all['DIM_1'] = df_transport_all['DIM_1'].astype(int)
+    df_transport_all['DIM_1'] = df_transport_all['DIM_1'].astype(str)
 
     transportcap_xr = (
         df_transport_all
@@ -416,6 +426,8 @@ def compute_transport_capacity(
         .rename({'time': 'Time', 'DIM_1': 'Region', 'Tech Type': 'Type'})
     )
     transportcap_xr = prism.Q_(transportcap_xr, "kg") #Add units
+    transportcap_xr.name = "TransportStockDemand"
+    transportcap_xr = region_knowledge_graph.rebroadcast_xarray(transportcap_xr, output_coords=IMAGE_REGIONS, dim="Region")
 
     return transportcap_xr
 
@@ -515,7 +527,7 @@ def compute_pipelines_capacity(
     # Pipeline capacity ------
     df_pipelines_all = df_pipelines_all.loc[~df_pipelines_all['DIM_1'].isin([27,28])]  # exclude region 27 & 28 (empty & global total), mind that the columns represent generation technologies
     df_pipelines_all = df_pipelines_all.loc[df_pipelines_all['time'].isin(range(year_start, year_end + 1)), ['time', 'DIM_1', 'value', 'Tech Type']]  # only keep relevant years and technology columns
-    df_pipelines_all['DIM_1'] = df_pipelines_all['DIM_1'].astype(int)
+    df_pipelines_all['DIM_1'] = df_pipelines_all['DIM_1'].astype(str)
 
     # Convert to 3D array: (Year, Region, Fuel, Type)
     pipelinecap_xr = (
@@ -554,6 +566,8 @@ def compute_pipelines_capacity(
 
     # Add units
     pipelinecap_xr = prism.Q_(pipelinecap_xr, "km")
+    pipelinecap_xr.name = "PipelineStockDemand"
+    pipelinecap_xr = region_knowledge_graph.rebroadcast_xarray(pipelinecap_xr, output_coords=IMAGE_REGIONS, dim="Region")
 
     #Reorder technology coordinate in all three datasets (capacity, lifetime, material intensities) 
     # to match the same order of technologies, so that we can easily combine the data in the model 
