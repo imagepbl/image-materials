@@ -2,7 +2,7 @@ Detailed Model Documentation
 ============================
 
 **Stock Classes**
-----------------
+-----------------
 
 GenericStocks
 -------------

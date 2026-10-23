@@ -32,7 +32,7 @@ Key Concepts
 **Material Flow Analysis**: The models track material flows through the economy, from virgin material inputs through use phases to end-of-life treatment.
 
 Model Description and relationships
-----------------------
+-----------------------------------
 
 **Model Flow and Relationships:**
 
@@ -104,7 +104,7 @@ The :class:`RestOf <imagematerials.model.RestOf>` class models material consumpt
 - **MaterialIntensities**: Use for cases where you have material intensities per stock unit to calculate material use
 
 Complete Modeling Workflow
-----------------------
+--------------------------
 
 A typical IMAGE materials modeling workflow follows these steps:
 

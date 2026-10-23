@@ -1,7 +1,7 @@
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 import netCDF4
 import numpy as np
@@ -272,24 +272,177 @@ def read_climate_policy_config(scenario_folder) -> dict:
     return _read_config(scenario_folder)
 
 
-def read_circular_economy_config(scenario_folders: dict) -> dict:
-    """Extract data from multiple .toml-files and joins it together.
+def read_circular_economy_data(data_file: Union[Path, str, None]) -> dict:
+    """Read circular economy / resource efficiency parameter data from one TOML file.
 
     Parameters
     ----------
-    scenario_folders
-        Dictionary with labelled paths to the files that must be read.
+    data_file
+        Path to a circular_economy_data.toml file, or a directory containing one named
+        'circular_economy_data.toml'. If None, returns an empty dict.
 
     Returns
     -------
-        Dictionary containing the contents of all toml-file, accessible
-        under the specified labels.
+        Nested dictionary keyed by sector, then flag name, e.g.
+        data["buildings"]["FlagLifetimeExtension"]["eol_reuse_rate_2060"].
 
     """
-    config_dict = {}
-    for key, scenario_folder in scenario_folders.items():
-        config_dict[key] = _read_config(scenario_folder)
-    return config_dict
+    if data_file is None:
+        return {}
+    data_file = Path(data_file)
+    if data_file.is_dir():
+        data_file = data_file / "circular_economy_data.toml"
+    with open(data_file, "rb") as f:
+        return tomllib.load(f)
+
+
+# Flags that may only be enabled if another flag is also enabled, because the
+# dependent measure builds on the output of the flag it depends on, e.g. floorspace
+# reduction assumes the floorspace trajectory has already been calibrated.
+DEPENDENT_FLAGS = (
+    ("buildings", "FlagFloorSpaceReductionResidential", "FlagFloorSpaceCalibrationResidential"),
+    ("buildings", "FlagFloorSpaceReductionCommercial", "FlagFloorSpaceCalibrationCommercial"),
+)
+
+# Groups of flags within one sector of which at most one may be True at a time,
+# because they are two implementations of the same measure.
+# FlagLifetimeExtensionSlow applies the regional lifetime targets from
+# circular_economy_data.toml on top of the SSP2_CP database;
+# FlagLifetimeExtension2D_RE instead swaps in the pre-built SSP2_2D_RE lifetime
+# database. Enabling both would double-count.
+MUTUALLY_EXCLUSIVE_FLAGS = (
+    ("buildings", ("FlagLifetimeExtensionSlow", "FlagLifetimeExtension2D_RE")),
+)
+
+
+def validate_resource_efficiency_flags(resource_efficiency_flags: dict) -> None:
+    """Check resource-efficiency flag combinations are valid.
+
+    Parameters
+    ----------
+    resource_efficiency_flags
+        Nested dictionary as returned by read_resource_efficiency_flags.
+
+    Raises
+    ------
+    ValueError
+        If a flag is True while a flag it depends on (see DEPENDENT_FLAGS) is not,
+        or if more than one flag in a mutually exclusive group (see
+        MUTUALLY_EXCLUSIVE_FLAGS) is True.
+
+    """
+    if not resource_efficiency_flags:
+        return
+    for sector, dependent_flag, required_flag in DEPENDENT_FLAGS:
+        if flag_enabled(resource_efficiency_flags, sector, dependent_flag) and not \
+                flag_enabled(resource_efficiency_flags, sector, required_flag):
+            raise ValueError(
+                f"'{dependent_flag}' requires '{required_flag}' to also be True "
+                f"in [{sector}] of resource_efficiency_flags.toml."
+            )
+    for sector, group in MUTUALLY_EXCLUSIVE_FLAGS:
+        enabled = [f for f in group if flag_enabled(resource_efficiency_flags, sector, f)]
+        if len(enabled) > 1:
+            raise ValueError(
+                f"Flags {enabled} in [{sector}] of resource_efficiency_flags.toml are "
+                f"mutually exclusive; enable at most one of {list(group)}."
+            )
+
+
+def read_resource_efficiency_flags(flags_file: Union[Path, str, None]) -> dict:
+    """Read the resource-efficiency on/off flags from a flags TOML file.
+
+    Parameters
+    ----------
+    flags_file
+        Path to a resource_efficiency_flags.toml file, or a directory containing one
+        named 'resource_efficiency_flags.toml'. If None, all flags default to False
+        (no circular economy / resource efficiency measures applied).
+
+    Returns
+    -------
+        Nested dictionary keyed by sector then flag name, e.g.
+        flags["buildings"]["FlagLifetimeExtension"].
+
+    Raises
+    ------
+    ValueError
+        If a dependent flag is True without its prerequisite (see DEPENDENT_FLAGS).
+
+    """
+    if flags_file is None:
+        return {}
+    flags_file = Path(flags_file)
+    if flags_file.is_dir():
+        flags_file = flags_file / "resource_efficiency_flags.toml"
+    with open(flags_file, "rb") as f:
+        flags = tomllib.load(f)
+    validate_resource_efficiency_flags(flags)
+    return flags
+
+
+def flag_enabled(resource_efficiency_flags: dict, sector: str, flag_name: str) -> bool:
+    """Check whether a named resource-efficiency flag is enabled for a sector.
+
+    Parameters
+    ----------
+    resource_efficiency_flags
+        Nested dictionary as returned by read_resource_efficiency_flags. May be None,
+        in which case every flag is considered disabled.
+    sector
+        Sector the flag belongs to, e.g. 'buildings', 'vehicles', 'electricity', 'end_of_life'.
+    flag_name
+        Name of the flag, e.g. 'FlagLifetimeExtension'.
+
+    Returns
+    -------
+        True if the flag is present and set to True, False otherwise.
+
+    """
+    if not resource_efficiency_flags:
+        return False
+    return bool(resource_efficiency_flags.get(sector, {}).get(flag_name, False))
+
+
+def resolve_circular_economy_scenario(circular_economy_scenarios_dir: Union[Path, str],
+                                       scenario_name: Union[str, None]) -> Path:
+    """Resolve a named circular economy scenario to its data folder.
+
+    Each named scenario is a self-contained subfolder of
+    circular_economy_scenarios_dir holding its own
+    'resource_efficiency_flags.toml' and 'circular_economy_data.toml', e.g.
+    '<circular_economy_scenarios_dir>/narrow_product/'.
+
+    Parameters
+    ----------
+    circular_economy_scenarios_dir
+        The base 'circular_economy_scenarios' directory (containing one
+        subfolder per named scenario).
+    scenario_name
+        Name of the scenario subfolder. If None, resolves to the 'base'
+        scenario (every flag disabled).
+
+    Returns
+    -------
+        Path to the resolved scenario folder, suitable for passing as both
+        circular_economy_data_file and resource_efficiency_flags_file.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the corresponding scenario folder doesn't exist.
+
+    """
+    circular_economy_scenarios_dir = Path(circular_economy_scenarios_dir)
+    if scenario_name is None:
+        scenario_name = "base"
+
+    scenario_dir = circular_economy_scenarios_dir / scenario_name
+    if not scenario_dir.is_dir():
+        raise FileNotFoundError(
+            f"No circular economy scenario folder found at {scenario_dir}"
+        )
+    return scenario_dir
 
 
 def _read_config(scenario_folder) -> dict:
@@ -383,9 +536,9 @@ def convert_lifetime_dataset(lifetime_dataset: xr.Dataset) -> dict[str, xr.DataA
         dist = NAME_TO_DIST[dist_name]
 
         array = xr.DataArray(
-            0.0, dims=("Time", "Type", "ScipyParam"),
+            0.0, dims=("time", "Type", "ScipyParam"),
             coords={
-                "Time": lifetime_dataset.coords["year"].to_numpy(),
+                "time": lifetime_dataset.coords["year"].to_numpy(),
                 "Type": mode_list,
                 "ScipyParam": dist.variable_scipy_param})
 
@@ -427,7 +580,7 @@ def convert_lifetime_dataarray(lifetime_dataarray: xr.DataArray) -> dict[str, xr
     Returns
     -------
     dict[str, xr.DataArray]
-        Dictionary containing one DataArray per distribution, with dimensions (Time, Type, ScipyParam),
+        Dictionary containing one DataArray per distribution, with dimensions (time, Type, ScipyParam),
         fully preserving coordinates for compatibility with downstream code.
 
     """
@@ -470,9 +623,9 @@ def convert_lifetime_dataarray(lifetime_dataarray: xr.DataArray) -> dict[str, xr
 
         array = xr.DataArray(
             0.0,
-            dims=("Time", "Type", "ScipyParam"),
+            dims=("time", "Type", "ScipyParam"),
             coords={
-                "Time": lifetime_dataarray.coords["Cohort"].to_numpy(),
+                "time": lifetime_dataarray.coords["Cohort"].to_numpy(),
                 "Type": mode_list,
                 "ScipyParam": dist.variable_scipy_param,
             },
@@ -525,6 +678,7 @@ def scenario_change(arr: xr.DataArray, base_year: int, target_year: int, change:
     steepness
         Steepness parameter for the 's-curve' implementation; default is 0.5.
 
+
     Returns
     -------
         A new Xarray with updated values for each year between base_year and target_year, and interpolated values where necessary.
@@ -542,37 +696,39 @@ def scenario_change(arr: xr.DataArray, base_year: int, target_year: int, change:
     result = arr.copy()
 
     for region, increase in change.items():
-        base_val = result.loc[{"Time": target_year, "Region": region}]  # kept (not relied on)
+        base_val = result.loc[{"time": target_year, "Region": region}]  # kept (not relied on)
         if region in result.Region:
             if implementation_rate == 'linear':
                 # ramp progress: 0 at base_year, 1 at target_year, held at 1 after
                 span = max(1, target_year - base_year)
                 # apply to each year explicitly to preserve structure
-                for year in range(base_year + 1, target_year + 1):
+                for year in range(base_year, target_year + 1):
                     progress = (year - base_year) / span
-                    result.loc[{"Time": year, "Region": region}] = (
-                        arr.loc[{"Time": year, "Region": region}] * (1 + (increase / 100.0) * progress)
+                    result.loc[{"time": year, "Region": region}] = (
+                        arr.loc[{"time": year, "Region": region}] * (1 + (increase / 100.0) * progress)
                     )
                 # after target_year, full effect but still relative to same-year baseline
-                result.loc[{"Time": slice(target_year + 1, None), "Region": region}] = (
-                    arr.loc[{"Time": slice(target_year + 1, None), "Region": region}] * (1 + increase / 100.0)
+                result.loc[{"time": slice(target_year + 1, None), "Region": region}] = (
+                    arr.loc[{"time": slice(target_year + 1, None), "Region": region}] * (1 + increase / 100.0)
                 )
-                # keep explicit anchor years
-                if 'INTERMEDIATE_YEAR' in globals():
-                    result.loc[{"Time": INTERMEDIATE_YEAR, "Region": region}] = (
-                        arr.loc[{"Time": INTERMEDIATE_YEAR, "Region": region}] * (1 + increase / 100.0)
-                    )
-                if 'END_YEAR' in globals():
-                    result.loc[{"Time": END_YEAR, "Region": region}] = (
-                        arr.loc[{"Time": END_YEAR, "Region": region}] * (1 + increase / 100.0)
-                    )
+                # keep explicit anchor years (only when data_type is set,
+                # e.g. vehicles with sparse time steps)
+                if data_type is not None:
+                    if 'INTERMEDIATE_YEAR' in globals():
+                        result.loc[{"Time": INTERMEDIATE_YEAR, "Region": region}] = (
+                            arr.loc[{"Time": INTERMEDIATE_YEAR, "Region": region}] * (1 + increase / 100.0)
+                        )
+                    if 'END_YEAR' in globals():
+                        result.loc[{"Time": END_YEAR, "Region": region}] = (
+                            arr.loc[{"Time": END_YEAR, "Region": region}] * (1 + increase / 100.0)
+                        )
 
             elif implementation_rate == 'immediate':
                 # unchanged up to base_year; full step from base_year+1 onward, relative to same-year baseline
-                result.loc[{"Time": slice(None, base_year), "Region": region}] = \
-                    arr.loc[{"Time": slice(None, base_year), "Region": region}]
-                result.loc[{"Time": slice(base_year + 1, None), "Region": region}] = \
-                    arr.loc[{"Time": slice(base_year + 1, None), "Region": region}] * (1 + increase / 100.0)
+                result.loc[{"time": slice(None, base_year), "Region": region}] = \
+                    arr.loc[{"time": slice(None, base_year), "Region": region}]
+                result.loc[{"time": slice(base_year + 1, None), "Region": region}] = \
+                    arr.loc[{"time": slice(base_year + 1, None), "Region": region}] * (1 + increase / 100.0)
 
             elif implementation_rate == 's-curve':
                 years = list(range(base_year, target_year + 1))
@@ -583,19 +739,19 @@ def scenario_change(arr: xr.DataArray, base_year: int, target_year: int, change:
                 for year in years:
                     s = 1.0 / (1.0 + np.exp(-steepness * (year - mid_year)))
                     progress = np.clip((s - s0) / (s1 - s0), 0.0, 1.0)
-                    result.loc[{"Time": year, "Region": region}] = (
-                        arr.loc[{"Time": year, "Region": region}] * (1 + (increase / 100.0) * progress)
+                    result.loc[{"time": year, "Region": region}] = (
+                        arr.loc[{"time": year, "Region": region}] * (1 + (increase / 100.0) * progress)
                     )
                 # after target_year, full effect relative to same-year baseline
-                result.loc[{"Time": slice(target_year + 1, None), "Region": region}] = (
-                    arr.loc[{"Time": slice(target_year + 1, None), "Region": region}] * (1 + increase / 100.0)
+                result.loc[{"time": slice(target_year + 1, None), "Region": region}] = (
+                    arr.loc[{"time": slice(target_year + 1, None), "Region": region}] * (1 + increase / 100.0)
                 )
             else: 
                 raise ValueError(f"Unknown implementation method: '{implementation_rate}'. "
                                   "Supported methods are 'immediate', 'linear', and 's-curve'.")
         else:
             raise ValueError(f"Region {region} not found in DataArray.")
-    return result.interpolate_na("Time", method="cubic")
+    return result.interpolate_na("time", method="cubic")
 
 
 def apply_change_per_region(arr: xr.DataArray, base_year: int, target_year: int, increase: float,
@@ -632,7 +788,7 @@ def apply_change_per_region(arr: xr.DataArray, base_year: int, target_year: int,
             change={region: float(increase.loc[{"Region": region}].item())}, 
             implementation_rate=implementation_rate, 
             data_type=data_type, 
-            steepness=steepness
+            steepness=steepness,
         )
         results.append(result)
     # Concatenate results along columns (axis=1), aligning on index
@@ -648,7 +804,7 @@ def overwrite_future_rates(arr: xr.DataArray, target_year: int, supertypes: list
     Parameters
     ----------
     arr : xr.DataArray
-        A DataArray with dimensions including 'Time', 'material', and 'Type'.
+        A DataArray with dimensions including 'time', 'material', and 'Type'.
     target_year : int
         The year for which values should be overwritten.
     supertypes: list
@@ -666,7 +822,7 @@ def overwrite_future_rates(arr: xr.DataArray, target_year: int, supertypes: list
     for material, new_value in new_val.items():
         if material not in result.material.values:
             raise ValueError(f"'{material}' not found in DataArray.")
-        result.loc[{"Time": target_year,"Type": supertypes, "material": material}] = new_value
+        result.loc[{"time": target_year,"Type": supertypes, "material": material}] = new_value
     return result
 
 

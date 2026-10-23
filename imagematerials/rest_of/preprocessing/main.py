@@ -8,6 +8,7 @@ from pathlib import Path
 from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.concepts import create_region_graph
 
+from imagematerials.factory import ModelFactory
 from imagematerials.read_mym import read_mym_df
 from imagematerials.buildings.preprocessing.population import compute_population
 
@@ -17,41 +18,9 @@ from imagematerials.rest_of.preprocessing.regressions_all_materials import (fit_
                                                                             historic_other_fraction_consumption_to_xr)
 
 from imagematerials.rest_of.util import sum_inflows_for_all_sectors, save_sum_as_csv
+from imagematerials.util import flag_enabled, read_resource_efficiency_flags
 
-
-def sum_and_save(model_run, list_sum_sectors: list, save_path: Path, mfa_data = 'inflow_materials'):
-    """
-    Sums inflows across specified sectors and saves the results for steel, aluminium, and copper
-    Parameters
-    ----------
-    model_run :
-        ImageMaterials model instance providing sector attributes (buildings, vehicles, generation, grid, ...)
-        each exposing `.get(get_mfa_data).to_array()` returning an xarray.DataArray.
-    list_sum_sectors : list
-        List of sector names to include in the sum (e.g. ["buildings", "vehicles", "generation", "grid"]).
-    mfa_data : str, optional
-        Key/name of the MFA data to extract from each sector (default is 'inflow_materials').
-        Could also be stock, or outflow_materials.
-    Returns
-    -------
-    xarray.DataArray
-        Elementwise sum of the sector inflows for the specified sectors.
-    """
-
-    total_inflow_combined = sum_inflows_for_all_sectors(model_run, mfa_data, list_sum_sectors)
-
-    # save materials
-    save_sum_as_csv(total_inflow_combined, "steel", save_path)
-    save_sum_as_csv(total_inflow_combined, "aluminium", save_path)
-    save_sum_as_csv(total_inflow_combined, "copper", save_path)
-    save_sum_as_csv(total_inflow_combined, "cement", save_path)
-    save_sum_as_csv(total_inflow_combined, "sand_gravel_crushed_rock", save_path)
-
-    print("Materials saved successfully.")
-    return total_inflow_combined
-
-
-def read_gompertz_values(base_directory, scenario: str):
+def read_gompertz_values(base_directory, scenario: str, resource_efficiency_flags: dict = None):
     """
     Reads Gompertz coefficient values from a NetCDF file and adapts them according to the specified scenario.
 
@@ -64,7 +33,11 @@ def read_gompertz_values(base_directory, scenario: str):
     base_directory : Path or str
         The base directory containing the 'rest-of/gompertz_values/coefs_gompertz.nc' file.
     scenario : str
-        The scenario name. If it matches 'SSP2_VLLO_LifeTech', resource efficiency adaptation is applied.
+        The scenario name.
+    resource_efficiency_flags : dict, optional
+        Nested dictionary as returned by read_resource_efficiency_flags. If the
+        'rest_of' sector's 'FlagResourceEfficiency' flag is enabled, the Gompertz
+        coefficients adapted for resource efficiency measures are used.
 
     Returns
     -------
@@ -73,17 +46,15 @@ def read_gompertz_values(base_directory, scenario: str):
 
     Notes
     -----
-    - The returned DataArray has dimensions including 'coef', 'material', 'Region', and 'Time'.
+    - The returned DataArray has dimensions including 'coef', 'material', 'Region', and 'time'.
     - Only the 'a' coefficient is adapted for resource efficiency scenarios.
     - The function expects regions to be numeric strings for sorting.
     """
 
-    if scenario in ["SSP2_resource_efficiency", "SSP2_narrow_activity","SSP2_narrow", "SSP2_narrow_slow_close", 
-                    "SSP2_narrow_act_26_tax","SSP2_narrow_26_tax", "SSP2_narrow_slow_close_26_tax",
-                    "SSP2_narrow_slow_close_19_tax"]:
+    if flag_enabled(resource_efficiency_flags, "rest_of", "FlagResourceEfficiency"):
         print('Using Gompertz coefficients for resource efficiency measures')
         name = "coefs_gompertz_eff.nc"
-    else: 
+    else:
         name = "coefs_gompertz.nc"
 
     xr_gompertz = xr.open_dataset(base_directory / "rest-of" / "gompertz_values" / name, engine="netcdf4")
@@ -119,12 +90,12 @@ def read_image_gdp_cap_data(base_directory, image_scenario_directory):
     # to xarry
     # drop empty and global region
     gdp_per_capita = gdp_per_capita.loc[:, :26]
-    gdp_per_capita = gdp_per_capita.rename_axis(index = "Time", columns = "Region")
+    gdp_per_capita = gdp_per_capita.rename_axis(index = "time", columns = "Region")
 
     gdp_per_capita_xr = xr.DataArray(
         data=gdp_per_capita.values,                # Data values from the DataFrame
-        dims=["Time", "Region"],            # Names for the two dimensions
-        coords={"Time": gdp_per_capita.index,      # Time coordinates from the DataFrame index
+        dims=["time", "Region"],            # Names for the two dimensions
+        coords={"time": gdp_per_capita.index,      # time coordinates from the DataFrame index
                 "Region": gdp_per_capita.columns}  # Region coordinates from the DataFrame columns
     )
     gdp_per_capita_xr.coords["Region"]  = [str(x.values) for x in gdp_per_capita_xr.coords["Region"]]
@@ -146,21 +117,22 @@ def fit_all_materials_save_corrseponding_input_data(path_input_data, path_input_
     max_x = get_X_max_scaling_factor(results, save=True)
 
 
-def rest_of_preprocessing(base_directory, image_scenario_directory, scenario: str, 
-                          refit = False):
-    
+def rest_of_preprocessing(base_directory, image_scenario_directory, scenario: str,
+                          resource_efficiency_flags_file=None, refit = False):
+
     if refit == True:
         fit_all_materials_save_corrseponding_input_data()
         print('Materials regression refitted and preprocessing data updated.')
 
-    gompertz_values = read_gompertz_values(base_directory, scenario)
+    resource_efficiency_flags = read_resource_efficiency_flags(resource_efficiency_flags_file)
+    gompertz_values = read_gompertz_values(base_directory, scenario, resource_efficiency_flags)
     gdp_per_capita = read_image_gdp_cap_data(base_directory, image_scenario_directory)
     historic_diff_consumption_mean = read_historic_diff_cons_data_mean(base_directory)
     historic_diff_consumption_total = read_historic_diff_cons_data(base_directory)
     population = compute_population(image_scenario_directory, base_directory)
     # Filter to total population from 1971 onward.
-    population = population.sel(Area="Total", Time=slice(1971, None)).drop_vars("Area")
-    # Total is duplicated across Quintile; collapse to a single Time x Region series.
+    population = population.sel(Area="Total", time=slice(1971, None)).drop_vars("Area")
+    # Total is duplicated across Quintile; collapse to a single time x Region series.
     if "Quintile" in population.dims:
         population = population.mean("Quintile")
     # from nr to Region abbreviations

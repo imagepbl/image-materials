@@ -1,15 +1,15 @@
 import xarray as xr
 
 from imagematerials.electricity.utils import (
-    apply_ce_measures_to_elc, 
+    apply_ce_measures_to_elc,
 )
-
-
+from imagematerials.util import flag_enabled
 
 
 def apply_ce_measures_to_elc_generation(materials_array: xr.DataArray,
                                         lifetime_array: xr.DataArray,
-                                        circular_economy_config: dict):
+                                        circular_economy_config: dict,
+                                        resource_efficiency_flags: dict = None):
     """Implement circular economy measures for electricity generation.
 
     Parameters
@@ -30,12 +30,12 @@ def apply_ce_measures_to_elc_generation(materials_array: xr.DataArray,
 
     """
 
-    if "narrow_product" in circular_economy_config.keys():
-        ce_scen             = "narrow_product"
-        target_year         = circular_economy_config[ce_scen]['electricity']['target_year']
-        base_year           = circular_economy_config[ce_scen]['electricity']['base_year']
-        implementation_rate = circular_economy_config[ce_scen]['electricity']['implementation_rate']
-        weight_change_pc    = circular_economy_config[ce_scen]['electricity']['generation']['weight_change_pc']
+    if flag_enabled(resource_efficiency_flags, "electricity", "FlagLightweightingGeneration"):
+        flag_config          = circular_economy_config['electricity']['FlagLightweightingGeneration']
+        target_year          = flag_config['target_year']
+        base_year            = flag_config['base_year']
+        implementation_rate  = flag_config['implementation_rate']
+        weight_change_pc     = flag_config['weight_change_pc']
 
         materials_array = apply_ce_measures_to_elc(
             materials_array,
@@ -44,14 +44,14 @@ def apply_ce_measures_to_elc_generation(materials_array: xr.DataArray,
             change              = weight_change_pc,
             implementation_rate = implementation_rate
         )
-        print("narrow|lightweighting applied to ", materials_array.name)
+        print("FlagLightweightingGeneration applied to ", materials_array.name)
 
-    if "slow" in circular_economy_config.keys():
-        ce_scen             = "slow"
-        target_year         = circular_economy_config[ce_scen]['electricity']['target_year']
-        base_year           = circular_economy_config[ce_scen]['electricity']['base_year']
-        implementation_rate = circular_economy_config[ce_scen]['electricity']['implementation_rate']
-        lifetime_change_pc  = circular_economy_config[ce_scen]['electricity']['generation']['lifetime_increase_percent']
+    if flag_enabled(resource_efficiency_flags, "electricity", "FlagLifetimeExtensionGeneration"):
+        flag_config          = circular_economy_config['electricity']['FlagLifetimeExtensionGeneration']
+        target_year          = flag_config['target_year']
+        base_year            = flag_config['base_year']
+        implementation_rate  = flag_config['implementation_rate']
+        lifetime_change_pc   = flag_config['lifetime_increase_percent']
 
         lifetime_array = apply_ce_measures_to_elc(
             lifetime_array,
@@ -61,7 +61,7 @@ def apply_ce_measures_to_elc_generation(materials_array: xr.DataArray,
             implementation_rate = implementation_rate,
             data_type           = "lifetime"
         )
-        print("slow|lifetime increase applied to ", lifetime_array.name)
+        print("FlagLifetimeExtensionGeneration applied to ", lifetime_array.name)
 
     return materials_array, lifetime_array
 
@@ -69,7 +69,8 @@ def apply_ce_measures_to_elc_generation(materials_array: xr.DataArray,
 
 def apply_ce_measures_to_elc_grid(materials_additions_array: xr.DataArray,
                                 lifetime_array: xr.DataArray,
-                                circular_economy_config: dict):
+                                circular_economy_config: dict,
+                                resource_efficiency_flags: dict = None):
     """Implement circular economy measures for electricity generation.
 
     Parameters
@@ -89,14 +90,12 @@ def apply_ce_measures_to_elc_grid(materials_additions_array: xr.DataArray,
         Updated lifetimes for electricity grids.
 
     """
-    if "narrow_product" in circular_economy_config.keys():
-        ce_scen = "narrow_product"
-
-        target_year         = circular_economy_config[ce_scen]['electricity']['target_year']
-        base_year           = circular_economy_config[ce_scen]['electricity']['base_year']
-        implementation_rate = circular_economy_config[ce_scen]['electricity']['implementation_rate']
-
-        weight_change_pc = circular_economy_config[ce_scen]['electricity']['grid_add']['weight_change_pc']
+    if flag_enabled(resource_efficiency_flags, "electricity", "FlagLightweightingGrid"):
+        flag_config          = circular_economy_config['electricity']['FlagLightweightingGrid']
+        target_year          = flag_config['target_year']
+        base_year            = flag_config['base_year']
+        implementation_rate  = flag_config['implementation_rate']
+        weight_change_pc     = flag_config['weight_change_pc']
 
         materials_additions_array = apply_ce_measures_to_elc(
             materials_additions_array,
@@ -106,15 +105,15 @@ def apply_ce_measures_to_elc_grid(materials_additions_array: xr.DataArray,
             implementation_rate=implementation_rate,
             data_sector = "electricity grid"
         )
-        print("narrow|lightweighting applied to ", materials_additions_array.name)
+        print("FlagLightweightingGrid applied to ", materials_additions_array.name)
 
 
-    if "slow" in circular_economy_config.keys():
-        ce_scen = "slow"
-        target_year          = circular_economy_config[ce_scen]['electricity']['target_year']
-        base_year            = circular_economy_config[ce_scen]['electricity']['base_year']
-        implementation_rate  = circular_economy_config[ce_scen]['electricity']['implementation_rate']
-        lifetime_change_pc = circular_economy_config[ce_scen]['electricity']['grid_add']['lifetime_increase_percent']
+    if flag_enabled(resource_efficiency_flags, "electricity", "FlagLifetimeExtensionGrid"):
+        flag_config          = circular_economy_config['electricity']['FlagLifetimeExtensionGrid']
+        target_year          = flag_config['target_year']
+        base_year            = flag_config['base_year']
+        implementation_rate  = flag_config['implementation_rate']
+        lifetime_change_pc   = flag_config['lifetime_increase_percent']
 
         lifetime_array = apply_ce_measures_to_elc(
             lifetime_array,
@@ -125,6 +124,6 @@ def apply_ce_measures_to_elc_grid(materials_additions_array: xr.DataArray,
             data_sector         = "electricity grid",
             data_type           = "lifetime"
         )
-        print("slow|lifetime increase applied to ", lifetime_array.name)
+        print("FlagLifetimeExtensionGrid applied to ", lifetime_array.name)
 
     return materials_additions_array, lifetime_array

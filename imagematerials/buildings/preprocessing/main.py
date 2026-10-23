@@ -27,6 +27,7 @@ from imagematerials.constants import IMAGE_REGIONS
 
 def buildings_preprocessing(base_directory: Path, climate_policy_config: dict,
                             circular_economy_config: dict,
+                            resource_efficiency_flags: dict = None,
                             image_scenario:str = "SSP2_CP") -> xr.DataArray:
     """Preprocess the buildings data from start to finish.
 
@@ -68,12 +69,13 @@ def buildings_preprocessing(base_directory: Path, climate_policy_config: dict,
     floorspace_commercial_capita = extrapolate_floorspace(floorspace_image_commercial, minimum_comm)
 
     # Commercial floorspace [Time, Region, Type]
-    
-    if "base" or "narrow_activity" or "narrow" in circular_economy_config.keys():
-        # Implement circular economy for commercial floorspace
-        # This is only done for the base and narrow_activity scenarios, as the other scenarios do not have a circular economy component
-        floorspace_commercial_capita = apply_circular_economy_commercial_floorspace(floorspace_commercial_capita, circular_economy_config)
-        
+
+    # Circular economy measures for commercial floorspace are gated internally by
+    # FlagFloorSpaceCalibrationCommercial / FlagFloorSpaceReductionCommercial, so this
+    # call is safe to make unconditionally.
+    floorspace_commercial_capita = apply_circular_economy_commercial_floorspace(
+        floorspace_commercial_capita, circular_economy_config, resource_efficiency_flags)
+
     # Calculate population ("Total", "Rural", "Urban")
     population = compute_population(image_directory, base_directory)
 
@@ -81,11 +83,12 @@ def buildings_preprocessing(base_directory: Path, climate_policy_config: dict,
 
     housing_type = compute_housing_type(database_directory)
 
-    floorspace_residential_total = compute_housing_residential(population, 
+    floorspace_residential_total = compute_housing_residential(population,
                                                          average_m2_capita,
-                                                         housing_type, 
+                                                         housing_type,
                                                          floorspace_residential_capita,
-                                                         circular_economy_config)
+                                                         circular_economy_config,
+                                                         resource_efficiency_flags)
 
     # Commercial floorspace also needs to be multiplied by population & drop Area dimension
     floorspace_commercial_total = floorspace_commercial_capita * population.sel(Area=['Urban', 'Rural']).sum("Area")
@@ -96,12 +99,14 @@ def buildings_preprocessing(base_directory: Path, climate_policy_config: dict,
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         lifetimes = compute_lifetimes(base_directory, floorspace_commercial_total.coords["Type"].values,
-                                      circular_economy_config)
+                                      circular_economy_config, resource_efficiency_flags=resource_efficiency_flags)
 
     mat_intensities_comm = compute_mat_intensities_commercial(database_directory,
-                                                              circular_economy_config)
+                                                              circular_economy_config,
+                                                              resource_efficiency_flags=resource_efficiency_flags)
     mat_intensities_res = compute_mat_intensities_residential(database_directory,
-                                                              circular_economy_config)
+                                                              circular_economy_config,
+                                                              resource_efficiency_flags=resource_efficiency_flags)
     mat_intensities = xr.concat((mat_intensities_res, mat_intensities_comm), dim="Type")
     knowledge_graph_buildings = create_building_graph()
     mat_intensities = knowledge_graph_buildings.rebroadcast_xarray(

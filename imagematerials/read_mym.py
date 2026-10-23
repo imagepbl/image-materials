@@ -1,11 +1,221 @@
+import functools
 import numpy as np
 import re as re
 import os.path
 import pandas as pd
+import yaml
 
-from pym import read_mym
 from csv import Sniffer as Sniffer
+from pathlib import Path
 from string import whitespace as whitespace
+
+# Default location of the dimension label lookup file, which lives next to
+# this module in the package directory (imagematerials/dimensions.yaml).
+DEFAULT_DIMENSIONS_YAML = Path(__file__).resolve().parent / 'dimensions.yaml'
+
+
+@functools.lru_cache(maxsize=None)
+def _load_dimensions_yaml(path):
+    path = Path(path)
+    if not path.is_file():
+        return {}
+    with open(path, 'r', encoding='utf-8') as yaml_file:
+        return yaml.safe_load(yaml_file) or {}
+# ............................................................................ #
+def mymarray_to_xarray(mym_array, dim_prefix='dim', dimensions_yaml=DEFAULT_DIMENSIONS_YAML, **dimension_overrides):
+    """
+    Convert a ``pym.MymArray`` object to an ``xarray.DataArray``.
+
+    Parameters
+    ----------
+    mym_array : pym.MymArray
+        Input object returned by ``pym.read_mym`` / ``pym.load_mym``.
+    dim_prefix : str, optional
+        Prefix used for generated non-domain dimension names.
+    dimensions_yaml : str or pathlib.Path, optional
+        Path to a YAML file mapping dimension names to their coordinate
+        labels, e.g. ``FOSSIL: [coal, oil, natural gas]``. Defaults to
+        ``imagematerials/dimensions.yaml`` in the package. Dimension names
+        resolved via ``dim_prefix``/``dimension_overrides`` (or parsed from
+        file annotations) are looked up in this file to fill in coordinate
+        labels.
+    **dimension_overrides
+        Optional dimension name overrides keyed by non-domain position, e.g.
+        ``dim_1='PRIM+4'`` or ``dim_2='NRT'``. Provided names are also used
+        to look up coordinate labels in ``constants.dimensions`` when present.
+        You can also pass an explicit coordinate sequence, e.g.
+        ``dim_1=['coal', 'oil', ...]``, or a dict like
+        ``dim_1={'name': 'primary', 'coords': ['coal', 'oil', ...]}``.
+
+    Returns
+    -------
+    xarray.DataArray
+        DataArray with coordinates for domain (if present) and index-like
+        coordinates for all other dimensions.
+    """
+    try:
+        import xarray as xr
+    except ImportError as exc:
+        raise ImportError('xarray is required for mymarray_to_xarray()') from exc
+
+    if not hasattr(mym_array, 'data') or not hasattr(mym_array, 'metadata'):
+        raise TypeError('mym_array must have data and metadata attributes')
+
+    def _coerce_coord_sequence(values):
+        if isinstance(values, np.ndarray):
+            return values.tolist()
+        if isinstance(values, (list, tuple, pd.Index)):
+            return list(values)
+        return None
+
+    def _resolve_dim_spec(local_axis, default_name):
+        override_keys = [f'{dim_prefix}_{local_axis + 1}']
+        if dim_prefix != 'dim':
+            override_keys.append(f'dim_{local_axis + 1}')
+
+        for key in override_keys:
+            if key in dimension_overrides and dimension_overrides[key] is not None:
+                override_value = dimension_overrides[key]
+
+                if isinstance(override_value, str):
+                    return str(override_value), None
+
+                if isinstance(override_value, dict):
+                    dim_name = str(override_value.get('name', default_name))
+                    explicit_coords = _coerce_coord_sequence(override_value.get('coords'))
+                    return dim_name, explicit_coords
+
+                explicit_coords = _coerce_coord_sequence(override_value)
+                if explicit_coords is not None:
+                    return default_name, explicit_coords
+
+                return str(override_value), None
+
+        return default_name, None
+
+    def _extract_dim_names_from_annotations(annotations, expected_count):
+        if expected_count <= 0:
+            return []
+
+        symbol_pattern = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
+        bracket_pattern = re.compile(r'\[([^\[\]]+)\]')
+
+        for line in annotations or []:
+            matches = bracket_pattern.findall(str(line))
+            for match in reversed(matches):
+                labels = [token.strip() for token in match.split(',')]
+                if len(labels) != expected_count:
+                    continue
+                if all(symbol_pattern.match(label) for label in labels) and len(set(labels)) == len(labels):
+                    return labels
+        return None
+
+    def _get_yaml_dimensions(dim_name):
+        dimensions = _load_dimensions_yaml(dimensions_yaml)
+        return dimensions.get(dim_name)
+
+    def _get_const_dimensions(dim_name):
+        try:
+            import constants as const
+        except ImportError:
+            return None
+
+        alias_map = {
+            'PRIM+4': 'DIM2_primary_dict',
+        }
+
+        alias_target = alias_map.get(dim_name)
+        if alias_target is not None:
+            return getattr(const, alias_target, None)
+
+        dimensions = getattr(const, 'dimensions', None)
+        if isinstance(dimensions, dict) and dim_name in dimensions:
+            return dimensions[dim_name]
+
+        return getattr(const, dim_name, None)
+
+    def _mapped_coord_from_const(dim_name, size):
+        dim_values = _get_yaml_dimensions(dim_name)
+        if dim_values is None:
+            dim_values = _get_const_dimensions(dim_name)
+        if dim_values is None:
+            return None
+
+        if isinstance(dim_values, dict):
+            expected_index = list(range(1, size + 1))
+
+            if set(expected_index).issubset(set(dim_values.keys())):
+                return [dim_values[index] for index in expected_index]
+
+            if set(expected_index).issubset(set(dim_values.values())):
+                reverse_map = {value: key for key, value in dim_values.items()}
+                return [reverse_map[index] for index in expected_index]
+
+            return None
+
+        if isinstance(dim_values, (list, tuple)):
+            if len(dim_values) < size:
+                return None
+            return list(dim_values[:size])
+
+        return None
+
+    data = mym_array.data
+    metadata = mym_array.metadata
+
+    has_domain = bool(getattr(metadata, 'has_domain', False))
+
+    dims = []
+    coords = {}
+
+    axis_offset = 0
+    if has_domain:
+        domain_name = metadata.domain if getattr(metadata, 'domain', None) else 'domain'
+        dims.append(domain_name)
+        coords[domain_name] = mym_array.domain
+        axis_offset = 1
+
+    non_domain_ndim = data.ndim - axis_offset
+    annotation_dims = _extract_dim_names_from_annotations(
+        getattr(metadata, 'annotations', []),
+        expected_count=non_domain_ndim,
+    )
+
+    for axis in range(axis_offset, data.ndim):
+        local_axis = axis - axis_offset
+        if annotation_dims:
+            default_dim_name = annotation_dims[local_axis]
+        else:
+            default_dim_name = f'{dim_prefix}_{local_axis + 1}'
+        dim_name, explicit_coords = _resolve_dim_spec(local_axis, default_dim_name)
+        dims.append(dim_name)
+
+        if explicit_coords is not None:
+            if len(explicit_coords) != data.shape[axis]:
+                raise ValueError(
+                    f'Explicit coordinates for {dim_name!r} have length '
+                    f'{len(explicit_coords)}, expected {data.shape[axis]}'
+                )
+            coords[dim_name] = explicit_coords
+        else:
+            mapped_coord = _mapped_coord_from_const(dim_name, data.shape[axis])
+            if mapped_coord is not None:
+                coords[dim_name] = mapped_coord
+            else:
+                coords[dim_name] = np.arange(1, data.shape[axis] + 1)
+
+    attrs = {
+        'full_name': '.'.join(getattr(metadata, 'full_name', [])),
+        'annotations': list(getattr(metadata, 'annotations', [])),
+    }
+
+    return xr.DataArray(
+        data,
+        dims=dims,
+        coords=coords,
+        name=getattr(metadata, 'name', None),
+        attrs=attrs,
+    )
 
 def process_header(line):
     raw_data = ''

@@ -1,5 +1,5 @@
 person = [population] = persons = people
-
+household = [households] = households
 meter = [length] = m
 
 share = 1 = ratio = fraction

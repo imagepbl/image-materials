@@ -51,7 +51,7 @@ def add_historic_stock(da_stock: xr.DataArray,
     Parameters
     ----------
     da_stock : xarray.DataArray
-        Input DataArray with dims ('Time', 'Region', 'Type').
+        Input DataArray with dims ('time', 'Region', 'Type').
     year_start : int
         The first year to start historic stock from (will be filled with zeros).
     interp_method : str, optional
@@ -76,7 +76,7 @@ def add_historic_stock(da_stock: xr.DataArray,
     else:
         raise ValueError(f"Could not find a type dimension. Please specify with `dim=`.")
 
-    t_first = int(da_stock.Time.min())
+    t_first = int(da_stock.time.min())
     if year_start >= t_first:
         return da_stock
 
@@ -87,7 +87,7 @@ def add_historic_stock(da_stock: xr.DataArray,
     # Interpolate from 0 to first existing value - use this approach as it is faster than using xr.interp()
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UnitStrippedWarning)
-        first_values = da_stock.sel(Time=t_first).values.astype(float)
+        first_values = da_stock.sel(time=t_first).values.astype(float)
     if interp_method == "linear":
         stock_hist = np.linspace(0, 1, n_hist)[:, None, None] * first_values[None, :, :]
     elif interp_method == "quadratic":
@@ -98,14 +98,14 @@ def add_historic_stock(da_stock: xr.DataArray,
     # Build historic DataArray
     da_stock_hist = xr.DataArray(
         stock_hist,
-        coords={"Time": t_hist, "Region": da_stock.Region, type_dim: da_stock[type_dim]},
-        dims=("Time", "Region", type_dim)
+        coords={"time": t_hist, "Region": da_stock.Region, type_dim: da_stock[type_dim]},
+        dims=("time", "Region", type_dim)
     )
 
     da_stock_hist = prism.Q_(da_stock_hist, unit)
 
     # Concatenate with input array
-    da_stock_extended = xr.concat([da_stock_hist, da_stock], dim="Time")
+    da_stock_extended = xr.concat([da_stock_hist, da_stock], dim="time")
 
     return da_stock_extended
 
@@ -173,7 +173,7 @@ def interpolate_xr(data_array: xr.DataArray,
     Parameters
     ----------
     data_array : xarray.DataArray
-        Input DataArray with a 'Time' coordinate containing numeric values (e.g. 2020, 2050).
+        Input DataArray with a 'time' coordinate containing numeric values (e.g. 2020, 2050).
     t_start : int, float, or dict
         Start year for the interpolation range. If a dict, keys are Region names
         and values are the year at which that region's data reaches 0. Regions not
@@ -205,7 +205,7 @@ def interpolate_xr(data_array: xr.DataArray,
 
     """
     # Determine which dimension to use
-    dim = 'Time' if 'Time' in data_array.dims else 'Cohort'
+    dim = 'time' if 'time' in data_array.dims else 'Cohort'
 
     # The interpolations strips the unit, so save it here and reattach later
     unit = prism.U_(data_array)
@@ -429,7 +429,7 @@ def flexible_plot_1panel(
     da: xarray.DataArray
         Data array to plot
     x_dim:
-        dimension to use on the x axis (e.g. 'Time' or 'Cohort')
+        dimension to use on the x axis (e.g. 'time' or 'Cohort')
     varying_dims:
         list of dims that define separate lines (e.g. ['Type', 'Region'])
     fixed:
@@ -439,7 +439,7 @@ def flexible_plot_1panel(
     --------
     >>> flexible_plot_1panel(
     >>>     da=grid_length,
-    >>>     x_dim="Time",
+    >>>     x_dim="time",
     >>>     varying_dims=["Type", "Region"],
     >>>     fixed={"Type": [1, 2], "Region": [0, 3]},
     >>>     plot_type='scatter'
@@ -674,7 +674,7 @@ def calculate_grid_growth(gcap, grid_lines):
     ----------
     gcap : xarray.DataArray
         Regional generation capacity by technology and time. Must include dimensions
-        ``Type`` and ``Time``.
+        ``Type`` and ``time``.
     grid_lines : xarray.DataArray
         Grid line lengths by voltage level, type, region, and time. Used to define the target
         shape and coordinates of the returned growth factor DataArray.
@@ -700,13 +700,13 @@ def calculate_grid_growth(gcap, grid_lines):
     # Compute additional/reduced growth
     add_growth = vre_fraction * 1             # if value is e.g. 0.2 = 20% additional HV lines per doubling of vre gcap
     red_growth = (1 - vre_fraction) * 0.7     
-    add_growth = add_growth.where(add_growth.Time >= 2020, 0)  # Set pre-2020 values to 0
-    red_growth = red_growth.where(red_growth.Time >= 2020, 0)
+    add_growth = add_growth.where(add_growth.time >= 2020, 0)  # Set pre-2020 values to 0
+    red_growth = red_growth.where(red_growth.time >= 2020, 0)
     # Create a ramp factor (line length addition/reduction is gradually introduced from 2020 towards 2050)
     ramp_factor = xr.DataArray(
-        np.clip((add_growth.Time - 2020) / 30, 0, 1),
-        coords={"Time": add_growth.Time},
-        dims=["Time"]
+        np.clip((add_growth.time - 2020) / 30, 0, 1),
+        coords={"time": add_growth.time},
+        dims=["time"]
     )
     add_growth = add_growth * ramp_factor # Apply ramp factor
     red_growth = red_growth * ramp_factor
@@ -814,7 +814,7 @@ def _build_status_timeseries_phs_data(df: pd.DataFrame,
     Returns
     -------
     xr.DataArray
-        A (Time × Region) DataArray representing the interpolated and
+        A (time × Region) DataArray representing the interpolated and
         regionally rebroadcast time series for the given status.
 
     """
@@ -831,14 +831,14 @@ def _build_status_timeseries_phs_data(df: pd.DataFrame,
             .values
     )
     
-    # create a new DataArray with Time dimension from t_start to t_end
+    # create a new DataArray with time dimension from t_start to t_end
     xr_status = xr.DataArray(
         data=np.vstack([np.zeros(len(IHA_REGIONS)), values]),
         coords={
-            "Time": [t_start, t_end],
+            "time": [t_start, t_end],
             "Region": IHA_REGIONS
         },
-        dims=["Time", "Region"],
+        dims=["time", "Region"],
     )
     xr_status = interpolate_xr(xr_status, t_start, t_end)
 
@@ -918,7 +918,7 @@ def derive_phs_installed_capacity(data: list,
     Returns
     -------
     phs_power : xr.DataArray
-        Installed PHS power capacity in MW with dimensions ``('Time', 'Region')``,
+        Installed PHS power capacity in MW with dimensions ``('time', 'Region')``,
         covering the full modelling horizon from the earliest recorded cohort year
         to 2100.
 
@@ -962,6 +962,7 @@ def derive_phs_installed_capacity(data: list,
     df_data2_country = df_data2.groupby(["Region", "Time"])[["value"]].sum()
     da_data2_country = xr.DataArray.from_series(df_data2_country["value"]).rename("PumpedHydropowerStorageCapacity") # create Dataarray
     da_data2_country = prism.Q_(da_data2_country, unit_data2)
+    da_data2_country = da_data2_country.rename({"Time": "time"}) 
     
     unit_data3 = df_data3["unit"].iloc[0] # extract unit from the file (assumes it's the same for all rows)
     df_data3 = df_data3.drop(columns="unit")
@@ -1008,7 +1009,7 @@ def derive_phs_installed_capacity(data: list,
     # calculate region shares
 
     # select time
-    da = phs.sel(Time=[2024])
+    da = phs.sel(time=[2024])
     # mapping
     # create a coordinate for superregions
     superregion = xr.DataArray(
@@ -1021,23 +1022,23 @@ def derive_phs_installed_capacity(data: list,
     # compute shares within each superregion
     shares = da.groupby("Superregion").map(lambda x: x / x.sum())
     shares = shares.pint.dequantify()
-    shares = shares.reindex(Time=np.arange(2024, 2061), method="ffill") # forward fill shares to future years (assumes shares remain constant after 2024)
+    shares = shares.reindex(time=np.arange(2024, 2061), method="ffill") # forward fill shares to future years (assumes shares remain constant after 2024)
 
     # Adjust shares based on literature insights
     override_regions = df_shares_adjustment_2030["Region"].values
     time_override = 2030
     da_override = xr.full_like(
-        shares.sel(Time=[2024, 2030]),
+        shares.sel(time=[2024, 2030]),
         fill_value=np.nan
     )
     for r in override_regions:
-        da_override.loc[dict(Region=r, Time=time_override)] = df_shares_adjustment_2030.loc[(df_shares_adjustment_2030["time"] == time_override) & (df_shares_adjustment_2030["Region"] == r), "value"].values[0] #override_2030[r]
-        da_override.loc[dict(Region=r, Time=2024)] = shares.sel(Time=2024, Region=r).values
+        da_override.loc[dict(Region=r, time=time_override)] = df_shares_adjustment_2030.loc[(df_shares_adjustment_2030["time"] == time_override) & (df_shares_adjustment_2030["Region"] == r), "value"].values[0] #override_2030[r]
+        da_override.loc[dict(Region=r, time=2024)] = shares.sel(time=2024, Region=r).values
     # Interpolate shares (linearly between 2024–2030, constant after 2030)
     da_override = interpolate_xr(da_override, t_start=2024, t_end=2060, interp_method="linear")
 
     # update shares
-    shares.loc[dict(Time=slice(2024, None), Region=override_regions)] = da_override.sel(Time=slice(2024, None), Region=override_regions)
+    shares.loc[dict(time=slice(2024, None), Region=override_regions)] = da_override.sel(time=slice(2024, None), Region=override_regions)
 
     #---------------------------------------------------------------------------------------------------
     # extrapolating future data (2024-2060)
@@ -1048,16 +1049,16 @@ def derive_phs_installed_capacity(data: list,
     xr_planned_pending_approval = _build_status_timeseries_phs_data(df_data3, "planned pending approval", 2035, 2060, shares, unit_data3)
     xr_announced = _build_status_timeseries_phs_data(df_data3, "announced", 2035, 2060, shares, unit_data3)
 
-    time = np.arange(phs.Time.min().item(), 2061)
+    time = np.arange(phs.time.min().item(), 2061)
     if flag_phs == "phs_low":
-        uc = xr_under_construction.reindex(Time=time, method="ffill").fillna(0)
-        pra = xr_planned_regulator_approved.reindex(Time=time).fillna(0)
+        uc = xr_under_construction.reindex(time=time, method="ffill").fillna(0)
+        pra = xr_planned_regulator_approved.reindex(time=time).fillna(0)
         phs_2060 = phs + uc + pra
     elif flag_phs == "phs_high":
-        uc = xr_under_construction.reindex(Time=time, method="ffill").fillna(0)
-        pra = xr_planned_regulator_approved.reindex(Time=time).fillna(0)
-        ppa = xr_planned_pending_approval.reindex(Time=time).fillna(0)
-        ann = xr_announced.reindex(Time=time).fillna(0)
+        uc = xr_under_construction.reindex(time=time, method="ffill").fillna(0)
+        pra = xr_planned_regulator_approved.reindex(time=time).fillna(0)
+        ppa = xr_planned_pending_approval.reindex(time=time).fillna(0)
+        ann = xr_announced.reindex(time=time).fillna(0)
         phs_2060 = phs + uc + pra + ppa + ann
 
     #---------------------------------------------------------------------------------------------------
@@ -1066,18 +1067,18 @@ def derive_phs_installed_capacity(data: list,
     if flag_phs == "phs_low":
         # for the low PHS scenario, we assume that after 2060, the capacity remains constant at the 2060 
         # level (i.e., no further growth after 2060)
-        phs_power = phs_2060.reindex(Time=np.arange(phs.Time.min().item(), 2101), method="ffill").fillna(0)
+        phs_power = phs_2060.reindex(time=np.arange(phs.time.min().item(), 2101), method="ffill").fillna(0)
     elif flag_phs == "phs_high":
         # --- select relevant time range ---
         # this factor determines how strongly the growth of PHS capacity is linked to the growth of storage 
         # energy demand; a value of 0.5 means that if the storage energy demand grows by 10% from one year 
         # to the next, the PHS capacity will grow by 5% in that year, if the condition below is met. This is 
         # a simplifying assumption and can be adjusted based on literature insights or sensitivity analysis. 
-        phs_temporary = phs_2060.sel(Time=[2060]).reindex(Time=np.arange(2060, 2101), method="ffill") # forward fill from 2060 to 2100 with constant values (will be updated with growth assumption in the next steps)
-        demand = storage_energy_xr.sel(Time=slice(2060, 2100))
+        phs_temporary = phs_2060.sel(time=[2060]).reindex(time=np.arange(2060, 2101), method="ffill") # forward fill from 2060 to 2100 with constant values (will be updated with growth assumption in the next steps)
+        demand = storage_energy_xr.sel(time=slice(2060, 2100))
         # align sequence of dimensions
-        phs_temporary = phs_temporary.transpose("Time", "Region")
-        demand = demand.transpose("Time", "Region")
+        phs_temporary = phs_temporary.transpose("time", "Region")
+        demand = demand.transpose("time", "Region")
 
         # --- compute base growth rates (NumPy) ---
         # growth rate = f(t+1)/f(t) - 1, by rolling -1 values for year 2061 are now saved under year 2060, 
@@ -1115,8 +1116,8 @@ def derive_phs_installed_capacity(data: list,
         phs_updated = prism.Q_(phs_updated, "MW")
         # --- merge with original before 2060 ---
         phs_power = xr.concat(
-            [phs_2060.sel(Time=slice(None, 2059)), phs_updated],
-            dim="Time"
+            [phs_2060.sel(time=slice(None, 2059)), phs_updated],
+            dim="time"
         )
 
     #---------------------------------------------------------------------------------------------------
@@ -1137,9 +1138,9 @@ def calculate_remaining_storage_demand(storage_energy_da, phs_energy):
     Parameters
     ----------
     storage_energy_da : xr.DataArray
-        Total storage energy capacity demand with dimensions (Time, Region).
+        Total storage energy capacity demand with dimensions (time, Region).
     phs_energy : xr.DataArray
-        Pumped hydro storage energy capacity with dimension (Time, Region).
+        Pumped hydro storage energy capacity with dimension (time, Region).
 
     Returns
     -------
@@ -1164,21 +1165,21 @@ def calculate_remaining_storage_demand(storage_energy_da, phs_energy):
     floor_fraction = xr.zeros_like(storage_energy_remaining)
 
     # Linearly interpolate floor fraction: 0.04 (2017) -> 0.1 (2025) -> 0.2 (2030), capped at 0.2 after
-    floor_fraction = xr.where(storage_energy_remaining.Time >= 2010,
-                        0 + (0.04 - 0) * (storage_energy_remaining.Time - 2010) / (2017 - 2010),
+    floor_fraction = xr.where(storage_energy_remaining.time >= 2010,
+                        0 + (0.04 - 0) * (storage_energy_remaining.time - 2010) / (2017 - 2010),
                         floor_fraction)
-    floor_fraction = xr.where(storage_energy_remaining.Time >= 2017,
-                        0.04 + (0.1 - 0.04) * (storage_energy_remaining.Time - 2017) / (2025 - 2017),
+    floor_fraction = xr.where(storage_energy_remaining.time >= 2017,
+                        0.04 + (0.1 - 0.04) * (storage_energy_remaining.time - 2017) / (2025 - 2017),
                         floor_fraction)
-    floor_fraction = xr.where(storage_energy_remaining.Time >= 2025,
-                        0.1 + (0.2 - 0.1) * (storage_energy_remaining.Time - 2025) / (2030 - 2025),
+    floor_fraction = xr.where(storage_energy_remaining.time >= 2025,
+                        0.1 + (0.2 - 0.1) * (storage_energy_remaining.time - 2025) / (2030 - 2025),
                         floor_fraction)
-    floor_fraction = xr.where(storage_energy_remaining.Time >= 2030, 0.2, floor_fraction)
+    floor_fraction = xr.where(storage_energy_remaining.time >= 2030, 0.2, floor_fraction)
 
     # Apply floor
     min_value = floor_fraction * storage_energy_da
     storage_energy_remaining = xr.where(
-        (storage_energy_remaining.Time >= 2000) & (storage_energy_remaining < min_value),
+        (storage_energy_remaining.time >= 2000) & (storage_energy_remaining < min_value),
         min_value,
         storage_energy_remaining
     )
@@ -1203,7 +1204,7 @@ def derive_btm_installed_capacity(gcap_xr_interp: xr.DataArray,
     ----------
     gcap_xr_interp : xr.DataArray
         Interpolated installed power capacity by technology type, with dimensions
-        (Time, Region, Type) and units in MW. Must contain a "SPVR" entry along
+        (time, Region, Type) and units in MW. Must contain a "SPVR" entry along
         the Type dimension (rooftop solar PV).
     ratio_btm_deployment_data : pd.DataFrame
         Raw BTM deployment ratio data with columns ["Region", "Time", "Value"],
@@ -1217,13 +1218,13 @@ def derive_btm_installed_capacity(gcap_xr_interp: xr.DataArray,
     Returns
     -------
     xr.DataArray
-        BTM installed energy capacity with dimensions (Time, Region) and units
+        BTM installed energy capacity with dimensions (time, Region) and units
         in MWh, interpolated over the period 2000-2100.
 
     """
     ratio_btm_to_solar = prism.Q_(ratio_btm_to_solar, "MWh/MW")
 
-    ratio_btm_deployment = ratio_btm_deployment_data.groupby(["Region", "Time"])[["Value"]].sum()
+    ratio_btm_deployment = ratio_btm_deployment_data.groupby(["Region", "time"])[["Value"]].sum()
     ratio_btm_deployment = xr.DataArray.from_series(ratio_btm_deployment["Value"])
     ratio_btm_deployment = prism.Q_(ratio_btm_deployment, "dimensionless")
     ratio_btm_deployment_xr_interp = interpolate_xr(ratio_btm_deployment, t_start = 2000, t_end = 2100)
@@ -1408,7 +1409,7 @@ def apply_ce_measures_to_elc(arr: xr.DataArray,
         Parameters
         ----------
         arr : xr.DataArray
-            Input DataArray containing a time dimension ('Time' or 'Cohort') and a type
+            Input DataArray containing a time dimension ('time' or 'Cohort') and a type
             classification dimension ('Type' or 'SuperType').
         base_year : int
             Year at which the implementation of lightweighting begins.
@@ -1440,7 +1441,7 @@ def apply_ce_measures_to_elc(arr: xr.DataArray,
 
         Notes
         -----
-        - Supports DataArrays with either 'Time' or 'Cohort' as the temporal dimension.
+        - Supports DataArrays with either 'time' or 'Cohort' as the temporal dimension.
         - Supports either 'Type' or 'SuperType' as the vehicle classification dimension.
         - A pandas-based implementation exists for vehicle-level data.
         - A general xarray-based version is available in general utilities for regional data.
@@ -1449,12 +1450,12 @@ def apply_ce_measures_to_elc(arr: xr.DataArray,
         result = arr.copy()
 
         # Determine time and type dimensions (to support different types of DataArrays)
-        if "Time" in arr.dims:
-            time_dim = "Time"
+        if "time" in arr.dims:
+            time_dim = "time"
         elif "Cohort" in arr.dims:
             time_dim = "Cohort"
         else:
-            raise ValueError("Input DataArray must have either 'Time' or 'Cohort' dimension.")
+            raise ValueError("Input DataArray must have either 'time' or 'Cohort' dimension.")
 
         if "Type" in arr.dims:
             type_dim = "Type"

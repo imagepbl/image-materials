@@ -3,6 +3,7 @@ import logging
 import xarray as xr
 import pandas as pd
 
+from imagematerials.util import flag_enabled
 from imagematerials.vehicles.constants import (
     TONNES_TO_KGS,
     years_range
@@ -17,7 +18,8 @@ from imagematerials.vehicles.modelling_functions import (
 )
 
 
-def get_weights(data_path: str, general_data_path: str, circular_economy_config: dict):
+def get_weights(data_path: str, general_data_path: str, circular_economy_config: dict,
+                resource_efficiency_flags: dict = None):
     """Get vehicle weights from CSV and squeeze it in the right format.
 
     Parameters
@@ -54,23 +56,17 @@ def get_weights(data_path: str, general_data_path: str, circular_economy_config:
         vehicle_weight_kg_typical.rename_axis('mode', axis=1).stack().unstack(['mode', 'type'])
     vehicle_weights_typical = interpolate(pd.DataFrame(vehicle_weights_typical))
 
-    # Apply lightweighting if part of scenario
-    ce_scen = None  # INITIALIZE ce_scen
+    # Apply lightweighting if the flag is enabled
+    if flag_enabled(resource_efficiency_flags, "vehicles", "FlagLightweighting"):
+        print("Implementing FlagLightweighting for Vehicles (lightweighting)")
+        config = circular_economy_config['vehicles']['FlagLightweighting']
 
-    if "narrow" in circular_economy_config.keys():
-        ce_scen = "narrow"
-    if "narrow_product" in circular_economy_config.keys():
-        ce_scen = "narrow_product"
-    if "resource_efficient" in circular_economy_config.keys():
-        ce_scen = "resource_efficient"
+        # Verify both are defined, otherwise raise error
+        if not ('weight_change_pc' in config.get('road', {}) and
+                'weight_change_pc' in config.get('non-road', {})):
+            raise ValueError("Both 'road' and 'non-road' weight_change_pc must be defined "
+                             "in vehicles.FlagLightweighting")
 
-    if ce_scen in ["resource_efficient", "narrow_product", "narrow"]:
-                # Verify both are defined, otherwise raise error
-        if not ('weight_change_pc' in circular_economy_config[ce_scen]['vehicles'].get('road', {}) and \
-                'weight_change_pc' in circular_economy_config[ce_scen]['vehicles'].get('non-road', {})):
-            raise ValueError(f"Both 'road' and 'non-road' weight_change_pc must be defined in '{ce_scen}' scenario")
-        
-        config = circular_economy_config[ce_scen]['vehicles']
         target_year = config['target_year']
         base_year = config['base_year']
         non_road_weight_change_pc = config['non-road']['weight_change_pc']
@@ -78,9 +74,9 @@ def get_weights(data_path: str, general_data_path: str, circular_economy_config:
         implementation_rate = config['implementation_rate']
 
         vehicle_weights_simple = scenario_change(
-            vehicle_weights_simple, base_year, target_year, 
+            vehicle_weights_simple, base_year, target_year,
             non_road_weight_change_pc, implementation_rate)
-        
+
         if isinstance(vehicle_weights_typical.columns, pd.MultiIndex):
             weight_change_pc_expanded = {}
             for mode, pct in road_weight_change_pc.items():
@@ -95,7 +91,7 @@ def get_weights(data_path: str, general_data_path: str, circular_economy_config:
             vehicle_weights_typical, base_year, target_year,
             weight_change_pc_expanded, implementation_rate
         )
-        logging.debug(f"implemented '{ce_scen}' for Vehicles (lightweighting)")
+        logging.debug("implemented FlagLightweighting for Vehicles (lightweighting)")
 
     vehicle_weights_simple = xarray_conversion(vehicle_weights_simple, (["Cohort"], ["Type"],))
     vehicle_weights_typical = xarray_conversion(vehicle_weights_typical, (["Cohort"], ["Type", "SubType"], {"Type": ["Type", "SubType"]}))

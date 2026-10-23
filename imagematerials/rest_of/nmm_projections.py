@@ -270,6 +270,7 @@ def sand_projections(scenario: str, path_input_data, path_input_data_image):
         'group_10' : ([0, 4, 0], [12.5, 20, 6]),
     }
 
+
     sand.get_X_max_scaling_factor()
     sand.fit_models(best_rmse_models=rmse_models, bounds=bounds)
 

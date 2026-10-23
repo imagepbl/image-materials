@@ -115,15 +115,15 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
 
     #read in the lifetime of storage technologies (in yrs). The lifetime is assumed to be 1.5* the number of cycles divided by the number of days in a year (assuming diurnal use, and 50% extra cycles before replacement, representing continued use below 80% remaining capacity) OR the maximum lifetime in years, which-ever comes first 
     lifetimes = pd.read_csv(path_external_data_standard / 'storage_lifetimes_long.csv', 
-                            usecols=["Time", "sub_technology", "value"])
+                            usecols=["Time", "technology", "value"])
 
     # material intensities in kg/kWh
     material_intensities = pd.read_csv(path_external_data_standard / 'storage_and_ev_battery_material_intensities_long.csv', 
-                                       usecols=["Time", "sub_technology", "material", "value"])# .transpose()
+                                       usecols=["Time", "technology", "material", "value"])# .transpose()
 
     # market shares in % of total storage capacity (excluding pumped hydropower storage; values: 0-1)
     market_shares = pd.read_csv(path_external_data_standard / 'storage_market_shares_long.csv', 
-                                usecols=["Time", "sub_technology", "value"]) #index_col=[0,1],usecols=lambda col: col != "unit"
+                                usecols=["Time", "technology", "value"]) #index_col=[0,1],usecols=lambda col: col != "unit"
 
     # Data for Pumped Hydropower Storage (PHS) ---------------------------------------------------------
     # Hydro-dam power capacity (also MW) within 5 regions reported by the IHA (international Hydropwer Association)
@@ -175,13 +175,13 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
 
     # storage energy capacity (MWh) --------------------------------------------------------------------
     storage_energy = storage_energy.iloc[:, :26]
-    storage_energy.index.name = "Time"
+    storage_energy.index.name = "time"
     storage_energy.columns.name = "Region"
     storage_energy_da = xr.DataArray(
         storage_energy.values,
-        dims=["Time", "Region"],
+        dims=["time", "Region"],
         coords={
-            "Time": storage_energy.index,
+            "time": storage_energy.index,
             "Region": [("region_" + str(r)) for r in storage_energy.columns]
         }
     )
@@ -190,13 +190,13 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
 
     # storage power capacity (MW) ----------------------------------------------------------------------
     storage_power = storage_power.iloc[:, :26]
-    storage_power.index.name = "Time"
+    storage_power.index.name = "time"
     storage_power.columns.name = "Region"
     storage_power_da = xr.DataArray(
         storage_power.values,
-        dims=["Time", "Region"],
+        dims=["time", "Region"],
         coords={
-            "Time": storage_power.index,
+            "time": storage_power.index,
             "Region": [("region_" + str(r)) for r in storage_power.columns]
         }
     )
@@ -230,27 +230,27 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
 
     # material intensities (kg/kWh) --------------------------------------------------------------------
     material_intensities_da = (
-        material_intensities.set_index(["Time", "sub_technology", "material"])["value"]
+        material_intensities.set_index(["Time", "technology", "material"])["value"]
         .to_xarray()
-        .rename({"sub_technology": "Type", "Time": "Cohort"})
+        .rename({"technology": "Type", "Time": "Cohort"})
     )
     material_intensities_da = prism.Q_(material_intensities_da, "kg/kWh")
     material_intensities_da.name = "StorageMaterialIntensities"
 
     # market shares (%) --------------------------------------------------------------------------------
     market_shares_da = (
-        market_shares.set_index(["Time", "sub_technology"])["value"]
+        market_shares.set_index(["Time", "technology"])["value"]
         .to_xarray()
-        .rename({"sub_technology": "Type", "Time": "Cohort"})
+        .rename({"technology": "Type", "Time": "Cohort"})
     )
     market_shares_da = prism.Q_(market_shares_da, "dimensionless")
     market_shares_da.name = "StorageMarketShares"
 
     # lifetimes (yr) -----------------------------------------------------------------------------------
     lifetimes_da = (
-        lifetimes.set_index(["Time", "sub_technology"])["value"]
+        lifetimes.set_index(["Time", "technology"])["value"]
         .to_xarray()
-        .rename({"sub_technology": "Type", "Time": "Cohort"})
+        .rename({"technology": "Type", "Time": "Cohort"})
     )
     lifetimes_da = lifetimes_da.expand_dims({"DistributionParams": ["mean", "stdev"]})
     lifetimes_da.name = "StorageLifetime"
@@ -282,8 +282,8 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
 
     data_phs = [df_data1, df_data2, df_data3, df_shares_adjustment_2030, storage_energy_da]
     phs_power, phs_energy = derive_phs_installed_capacity(data_phs, factor_phs_growth_rel_demand, mean_discharge_duration, flag_phs_scenario) #mean_discharge_duration
-    phs_energy = phs_energy.sel(Time=slice(year_start, year_end)) # make sure to only keep the years in the requested time range
-    phs_energy = phs_energy.expand_dims({"Type": ["PHS"]}).transpose("Time", "Region", "Type")
+    phs_energy = phs_energy.sel(time=slice(year_start, year_end)) # make sure to only keep the years in the requested time range
+    phs_energy = phs_energy.expand_dims({"Type": ["PHS"]}).transpose("time", "Region", "Type")
 
     ####################################################################################################
     # 2. Behind-the-meter storage 
@@ -309,7 +309,7 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
 
     # The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
     lifetimes_phs_dict = convert_lifetime(lifetimes_da.sel(Type=["PHS"]))
-    lifetimes_non_phs_dict = convert_lifetime(lifetimes_da.sel(Type = TECH_STATIONARY_STORAGE))
+    lifetimes_non_phs_dict = convert_lifetime(lifetimes_da.sel(Type = TECH_STATIONARY_STORAGE).sortby("Type"))
 
     # PHS ----------------------------------------------------------------------------------------------
     # bring preprocessing data into a generic format for the model
@@ -324,8 +324,8 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
     prep_data_oth_storage = {}
     prep_data_oth_storage["lifetimes"] = lifetimes_non_phs_dict
     prep_data_oth_storage["stocks"] = storage_energy_remaining
-    prep_data_oth_storage["material_intensities"] = material_intensities_da.sel(Type=TECH_STATIONARY_STORAGE)
-    prep_data_oth_storage["shares"] = market_shares_da.sel(Type=TECH_STATIONARY_STORAGE)
+    prep_data_oth_storage["material_intensities"] = material_intensities_da.sel(Type=TECH_STATIONARY_STORAGE).sortby("Type")
+    prep_data_oth_storage["shares"] = market_shares_da.sel(Type=TECH_STATIONARY_STORAGE).sortby("Type")
     prep_data_oth_storage["set_unit_flexible"] = str(prism.U_(prep_data_oth_storage["stocks"])) # prism.U_ gives the unit back
     prep_data_oth_storage["knowledge_graph"] = create_electricity_graph()
 

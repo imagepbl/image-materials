@@ -147,9 +147,9 @@ def make_gompertz_coefs_da(results_models, material_order=None, region_order=Non
         dim='coef'
     ).assign_coords(coef=['a', 'b', 'c', 'd'])
 
-    # Expand to include 'Time' dimension 
+    # Expand to include 'time' dimension 
     years = np.arange(start_year, end_year + 1)
-    coefs_da = coefs_da.expand_dims(Time=years)
+    coefs_da = coefs_da.expand_dims(time=years)
     coefs_da = xr.ones_like(coefs_da) * coefs_da
 
     coefs_da = coefs_da.rename("gompertz_coefs")  # <-- Set a descriptive name
@@ -241,17 +241,17 @@ def historic_other_fraction_consumption_to_xr(results_models):
         diff_cons = diff_cons.to_xarray().to_array()
         # rename coords
         if material in ['cement', 'sand', 'limestone', 'clay']:
-            diff_cons = diff_cons.rename({'t': 'Time', 'variable': 'Region'})
+            diff_cons = diff_cons.rename({'t': 'time', 'variable': 'Region'})
         elif material in ['copper']:
-            diff_cons = diff_cons.rename({'year': 'Time', 'variable': 'Region'})
+            diff_cons = diff_cons.rename({'year': 'time', 'variable': 'Region'})
         else:
-            diff_cons = diff_cons.rename({'index': 'Time', 'variable': 'Region'})
+            diff_cons = diff_cons.rename({'index': 'time', 'variable': 'Region'})
 
         # replace dimension of coords Region to '1', '2', 3,... instead of class_ 1, class_ 2, ...
         diff_cons['Region'] = diff_cons['Region'].str.replace('class_ ', '')
         # extend years to 2100 and fill with np.nan
         all_years = np.arange(1971, 2101)
-        diff_cons = diff_cons.reindex(Time=all_years, fill_value=np.nan)
+        diff_cons = diff_cons.reindex(time=all_years, fill_value=np.nan)
         diff_cons_all[material] = diff_cons
 
     diff_cons_all = diff_cons_all.to_array(dim='material')

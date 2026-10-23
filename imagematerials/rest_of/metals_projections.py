@@ -227,7 +227,7 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
     }
 
     bounds = {
-        'all' :                     ([0, 0, 0], [1, 2000, 100]),
+        'all' :    ([0, 0, 0], [1, 2000, 100]),
         'group_1': ([0, 0, 0], [10, 2000, 100]),
         'group_2': ([0, 0, 0], [10, 1000, 100]),
         'group_3': ([0, 0, 0], [10, 1000, 100]),
@@ -238,17 +238,13 @@ def aluminium_projection(scenario: str, path_input_data, path_input_data_image):
     aluminium.fit_models(best_rmse_models=best_rmse_models, bounds=bounds)
     aluminium.get_X_max_scaling_factor()
 
-    aluminium.assign_fit_to_groups_not_fitted(little_data, 
-                                        assign_model='group_3', 
-                                        model_nr=1, 
-                                        overwrite_existing=True)
     aluminium.assign_fit_to_groups_not_fitted(scattered,
                                         assign_model='group_2',
                                         model_nr=1,
                                         overwrite_existing=True)
     
 
-    aluminium.remove_regions_with_no_good_fit_from_region_model_match(no_data)
+    aluminium.remove_regions_with_no_good_fit_from_region_model_match(no_data+little_data)
     
 
     return aluminium, aluminium_logical_groups

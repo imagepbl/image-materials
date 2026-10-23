@@ -34,9 +34,10 @@ from imagematerials.electricity.constants import (
 #############################################################################################################
 #############################################################################################################
 
-def get_preprocessing_data_grid(path_base: str, 
-                                climate_policy_config: dict, 
-                                circular_economy_config: dict):
+def get_preprocessing_data_grid(path_base: str,
+                                climate_policy_config: dict,
+                                circular_economy_config: dict,
+                                resource_efficiency_flags: dict = None):
     """Prepare preprocessing input data for the electricity grid sub-module.
 
     This function reads static and scenario-dependent grid data (line lengths,
@@ -128,9 +129,9 @@ def get_preprocessing_data_grid(path_base: str,
     # Build xarray DataArray
     gcap = xr.DataArray(
         data_array,
-        dims=('Time', 'Region', 'Type'),
+        dims=('time', 'Region', 'Type'),
         coords={
-            'Time': years,
+            'time': years,
             'Region': [str(r) for r in regions],
             'Type': [str(r) for r in techs]
         },
@@ -148,16 +149,16 @@ def get_preprocessing_data_grid(path_base: str,
     years = np.arange(year_start_image_projection,year_end+1,1)
     grid_lines = xr.DataArray(
         np.full((len(years), len(grid_length_hv_data.columns), len(line_types)), np.nan),
-        dims=("Time","Region","Type"),
+        dims=("time","Region","Type"),
         coords={
-            "Time": years.astype(int),
+            "time": years.astype(int),
             "Region": grid_length_hv_data.columns.astype(str),
             "Type": line_types
         },
         name="GridLength"
     )
     # fill all years with the data read in for HV in 2016, as they will be later scaled by multiplying with a growth factor relative to the year 2016
-    grid_lines.loc[{"Time":slice(year_start_image_projection, year_end), "Type":"HV - Lines - Overhead"}] = grid_length_hv_data.values.reshape(-1)
+    grid_lines.loc[{"time":slice(year_start_image_projection, year_end), "Type":"HV - Lines - Overhead"}] = grid_length_hv_data.values.reshape(-1)
     grid_lines = prism.Q_(grid_lines, "km")
     grid_lines = knowledge_graph_region.rebroadcast_xarray(grid_lines, output_coords=IMAGE_REGIONS, dim="Region") # convert region names to the standard names from IMAGE
 
@@ -167,9 +168,9 @@ def get_preprocessing_data_grid(path_base: str,
     years = np.arange(year_start_image_projection,year_end+1,1)
     grid_additions = xr.DataArray(
         np.full((len(years), len(IMAGE_REGIONS), len(additions_types)), np.nan),
-        dims=("Time","Region","Type"),
+        dims=("time","Region","Type"),
         coords={
-            "Time": years.astype(int),
+            "time": years.astype(int),
             "Region": IMAGE_REGIONS,
             "Type": additions_types
         },
@@ -243,9 +244,9 @@ def get_preprocessing_data_grid(path_base: str,
     # Build xarray DataArray
     gdp_pc = xr.DataArray(
         data_array,
-        dims=('Time', 'Region'),
+        dims=('time', 'Region'),
         coords={
-            'Time': years,
+            'time': years,
             'Region': [str(r) for r in regions]
         },
         name='GDPPerCapita'
@@ -330,7 +331,8 @@ def get_preprocessing_data_grid(path_base: str,
 
         materials_additions_interp, grid_lifetime_interp = apply_ce_measures_to_elc_grid(materials_additions_interp,
                                                                                           grid_lifetime_interp,
-                                                                                          circular_economy_config)
+                                                                                          circular_economy_config,
+                                                                                          resource_efficiency_flags)
 
     ################################################################################################
     # Prep_data File #

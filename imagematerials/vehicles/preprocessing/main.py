@@ -19,7 +19,8 @@ from imagematerials.vehicles.preprocessing.util import get_lifetimes
 from imagematerials.vehicles.preprocessing.weights import get_weights
 
 def vehicles_preprocessing(base_directory: str, climate_policy_config: dict,
-                           circular_economy_config: dict, image_scenario: str = FOLDER):
+                           circular_economy_config: dict, resource_efficiency_flags: dict = None,
+                           image_scenario: str = FOLDER):
     # Preparing directory shorthands
     base_directory = Path(base_directory)
     general_data_directory = base_directory.joinpath("vehicles", "standard_data")
@@ -33,17 +34,20 @@ def vehicles_preprocessing(base_directory: str, climate_policy_config: dict,
 
     # Create vehicle knowledge graph
     knowledge_graph_vehicle = create_vehicle_graph()
+    resource_efficiency_flags = resource_efficiency_flags or {}
 
     # Collect results
     return {
         "knowledge_graph": knowledge_graph_vehicle,
-        "lifetimes": get_lifetimes(scenario_data_directory, circular_economy_config),
+        "lifetimes": get_lifetimes(scenario_data_directory, circular_economy_config,
+                                   resource_efficiency_flags),
         "maintenance_material_fractions": get_maintenance_materials(general_data_directory),
         "material_fractions": get_material_fractions(scenario_data_directory),
         "stocks": get_vehicle_stocks(scenario_data_directory, general_data_directory,
                                      climate_policy_data_directory, climate_policy_config,
-                                     circular_economy_config, knowledge_graph_vehicle),
+                                     circular_economy_config, knowledge_graph_vehicle,
+                                     resource_efficiency_flags),
         "weights": get_weights(scenario_data_directory, general_data_directory,
-                               circular_economy_config),
+                               circular_economy_config, resource_efficiency_flags),
         "set_unit_flexible": "count"
     }

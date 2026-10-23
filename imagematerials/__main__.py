@@ -47,10 +47,10 @@ def export_summary_netcdf(model, output_fp):
     empty.to_netcdf(output_fp, group="summary", mode="a", engine="netcdf4")
 
 def _convert_timevar(time_var, time_coor):
-    random_t = time_coor.coords["Time"].values[0]
+    random_t = time_coor.coords["time"].values[0]
     coords = dict(time_var[random_t].coords.items())
-    coords["Time"] = time_coor
+    coords["time"] = time_coor
     array = xr.DataArray(0.0, dims=list(coords), coords=coords)
     for t in time_coor.values:
-        array.loc[{"Time": t}] = time_var[t]
+        array.loc[{"time": t}] = time_var[t]
     return array

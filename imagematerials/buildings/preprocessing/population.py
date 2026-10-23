@@ -25,20 +25,20 @@ def _load_pop_q_raw(
     Returns
     -------
     xr.DataArray
-        Population data with dimensions ``("Time", "Region", "Area")``, where
+        Population data with dimensions ``("time", "Region", "Area")``, where
         ``Area`` contains ``Total``, ``Urban``, ``Rural``, and all quintile labels.
     """
     pop_q = read_mym_df(image_directory.joinpath("Socioeconomic", "Pop_q.out"))
-    pop_q = pop_q.rename(columns={"time": "Time", "DIM_1": "Region"})
-    value_cols = [c for c in pop_q.columns if c not in ["Time", "Region"]]
+    pop_q = pop_q.rename(columns={"DIM_1": "Region"})
+    value_cols = [c for c in pop_q.columns if c not in ["time", "Region"]]
 
     pop_q_xr = (
         pop_q
-        .set_index(["Time", "Region"])[value_cols]
+        .set_index(["time", "Region"])[value_cols]
         .rename_axis(columns="Area")
         .stack(future_stack=True)
         .to_xarray()
-        .transpose("Time", "Region", "Area")
+        .transpose("time", "Region", "Area")
     )
     pop_q_xr = pop_q_xr.assign_coords(Area=[area_labels.get(a, a) for a in pop_q_xr.coords["Area"].values])
     # remove global region (27) by selecting only the specified region range
@@ -74,7 +74,7 @@ def _get_pop_q_xr(
     Returns
     -------
     xr.DataArray
-        Population data with dimensions ``("Time", "Region", "Area", "Quintile")``,
+        Population data with dimensions ``("time", "Region", "Area", "Quintile")``,
         where ``Area`` is ``["Urban", "Rural"]`` and ``Quintile`` is ``["Q1", ..., "Q5"]``.
     """
     pop_q_raw = _load_pop_q_raw(image_directory, region_range, area_labels)
@@ -92,7 +92,7 @@ def _get_pop_q_xr(
         .rename({"Area": "Quintile"})
         .expand_dims(Area=["Rural"])
     )
-    return xr.concat([urban_q, rural_q], dim="Area").transpose("Time", "Region", "Area", "Quintile")
+    return xr.concat([urban_q, rural_q], dim="Area").transpose("time", "Region", "Area", "Quintile")
 
 
 def _build_total_population(
@@ -109,7 +109,7 @@ def _build_total_population(
     Parameters
     ----------
     pop_q_data : xr.DataArray
-        IMAGE population data with dimensions including ``Time``, ``Region``, and
+        IMAGE population data with dimensions including ``time``, ``Region``, and
         ``Area``. The ``Area='Total'`` slice is used as IMAGE total population.
     base_population : xr.DataArray
         Reference population data used to ensure the final time range covers all
@@ -121,7 +121,7 @@ def _build_total_population(
     -------
     tuple[xr.DataArray, np.ndarray]
         ``(total_population, time_all)`` where:
-        - ``total_population`` has dimensions ``("Time", "Region")``
+        - ``total_population`` has dimensions ``("time", "Region")``
         - ``time_all`` is the full annual timeline used for reindexing.
     """
     base_directory = image_directory.parent.parent
@@ -130,8 +130,8 @@ def _build_total_population(
     historic_population = pd.read_csv(historic_path)
     historic_population = (
         historic_population
-        .rename(columns={"Year": "Time", "IMAGE_region": "Region", "Population": "Population"})
-        .pivot(index="Time", columns="Region", values="Population")
+        .rename(columns={"Year": "time", "IMAGE_region": "Region", "Population": "Population"})
+        .pivot(index="time", columns="Region", values="Population")
     )
     historic_population = historic_population.reindex(
         index=range(historic_population.index.min(), historic_population.index.max() + 1)  # Explicitly specify index
@@ -140,13 +140,13 @@ def _build_total_population(
 
     historic_population.columns = [str(c) for c in historic_population.columns]
     historic_population.index = historic_population.index.astype(int)
-    historic_population.index.name = "Time"
+    historic_population.index.name = "time"
 
     historic_total = xr.DataArray(
         historic_population.values,
-        dims=("Time", "Region"),
+        dims=("time", "Region"),
         coords={
-            "Time": historic_population.index.to_numpy(),
+            "time": historic_population.index.to_numpy(),
             "Region": historic_population.columns.to_numpy(),
         },
     )
@@ -154,15 +154,15 @@ def _build_total_population(
     image_total = _as_string_regions(pop_q_data.sel(Area="Total"))
 
     time_all = np.arange(
-        int(min(historic_total.coords["Time"].min(), image_total.coords["Time"].min(), base_population.coords["Time"].min())),
-        int(max(historic_total.coords["Time"].max(), image_total.coords["Time"].max(), base_population.coords["Time"].max())) + 1,
+        int(min(historic_total.coords["time"].min(), image_total.coords["time"].min(), base_population.coords["time"].min())),
+        int(max(historic_total.coords["time"].max(), image_total.coords["time"].max(), base_population.coords["time"].max())) + 1,
     )
 
-    historic_total = historic_total.reindex(Time=time_all, Region=regions)
-    image_total = image_total.reindex(Region=regions).interp(Time=time_all, kwargs={"fill_value": "extrapolate"})
+    historic_total = historic_total.reindex(time=time_all, Region=regions)
+    image_total = image_total.reindex(Region=regions).interp(time=time_all, kwargs={"fill_value": "extrapolate"})
 
     total_population = historic_total.combine_first(image_total)
-    total_population = total_population.interpolate_na(dim="Time", method="linear").clip(min=0)
+    total_population = total_population.interpolate_na(dim="time", method="linear").clip(min=0)
     return total_population, time_all
 
 
@@ -178,7 +178,7 @@ def _split_urban_rural(pop_q_data: xr.DataArray,
         Population data containing at least ``Area`` values ``Urban``, ``Rural``,
         and ``Total``.
     total_population : xr.DataArray
-        Total population with dimensions ``("Time", "Region")``.
+        Total population with dimensions ``("time", "Region")``.
     regions : list[str]
         Region codes to include.
     time_all : np.ndarray
@@ -187,7 +187,7 @@ def _split_urban_rural(pop_q_data: xr.DataArray,
     Returns
     -------
     xr.DataArray
-        Urban/rural population with dimensions ``("Area", "Time", "Region")``
+        Urban/rural population with dimensions ``("Area", "time", "Region")``
         (xarray order may vary by operation). For years before the IMAGE
         reference year, the urban share transitions linearly from 0 at 1700
         to the regional IMAGE urban share at the reference year; rural is the
@@ -195,21 +195,21 @@ def _split_urban_rural(pop_q_data: xr.DataArray,
     """
     ur_share = pop_q_data.sel(Area=["Urban", "Rural"]) / pop_q_data.sel(Area="Total")
     ur_share = _as_string_regions(ur_share)
-    ur_share = ur_share.reindex(Region=regions).interp(Time=time_all, kwargs={"fill_value": "extrapolate"})
+    ur_share = ur_share.reindex(Region=regions).interp(time=time_all, kwargs={"fill_value": "extrapolate"})
 
     # Enforce a historical transition: Urban=0 and Rural=1 in 1700, then
     # linearly approach IMAGE regional shares by 1971 (fallback: first IMAGE year).
-    image_years = pop_q_data.coords["Time"].values
+    image_years = pop_q_data.coords["time"].values
     reference_year = 1971 if 1971 in image_years else int(np.min(image_years))
     transition_start_year = 1700
 
-    time_coord = xr.DataArray(time_all, dims=["Time"], coords={"Time": time_all})
+    time_coord = xr.DataArray(time_all, dims=["time"], coords={"time": time_all})
     transition_progress = (
         (time_coord - transition_start_year)
         / max(reference_year - transition_start_year, 1)
     ).clip(min=0, max=1)
 
-    urban_at_reference = ur_share.sel(Area="Urban", Time=reference_year)
+    urban_at_reference = ur_share.sel(Area="Urban", time=reference_year)
     urban_share = xr.where(
         time_coord < reference_year,
         transition_progress * urban_at_reference,
@@ -256,14 +256,14 @@ def _split_quintiles(
     Returns
     -------
     xr.DataArray
-        Combined population array with dimensions ``("Area", "Quintile", "Time", "Region")``.
+        Combined population array with dimensions ``("Area", "Quintile", "time", "Region")``.
     """
     q_labels = [f"Q{i}" for i in range(1, len(urban_q_areas) + 1)]
 
     # Urban quintiles
     urban_q_share = pop_q_data.sel(Area=urban_q_areas) / pop_q_data.sel(Area="Urban")
     urban_q_share = _as_string_regions(urban_q_share)
-    urban_q_share = urban_q_share.reindex(Region=regions).interp(Time=time_all, kwargs={"fill_value": "extrapolate"})
+    urban_q_share = urban_q_share.reindex(Region=regions).interp(time=time_all, kwargs={"fill_value": "extrapolate"})
     urban_q_share = _normalize_shares(urban_q_share, dim="Area", fallback=1 / len(urban_q_areas))
     urban_q_pop = (
         urban_q_share.assign_coords(Area=q_labels)
@@ -275,7 +275,7 @@ def _split_quintiles(
     # Rural quintiles
     rural_q_share = pop_q_data.sel(Area=rural_q_areas) / pop_q_data.sel(Area="Rural")
     rural_q_share = _as_string_regions(rural_q_share)
-    rural_q_share = rural_q_share.reindex(Region=regions).interp(Time=time_all, kwargs={"fill_value": "extrapolate"})
+    rural_q_share = rural_q_share.reindex(Region=regions).interp(time=time_all, kwargs={"fill_value": "extrapolate"})
     rural_q_share = _normalize_shares(rural_q_share, dim="Area", fallback=1 / len(rural_q_areas))
     rural_q_pop = (
         rural_q_share.assign_coords(Area=q_labels)
@@ -305,20 +305,20 @@ def _align_core_population(population_split: xr.DataArray, base_population: xr.D
         Updated ``population_split`` with core areas overwritten on overlapping
         time-region coordinates.
     """
-    aligned_base = _as_string_regions(base_population).transpose("Time", "Region", "Area")
+    aligned_base = _as_string_regions(base_population).transpose("time", "Region", "Area")
     # Find the years and regions that exist in both datasets.
-    common_time = np.intersect1d(population_split.coords["Time"].values, aligned_base.coords["Time"].values)
+    common_time = np.intersect1d(population_split.coords["time"].values, aligned_base.coords["time"].values)
     common_region = np.intersect1d(population_split.coords["Region"].values, aligned_base.coords["Region"].values)
 
     n_quintiles = population_split.sizes.get("Quintile", 1)
 
     for area in ["Total", "Urban", "Rural"]:
-        base_vals = aligned_base.sel(Time=common_time, Region=common_region, Area=area)
+        base_vals = aligned_base.sel(time=common_time, Region=common_region, Area=area)
         if area in ["Urban", "Rural"] and n_quintiles > 1:
             # Distribute equally across quintiles so that sum("Quintile") == base_vals
-            population_split.loc[{"Time": common_time, "Region": common_region, "Area": area}] = base_vals / n_quintiles
+            population_split.loc[{"time": common_time, "Region": common_region, "Area": area}] = base_vals / n_quintiles
         else:
-            population_split.loc[{"Time": common_time, "Region": common_region, "Area": area}] = base_vals
+            population_split.loc[{"time": common_time, "Region": common_region, "Area": area}] = base_vals
     return population_split
 
 
@@ -348,15 +348,15 @@ def _equalize_quintiles(
     xr.DataArray
         Population split with equalized quintile values.
     """
-    historic_time = population_split.coords["Time"].values <= cutoff_year
+    historic_time = population_split.coords["time"].values <= cutoff_year
     if not np.any(historic_time):
         return population_split
 
     # Divide the sum over Quintile equally across all quintile slots
-    total_vals = population_split.sel(Area=target_area, Time=historic_time).sum(dim="Quintile")
+    total_vals = population_split.sel(Area=target_area, time=historic_time).sum(dim="Quintile")
     equal_vals = total_vals / len(q_labels)
     for q in q_labels:
-        population_split.loc[{"Area": target_area, "Quintile": q, "Time": historic_time}] = equal_vals
+        population_split.loc[{"Area": target_area, "Quintile": q, "time": historic_time}] = equal_vals
     return population_split
 
 
@@ -388,7 +388,7 @@ def compute_population(
     q_labels = [f"Q{i}" for i in range(1, len(urban_q_areas) + 1)]
 
     pop_q_data = _load_pop_q_raw(image_directory, region_range)
-    population = pop_q_data.sel(Area=["Total", "Urban", "Rural"]).transpose("Time", "Region", "Area")
+    population = pop_q_data.sel(Area=["Total", "Urban", "Rural"]).transpose("time", "Region", "Area")
 
     total_population_xr, time_all = _build_total_population(
         image_directory=image_directory,
@@ -421,7 +421,7 @@ def compute_population(
         ],
         dim="Area",
         join="outer",
-    ).transpose("Time", "Region", "Area", "Quintile").clip(min=0)
+    ).transpose("time", "Region", "Area", "Quintile").clip(min=0)
 
     population_split_xr = _align_core_population(population_split_xr, population)
     population_split_xr = _equalize_quintiles(population_split_xr, q_labels, "Urban", cutoff_year=1970)

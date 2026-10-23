@@ -60,9 +60,10 @@ Here we also calculate the inflow, stocks and outflow of materials of the buildi
        simulation_timeline = prism.Timeline(1970, 2100, 1)
 
        # calculate the preprocessing data for the buildings sector
-       bld_sector = get_preprocessing_data("buildings", Path("..", "data", "raw"), 
-                                                                      climate_policy_scenario_dir, 
-                                                                      circular_economy_scenario_dirs = None) 
+       bld_sector = get_preprocessing_data("buildings", Path("..", "data", "raw"),
+                                                                      climate_policy_scenario_dir,
+                                                                      circular_economy_data_file = None,
+                                                                      resource_efficiency_flags_file = None)
 
 
 4. Setting up the simulation

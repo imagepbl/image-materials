@@ -63,7 +63,7 @@ def run_infrastructure_simulation(prep_data=None, scenario=SCEN):
         prep_data = get_preprocessing_data_infrastructure(path_base, scenario)
 
     print("\n--- Running Infrastructure Sector Model ---")
-    time_start = int(prep_data["stocks"].coords["Time"].min().values)
+    time_start = int(prep_data["stocks"].coords["time"].min().values)
 
     complete_timeline = prism.Timeline(time_start, YEAR_END, 1)
     # Simulate from time_start (1911) so DSM processes stock_tail years
@@ -91,7 +91,7 @@ def run_infrastructure_simulation(prep_data=None, scenario=SCEN):
     # Attach a Time coordinate DataArray for convenience in reporting
     infra_model = main_model_factory.submodels[0]
     times = np.array(infra_model.Cohort)
-    infra_model.time_coor = xr.DataArray(times, dims=["Time"], coords={"Time": times})
+    infra_model.time_coor = xr.DataArray(times, dims=["time"], coords={"time": times})
 
     return main_model_factory, prep_data
 
@@ -121,12 +121,12 @@ def export_infrastructure_report(main_model_factory, prep_data, output_dir=None)
     time_coor_da = infra_model.time_coor
     
     # physical Units (km)
-    da_inflow_km = _convert_timevar(infra_model.inflow, time_coor_da).sel(Time=time_slice)
-    da_outflow_km = _convert_timevar(infra_model.outflow_by_cohort, time_coor_da).sum(dim='Cohort').sel(Time=time_slice)
+    da_inflow_km = _convert_timevar(infra_model.inflow, time_coor_da).sel(time=time_slice)
+    da_outflow_km = _convert_timevar(infra_model.outflow_by_cohort, time_coor_da).sum(dim='Cohort').sel(time=time_slice)
 
     # Material Units (kg)
-    da_inflow_mat = _convert_timevar(mat_model.inflow_materials, time_coor_da).sel(Time=time_slice)
-    da_outflow_mat = _convert_timevar(mat_model.outflow_by_cohort_materials, time_coor_da).sel(Time=time_slice)
+    da_inflow_mat = _convert_timevar(mat_model.inflow_materials, time_coor_da).sel(time=time_slice)
+    da_outflow_mat = _convert_timevar(mat_model.outflow_by_cohort_materials, time_coor_da).sel(time=time_slice)
 
     # Mass balance: subtract obsolete inflow from active outflow (v5 lines 2793-2809)
     active_types = prep_data.get("active_types", [])
@@ -171,10 +171,10 @@ def export_infrastructure_report(main_model_factory, prep_data, output_dir=None)
     da_inflow_mat = da_inflow_mat_active
     da_outflow_mat = da_outflow_mat_active
     da_expansion_km = da_inflow_km - da_outflow_km
-    da_stock_km = infra_model.stock_by_cohort.sum(dim='Cohort').sel(Time=time_slice, Type=active_types)
+    da_stock_km = infra_model.stock_by_cohort.sum(dim='Cohort').sel(time=time_slice, Type=active_types)
 
     da_expansion_mat = da_inflow_mat - da_outflow_mat
-    da_stock_mat = mat_model.stock_by_cohort_materials.sel(Time=time_slice, Type=active_types)
+    da_stock_mat = mat_model.stock_by_cohort_materials.sel(time=time_slice, Type=active_types)
 
     # --- Permanent aggregate (80%) — add to stock and inflow for reporting ---
     perm_agg_mi = prep_data.get("permanent_aggregate_mi", None)
@@ -194,10 +194,10 @@ def export_infrastructure_report(main_model_factory, prep_data, output_dir=None)
         perm_agg_stock = phys_stock_plain * perm_agg_mi
 
         # Permanent agg inflow = increase in permanent stock (diff, clipped at 0)
-        perm_agg_inflow = perm_agg_stock.diff(dim="Time").clip(min=0)
+        perm_agg_inflow = perm_agg_stock.diff(dim="time").clip(min=0)
         # First year: permanent stock IS the initial inflow
-        first_year_stock = perm_agg_stock.isel(Time=0)
-        perm_agg_inflow = xr.concat([first_year_stock.expand_dims("Time"), perm_agg_inflow], dim="Time")
+        first_year_stock = perm_agg_stock.isel(time=0)
+        perm_agg_inflow = xr.concat([first_year_stock.expand_dims("time"), perm_agg_inflow], dim="time")
 
         # Add permanent aggregate to material stock and inflow
         perm_stock_expanded = perm_agg_stock.expand_dims({"material": ["aggregate"]})
@@ -273,7 +273,7 @@ def export_infrastructure_report(main_model_factory, prep_data, output_dir=None)
         dfs.append(df)
 
     long_df = pd.concat(dfs, ignore_index=True)
-    long_df.rename(columns={'Time': 'year', 'Region': 'regions',
+    long_df.rename(columns={'time': 'year', 'Region': 'regions',
                             'material': 'materials', 'Type': 'elements'}, inplace=True)
     # Convert kg → kt
     long_df['value'] = long_df['value'] / 1e6

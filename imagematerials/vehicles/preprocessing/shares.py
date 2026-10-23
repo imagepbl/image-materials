@@ -128,7 +128,7 @@ def get_vehicle_shares(climate_data_path: str, climate_policy_config, knowledge_
     vehicle_shares_typical = interpolate(vehicle_shares_typical, change='no')
     shares = xarray_conversion(
         vehicle_shares_typical,
-        (["Time"], ["Type", "SubType", "Region"], {"Type": ["Type", "SubType"]})
+        (["time"], ["Type", "SubType", "Region"], {"Type": ["Type", "SubType"]})
     )
 
     # Different from the stocks: cutoff ([:-2]) not needed
