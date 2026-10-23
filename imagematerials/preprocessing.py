@@ -45,12 +45,14 @@ def _get_vehicles_prep_data(base_dir, climate_policy_scenario_dir, circular_econ
 
     return prep_data
 
-def _get_fossilfuels_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_scenario_dirs):
+def _get_fossilfuels_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_data_file,
+                                resource_efficiency_flags_file=None):
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
-        circular_economy_config = read_circular_economy_config(circular_economy_scenario_dirs)
+        circular_economy_config = read_circular_economy_data(circular_economy_data_file)
+        resource_efficiency_flags = read_resource_efficiency_flags(resource_efficiency_flags_file)
         prep_data_extraction = prep_ff_extr(base_dir, climate_policy_config, circular_economy_config)
         prep_data_processing = prep_ff_proc(base_dir, climate_policy_config, circular_economy_config)
         prep_data_pipelines = prep_ff_pipe(base_dir, climate_policy_config, circular_economy_config)
@@ -267,7 +269,8 @@ def get_preprocessing_data(
 
         elif sector == "fossil_fuels":
                     prep_data = _get_fossilfuels_prep_data(base_dir, climate_policy_scenario_dir,
-                                                           circular_economy_scenario_dirs)
+                                                           circular_economy_data_file,
+                                                           resource_efficiency_flags_file)
 
         elif sector == "appliances":
             prep_data = appliances_preprocessing(base_dir, 

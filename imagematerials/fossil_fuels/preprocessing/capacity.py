@@ -31,7 +31,7 @@ def compute_extraction_capacity(
 
     Takes the extraction stock tables from compute_all_infra() (one per fuel),
     keeps the relevant years and regions, and brings them into the format the
-    model needs: one array with dimensions Time, Region and Type, in kg.
+    model needs: one array with dimensions time, Region and Type, in kg.
 
     Parameters
     ----------
@@ -44,7 +44,7 @@ def compute_extraction_capacity(
 
     Returns
     -------
-    Extraction stock in kg (units added with prism.Q_), dimensions (Time, Region, Type).
+    Extraction stock in kg (units added with prism.Q_), dimensions (time, Region, Type).
         Type holds the six extraction technologies in a fixed order that matches the lifetime and 
         material intensity data: Coal Opencast, Coal Underground, Gas Offshore, Gas Onshore, 
         Oil Offshore, Oil Onshore.
@@ -107,7 +107,7 @@ def compute_extraction_capacity(
         df_extraction_all
         .set_index(['time', 'DIM_1', 'Tech Type'])
         .to_xarray()['value']
-        .rename({'time': 'Time', 'DIM_1': 'Region', 'Tech Type': 'Type'})
+        .rename({'DIM_1': 'Region', 'Tech Type': 'Type'})
     )  
     extractioncap_xr = prism.Q_(extractioncap_xr, "kg") # add units
     extractioncap_xr.name = "ExtractionStockDemand"
@@ -148,7 +148,7 @@ def compute_processing_capacity(
 
     Returns
     -------
-    Processing stock in kg, dimensions (Time, Region, Type). Type holds "Coal Preparation", 
+    Processing stock in kg, dimensions (time, Region, Type). Type holds "Coal Preparation", 
         "Gas Processing" and "Oil Refinery".
 
     """
@@ -220,7 +220,7 @@ def compute_processing_capacity(
         df_processing_all
         .set_index(['time', 'DIM_1', 'Tech Type'])
         .to_xarray()['value']
-        .rename({'time': 'Time', 'DIM_1': 'Region', 'Tech Type': 'Type'})
+        .rename({'DIM_1': 'Region', 'Tech Type': 'Type'})
     )
     processingcap_xr = prism.Q_(processingcap_xr, "kg") #Add units
     processingcap_xr.name = "ProcessingStockDemand"
@@ -252,7 +252,7 @@ def compute_storage_capacity(
 
     Returns
     -------
-        Oil storage stock in m3, dimensions (Time, Region, Type).
+        Oil storage stock in m3, dimensions (time, Region, Type).
         Type contains "Oil Storage" (the sum of "Oil Crude" and "Oil Products").
 
     """
@@ -301,7 +301,7 @@ def compute_storage_capacity(
         df_storage_all
         .set_index(['time', 'DIM_1', 'Tech Type'])
         .to_xarray()['value']
-        .rename({'time': 'Time', 'DIM_1': 'Region', 'Tech Type': 'Type'})
+        .rename({'DIM_1': 'Region', 'Tech Type': 'Type'})
     )
     #Combine oil crude and oil products into one "oil storage" category 
     oil_storage = storagecap_xr.sel(Type=['Oil Crude', 'Oil Products']).sum(dim='Type')
@@ -342,7 +342,7 @@ def compute_transport_capacity(
 
     Returns
     -------
-    Processing stock in kg, dimensions (Time, Region, Type).
+    Processing stock in kg, dimensions (time, Region, Type).
 
     """
     #Transport capacity (stock demand per generation technology) 
@@ -423,7 +423,7 @@ def compute_transport_capacity(
         df_transport_all
         .set_index(['time', 'DIM_1', 'Tech Type'])
         .to_xarray()['value']
-        .rename({'time': 'Time', 'DIM_1': 'Region', 'Tech Type': 'Type'})
+        .rename({'DIM_1': 'Region', 'Tech Type': 'Type'})
     )
     transportcap_xr = prism.Q_(transportcap_xr, "kg") #Add units
     transportcap_xr.name = "TransportStockDemand"
@@ -464,7 +464,7 @@ def compute_pipelines_capacity(
 
     Returns
     -------
-    Pipeline stock in km, dimensions (Time, Region, Type).
+    Pipeline stock in km, dimensions (time, Region, Type).
         Type holds six pipeline types in a fixed order that matches the lifetime and
         material intensity data: Gas Distribution Pipeline, Gas Transmission Pipeline,
         Oil Offshore Crude Pipeline, Oil Onshore Crude Pipeline,
@@ -534,7 +534,7 @@ def compute_pipelines_capacity(
         df_pipelines_all
         .set_index(['time', 'DIM_1', 'Tech Type'])
         .to_xarray()['value']
-        .rename({'time': 'Time', 'DIM_1': 'Region', 'Tech Type': 'Type'})
+        .rename({'DIM_1': 'Region', 'Tech Type': 'Type'})
     )
 
     pipelinecap_xr = pipelinecap_xr.assign_coords(

@@ -74,6 +74,7 @@ def get_preprocessing_data_extraction(
         path_base: str | Path,
         climate_policy_config: dict[str, Any],
         circular_economy_config: dict[str, Any],
+        resource_efficiency_flags: dict = None,
     ) -> dict[str, Any]:
     """Collect the preprocessing data of the extraction stage in the format the model expects.
 
@@ -97,7 +98,7 @@ def get_preprocessing_data_extraction(
     Dictionary with the keys:
         - "lifetimes": lifetimes in years, one DataArray per distribution parameter (format created 
             by convert_lifetime()).
-        - "stocks": extraction infrastructure in kg, dimensions (Time, Region, Type).
+        - "stocks": extraction infrastructure in kg, dimensions (time, Region, Type).
         - "material_intensities": material use per unit of stock in kg/kg, dimensions (Cohort, Type, 
             material).
         - "knowledge_graph": the fossil fuel knowledge graph (create_fossil_fuel_graph()).
@@ -137,6 +138,7 @@ def get_preprocessing_data_processing(
         path_base: str | Path,
         climate_policy_config: dict[str, Any],
         circular_economy_config: dict[str, Any],
+        resource_efficiency_flags: dict = None,
     ) -> dict[str, Any]:
     """Collect the preprocessing data of the processing stage in the format the model expects.
 
@@ -159,7 +161,7 @@ def get_preprocessing_data_processing(
     Dictionary with the keys:
         - "lifetimes": lifetimes in years, one DataArray per distribution parameter (format created 
             by convert_lifetime()).
-        - "stocks": processing infrastructure in kg, dimensions (Time, Region, Type).
+        - "stocks": processing infrastructure in kg, dimensions (time, Region, Type).
         - "material_intensities": material use per unit of stock in kg/kg, dimensions (Cohort, Type, 
             material).
         - "knowledge_graph": the fossil fuel knowledge graph (create_fossil_fuel_graph()).
@@ -199,6 +201,7 @@ def get_preprocessing_data_storage(
         path_base: str | Path,
         climate_policy_config: dict[str, Any],
         circular_economy_config: dict[str, Any],
+        resource_efficiency_flags: dict = None,
     ) -> dict[str, Any]:
     """Collect the preprocessing data of the storage stage in the format the model expects.
 
@@ -221,7 +224,7 @@ def get_preprocessing_data_storage(
     Dictionary with the keys:
         - "lifetimes": lifetimes in years, one DataArray per distribution parameter (format created 
             by convert_lifetime()).
-        - "stocks": storage infrastructure in m3, dimensions (Time, Region, Type).
+        - "stocks": storage infrastructure in m3, dimensions (time, Region, Type).
         - "material_intensities": material use per unit of stock in kg/m3, dimensions (Cohort, Type, 
             material).
         - "knowledge_graph": the fossil fuel knowledge graph (create_fossil_fuel_graph()).
@@ -260,6 +263,7 @@ def get_preprocessing_data_transport(
         path_base: str | Path,
         climate_policy_config: dict[str, Any],
         circular_economy_config: dict[str, Any],
+        resource_efficiency_flags: dict = None,
     ) -> dict[str, Any]:
     """Collect the preprocessing data of the transport stage in the format the model expects.
 
@@ -282,7 +286,7 @@ def get_preprocessing_data_transport(
     Dictionary with the keys:
         - "lifetimes": lifetimes in years, one DataArray per distribution parameter (format created 
             by convert_lifetime()).
-        - "stocks": transport infrastructure in kg, dimensions (Time, Region, Type).
+        - "stocks": transport infrastructure in kg, dimensions (time, Region, Type).
         - "material_intensities": material use per unit of stock in kg/kg, dimensions (Cohort, Type, 
             material).
         - "knowledge_graph": the fossil fuel knowledge graph (create_fossil_fuel_graph()).
@@ -320,6 +324,7 @@ def get_preprocessing_data_pipelines(
         path_base: str | Path,
         climate_policy_config: dict[str, Any],
         circular_economy_config: dict[str, Any],
+        resource_efficiency_flags: dict = None,
     ) -> dict[str, Any]:
     """Collect the preprocessing data of the pipeline stage in the format the model expects.
 
@@ -342,7 +347,7 @@ def get_preprocessing_data_pipelines(
     Dictionary with the keys:
         - "lifetimes": lifetimes in years, one DataArray per distribution parameter (format created 
             by convert_lifetime()).
-        - "stocks": pipeline infrastructure in km, dimensions (Time, Region, Type).
+        - "stocks": pipeline infrastructure in km, dimensions (time, Region, Type).
         - "material_intensities": material use per unit of stock in kg/km, dimensions (Cohort, Type, 
             material).
         - "knowledge_graph": the fossil fuel knowledge graph (create_fossil_fuel_graph()).
