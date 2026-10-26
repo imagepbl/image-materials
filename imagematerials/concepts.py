@@ -1352,5 +1352,85 @@ def create_materials_graph():
 
     return materials_knowledge_graph
 
-knowledge_graph = KnowledgeGraph(*create_building_graph()._items, *create_vehicle_graph()._items, *create_electricity_graph()._items)
+def create_fossil_fuel_graph():
+    """Create the knowledge graph for the fossil fuel sector."""
+
+    ff_fueltypes = ["Coal", "Oil", "Gas"]
+    ff_supertypes = ["Extraction", "Processing", "Transport", "Pipeline"]
+
+    fossil_fuel_knowledge_graph = KnowledgeGraph(Node("fossil fuels"))
+
+    # 1st level: fuel types and supertypes (stages in the fossil fuel supply chain)
+
+    for fueltype in ff_fueltypes:
+        fossil_fuel_knowledge_graph.add(Node(fueltype, inherits_from="fossil fuels"))
+
+    for supertype in ff_supertypes:
+        fossil_fuel_knowledge_graph.add(Node(supertype, inherits_from="fossil fuels"))
+
+    # 2nd level: fuel - stage combinations
+
+    fossil_fuel_knowledge_graph.add(Node("Coal - Extraction", inherits_from=["Coal", "Extraction"]))
+    fossil_fuel_knowledge_graph.add(Node("Oil - Extraction", inherits_from=["Oil", "Extraction"]))
+    fossil_fuel_knowledge_graph.add(Node("Gas - Extraction", inherits_from=["Gas", "Extraction"]))
+
+    fossil_fuel_knowledge_graph.add(Node("Coal - Processing", inherits_from=["Coal", "Processing"]))
+    fossil_fuel_knowledge_graph.add(Node("Oil - Processing", inherits_from=["Oil", "Processing"]))
+    fossil_fuel_knowledge_graph.add(Node("Gas - Processing", inherits_from=["Gas", "Processing"]))
+
+    fossil_fuel_knowledge_graph.add(Node("Coal - Transport", inherits_from=["Coal", "Transport"]))
+    fossil_fuel_knowledge_graph.add(Node("Oil - Transport", inherits_from=["Oil", "Transport"]))
+    fossil_fuel_knowledge_graph.add(Node("Gas - Transport", inherits_from=["Gas", "Transport"]))
+
+    fossil_fuel_knowledge_graph.add(Node("Oil - Pipeline", inherits_from=["Oil", "Pipeline"]))
+    fossil_fuel_knowledge_graph.add(Node("Gas - Pipeline", inherits_from=["Gas", "Pipeline"]))
+
+    # 3rd level: subtypes of stages
+
+# Extraction subtypes
+
+    for subtype in ["Coal Underground", "Coal Opencast"]:
+        fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from="Coal - Extraction"))
+
+    for subtype in ["Oil Onshore", "Oil Offshore"]:
+        fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from="Oil - Extraction"))
+
+    for subtype in ["Gas Onshore", "Gas Offshore"]:
+        fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from="Gas - Extraction"))
+
+# Processing subtypes
+
+    for subtype in ["Coal Preparation"]:
+        fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from="Coal - Processing")) 
+
+    for subtype in ["Oil Refinery", "Oil Storage"]:
+        fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from="Oil - Processing"))
+
+    for subtype in ["Gas Processing"]:
+        fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from="Gas - Processing"))
+
+# Transport subtypes
+
+    for subtype in ["Coal Rail", "Coal Truck", "Coal Inland Ships", "Coal Ocean Ships"]:
+        fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from="Coal - Transport"))
+
+    for subtype in ["Oil Rail", "Oil Truck", "Oil Inland Ships", "Oil Ocean Ships"]:
+         fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from="Oil - Transport"))
+
+    for subtype in ["Gas Rail", "Gas Truck", "Gas Inland Ships", "Gas Ocean Ships"]:
+         fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from="Gas - Transport"))
+
+# Pipelines subtypes
+
+    for subtype in ["Gas Transmission Pipeline", "Gas Distribution Pipeline"]:   
+         fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from=["Gas - Pipeline"])) 
+
+    for subtype in ["Oil Offshore Crude Pipeline", "Oil Onshore Crude Pipelins", "Oil Offshore Product Pipeline", "Oil Onshore Product Pipeline"]:  
+         fossil_fuel_knowledge_graph.add(Node(subtype, inherits_from=["Oil - Pipeline"]))   
+         
+
+    return fossil_fuel_knowledge_graph
+
+
+knowledge_graph = KnowledgeGraph(*create_building_graph()._items, *create_vehicle_graph()._items, *create_electricity_graph()._items, *create_fossil_fuel_graph()._items)
 
