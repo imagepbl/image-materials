@@ -21,7 +21,7 @@ from imagematerials.fossil_fuels.preprocessing.stock_demand.pipelines import pip
 from imagematerials.fossil_fuels.preprocessing.stock_demand.transport import transport
 from imagematerials.fossil_fuels.preprocessing.stock_demand.extraction import extraction_stocks
 from imagematerials.fossil_fuels.preprocessing.stock_demand.storage import storage_indexed_stocks_growth
-from imagematerials.fossil_fuels.preprocessing.stock_demand.refinery import refinery_stocks
+from imagematerials.fossil_fuels.preprocessing.stock_demand.processing import processing_stocks
 from imagematerials.fossil_fuels import constants
 from imagematerials.fossil_fuels.utils import (
     generate_historic_profile,
@@ -306,7 +306,7 @@ def coal_infra(
         production_intensity_weight_coal,
         drivers["mining_type_share_coal"],
     )  # in kg (total weight of infrastructure)
-    preparation_stock_coal = refinery_stocks(
+    preparation_stock_coal = processing_stocks(
         fuel,
         (coal_use_total * constants.GJ_TO_KG_COAL),
         preparation_intensity_weight_coal,
@@ -390,7 +390,7 @@ def gas_infra(
     gas_pipelines = pipelines_indexed_stock_growth(
         fuel, gas_use_total, drivers["gas_pipeline_length"], baseyear
     )  # in km
-    processing_stock_gas = refinery_stocks(
+    processing_stock_gas = processing_stocks(
         fuel,
         (gas_use_total * constants.GJ_TO_M3_GAS),
         processing_intensity_weight_gas,
@@ -476,7 +476,7 @@ def oil_infra(
         drivers["oil_storage_capacity"] * constants.MB_TO_M3,
         baseyear,
     )  # in m3
-    refinery_stock_oil = refinery_stocks(
+    refinery_stock_oil = processing_stocks(
         fuel,
         (oil_use_total * constants.GJ_TO_KG_OIL / constants.FRACTION_REFINING_CAP),
         refinery_intensity_weight_oil,

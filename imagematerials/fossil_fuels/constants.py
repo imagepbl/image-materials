@@ -271,116 +271,116 @@ DICT_MATERIALS_COLORS = {
 ####################################################################################################
 # Module containing global constants
 # TODO: check if this is needed, otherwise remove
-import numpy as np
-import prism
-from prism import Q_
+# import numpy as np
+# import prism
+# from prism import Q_
 
-# Time
-BASE_TIMELINE = prism.Timeline(
-    start=Q_(1971, 'year'),
-    end=Q_(2100, 'year'),
-    stepsize=Q_(1, 'year'))
-# End-point of calibration period (start year 1971) (some data up to 2007, but
-# 2005 is guaranteed as complete dataset)
-T_CALIB = Q_(2015, 'year')
-# Last year of historic data for fossil fuel calibration.
-T_CALIB_FOSSIL = Q_(2015, 'year')
-# Time for transition to central learn matrix.
-T_LEARN = Q_(2020, 'year')
-T_STOP_LEARNING = Q_(2000, 'year')
-# Year in which subsidy adjustment rate is fixed
-T_SUBRATE = Q_(2015, 'year')
-TRADE_YEAR = Q_(1971, 'year')
-SUBTYPE_SEPARATOR = " - "
+# # Time
+# BASE_TIMELINE = prism.Timeline(
+#     start=Q_(1971, 'year'),
+#     end=Q_(2100, 'year'),
+#     stepsize=Q_(1, 'year'))
+# # End-point of calibration period (start year 1971) (some data up to 2007, but
+# # 2005 is guaranteed as complete dataset)
+# T_CALIB = Q_(2015, 'year')
+# # Last year of historic data for fossil fuel calibration.
+# T_CALIB_FOSSIL = Q_(2015, 'year')
+# # Time for transition to central learn matrix.
+# T_LEARN = Q_(2020, 'year')
+# T_STOP_LEARNING = Q_(2000, 'year')
+# # Year in which subsidy adjustment rate is fixed
+# T_SUBRATE = Q_(2015, 'year')
+# TRADE_YEAR = Q_(1971, 'year')
+# SUBTYPE_SEPARATOR = " - "
 
-Region = prism.Dimension('region', IMAGE_REGIONS + ["World"])  # World regions
-ExtendedRegion = prism.Dimension('region', Region.coords + ["World2"])
-ImportRegion = prism.Dimension("import_region", Region.coords)
-ExportRegion = prism.Dimension("export_region", Region.coords)
-ReducedRegion = prism.Dimension("region", IMAGE_REGIONS)
-ReducedImportRegion = prism.Dimension("import_region", IMAGE_REGIONS)
-ReducedExportRegion = prism.Dimension("export_region", IMAGE_REGIONS)
+# Region = prism.Dimension('region', IMAGE_REGIONS + ["World"])  # World regions
+# ExtendedRegion = prism.Dimension('region', Region.coords + ["World2"])
+# ImportRegion = prism.Dimension("import_region", Region.coords)
+# ExportRegion = prism.Dimension("export_region", Region.coords)
+# ReducedRegion = prism.Dimension("region", IMAGE_REGIONS)
+# ReducedImportRegion = prism.Dimension("import_region", IMAGE_REGIONS)
+# ReducedExportRegion = prism.Dimension("export_region", IMAGE_REGIONS)
 
-# Energy carriers
-EnergyCarrier = prism.Dimension("carrier", [
-    "solid fuel",
-    "liquid fuel",
-    "gaseous fuel",
-    "hydrogen",
-    "modern biofuel",
-    "secondary heat",
-    "traditional biofuel",
-    "electricity",
-    "total"
-])
-PrimaryEnergyCarrier = prism.Dimension("carrier", [
-    "coal",
-    "conventional oil",
-    "unconventional oil",
-    "natural gas",
-    "modern biofuel",
-    "traditional biofuel",
-    "nuclear",
-    "renewables",
-    "hydro-electricity"
-])
+# # Energy carriers
+# EnergyCarrier = prism.Dimension("carrier", [
+#     "solid fuel",
+#     "liquid fuel",
+#     "gaseous fuel",
+#     "hydrogen",
+#     "modern biofuel",
+#     "secondary heat",
+#     "traditional biofuel",
+#     "electricity",
+#     "total"
+# ])
+# PrimaryEnergyCarrier = prism.Dimension("carrier", [
+#     "coal",
+#     "conventional oil",
+#     "unconventional oil",
+#     "natural gas",
+#     "modern biofuel",
+#     "traditional biofuel",
+#     "nuclear",
+#     "renewables",
+#     "hydro-electricity"
+# ])
 
-# Resources
-ConventionalCategory = prism.Dimension("category", [1, 2, 3, 4, 5, 6, 7])
-UnconventionalCategory = prism.Dimension("category", [8, 9, 10, 11, 12])
-Category = prism.Dimension(
-    "category",
-    [*ConventionalCategory.coords, *UnconventionalCategory.coords]
-)  # Resource categories
-CategoryType = prism.Dimension("category_type", ['conventional', 'unconventional'])
+# # Resources
+# ConventionalCategory = prism.Dimension("category", [1, 2, 3, 4, 5, 6, 7])
+# UnconventionalCategory = prism.Dimension("category", [8, 9, 10, 11, 12])
+# Category = prism.Dimension(
+#     "category",
+#     [*ConventionalCategory.coords, *UnconventionalCategory.coords]
+# )  # Resource categories
+# CategoryType = prism.Dimension("category_type", ['conventional', 'unconventional'])
 
-# Constants
-#   Carbon content per fuel (coal, oil, gas and biomass) unit: kg-C/GJ
-Fuel = prism.Dimension("fuel", ["coal", "oil", "gas", "modern biofuel"])
-CARBON_CONTENT_FUEL_2 = prism.Array[Fuel, 'kg*C/GJ'](values=[25.5, 19.3, 15.3, 26])
+# # Constants
+# #   Carbon content per fuel (coal, oil, gas and biomass) unit: kg-C/GJ
+# Fuel = prism.Dimension("fuel", ["coal", "oil", "gas", "modern biofuel"])
+# CARBON_CONTENT_FUEL_2 = prism.Array[Fuel, 'kg*C/GJ'](values=[25.5, 19.3, 15.3, 26])
 
-# Calculations
-EROICalculation = prism.Dimension("eroi_calculation", ['exogenous', 'endogenous'])
+# # Calculations
+# EROICalculation = prism.Dimension("eroi_calculation", ['exogenous', 'endogenous'])
 
-# Price deflator
-DEFLATOR_WORLD = 1.12
+# # Price deflator
+# DEFLATOR_WORLD = 1.12
 
-# Tolerances
-SAFE_MARGIN = 1.125  # Safety margin in investing in fossil fuel producing capacity.
+# # Tolerances
+# SAFE_MARGIN = 1.125  # Safety margin in investing in fossil fuel producing capacity.
 
-EPS = 1.0e-6  # Small number used as tolerance.
-if prism.USE_PINT:
-    EPS_GJ = prism.Q_(EPS, 'GJ')
-    EPS_PJ = prism.Q_(EPS, 'PJ')
-    EPS_DOL_PER_GJ = prism.Q_(EPS, 'dol/GJ')
-else:
-    EPS_GJ = EPS
-    EPS_PJ = EPS
-    EPS_DOL_PER_GJ = EPS
+# EPS = 1.0e-6  # Small number used as tolerance.
+# if prism.USE_PINT:
+#     EPS_GJ = prism.Q_(EPS, 'GJ')
+#     EPS_PJ = prism.Q_(EPS, 'PJ')
+#     EPS_DOL_PER_GJ = prism.Q_(EPS, 'dol/GJ')
+# else:
+#     EPS_GJ = EPS
+#     EPS_PJ = EPS
+#     EPS_DOL_PER_GJ = EPS
 
-# Unit conversions
-if prism.USE_PINT:
-    GJ = prism.Q_(1, 'GJ')
-    TJ_TO_GJ = 1
-    PJ_TO_GJ = 1
-else:
-    GJ = 1
-    TJ_TO_GJ = 1e3
-    PJ_TO_GJ = 1e6
+# # Unit conversions
+# if prism.USE_PINT:
+#     GJ = prism.Q_(1, 'GJ')
+#     TJ_TO_GJ = 1
+#     PJ_TO_GJ = 1
+# else:
+#     GJ = 1
+#     TJ_TO_GJ = 1e3
+#     PJ_TO_GJ = 1e6
 
-# Energy carriers
-_ENERGY_CARRIERS = [
-    "Solid fuel",
-    "Liquid fuel",
-    "Gaseous fuel",
-    "Hydrogen",
-    "Modern Biofuel",
-    "Secondary Heat",
-    "Traditional BioFuel",
-    "Electricity"
-]
-# Energy carriers in secondary fuel use
-EnergyCarriers = prism.Dimension('energycarrier', _ENERGY_CARRIERS)
+# # Energy carriers
+# _ENERGY_CARRIERS = [
+#     "Solid fuel",
+#     "Liquid fuel",
+#     "Gaseous fuel",
+#     "Hydrogen",
+#     "Modern Biofuel",
+#     "Secondary Heat",
+#     "Traditional BioFuel",
+#     "Electricity"
+# ]
+# # Energy carriers in secondary fuel use
+# EnergyCarriers = prism.Dimension('energycarrier', _ENERGY_CARRIERS)
 
 
 

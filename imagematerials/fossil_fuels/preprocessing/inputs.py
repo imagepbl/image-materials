@@ -4,11 +4,10 @@ inputs.py -- reads ALL input data of the fossil fuel module in one place.
 This file only READS data (nothing is calculated here), so it is the place to
 look if you want to know which files the model needs.
 
-Usage (in main.py):
+Usage (in main.py)::
 
     inputs_image = load_inputs_image(climate_policy_config)
     inputs = load_inputs(path_base, climate_policy_config)
-
     inputs_image["image"]["primpersec"]      # IMAGE output
     inputs["lifetimes"]["extraction"]        # lifetimes, one table per stage
     inputs["materials"]["extraction"]        # material intensities, one table per stage
@@ -17,10 +16,14 @@ Usage (in main.py):
 Where do the files come from?
   * IMAGE output files: from the folder given in the config file
     (climate_policy_config["config_file_path"] + the names in [data_files]).
-  * All other files: first looked up in the scenario-specific folder
+  * All other files: first looked up in the scenario-specific folder::
+
         <path_base>/fossil_fuels/<scenario name>/
-    and if the file is not there, in the standard folder
+
+    and if the file is not there, in the standard folder::
+
         <path_base>/fossil_fuels/standard_data/
+
     So a scenario folder only needs to contain the files that differ from standard.
 """
 
@@ -37,8 +40,8 @@ def load_inputs_image(
 
     Parameters
     ----------
-    climate_policy_config: Scenario configuration. Only
-        climate_policy_config["config_file_path"] is used, to get the scenario name.
+    climate_policy_config: Scenario configuration. Only climate_policy_config["config_file_path"] is 
+        used, to get the scenario name.
 
     Returns
     -------
@@ -69,10 +72,14 @@ def load_inputs(
     ) -> dict[str, dict[str, pd.DataFrame | pd.Series]]:
     """Read all fossil fuel input files (lifetimes, material intensities, drivers).
 
-    Files are looked up in the scenario folder first,
+    Files are looked up in the scenario folder first::
+
         <path_base>/fossil_fuels/<scenario name>/
-    and, if a file is not there, in the standard folder
+
+    and, if a file is not there, in the standard folder::
+
         <path_base>/fossil_fuels/standard_data/
+
     so a scenario folder only has to contain the files that differ from standard.
     The scenario name is the name of the folder given in
     climate_policy_config["config_file_path"] (e.g. "SSP2_baseline").

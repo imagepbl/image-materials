@@ -14,7 +14,7 @@ This script initializes input parameters and loads data for the FUMA model.
 import pandas as pd
 
 
-def refinery_stocks(fuel, fuel_use, refinery_intensity_weight):
+def processing_stocks(fuel, fuel_use, refinery_intensity_weight):
     refinery_stocks = pd.concat(
         [fuel_use.mul(refinery_intensity_weight.iloc[0])],
         keys=[refinery_intensity_weight.index[0]],
