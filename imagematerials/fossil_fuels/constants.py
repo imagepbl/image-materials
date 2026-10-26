@@ -7,30 +7,6 @@ from imagematerials.constants import IMAGE_REGIONS
 
 ureg = pint.UnitRegistry(force_ndarray_like=True)
 
-# paths (should be removed) ########################################################################
-
-circular_economy_config = None
-climate_policy_config =  "SSP1_climate_policy"
-scenario = "SSP1_climate_policy"
-
-scen_folder = scenario 
-STANDARD_SCEN_EXTERNAL_DATA = scenario 
-SCENARIO_DEFAULT =  "SSP1_climate_policy"
-
-
-# Define paths (change to be consistent with other OS)
-path_base = Path(__file__).resolve()
-while path_base.name != "image-materials":
-    path_base = path_base.parent
-
-# Build paths using Path
-DATA_DIR = Path(path_base, "data", "raw", "fossil_fuels")
-IMAGE_DIR = Path(path_base, "data", "raw", "image")
-OUTPUT_DIR = Path(DATA_DIR, "Scenario_data")
-
-CLIMATE_POLICY_SCENARIO_DIR = Path(IMAGE_DIR, scen_folder)
-climate_policy_scenario_dir = CLIMATE_POLICY_SCENARIO_DIR
-
 
 ####################################################################################################
 # Unit conversions
