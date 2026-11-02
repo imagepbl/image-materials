@@ -6,6 +6,7 @@ from typing import Sequence, Union, Optional
 import prism
 import xarray as xr
 
+from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.electricity.constants import (
     EPG_SUBTECH_TO_TECH,
     TECH_STATIONARY_STORAGE
@@ -849,6 +850,112 @@ def create_image_region_graph() -> KnowledgeGraph:
 
     return graph
 
+def create_R10_region_graph():
+
+    region_knowledge_graph = KnowledgeGraph()
+
+    R10_region_list = ["Africa", "China+", "Latin America", "Middle East", "India+", "Europe", 
+                       "North America", "Reforming Economies", "Rest of Asia", "Pacific OECD"]
+    region_to_R10 = {
+        # 1. Africa
+        "EAF": "Africa", "NAF": "Africa", "WAF": "Africa", "RSAF": "Africa", "SAF": "Africa",
+        # 2. China+
+        "CHN": "China+", "KOR": "China+",
+        # 3. Latin America
+        "BRA": "Latin America", "MEX": "Latin America", "RSAM": "Latin America", "RCAM": "Latin America",
+        # 4. Middle East
+        "ME": "Middle East",
+        # 5. India+
+        "INDIA": "India+", "RSAS": "India+",
+        # 6. Europe
+        "CEU": "Europe", "WEU": "Europe", "TUR": "Europe",
+        # 7. North America
+        "CAN": "North America", "USA": "North America",
+        # 8. Reforming Economies
+        "UKR": "Reforming Economies", "STAN": "Reforming Economies", "RUS": "Reforming Economies",
+        # 9. Rest of Asia
+        "SEAS": "Rest of Asia", "INDO": "Rest of Asia",
+        # 10. Pacific OECD
+        "JAP": "Pacific OECD", "OCE": "Pacific OECD"
+    }
+
+    for r10_region in R10_region_list:
+        region_knowledge_graph.add(Node(r10_region, inherits_from=None))
+    # Add country nodes 
+    for region in IMAGE_REGIONS:
+        parent = region_to_R10.get(region)
+        region_knowledge_graph.add(Node(region, inherits_from=parent))
+
+    return region_knowledge_graph
+
+def create_R9_region_graph():
+
+    region_knowledge_graph = KnowledgeGraph()
+
+    R9_region_list = ["Middle East & Africa", "China", "Latin America", "USA", "India", "European Union", 
+                       "Reforming Economies", "Other Asia", "Other OECD"]
+    region_to_R9 = {
+        # 1. Middle East & Africa
+        "EAF": "Middle East & Africa", "NAF": "Middle East & Africa", "WAF": "Middle East & Africa", 
+        "RSAF": "Middle East & Africa", "SAF": "Middle East & Africa", "ME": "Middle East & Africa",
+        # 2. China
+        "CHN": "China",
+        # 3. Latin America
+        "BRA": "Latin America", "MEX": "Latin America", "RSAM": "Latin America", "RCAM": "Latin America",
+        # 4. USA
+        #"USA" : "USA", # can`t inherit from itself`
+        # 5. India
+        "INDIA": "India",
+        # 6. European Union
+        "CEU": "European Union", "WEU": "European Union",
+        # 8. Reforming Economies
+        "UKR": "Reforming Economies", "STAN": "Reforming Economies", "RUS": "Reforming Economies",
+        # 9. Other Asia
+        "KOR": "Other Asia", "SEAS": "Other Asia", "INDO": "Other Asia", "RSAS": "Other Asia",
+        # 10. Other OECD
+        "CAN": "Other OECD", "OCE": "Other OECD", "JAP": "Other OECD", "TUR": "Other OECD"
+    }
+
+    for r9_region in R9_region_list:
+        region_knowledge_graph.add(Node(r9_region, inherits_from=None))
+    # Add country nodes 
+    for region in IMAGE_REGIONS:
+        if region != "USA":
+            parent = region_to_R9.get(region)
+            region_knowledge_graph.add(Node(region, inherits_from=parent))
+
+    return region_knowledge_graph
+
+def create_R5_region_graph():
+
+    region_knowledge_graph = KnowledgeGraph()
+
+    R5_region_list = ["Middle East & Africa", "Asia", "Latin America", "OECD & EU", "Reforming Economies"]
+    region_to_R5 = {
+        # 1. Middle East & Africa
+        "EAF": "Middle East & Africa", "NAF": "Middle East & Africa", "WAF": "Middle East & Africa", 
+        "RSAF": "Middle East & Africa", "SAF": "Middle East & Africa", "ME": "Middle East & Africa",
+        # 2. Asia
+        "CHN": "Asia", "STAN": "Asia", "SEAS": "Asia", "INDO": "Asia", 
+        "RSAS": "Asia", "INDIA": "Asia",
+        # 3. Latin America
+        "BRA": "Latin America", "MEX": "Latin America", "RSAM": "Latin America", "RCAM": "Latin America",
+        # 4. OECD & EU
+        "CAN": "OECD & EU", "OCE": "OECD & EU", "JAP": "OECD & EU", "TUR": "OECD & EU", 
+        "USA" : "OECD & EU", "KOR": "OECD & EU", "CEU": "OECD & EU", "WEU": "OECD & EU",
+        # 8. Reforming Economies
+        "UKR": "Reforming Economies", "RUS": "Reforming Economies"
+    }
+
+    for r5_region in R5_region_list:
+        region_knowledge_graph.add(Node(r5_region, inherits_from=None))
+    # Add country nodes 
+    for region in IMAGE_REGIONS:
+        parent = region_to_R5.get(region)
+        region_knowledge_graph.add(Node(region, inherits_from=parent))
+
+    return region_knowledge_graph
+
 def create_region_graph():
     #TODO move to seperate file
 
@@ -1147,6 +1254,95 @@ def create_electricity_graph():
         electricity_knowledge_graph.add(Node(subtype, inherits_from="Other Storage"))
     
     return electricity_knowledge_graph
+
+def create_h2_graph():
+    """Create the knowledge graph for the hydrogen production sector (including type synonyms)."""
+    h2_knowledge_graph = KnowledgeGraph(Node("HydrogenProduction"))
+
+    tech_types = {
+        # categories:
+        "CBF": ["carbon based fuel", "carbon based fuel (mainly SMR)"],
+        "CBF+CCS": ["carbon based fuel + CCS"],
+        "electrolysis": ["electrolysis based", "electricity", "electricity based"],
+        "FF": ["fossil fuel based", "fossil fuels"],
+        # "FFnoCCS": ["fossil fuel based - no CCS", "fossil fuel based without CCS"],
+        # "FF+CCS": ["fossil fuel based + CCS", "fossil fuel based with CCS"],
+        "Bio": ["biofuel based", "biofuels"],
+        "coal": ["feedstock coal"],
+        "oil": ["feedstock oil"], 
+        "natural_gas": ["feedstock natural gas", "natural gas", "NG"],
+        "electrolysis_AEL/SOEL": ["electrolysis (alkaline & solid oxide)", "AEL/SOEL"],
+        "electrolysis_AEL": ["AEL", "alkaline electrolysis", "alkaline"], # additional technologies (not in IMAGE-energy, only in IMAGE-materials)
+        "electrolysis_PEMEL": ["PEMEL", "proton exchange membrane electrolysis", "PEM"], # additional technologies (not in IMAGE-energy, only in IMAGE-materials)
+        "electrolysis_SOEL": ["SOEL", "solid oxide electrolysis", "SOEC", "SO"], # additional technologies (not in IMAGE-energy, only in IMAGE-materials)
+        "electrolysis+RE": ["electrolysis linked to renewables", "electrolysis + renewable energy"],
+        "CBF_tech1": ["carbon based fuel (tech1)"], # dummy variable for SharesInflowStocks model
+        "CBF+CCS_tech1": ["carbon based fuel + CCS (tech1)"],  # dummy variable for SharesInflowStocks model
+
+        # 17 technologies in IMAGE-energy:
+        "ClGs": ["coal gasification"],
+        "POOl": ["oil partial oxidation", "partial oxidation of oil"],
+        "SMR": ["NG steam reforming", "steam reforming of natural gas"],
+        "BioGs": ["biofuel gasification", "gasification of biofuels"],
+        "ClGsCS": ["coal gasification + CCS"],
+        "POOlCS": ["oil partial oxidation + CCS"],
+        "SMRCS": ["NG steam reforming + CCS", "steam reforming of natural gas / autothermal reforming of natural gas + CCS"],
+        "BioGsCS": ["biofuel gasification + CCS", "gasification of biofuels + CCS"],
+        "BLEl": ["electrolysis - base load", "base-load electrolysis (alkaline/SO)"],
+        "CurEl": ["electrolysis - curtailment", "curtailed electricity electrolysis (PEM)"],
+        "SPVEl": ["electrolysis + SPV", "electrolyzer (PEM) + solar PV electric power (central)"],
+        "CSPEl": ["electrolysis + CSP", "electrolyzer (PEM) + concentrated solar electric power"],
+        "WONEl": ["electrolysis - wind (onshore)", "electrolyzer (PEM) + onshore wind electric power"],
+        "WOFFEl": ["electrolysis - wind (offshore)", "electrolyzer (PEM) + offshore wind electric power"],
+        "GEOEl": ["electrolysis - geothermal", "electrolyzer (PEM) + geothermal electric power"],
+        "ssSMR": ["NG steam reforming - small-scale", "small-scale SMR"],
+        "ssEl": ["electrolysis - small-scale", "small-scale electrolysis"],
+    }
+
+    mapping = {
+        "CBF": ["HydrogenProduction"],
+        "CBF+CCS": ["HydrogenProduction"],
+        "electrolysis": ["HydrogenProduction"],     
+        "FF": ["HydrogenProduction"],
+        # "FFnoCCS": ["FF"],
+        # "FF+CCS": ["FF"],
+        "Bio": ["HydrogenProduction"],
+        "electrolysis+RE": ["electrolysis", "electrolysis_PEMEL"],
+        "coal": ["FF"],
+        "oil": ["FF"],
+        "natural_gas": ["FF"],
+        "CBF_tech1": ["CBF"],
+        "CBF+CCS_tech1": ["CBF+CCS"],
+        # technologies:
+        "ClGs": ["coal", "CBF"],
+        "POOl": ["oil", "CBF"],
+        "SMR": ["natural_gas", "CBF"],
+        "BioGs": ["Bio", "CBF"],
+        "ClGsCS": ["coal", "CBF+CCS"],
+        "POOlCS": ["oil", "CBF+CCS"],
+        "SMRCS": ["natural_gas", "CBF+CCS"],
+        "BioGsCS": ["Bio", "CBF+CCS"],
+        "BLEl": ["electrolysis", "electrolysis_AEL/SOEL"],
+        "CurEl": ["electrolysis", "electrolysis_PEMEL"],
+        "SPVEl": ["electrolysis+RE"],
+        "CSPEl": ["electrolysis+RE"],
+        "WONEl": ["electrolysis+RE"],
+        "WOFFEl": ["electrolysis+RE"],
+        "GEOEl": ["electrolysis+RE"],
+        "ssSMR": ["natural_gas", "CBF"],
+        "ssEl": ["electrolysis", "electrolysis_AEL/SOEL"],
+        # additional technologies (not in IMAGE-energy, only in IMAGE-materials)
+        "electrolysis_AEL/SOEL": ["electrolysis"],
+        "electrolysis_AEL": ["electrolysis", "electrolysis_AEL/SOEL"],
+        "electrolysis_PEMEL": ["electrolysis"],
+        "electrolysis_SOEL": ["electrolysis", "electrolysis_AEL/SOEL"]
+    }
+
+    for sub_type, synonyms in tech_types.items():
+            parent = mapping.get(sub_type)
+            h2_knowledge_graph.add(Node(name=sub_type, synonyms=synonyms, inherits_from=parent))
+
+    return h2_knowledge_graph
 
 def create_materials_graph():
     materials_knowledge_graph = KnowledgeGraph(Node("Materials"))

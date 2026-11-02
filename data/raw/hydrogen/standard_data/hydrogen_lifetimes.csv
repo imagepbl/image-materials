@@ -1,0 +1,11 @@
+time,unit,Region,sector,technology,sub_technology,value
+2005,share,World,hydrogen,electrolysis,AEL,10
+2005,share,World,hydrogen,electrolysis,PEMEL,10
+2005,share,World,hydrogen,electrolysis,SOEL,10
+2005,share,World,hydrogen,CBF,tech1,20
+2005,share,World,hydrogen,CBF+CCS,tech1,20
+2050,share,World,hydrogen,electrolysis,AEL,18
+2050,share,World,hydrogen,electrolysis,PEMEL,18
+2050,share,World,hydrogen,electrolysis,SOEL,18
+2050,share,World,hydrogen,CBF,tech1,20
+2050,share,World,hydrogen,CBF+CCS,tech1,20

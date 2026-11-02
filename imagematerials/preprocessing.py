@@ -4,15 +4,16 @@ from typing import Union
 
 import numpy as np
 
-from imagematerials.appliances.preprocessing.main import appliances_preprocessing
-from imagematerials.buildings.preprocessing.main import buildings_preprocessing as prep_bld
-from imagematerials.rest_of.preprocessing.main import rest_of_preprocessing as prep_rest
 from imagematerials.vehicles.preprocessing.main import vehicles_preprocessing as prep_vhc
-from imagematerials.eol.preprocessing import eol_preprocessing as prep_eol
+from imagematerials.vehicles.preprocessing.battery import get_preprocessing_data_evbattery as prep_battery
+from imagematerials.buildings.preprocessing.main import buildings_preprocessing as prep_bld
 from imagematerials.electricity.preprocessing.generation import get_preprocessing_data_gen as prep_elc_gen
 from imagematerials.electricity.preprocessing.grid import get_preprocessing_data_grid as prep_elc_grid
 from imagematerials.electricity.preprocessing.storage import get_preprocessing_data_stor as prep_elc_stor
-from imagematerials.vehicles.preprocessing.battery import get_preprocessing_data_evbattery as prep_battery
+from imagematerials.hydrogen.preprocessing.main import get_preprocessing_data_hydrogen as prep_hydrogen
+from imagematerials.appliances.preprocessing.main import appliances_preprocessing
+from imagematerials.rest_of.preprocessing.main import rest_of_preprocessing as prep_rest
+from imagematerials.eol.preprocessing import eol_preprocessing as prep_eol
 
 from imagematerials.fossil_fuels.preprocessing.main import get_preprocessing_data_extraction as prep_ff_extr
 from imagematerials.fossil_fuels.preprocessing.main import get_preprocessing_data_processing as prep_ff_proc
@@ -32,7 +33,7 @@ from imagematerials.util import (
 from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.util import flag_enabled
 
-
+# get prep data functions --------------------------------------------------------------------------
 def _get_vehicles_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_data_file,
                             resource_efficiency_flags_file=None):
 
@@ -86,6 +87,15 @@ def _get_ev_battery_prep_data(base_dir, climate_policy_scenario_dir, circular_ec
 
     return prep_data
 
+def _get_buildings_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_data_file,
+                             resource_efficiency_flags_file=None):
+    climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
+    circular_economy_config = read_circular_economy_data(circular_economy_data_file)
+    resource_efficiency_flags = read_resource_efficiency_flags(resource_efficiency_flags_file)
+    prep_data = prep_bld(base_dir, climate_policy_config, circular_economy_config,
+                         resource_efficiency_flags=resource_efficiency_flags)
+    return prep_data
+
 def _get_electricity_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_data_file,
                                resource_efficiency_flags_file=None):
 
@@ -109,15 +119,16 @@ def _get_electricity_prep_data(base_dir, climate_policy_scenario_dir, circular_e
         }
     return prep_data
 
-def _get_buildings_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_data_file,
-                             resource_efficiency_flags_file=None):
-    climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
-    circular_economy_config = read_circular_economy_data(circular_economy_data_file)
-    resource_efficiency_flags = read_resource_efficiency_flags(resource_efficiency_flags_file)
-    prep_data = prep_bld(base_dir, climate_policy_config, circular_economy_config,
-                         resource_efficiency_flags=resource_efficiency_flags)
+def _get_hydrogen_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_data_file,
+                            resource_efficiency_flags_file=None):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
+        circular_economy_config = read_circular_economy_data(circular_economy_data_file)
+        resource_efficiency_flags = read_resource_efficiency_flags(resource_efficiency_flags_file)
+        prep_data = prep_hydrogen(base_dir, climate_policy_config, circular_economy_config,
+                             resource_efficiency_flags)
     return prep_data
-
 
 def _get_rest_prep_data(base_dir, climate_policy_scenario_dir, scenario_name,
                         resource_efficiency_flags_file=None):
@@ -130,6 +141,7 @@ def _get_end_of_life_prep_data(base_dir, circular_economy_data_file, resource_ef
     prep_data = prep_eol(base_dir, circular_economy_data_file, resource_efficiency_flags_file)
     return prep_data
 
+# get sector functions -----------------------------------------------------------------------------
 def _get_vehicles_sector(prep_data):
     output_coords_type = list(prep_data["stocks"].Type.values)
     knowledge_graph = prep_data["knowledge_graph"]
@@ -142,6 +154,13 @@ def _get_vehicles_sector(prep_data):
 
     sec_vhc = Sector("vehicles", new_prep_data)
     return sec_vhc
+
+def _get_ev_battery_sector(prep_data):
+    sec_ev_battery = Sector("ev_battery", prep_data, check_coordinates=False)
+    return sec_ev_battery
+
+def _get_buildings_sector(prep_data):
+    return Sector("buildings", prep_data)
 
 def _get_fossilfuels_sector(prep_data):
 
@@ -170,24 +189,18 @@ def _get_electricity_sector(prep_data):
 
     return sec_elc
 
-def _get_ev_battery_sector(prep_data):
-
-    sec_ev_battery = Sector("ev_battery", prep_data, check_coordinates=False)
-
-    return sec_ev_battery
-
-
-def _get_buildings_sector(prep_data):
-    return Sector("buildings", prep_data)
+def _get_hydrogen_sector(prep_data):
+    sec_hydrogen = Sector("hydrogen", prep_data, check_coordinates=False)
+    return sec_hydrogen
 
 
 def _get_appliances_sector(prep_data):
     return Sector("appliances", prep_data)
 
-  
 def _get_end_of_life_sector(prep_data):
     return Sector("eol", prep_data)
 
+# general get preprocessing function that combines the above functions -----------------------------
 def get_preprocessing_data(
         sector, base_dir=None,
         climate_policy_scenario_dir: Union[str, Path, None] = None,
@@ -260,6 +273,11 @@ def get_preprocessing_data(
             prep_data = _get_vehicles_prep_data(base_dir, climate_policy_scenario_dir,
                                                 circular_economy_data_file,
                                                 resource_efficiency_flags_file)
+        elif sector == "ev_battery":
+            prep_data = _get_ev_battery_prep_data(base_dir, climate_policy_scenario_dir,
+                                                    circular_economy_data_file,
+                                                    resource_efficiency_flags_file)
+                    
         elif sector == "buildings":
             prep_data = _get_buildings_prep_data(base_dir, climate_policy_scenario_dir,
                                                  circular_economy_data_file,
@@ -270,10 +288,10 @@ def get_preprocessing_data(
                                                    circular_economy_data_file,
                                                    resource_efficiency_flags_file)
 
-        elif sector == "ev_battery":
-            prep_data = _get_ev_battery_prep_data(base_dir, climate_policy_scenario_dir,
-                                                   circular_economy_data_file,
-                                                   resource_efficiency_flags_file)
+        elif sector == "hydrogen":
+            prep_data = _get_hydrogen_prep_data(base_dir, climate_policy_scenario_dir,
+                                                    circular_economy_data_file,
+                                                    resource_efficiency_flags_file)
 
         elif sector == "fossil_fuels":
                     prep_data = _get_fossilfuels_prep_data(base_dir, climate_policy_scenario_dir,
@@ -302,12 +320,14 @@ def get_preprocessing_data(
 
     if sector == "vehicles":
         return _get_vehicles_sector(prep_data)
+    elif sector == "ev_battery":
+            return _get_ev_battery_sector(prep_data)
     elif sector == "buildings":
         return _get_buildings_sector(prep_data)
     elif sector == "electricity":
         return _get_electricity_sector(prep_data)
-    elif sector == "ev_battery":
-        return _get_ev_battery_sector(prep_data)
+    elif sector == "hydrogen":
+            return _get_hydrogen_sector(prep_data)
     elif sector == "fossil_fuels":
         return _get_fossilfuels_sector(prep_data)
     elif sector == "appliances":
