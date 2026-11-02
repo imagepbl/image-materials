@@ -7,15 +7,17 @@ Sectors Overview
    buildings
    vehicles
    electricity
-   rest-of
    infrastructure
+   fossil_fuels
+   rest-of
    end-of-life
 
 This section describes the individual sectors modelled in IMAGE Materials.
 
 - :doc:`Buildings <buildings>`
-- :doc:`Electricity <electricity>`
-- :doc:`End of Life <end-of-life>`
-- :doc:`Infrastructure <infrastructure>`
-- :doc:`Rest of Economy <rest-of>`
 - :doc:`Vehicles <vehicles>`
+- :doc:`Electricity <electricity>`
+- :doc:`Infrastructure <infrastructure>`
+- :doc:`Fossil fuel infrastructure <fossil_fuels>`
+- :doc:`Rest of Economy <rest-of>`
+- :doc:`End of Life <end-of-life>`

@@ -15,6 +15,11 @@ from imagematerials.appliances.preprocessing.main import appliances_preprocessin
 from imagematerials.rest_of.preprocessing.main import rest_of_preprocessing as prep_rest
 from imagematerials.eol.preprocessing import eol_preprocessing as prep_eol
 
+from imagematerials.fossil_fuels.preprocessing.main import get_preprocessing_data_extraction as prep_ff_extr
+from imagematerials.fossil_fuels.preprocessing.main import get_preprocessing_data_processing as prep_ff_proc
+from imagematerials.fossil_fuels.preprocessing.main import get_preprocessing_data_pipelines as prep_ff_pipe
+from imagematerials.fossil_fuels.preprocessing.main import get_preprocessing_data_transport as prep_ff_trp
+from imagematerials.fossil_fuels.preprocessing.main import get_preprocessing_data_storage as prep_ff_str  
 
 from imagematerials.factory import Sector
 from imagematerials.util import (
@@ -26,6 +31,7 @@ from imagematerials.util import (
     rebroadcast_prep_data,
 )
 from imagematerials.constants import IMAGE_REGIONS
+from imagematerials.util import flag_enabled
 
 # get prep data functions --------------------------------------------------------------------------
 def _get_vehicles_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_data_file,
@@ -38,6 +44,35 @@ def _get_vehicles_prep_data(base_dir, climate_policy_scenario_dir, circular_econ
         resource_efficiency_flags = read_resource_efficiency_flags(resource_efficiency_flags_file)
         prep_data = prep_vhc(base_dir, climate_policy_config, circular_economy_config,
                              resource_efficiency_flags)
+
+    return prep_data
+
+def _get_fossilfuels_prep_data(base_dir, climate_policy_scenario_dir, circular_economy_data_file,
+                                resource_efficiency_flags_file=None):
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        climate_policy_config = read_climate_policy_config(climate_policy_scenario_dir)
+        circular_economy_config = read_circular_economy_data(circular_economy_data_file)
+        resource_efficiency_flags = read_resource_efficiency_flags(resource_efficiency_flags_file)
+
+        prep_data_extraction = prep_ff_extr(base_dir, climate_policy_config, circular_economy_config, resource_efficiency_flags)
+        prep_data_processing = prep_ff_proc(base_dir, climate_policy_config, circular_economy_config, resource_efficiency_flags)
+        prep_data_pipelines = prep_ff_pipe(base_dir, climate_policy_config, circular_economy_config, resource_efficiency_flags)
+        prep_data_storage = prep_ff_str(base_dir, climate_policy_config, circular_economy_config, resource_efficiency_flags)
+            
+        prep_data = {
+            "prep_data_extraction": prep_data_extraction,
+            "prep_data_processing": prep_data_processing,
+            "prep_data_pipelines": prep_data_pipelines,
+            "prep_data_storage": prep_data_storage  
+
+        }
+                    
+        if flag_enabled(resource_efficiency_flags, "fossil_fuels", "FlagIncludeTransportation"):
+            # transport is only included if flag is set to true
+            prep_data_transport = prep_ff_trp(base_dir, climate_policy_config, circular_economy_config, resource_efficiency_flags)
+            prep_data["prep_data_transport"] = prep_data_transport
 
     return prep_data
 
@@ -121,13 +156,26 @@ def _get_vehicles_sector(prep_data):
     return sec_vhc
 
 def _get_ev_battery_sector(prep_data):
-
     sec_ev_battery = Sector("ev_battery", prep_data, check_coordinates=False)
-
     return sec_ev_battery
 
 def _get_buildings_sector(prep_data):
     return Sector("buildings", prep_data)
+
+def _get_fossilfuels_sector(prep_data):
+
+    sec_ff_extr = Sector("ff_extr", prep_data["prep_data_extraction"])
+    sec_ff_proc = Sector("ff_proc", prep_data["prep_data_processing"])
+    sec_ff_pipe = Sector("ff_pipe", prep_data["prep_data_pipelines"])
+    sec_ff_str = Sector("ff_str", prep_data["prep_data_storage"])
+
+    sec_ff = [sec_ff_extr, sec_ff_proc, sec_ff_pipe, sec_ff_str]
+
+    if "prep_data_transport" in prep_data:
+        sec_ff_trp = Sector("ff_trp", prep_data["prep_data_transport"])
+        sec_ff.append(sec_ff_trp)
+
+    return sec_ff
 
 def _get_electricity_sector(prep_data):
 
@@ -144,6 +192,7 @@ def _get_electricity_sector(prep_data):
 def _get_hydrogen_sector(prep_data):
     sec_hydrogen = Sector("hydrogen", prep_data, check_coordinates=False)
     return sec_hydrogen
+
 
 def _get_appliances_sector(prep_data):
     return Sector("appliances", prep_data)
@@ -244,6 +293,11 @@ def get_preprocessing_data(
                                                     circular_economy_data_file,
                                                     resource_efficiency_flags_file)
 
+        elif sector == "fossil_fuels":
+                    prep_data = _get_fossilfuels_prep_data(base_dir, climate_policy_scenario_dir,
+                                                           circular_economy_data_file,
+                                                           resource_efficiency_flags_file)
+
         elif sector == "appliances":
             prep_data = appliances_preprocessing(base_dir, 
                                                  climate_policy_scenario_dir,
@@ -274,6 +328,8 @@ def get_preprocessing_data(
         return _get_electricity_sector(prep_data)
     elif sector == "hydrogen":
             return _get_hydrogen_sector(prep_data)
+    elif sector == "fossil_fuels":
+        return _get_fossilfuels_sector(prep_data)
     elif sector == "appliances":
         return _get_appliances_sector(prep_data)
     elif sector == "rest_of":

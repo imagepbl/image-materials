@@ -184,6 +184,9 @@ cython_debug/
 # *.scn
 *.his
 
+# macOS
+.DS_Store
+
 IMAGE-Mat/output/
 IMAGE-Mat_old_version/
 examples/model_results/

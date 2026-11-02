@@ -28,3 +28,7 @@ FlagRecycling = false
 
 [rest_of]
 FlagResourceEfficiency = false
+
+[fossil_fuels]
+# should the sector transportation for fossil fuels be included (true=yes, false=no; only include in runs without vehicle sector to avoid double counting)
+FlagIncludeTransportation = true

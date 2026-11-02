@@ -1,0 +1,363 @@
+from pathlib import Path
+import pint
+import itertools
+import matplotlib.pyplot as plt
+
+from imagematerials.constants import IMAGE_REGIONS
+
+ureg = pint.UnitRegistry(force_ndarray_like=True)
+
+
+####################################################################################################
+# Unit conversions
+
+# TODO: use pint to convert units and not these conversion factors (where possible)
+
+PJ_TO_GJ = 10**6  # Peta-joule to Giga-joule
+TJ_TO_PJ = 10**3  # Tera-joule to Peta-joule
+MB_TO_M3 = 159000  # million barrels of oil to cubic meters
+GJ_TO_M3_GAS = (
+    27.77778  # m3/GJ gas (source: BP, Statistical Review of World Energy)
+)
+GJ_TO_KG_OIL = 23.88  # kg/GJ oil (source: IEA, https://www.iea.org/reports/unit-converter-and-glossary)
+GJ_TO_KG_COAL = 34.12  # in kg/GJ of hard coal (source:IEA, https://www.iea.org/reports/unit-converter-and-glossary)
+M3_petro_TO_GJ = 36.00648  # https://www.convert-measurement-units.com/convert+m3+Petrol+to+GJ.php
+GJ_TO_M3_OIL = 0.027772778677616  # https://www.convert-measurement-units.com/convert+m3+Petrol+to+GJ.php
+M3_TO_KG_OIL = 711.22
+MB_TO_KG_OIL = 138000000  # http://globalshift.co.uk/conv.html
+Bcm_TO_KG_GAS = 735000000  # chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://www.bp.com/content/dam/bp/business-sites/en/global/corporate/pdfs/energy-economics/statistical-review/bp-stats-review-2022-approximate-conversion-factors.pdf
+Bcm_To_GJ = 36000000  # billion cubic meter gas to Gj gas BP
+GJ_TO_EJ = 10**-9  # Giga-joule to Exajoule
+KG_TO_MT = 10**-9
+KG_TO_KT = 10**-6
+
+MEGA_TO_TERA = 1_000_000  # 1 Tera = 1,000,000 Mega
+PKMS_TO_VKMS = 1_000_000_000_000
+TONNES_TO_KGS = 1000
+
+# Define the units for each dimension
+unit_mapping = {
+    'time': ureg.year,
+    'year': ureg.year,
+    'Year': ureg.year,
+    'yr': ureg.year,
+    'kg': ureg.kilogram,
+    '%': ureg.percent,
+    't': ureg.tonne,
+    'MW': ureg.megawatt, #added
+    'GW': ureg.gigawatt, #added
+    'MWh': ureg.megawatthour, #added
+}
+
+# General constants ################################################################################
+
+NUM_REGIONS = 26  # 26 IMAGE regions
+START_YEAR = 1971  # first year available in IMAGE scenarios
+END_YEAR = 2100  # last year available in IMAGE scenarios
+BASE_YEAR = 2019  # last year before COVID pandemic, so realistic numbers
+YEAR_FIRST_FF = 1880 # start of coal in 1880
+
+
+# Fossil Fuels related constants ---------------------------------------------
+
+TECH_GEN = 27   # number of fossil  technologies -> 26 technologies + 1 empty row
+
+# # names of generation technologies as in the input files (e.g. composition_generation.csv) from Sebastiaan - should be renamed in files to match TIMER names in the future
+# GEN_TYPES_FOSSIL = ["Coal", "Oil", "Gas"]
+
+FRACTION_REFINING_CAP = 0.8 # Refining capacity used
+SD_LIFETIME = 0.3 # lifetimes are expressed as the mean lifetime. Lifetime (probability density) distribution is then determined using a standard deviation of 10% of the mean.
+YEAR_FIRST_PRODUCTION = {"coal": 1880, "oil": 1900, "gas": 1920}
+YEAR_STABILISATION = {"coal": 1920, "oil": 1970, "gas": 1970}
+
+# names of fossil fuel types (check with TIMER model)
+FF_TECHNOLOGIES = [
+    "Coal Opencast",
+    "Coal Underground",
+    "Oil Onshore",
+    "Oil Offshore",
+    "Gas Onshore",
+    "Gas Offshore",
+    "Coal Preparation",
+    "Oil Storage",
+    "Oil Refinery",
+    "Gas Processing",
+    "Coal Truck",
+    "Coal Train",
+    "Coal Ocean Ship",
+    "Coal Inland Ship",
+    "Oil Truck",
+    "Oil Train",
+    "Oil Ocean Ship",
+    "Oil Inland Ship",
+    "Gas Truck",
+    "Gas Train",
+    "Gas Ocean Ship",
+    "Gas Inland Ship",
+    "Oil Crude Composition Pipeline",
+    "Oil Product Pipeline",
+    "Gas Distribution Pipeline",
+    "Gas Transmission Pipeline"
+]
+
+EXTRACTION_TYPES = [
+    'Coal Opencast',
+    'Coal Underground',
+    'Gas Offshore',
+    'Gas Onshore',
+    'Oil Offshore',
+    'Oil Onshore'
+]
+
+PIPELINE_TYPES = [
+    'Gas Distribution Pipeline',
+    'Gas Transmission Pipeline',
+    'Oil Offshore Crude Pipeline',
+    'Oil Onshore Crude Pipeline',
+    'Oil Offshore Product Pipeline',
+    'Oil Onshore Product Pipeline'
+]
+
+# TODO: I don't think this is used, and if it would probably better to use the knoweldge graph -> remove
+# Define mapping: technology -> category
+# DICT_GENTECH_TO_CATEGORY = {
+#     "Coal Opencast: coal",
+#     "Coal Underground: coal",
+#     "Oil Onshore Extraction: oil",
+#     "Oil Offshore Extraction: oil",
+#     "Gas Onshore Extraction: gas",
+#     "Gas Offshore Extraction: gas",
+#     "Coal Preparation: coal",
+#     "Oil Storage: oil",
+#     "Oil Refinery: oil",
+#     "Gas Processing: gas",
+#     "Coal Truck: coal",
+#     "Coal Train: coal",
+#     "Coal Ocean Ship: coal",
+#     "Coal Inland Ship: coal",
+#     "Oil Truck: oil",
+#     "Oil Train: oil",
+#     "Oil Ocean Ship: oil",
+#     "Oil Inland Ship: oil",
+#     "Gas Truck: gas",
+#     "Gas Train: gas",
+#     "Gas Ocean Ship: gas",
+#     "Gas Inland Ship: gas",
+#     "Oil Crude Composition Pipeline: oil",
+#     "Oil Product Pipeline: oil",
+#     "Gas Distribution Pipeline: gas",
+#     "Gas Transmission Pipeline: gas"}
+
+
+
+# Constant direct from FUMA
+#primary_fuel_types_ff = ["coal", "conv oil", "unconv oil", "gas"]  # 1st 4
+
+#final_fuel_types1 = [
+   # "Solids",
+   # "Liquids1",
+    #"Sec gas",
+    #"Hydrogen",
+    #"Sec mod biomass",
+    #"Sec heat",
+    #"Sec trad biomass",
+    #"Electricity",
+    #"Liquids2",
+#]
+#final_fuel_types_ff1 = [
+   # "Solids",
+   # "Liquids1",
+   # "Sec gas",
+   # "Hydrogen",
+    #"Sec heat",
+    #"Electricity",
+   # "Liquids2",
+#]
+
+#final_fuel_types2 = [
+    #"Solids",
+    #"Liquids1",
+    #"Liquids2",
+    #"Sec gas",
+    #"Sec mod biomass",
+    #"Sec trad biomass",
+    #"Hydrogen",
+    #"Sec heat",
+    #"Electricity",
+#]  # 1st 9, last one is total
+#final_fuel_types_ff2 = [
+   # "Solids",
+    #"Liquids1",
+   # "Liquids2",
+    #"Sec gas",
+#]  # 1st 9, last one is total
+
+#sectors_ff = [
+  #  "industry",
+   # "transport",
+   # "residential",
+   # "services",
+   # "other",
+   # "non-energy",
+   # "bunkers",
+#]  # 1st 7, last one is total
+
+
+
+
+
+
+
+
+
+# Visualization related ############################################################################
+
+# Define color and linestyle pools
+colors = plt.get_cmap('tab20').colors  # 20 distinct colors
+linestyles = ['-', '--', ':'] #'-.'
+# Create a cycle of (color, linestyle) combinations
+style_combinations = list(itertools.product(colors, linestyles))
+# Map technologies to (color, linestyle)
+DICT_GENTECH_STYLES = {tech: style_combinations[i] for i, tech in enumerate(FF_TECHNOLOGIES)}
+
+DICT_GEN_CATEGORY_COLORS = {
+    'Coal':             "#F9564F",
+    'Oil':              "#5D536B",
+    'Gas':              "#5C9EAD"
+}
+
+
+DICT_MATERIALS_COLORS = {
+    'Steel':     '#FF9B85',
+    'Aluminium': '#B9FAF8',
+    'Concrete':  '#AAF683',
+    'Plastics':  '#60D394',
+    'Glass':     '#EE6055',
+    'Cu':        '#FB6376',
+    'Nd':        '#B8D0EB',
+    'Ta':        '#B298DC',
+    'Co':        '#F669C0',
+    'Pb':        '#6F2DBD',
+    'Mn':        "#31E7E7",
+    'Ni':        '#FCB1A6',
+    'Other':     '#FFD97D'
+}
+
+
+####################################################################################################
+# Module containing global constants
+# TODO: check if this is needed, otherwise remove
+# import numpy as np
+# import prism
+# from prism import Q_
+
+# # Time
+# BASE_TIMELINE = prism.Timeline(
+#     start=Q_(1971, 'year'),
+#     end=Q_(2100, 'year'),
+#     stepsize=Q_(1, 'year'))
+# # End-point of calibration period (start year 1971) (some data up to 2007, but
+# # 2005 is guaranteed as complete dataset)
+# T_CALIB = Q_(2015, 'year')
+# # Last year of historic data for fossil fuel calibration.
+# T_CALIB_FOSSIL = Q_(2015, 'year')
+# # Time for transition to central learn matrix.
+# T_LEARN = Q_(2020, 'year')
+# T_STOP_LEARNING = Q_(2000, 'year')
+# # Year in which subsidy adjustment rate is fixed
+# T_SUBRATE = Q_(2015, 'year')
+# TRADE_YEAR = Q_(1971, 'year')
+# SUBTYPE_SEPARATOR = " - "
+
+# Region = prism.Dimension('region', IMAGE_REGIONS + ["World"])  # World regions
+# ExtendedRegion = prism.Dimension('region', Region.coords + ["World2"])
+# ImportRegion = prism.Dimension("import_region", Region.coords)
+# ExportRegion = prism.Dimension("export_region", Region.coords)
+# ReducedRegion = prism.Dimension("region", IMAGE_REGIONS)
+# ReducedImportRegion = prism.Dimension("import_region", IMAGE_REGIONS)
+# ReducedExportRegion = prism.Dimension("export_region", IMAGE_REGIONS)
+
+# # Energy carriers
+# EnergyCarrier = prism.Dimension("carrier", [
+#     "solid fuel",
+#     "liquid fuel",
+#     "gaseous fuel",
+#     "hydrogen",
+#     "modern biofuel",
+#     "secondary heat",
+#     "traditional biofuel",
+#     "electricity",
+#     "total"
+# ])
+# PrimaryEnergyCarrier = prism.Dimension("carrier", [
+#     "coal",
+#     "conventional oil",
+#     "unconventional oil",
+#     "natural gas",
+#     "modern biofuel",
+#     "traditional biofuel",
+#     "nuclear",
+#     "renewables",
+#     "hydro-electricity"
+# ])
+
+# # Resources
+# ConventionalCategory = prism.Dimension("category", [1, 2, 3, 4, 5, 6, 7])
+# UnconventionalCategory = prism.Dimension("category", [8, 9, 10, 11, 12])
+# Category = prism.Dimension(
+#     "category",
+#     [*ConventionalCategory.coords, *UnconventionalCategory.coords]
+# )  # Resource categories
+# CategoryType = prism.Dimension("category_type", ['conventional', 'unconventional'])
+
+# # Constants
+# #   Carbon content per fuel (coal, oil, gas and biomass) unit: kg-C/GJ
+# Fuel = prism.Dimension("fuel", ["coal", "oil", "gas", "modern biofuel"])
+# CARBON_CONTENT_FUEL_2 = prism.Array[Fuel, 'kg*C/GJ'](values=[25.5, 19.3, 15.3, 26])
+
+# # Calculations
+# EROICalculation = prism.Dimension("eroi_calculation", ['exogenous', 'endogenous'])
+
+# # Price deflator
+# DEFLATOR_WORLD = 1.12
+
+# # Tolerances
+# SAFE_MARGIN = 1.125  # Safety margin in investing in fossil fuel producing capacity.
+
+# EPS = 1.0e-6  # Small number used as tolerance.
+# if prism.USE_PINT:
+#     EPS_GJ = prism.Q_(EPS, 'GJ')
+#     EPS_PJ = prism.Q_(EPS, 'PJ')
+#     EPS_DOL_PER_GJ = prism.Q_(EPS, 'dol/GJ')
+# else:
+#     EPS_GJ = EPS
+#     EPS_PJ = EPS
+#     EPS_DOL_PER_GJ = EPS
+
+# # Unit conversions
+# if prism.USE_PINT:
+#     GJ = prism.Q_(1, 'GJ')
+#     TJ_TO_GJ = 1
+#     PJ_TO_GJ = 1
+# else:
+#     GJ = 1
+#     TJ_TO_GJ = 1e3
+#     PJ_TO_GJ = 1e6
+
+# # Energy carriers
+# _ENERGY_CARRIERS = [
+#     "Solid fuel",
+#     "Liquid fuel",
+#     "Gaseous fuel",
+#     "Hydrogen",
+#     "Modern Biofuel",
+#     "Secondary Heat",
+#     "Traditional BioFuel",
+#     "Electricity"
+# ]
+# # Energy carriers in secondary fuel use
+# EnergyCarriers = prism.Dimension('energycarrier', _ENERGY_CARRIERS)
+
+
+
+

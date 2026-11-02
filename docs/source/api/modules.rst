@@ -5,9 +5,10 @@ API
    :maxdepth: 4
 
    imagematerials
-   vehicles
    buildings
+   vehicles
    electricity
-   end-of-life
    infrastructure
+   fossil_fuels
    rest-of
+   end-of-life
