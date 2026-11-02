@@ -1,4 +1,9 @@
 YEAR_FIRST_H2_PRODUCTION = 2015
+H2_LAST_EXTERNAL_YEAR = 2030        # external data used up to and including this year
+H2_FIRST_IMAGE_YEAR = 2040          # IMAGE data used from this year on (gap is interpolated)
+TECHS_SPLIT = ["electrolysis_AEL", "electrolysis_SOEL"]    # sub-technologies of the combined AEL/SOEL group
+TECHS_ELECTROLYSIS = ["electrolysis_PEMEL", *TECHS_SPLIT]
+TECHS_CBF = ["CBF+CCS_tech1", "CBF_tech1"]
 
 HYDROGEN_TECHNOLOGIES = [
     'ClGs',

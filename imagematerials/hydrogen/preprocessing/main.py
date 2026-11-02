@@ -1,5 +1,6 @@
 #%%
 from pathlib import Path
+from typing import Any
 import pandas as pd
 import xarray as xr
 
@@ -19,24 +20,64 @@ from imagematerials.electricity.constants import (
 )
 from imagematerials.hydrogen.constants import (
     YEAR_FIRST_H2_PRODUCTION,
-    ELECTROLYSIS_TECHNOLOGIES
+    ELECTROLYSIS_TECHNOLOGIES,
+    H2_LAST_EXTERNAL_YEAR,
+    H2_FIRST_IMAGE_YEAR,
+    TECHS_SPLIT,
+    TECHS_ELECTROLYSIS,
+    TECHS_CBF
 )
 
-# --- constants ------------------------------------------------------------------------------------
-LAST_EXTERNAL_YEAR = 2030        # external data used up to and including this year
-FIRST_IMAGE_YEAR = 2040          # IMAGE data used from this year on (gap is interpolated)
-FIRST_UPDATED_YEAR = LAST_EXTERNAL_YEAR + 1        # market shares are overwritten from this year on
-TECHS_SPLIT = ["electrolysis_AEL", "electrolysis_SOEL"]    # sub-technologies of the combined AEL/SOEL group
-TECHS_ELECTROLYSIS = ["electrolysis_PEMEL", *TECHS_SPLIT]
-TECHS_CBF = ["CBF+CCS_tech1", "CBF_tech1"]
+def get_preprocessing_data_hydrogen(path_base: str | Path,
+                               climate_policy_config: dict[str, Any],
+                               circular_economy_config: dict[str, Any],
+                               resource_efficiency_flags: dict[str, Any] | None = None
+                               ) -> dict[str, Any]:
+    """Build the preprocessing data for the hydrogen production sector.
 
+    Combines installed hydrogen production capacity from IMAGE-energy (TIMER) with external, 
+    literature-based data (material intensities, lifetimes and market shares) into the generic 
+    ``prep_data`` dictionary used by the stock-driven dynamic material flow model.
 
-def get_preprocessing_data_hydrogen(path_base: str,
-                               climate_policy_config: dict,
-                               circular_economy_config: dict,
-                               resource_efficiency_flags: dict = None
-                               ):
+    The steps are:
 
+    1. Read installed capacity (MW) per region and hydrogen technology from IMAGE-energy, aggregate 
+        to CBF, CBF+CCS and electrolysis.
+    2. Read material intensities (kg/MW), lifetimes (yr) and market shares (dimensionless) and
+       interpolate them to the model time range.
+    3. Merge the external electrolysis market shares (up to ``LAST_EXTERNAL_YEAR``) with IMAGE-energy 
+        shares (from ``FIRST_IMAGE_YEAR``), interpolate the gap, and split the combined AEL/SOEL 
+        share into AEL and SOEL using the external relative split.
+
+    Parameters
+    ----------
+    path_base: Base path of the external data. Data is expected in
+        ``<path_base>/hydrogen/standard_data``, and optionally in
+        ``<path_base>/hydrogen/<scenario file name>``.
+    climate_policy_config: Climate policy scenario configuration. Must contain:
+        - ``"config_file_path"`` (``Path``): scenario directory. Its name selects the scenario-
+            specific data folder, and it is the parent of the IMAGE-energy files.
+        - ``"data_files"`` (``dict[str, str]``): file names, with the key ``"H2Cap"`` pointing to 
+            the hydrogen capacity MYM file.
+    circular_economy_config: Circular economy scenario configuration. Currently unused.
+    resource_efficiency_flags: Resource efficiency flags. Currently unused.
+
+    Returns
+    -------
+    prep_data: Dictionary with the following keys:
+
+        - ``"stocks"`` (``xr.DataArray``): installed capacity in MW with 
+            dims ``(time, Region, SuperType)``.
+        - ``"lifetimes"`` (``dict[str, xr.DataArray]``): lifetime distribution parameters keyed by 
+            distribution name.
+        - ``"shares"`` (``xr.DataArray``): dimensionless market shares per ``Cohort`` and ``Type``, 
+            sorted alphabetically by ``Type``.
+        - ``"material_intensities"`` (``xr.DataArray``): material intensities in kg/MW with dims 
+            ``(Cohort, Type, material)``.
+        - ``"knowledge_graph"``: the hydrogen knowledge graph from ``create_h2_graph()``.
+        - ``"set_unit_flexible"`` (``str``): unit string of the stocks.
+
+    """
     scen = Path(climate_policy_config["config_file_path"]).name
     path_external_data_standard = Path(path_base, "hydrogen", "standard_data")
     path_external_data_scenario = Path(path_base, "hydrogen", scen) #test
@@ -161,8 +202,8 @@ def get_preprocessing_data_hydrogen(path_base: str,
     # --- 4. Combine external (<=2030) and IMAGE (>=2040), then interpolate the gap ----------------
     shares_combined = xr.concat(
         [
-            shares_grouped_external.sel(Cohort=slice(None, LAST_EXTERNAL_YEAR)),
-            shares_image.sel(Cohort=slice(FIRST_IMAGE_YEAR, None)),
+            shares_grouped_external.sel(Cohort=slice(None, H2_LAST_EXTERNAL_YEAR)),
+            shares_image.sel(Cohort=slice(H2_FIRST_IMAGE_YEAR, None)),
         ],
         dim="Cohort",
     )
