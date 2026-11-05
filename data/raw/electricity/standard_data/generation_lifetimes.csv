@@ -69,8 +69,37 @@ Time,type_data,unit,Region,sector,technology,sub_technology,value
 2020,inflow,years,World,generation,GEO,tech1,40
 2050,inflow,years,World,generation,GEO,tech1,40
 
-2020,inflow,years,World,generation,H2P,tech1,40
-2050,inflow,years,World,generation,H2P,tech1,40
+2020,inflow,years,World,generation,H2P,PEMFC,5
+2030,inflow,years,World,generation,H2P,PEMFC,8
+2050,inflow,years,World,generation,H2P,PEMFC,10
+
+2020,inflow,years,World,generation,H2P,SOFC,5
+2030,inflow,years,World,generation,H2P,SOFC,8
+2050,inflow,years,World,generation,H2P,SOFC,10
+
+2020,inflow,years,World,generation,H2P,PAFC,5
+2030,inflow,years,World,generation,H2P,PAFC,8
+2050,inflow,years,World,generation,H2P,PAFC,10
+
+2020,inflow,years,World,generation,H2P,turbine,40
+2030,inflow,years,World,generation,H2P,turbine,40
+2050,inflow,years,World,generation,H2P,turbine,40
+
+2020,inflow,years,World,generation,H2CHP,PEMFC,5
+2030,inflow,years,World,generation,H2CHP,PEMFC,8
+2050,inflow,years,World,generation,H2CHP,PEMFC,10
+
+2020,inflow,years,World,generation,H2CHP,SOFC,5
+2030,inflow,years,World,generation,H2CHP,SOFC,8
+2050,inflow,years,World,generation,H2CHP,SOFC,10
+
+2020,inflow,years,World,generation,H2CHP,PAFC,5
+2030,inflow,years,World,generation,H2CHP,PAFC,8
+2050,inflow,years,World,generation,H2CHP,PAFC,10
+
+2020,inflow,years,World,generation,H2CHP,turbine,40
+2030,inflow,years,World,generation,H2CHP,turbine,40
+2050,inflow,years,World,generation,H2CHP,turbine,40
 
 2020,inflow,years,World,generation,NUC,tech1,60
 2050,inflow,years,World,generation,NUC,tech1,60
@@ -140,6 +169,3 @@ Time,type_data,unit,Region,sector,technology,sub_technology,value
 
 2020,inflow,years,World,generation,GeoCHP,tech1,40
 2050,inflow,years,World,generation,GeoCHP,tech1,40
-
-2020,inflow,years,World,generation,H2CHP,tech1,40
-2050,inflow,years,World,generation,H2CHP,tech1,40
