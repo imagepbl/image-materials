@@ -142,7 +142,10 @@ EPG_SUB_TECHNOLOGIES = [
     "HYD_tech1",
     "OREN_tech1",
     "GEO_tech1",
-    "H2P_tech1",
+    "H2P_PEMFC",
+    "H2P_SOFC",
+    "H2P_PAFC",
+    "H2P_turbine",
     "NUC_tech1",
     "FREE12_tech1",
     "ClST_tech1",
@@ -166,7 +169,10 @@ EPG_SUB_TECHNOLOGIES = [
     "NGCHPCS_tech1",
     "BioCHPCS_tech1",
     "GeoCHP_tech1",
-    "H2CHP_tech1"
+    "H2CHP_PEMFC",
+    "H2CHP_SOFC",
+    "H2CHP_PAFC",
+    "H2CHP_turbine"
 ]
 
 EPG_TECHNOLOGIES_FINAL = [
@@ -194,7 +200,10 @@ EPG_TECHNOLOGIES_FINAL = [
     "HYD",
     "OREN",
     "GEO",
-    "H2P",
+    "H2P_PEMFC",
+    "H2P_SOFC",
+    "H2P_PAFC",
+    "H2P_turbine",
     "NUC",
     "FREE12",
     "ClST",
@@ -218,7 +227,10 @@ EPG_TECHNOLOGIES_FINAL = [
     "NGCHPCS",
     "BioCHPCS",
     "GeoCHP",
-    "H2CHP"
+    "H2CHP_PEMFC",
+    "H2CHP_SOFC",
+    "H2CHP_PAFC",
+    "H2CHP_turbine"
 ]
 
 EPG_SUBTECH_TO_TECH = {
@@ -246,7 +258,10 @@ EPG_SUBTECH_TO_TECH = {
     "HYD_tech1": ["HYD"],
     "OREN_tech1": ["OREN"],
     "GEO_tech1": ["GEO"],
-    "H2P_tech1": ["H2P"],
+    "H2P_PEMFC": ["H2P"],
+    "H2P_SOFC": ["H2P"],
+    "H2P_PAFC": ["H2P"],
+    "H2P_turbine": ["H2P"],
     "NUC_tech1": ["NUC"],
     "FREE12_tech1": ["FREE12"],
     "ClST_tech1": ["ClST"],
@@ -270,7 +285,10 @@ EPG_SUBTECH_TO_TECH = {
     "NGCHPCS_tech1": ["NGCHPCS"],
     "BioCHPCS_tech1": ["BioCHPCS"],
     "GeoCHP_tech1": ["GeoCHP"],
-    "H2CHP_tech1": ["H2CHP"],
+    "H2CHP_PEMFC": ["H2CHP"],
+    "H2CHP_SOFC": ["H2CHP"],
+    "H2CHP_PAFC": ["H2CHP"],
+    "H2CHP_turbine": ["H2CHP"],
 }
 
 EPG_TECHNOLOGIES_VRE = [

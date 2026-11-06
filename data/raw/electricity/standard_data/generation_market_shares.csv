@@ -110,6 +110,26 @@ Time,type_data,unit,Region,sector,technology,sub_technology,value
 2050,inflow,share,World,generation,SPVR,CIGS,0.045
 2050,inflow,share,World,generation,SPVR,a-Si,0.01
 
+2030,inflow,share,World,generation,H2P,turbine,0.78
+2030,inflow,share,World,generation,H2P,PEMFC,0.0231
+2030,inflow,share,World,generation,H2P,SOFC,0.08096
+2030,inflow,share,World,generation,H2P,PAFC,0.11594
+
+2050,inflow,share,World,generation,H2P,turbine,0.78
+2050,inflow,share,World,generation,H2P,PEMFC,0.088
+2050,inflow,share,World,generation,H2P,SOFC,0.066
+2050,inflow,share,World,generation,H2P,PAFC,0.066
+
+2030,inflow,share,World,generation,H2CHP,turbine,0.78
+2030,inflow,share,World,generation,H2CHP,PEMFC,0.0231
+2030,inflow,share,World,generation,H2CHP,SOFC,0.08096
+2030,inflow,share,World,generation,H2CHP,PAFC,0.11594
+
+2050,inflow,share,World,generation,H2CHP,turbine,0.78
+2050,inflow,share,World,generation,H2CHP,PEMFC,0.088
+2050,inflow,share,World,generation,H2CHP,SOFC,0.066
+2050,inflow,share,World,generation,H2CHP,PAFC,0.066
+
 2010,inflow,share,World,generation,WAVE,tech1,1
 2050,inflow,share,World,generation,WAVE,tech1,1
 2010,inflow,share,World,generation,HYD,tech1,1
@@ -118,8 +138,6 @@ Time,type_data,unit,Region,sector,technology,sub_technology,value
 2050,inflow,share,World,generation,OREN,tech1,1
 2010,inflow,share,World,generation,GEO,tech1,1
 2050,inflow,share,World,generation,GEO,tech1,1
-2010,inflow,share,World,generation,H2P,tech1,1
-2050,inflow,share,World,generation,H2P,tech1,1
 2010,inflow,share,World,generation,NUC,tech1,1
 2050,inflow,share,World,generation,NUC,tech1,1
 2010,inflow,share,World,generation,FREE12,tech1,1
@@ -166,5 +184,3 @@ Time,type_data,unit,Region,sector,technology,sub_technology,value
 2050,inflow,share,World,generation,BioCHPCS,tech1,1
 2010,inflow,share,World,generation,GeoCHP,tech1,1
 2050,inflow,share,World,generation,GeoCHP,tech1,1
-2010,inflow,share,World,generation,H2CHP,tech1,1
-2050,inflow,share,World,generation,H2CHP,tech1,1
