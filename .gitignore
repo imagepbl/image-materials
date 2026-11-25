@@ -193,6 +193,7 @@ cython_debug/
 IMAGE-Mat/output/
 IMAGE-Mat_old_version/
 examples/model_results/
+output/
 
 prism/
 pym/

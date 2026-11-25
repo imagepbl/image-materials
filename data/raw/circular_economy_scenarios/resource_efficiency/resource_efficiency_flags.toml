@@ -1,0 +1,33 @@
+[buildings]
+FlagFloorSpaceCalibrationResidential = true
+FlagFloorSpaceCalibrationCommercial = true
+FlagFloorSpaceReductionResidential = true
+FlagFloorSpaceReductionCommercial = true
+FlagLifetimeExtensionSlow = true
+FlagLifetimeExtension2D_RE = false
+FlagLightweightingResidential = true
+FlagLightweightingCommercial = true
+FlagResourceEfficientMaterials = false
+
+[vehicles]
+FlagLifetimeExtension = true
+FlagLightweighting = true
+FlagIntensityOfUse = true
+FlagMileageIncrease = true
+
+[electricity]
+FlagLightweightingGeneration = true
+FlagLifetimeExtensionGeneration = true
+FlagLightweightingGrid = true
+FlagLifetimeExtensionGrid = true
+
+[end_of_life]
+FlagLifetimeExtension = true
+FlagRecycling = true
+
+[rest_of]
+FlagResourceEfficiency = true
+
+[fossil_fuels]
+# should the sector transportation for fossil fuels be included (true=yes, false=no; only include in runs without vehicle sector to avoid double counting)
+FlagIncludeTransportation = true
