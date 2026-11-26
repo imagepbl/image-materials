@@ -45,7 +45,7 @@ from imagematerials.electricity.constants import (
     EPG_TECHNOLOGIES,
     EPG_TECHNOLOGIES_FINAL,
     EPG_SUB_TECHNOLOGIES,
-    TECH_STATIONARY_STORAGE,
+    ELECTRICITY_STATIONARY_STORAGE_TYPES,
 )
 from imagematerials.vehicles.constants import (
     vehicles_modes_sensitivity_analysis,
@@ -73,7 +73,7 @@ dict_sector_types = {
     "vehicles": vehicles_modes_sensitivity_analysis,
     "generation": EPG_SUB_TECHNOLOGIES,
     "storage_phs": ["PHS"],
-    "storage_other": TECH_STATIONARY_STORAGE,
+    "storage_other": ELECTRICITY_STATIONARY_STORAGE_TYPES,
     "ev_battery": EV_BATTERY_TYPES,
 }
 dict_sector_start_year = {

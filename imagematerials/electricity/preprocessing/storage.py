@@ -24,8 +24,7 @@ from imagematerials.electricity.constants import (
     STANDARD_SCEN_EXTERNAL_DATA,
     YEAR_FIRST_GRID,
     STD_LIFETIMES_ELECTR,
-    TECH_STATIONARY_STORAGE,
-    TECH_STATIONARY_STORAGE_ALL,
+    ELECTRICITY_STATIONARY_STORAGE_TYPES,
     unit_mapping,
     mean_discharge_duration,
     factor_phs_growth_rel_demand,
@@ -309,7 +308,7 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
 
     # The lifetimes are converted to the proper format for the model (dictionary with keys:distribution name, values:datarrays containing distribution parameters)
     lifetimes_phs_dict = convert_lifetime(lifetimes_da.sel(Type=["PHS"]))
-    lifetimes_non_phs_dict = convert_lifetime(lifetimes_da.sel(Type = TECH_STATIONARY_STORAGE).sortby("Type"))
+    lifetimes_non_phs_dict = convert_lifetime(lifetimes_da.sel(Type = ELECTRICITY_STATIONARY_STORAGE_TYPES).sortby("Type"))
 
     # PHS ----------------------------------------------------------------------------------------------
     # bring preprocessing data into a generic format for the model
@@ -324,8 +323,8 @@ def get_preprocessing_data_stor(path_base: str, climate_policy_config: dict, cir
     prep_data_oth_storage = {}
     prep_data_oth_storage["lifetimes"] = lifetimes_non_phs_dict
     prep_data_oth_storage["stocks"] = storage_energy_remaining
-    prep_data_oth_storage["material_intensities"] = material_intensities_da.sel(Type=TECH_STATIONARY_STORAGE).sortby("Type")
-    prep_data_oth_storage["shares"] = market_shares_da.sel(Type=TECH_STATIONARY_STORAGE).sortby("Type")
+    prep_data_oth_storage["material_intensities"] = material_intensities_da.sel(Type=ELECTRICITY_STATIONARY_STORAGE_TYPES).sortby("Type")
+    prep_data_oth_storage["shares"] = market_shares_da.sel(Type=ELECTRICITY_STATIONARY_STORAGE_TYPES).sortby("Type")
     prep_data_oth_storage["set_unit_flexible"] = str(prism.U_(prep_data_oth_storage["stocks"])) # prism.U_ gives the unit back
     prep_data_oth_storage["knowledge_graph"] = create_electricity_graph()
 

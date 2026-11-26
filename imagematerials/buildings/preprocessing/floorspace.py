@@ -22,7 +22,6 @@ from imagematerials.buildings.constants import (
     urban_q_areas,
     rural_q_areas,
     area_graph,
-    commercial_types
 )
 from imagematerials.buildings.preprocessing.circular_economy_measures import (
     ce_measures_residential_housing,

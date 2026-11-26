@@ -198,12 +198,32 @@ all_types = ['Bikes', 'Cars', 'Cars - BEV', 'Cars - FCV', 'Cars - HEV',
        'Regular Buses - PHEV', 'Regular Buses - Trolley', 'Small Ships',
        'Trains', 'Very Large Ships']
 
-EV_VEHICLE_TYPES = ['Cars - BEV', 'Cars - HEV','Cars - PHEV',
-        'Light Commercial Vehicles - BEV','Light Commercial Vehicles - HEV','Light Commercial Vehicles - PHEV',
-        'Medium Freight Trucks - BEV', 'Medium Freight Trucks - HEV','Medium Freight Trucks - PHEV',
-        'Heavy Freight Trucks - BEV', 'Heavy Freight Trucks - HEV', 'Heavy Freight Trucks - PHEV',
-        'Midi Buses - BEV','Midi Buses - HEV', 'Midi Buses - PHEV', 
-        'Regular Buses - BEV', 'Regular Buses - HEV','Regular Buses - PHEV', 'Regular Buses - Trolley']
+EV_VEHICLE_TYPES = [
+    'Cars - BEV', 'Cars - HEV','Cars - PHEV',
+    'Light Commercial Vehicles - BEV','Light Commercial Vehicles - HEV','Light Commercial Vehicles - PHEV',
+    'Medium Freight Trucks - BEV', 'Medium Freight Trucks - HEV','Medium Freight Trucks - PHEV',
+    'Heavy Freight Trucks - BEV', 'Heavy Freight Trucks - HEV', 'Heavy Freight Trucks - PHEV',
+    'Midi Buses - BEV','Midi Buses - HEV', 'Midi Buses - PHEV', 
+    'Regular Buses - BEV', 'Regular Buses - HEV','Regular Buses - PHEV', 'Regular Buses - Trolley'
+    ]
+
+VEHICLES_PASSENGER_TYPES = [
+    'Bikes', 
+    'Cars - BEV', 'Cars - FCV', 'Cars - HEV','Cars - ICE', 'Cars - PHEV', 'Cars - Trolley', 
+    'Light Commercial Vehicles - BEV','Light Commercial Vehicles - FCV','Light Commercial Vehicles - HEV','Light Commercial Vehicles - ICE','Light Commercial Vehicles - PHEV','Light Commercial Vehicles - Trolley',
+    'Regular Buses - PHEV', 'Regular Buses - Trolley','Regular Buses - BEV', 'Regular Buses - FCV','Regular Buses - HEV', 'Regular Buses - ICE',
+    'Midi Buses - BEV','Midi Buses - FCV', 'Midi Buses - HEV', 'Midi Buses - ICE','Midi Buses - PHEV', 'Midi Buses - Trolley',                        
+    'Trains','High Speed Trains',
+    'Passenger Planes',
+    ]
+
+VEHICLES_FREIGHT_TYPES = [
+    'Freight Planes',
+    'Medium Freight Trucks - BEV', 'Medium Freight Trucks - FCV','Medium Freight Trucks - HEV', 'Medium Freight Trucks - ICE','Medium Freight Trucks - PHEV', 'Medium Freight Trucks - Trolley',
+    'Freight Trains',
+    'Small Ships','Inland Ships','Medium Ships','Large Ships', 'Very Large Ships',
+    'Heavy Freight Trucks - BEV', 'Heavy Freight Trucks - FCV','Heavy Freight Trucks - HEV', 'Heavy Freight Trucks - ICE','Heavy Freight Trucks - PHEV', 'Heavy Freight Trucks - Trolley'
+    ]
 
 # This should be removed eventually, but is used in the maintenance module
 # to determine the maintenance lifetime of vehicles.

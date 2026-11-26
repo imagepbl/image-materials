@@ -70,8 +70,9 @@ urban_q_areas = ["Urban Q1", "Urban Q2", "Urban Q3", "Urban Q4", "Urban Q5"]
 rural_q_areas = ["Rural Q1", "Rural Q2", "Rural Q3", "Rural Q4", "Rural Q5"]
 quintiles_generic = ["Q1", "Q2", "Q3", "Q4", "Q5"]
 
-commercial_types = ["Office", "Retail+", "Hotels+", "Govt+"]
-
+BUILDINGS_COMMERCIAL_TYPES = ["Office", "Retail+", "Hotels+", "Govt+"]
+BUILDINGS_URBAN_TYPES = ["Appartment - Urban", "Detached - Urban", "High-rise - Urban", "Semi-detached - Urban"]
+BUILDINGS_RURAL_TYPES = ["Appartment - Rural", "Detached - Rural", "High-rise - Rural", "Semi-detached - Rural"]
 
 # Re-broadcast Area: Urban/Rural -> quintiles using a local Area knowledge graph
 area_graph = KnowledgeGraph(

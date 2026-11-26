@@ -9,7 +9,7 @@ import xarray as xr
 from imagematerials.constants import IMAGE_REGIONS
 from imagematerials.electricity.constants import (
     EPG_SUBTECH_TO_TECH,
-    TECH_STATIONARY_STORAGE
+    ELECTRICITY_STATIONARY_STORAGE_TYPES
 )
 
 @dataclass
@@ -1250,7 +1250,7 @@ def create_electricity_graph():
     for supertype_category in storage_by_category_type:
         electricity_knowledge_graph.add(Node(supertype_category, inherits_from="Storage"))
 
-    for subtype in TECH_STATIONARY_STORAGE:
+    for subtype in ELECTRICITY_STATIONARY_STORAGE_TYPES:
         electricity_knowledge_graph.add(Node(subtype, inherits_from="Other Storage"))
     
     return electricity_knowledge_graph

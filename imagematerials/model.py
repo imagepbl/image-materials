@@ -12,7 +12,9 @@ from pint import UnitRegistry
 from imagematerials.concepts import KnowledgeGraph
 from imagematerials.lifetimes import lifetimes_to_matrix
 from imagematerials.maintenance import Maintenance
-from imagematerials.vehicles.constants import EV_VEHICLE_TYPES
+from imagematerials.vehicles.constants import EV_VEHICLE_TYPES, VEHICLES_PASSENGER_TYPES, VEHICLES_FREIGHT_TYPES
+from imagematerials.buildings.constants import BUILDINGS_COMMERCIAL_TYPES, BUILDINGS_URBAN_TYPES, BUILDINGS_RURAL_TYPES
+from imagematerials.electricity.constants import ELECTRICITY_STATIONARY_STORAGE_TYPES_ALL, EPG_TECHNOLOGIES_FINAL, ELECTRICITY_GRID_TYPES
 
 REGION = prism.Dimension("Region")
 STOCK_TYPE = prism.Dimension("Type")
@@ -856,9 +858,8 @@ class EndOfLife(prism.Model):
         pass
 
     def compute_values(self, time: prism.Time, inflow_materials, outflow_by_cohort_materials, collection, reuse, recycling):
-        """
-        Computes reused material within sector and recyclable material from each sector/type, given collection, 
-        reuse and recycling rates at each time step 
+        """Computes reused material within sector and recyclable material from each sector/type, 
+        given collection, reuse and recycling rates at each time step 
 
         Parameters
         ----------
@@ -874,46 +875,21 @@ class EndOfLife(prism.Model):
             Reuse rate data by material and type.
         recycling: xr.DataArray
             Recycling rate data by material and type.
+
         """
         t, dt = time.t, time.dt
         type_dict = {
-            'passenger': ['Bikes', 
-                          'Cars - BEV', 'Cars - FCV', 'Cars - HEV','Cars - ICE', 'Cars - PHEV', 'Cars - Trolley', 
-                          'Light Commercial Vehicles - BEV','Light Commercial Vehicles - FCV','Light Commercial Vehicles - HEV','Light Commercial Vehicles - ICE','Light Commercial Vehicles - PHEV','Light Commercial Vehicles - Trolley',
-                          'Regular Buses - PHEV', 'Regular Buses - Trolley','Regular Buses - BEV', 'Regular Buses - FCV','Regular Buses - HEV', 'Regular Buses - ICE',
-                          'Midi Buses - BEV','Midi Buses - FCV', 'Midi Buses - HEV', 'Midi Buses - ICE','Midi Buses - PHEV', 'Midi Buses - Trolley',                        
-                          'Trains','High Speed Trains',
-                          'Passenger Planes',       
-        ],
-            'freight': ['Freight Planes',
-                        'Medium Freight Trucks - BEV', 'Medium Freight Trucks - FCV','Medium Freight Trucks - HEV', 'Medium Freight Trucks - ICE','Medium Freight Trucks - PHEV', 'Medium Freight Trucks - Trolley',
-                        'Freight Trains',
-                        'Small Ships','Inland Ships','Medium Ships','Large Ships', 'Very Large Ships',
-                        'Heavy Freight Trucks - BEV', 'Heavy Freight Trucks - FCV','Heavy Freight Trucks - HEV', 'Heavy Freight Trucks - ICE','Heavy Freight Trucks - PHEV', 'Heavy Freight Trucks - Trolley'
-        ],
-            'urban': ["Appartment - Urban","Detached - Urban","High-rise - Urban", "Semi-detached - Urban",    
-        ],
+            "passenger": VEHICLES_PASSENGER_TYPES,
+            "freight": VEHICLES_FREIGHT_TYPES,
 
-            'rural': ["Appartment - Rural","Detached - Rural","High-rise - Rural", "Semi-detached - Rural",
-        ],
-            
-            'commercial': ["Office","Retail+","Hotels+","Govt+"
-        ],
-            'generation':[ 'SPV', 'SPVR', 'CSP', 'WON', 'WOFF',
-            'WAVE', 'HYD', 'OREN', 'GEO', 'H2P', 'NUC', 'FREE12', 'ClST', 'OlST',
-            'NGOT', 'BioST', 'IGCC', 'OlCC', 'NGCC', 'BioCC', 'ClCS', 'OlCS',
-            'NGCS', 'BioCS', 'ClCHP', 'OlCHP', 'NGCHP', 'BioCHP', 'ClCHPCS',
-            'OlCHPCS', 'NGCHPCS', 'BioCHPCS', 'GeoCHP', 'H2CHP'
-            ],
+            "urban": BUILDINGS_URBAN_TYPES,
+            "rural": BUILDINGS_RURAL_TYPES,
+            "commercial": BUILDINGS_COMMERCIAL_TYPES,
 
-            'grid':['HV - Lines - Overhead','HV - Lines - Underground','HV - Substations', 'HV - Transformers',
-                    'LV - Lines - Overhead','LV - Lines - Underground','LV - Substations', 'LV - Transformers', 
-                    'MV - Lines - Overhead', 'MV - Lines - Underground','MV - Substations', 'MV - Transformers' 
-            ],
-
-            'storage': ["PHS", 'Compressed Air', 'Deep-cycle Lead-Acid', 'Flywheel', 'Hydrogen FC', 'LFP', 'LMO', 'LTO', 'Lithium Ceramic', 'Lithium Sulfur', 'Lithium-air',
-                        'NCA', 'NMC', 'NiMH', 'Sodium-Sulfur', 'Vanadium Redox', 'ZEBRA', 'Zinc-Bromide']
-        }
+            "generation": EPG_TECHNOLOGIES_FINAL,
+            "grid": ELECTRICITY_GRID_TYPES,
+            "storage": ELECTRICITY_STATIONARY_STORAGE_TYPES_ALL,
+            }
 
         self.sum_outflow[t] = prism.Q_(0.0, 'kg')
         for outflow in outflow_by_cohort_materials:

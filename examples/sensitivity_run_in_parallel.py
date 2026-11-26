@@ -17,7 +17,7 @@ from imagematerials.sensitivity_analysis.changedata import change_sector, Change
 from imagematerials.sensitivity_analysis.monte_carlo import sample_values, load_material_intensities, load_lifetimes, process_material_intensities
 
 from imagematerials.vehicles.constants import vehicles_modes_sensitivity_analysis, EV_BATTERY_TYPES
-from imagematerials.electricity.constants import EPG_TECHNOLOGIES_FINAL, TECH_STATIONARY_STORAGE
+from imagematerials.electricity.constants import EPG_TECHNOLOGIES_FINAL, ELECTRICITY_STATIONARY_STORAGE_TYPES
 from imagematerials.electricity.utils import rebroadcast_type_dims
 warnings.filterwarnings("ignore")
 
@@ -140,7 +140,7 @@ simulation_timeline = prism.Timeline(time_start, time_end, 1)
 ranges_vehicles = load_material_intensities(path_data / "vehicles" / "standard_data" / "vehicles_material_intensities_long.csv", "vehicles")
 ranges_generation = load_material_intensities(path_data / "electricity" / "standard_data" / "generation_material_intensities_long.csv", "generation")
 ranges_storage = load_material_intensities(path_data / "electricity" / "standard_data" / "storage_and_ev_battery_material_intensities_long.csv", "storage_other")
-ranges_storage_other = ranges_storage[ranges_storage["Type"].isin(TECH_STATIONARY_STORAGE)]
+ranges_storage_other = ranges_storage[ranges_storage["Type"].isin(ELECTRICITY_STATIONARY_STORAGE_TYPES)]
 ranges_storage_phs = ranges_storage[ranges_storage["Type"].isin(["PHS"])]
 ranges_ev_battery = ranges_storage[ranges_storage["Type"].isin(EV_BATTERY_TYPES)]
 
