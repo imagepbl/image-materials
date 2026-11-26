@@ -26,7 +26,9 @@ from imagematerials.hydrogen.constants import (
     PERCENTAGE_REDISTRIBUTION_FROM_PEM,
     TECHS_SPLIT,
     TECHS_ELECTROLYSIS,
-    TECHS_CBF
+    TECHS_CBF,
+    HYDROGEN_PRODUCTION_CATEGORIES,
+    HYDROGEN_PRODUCTION_TYPES
 )
 
 def get_preprocessing_data_hydrogen(path_base: str | Path,
@@ -101,10 +103,8 @@ def get_preprocessing_data_hydrogen(path_base: str | Path,
     h2cap_alltypes = h2cap_alltypes.drop_sel(Type="total", Region="WORLD")
 
     graph_h2 = create_h2_graph()
-    types = sorted(["CBF", "CBF+CCS", "electrolysis"])
-    subtypes = sorted(["CBF", "CBF+CCS", "electrolysis_AEL", "electrolysis_SOEL", "electrolysis_PEMEL"])
 
-    h2cap = graph_h2.aggregate_sum(h2cap_alltypes, output_coords=types)
+    h2cap = graph_h2.aggregate_sum(h2cap_alltypes, output_coords=HYDROGEN_PRODUCTION_CATEGORIES)
 
     # TIMER data only start in 1971, so we add a historic tail back to YEAR_FIRST_GRID=1921 #TODO to be adjusted
     h2cap_da_interp = interpolate_xr(h2cap, year_start, year_end) # fills the years before with the first value (which is 0), to align timeseries with other sectors (e.g. electricity)
@@ -128,7 +128,7 @@ def get_preprocessing_data_hydrogen(path_base: str | Path,
     ).sortby("Type")
     material_intensities_da = prism.Q_(material_intensities_da, "kg/MW")
     material_intensities_da.name = "HydrogenMaterialIntensities"
-    material_intensities_da = graph_h2.rebroadcast_xarray(material_intensities_da, output_coords=subtypes)
+    material_intensities_da = graph_h2.rebroadcast_xarray(material_intensities_da, output_coords=HYDROGEN_PRODUCTION_TYPES)
 
     material_intensities_da_interp = interpolate_xr(material_intensities_da, year_start, year_end)
 
@@ -146,7 +146,7 @@ def get_preprocessing_data_hydrogen(path_base: str | Path,
     ).sortby("Type")
     lifetimes_da = lifetimes_da.expand_dims({"DistributionParams": ["mean", "stdev"]})
     lifetimes_da.name = "GenerationLifetime"
-    lifetimes_da = graph_h2.rebroadcast_xarray(lifetimes_da, output_coords=subtypes)
+    lifetimes_da = graph_h2.rebroadcast_xarray(lifetimes_da, output_coords=HYDROGEN_PRODUCTION_TYPES)
 
     lifetimes_da_interp = interpolate_xr(lifetimes_da, year_start, year_end) 
     lifetimes_da_interp.loc[dict(DistributionParams="stdev")] = lifetimes_da_interp.loc[dict(DistributionParams="mean")] * STD_LIFETIMES_ELECTR
@@ -238,7 +238,7 @@ def get_preprocessing_data_hydrogen(path_base: str | Path,
 
     # --- 7. Calculate stocks per year per sub-technology -----------------------------------------------------
 
-    h2cap_da_interp_subtech = graph_h2.rebroadcast_xarray(h2cap_da_interp, output_coords=subtypes, shares = shares_final)
+    h2cap_da_interp_subtech = graph_h2.rebroadcast_xarray(h2cap_da_interp, output_coords=HYDROGEN_PRODUCTION_TYPES, shares = shares_final)
 
     #===================================================================================================
     #  Prep_data File

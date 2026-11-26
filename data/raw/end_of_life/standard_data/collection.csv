@@ -9,7 +9,7 @@ time,Region,Sector,Type,steel,concrete,wood,copper,aluminium,glass
 2020,World,Vehicles,freight,1,1,1,1,1,1
 2020,World,EV Batteries,ev_battery,1,1,1,1,1,1
 2020,World,Fossil Fuel Infrastructure,fossil_fuel_infrastructure,1,1,1,1,1,1
-2020,World,Hydrogen Production,h2_production,1,1,1,1,1,1
+2020,World,Hydrogen Production,hydrogen,1,1,1,1,1,1
 
 2050,World,Electricity,grid,1,1,1,1,1,1
 2050,World,Electricity,storage,1,1,1,1,1,1
@@ -21,4 +21,4 @@ time,Region,Sector,Type,steel,concrete,wood,copper,aluminium,glass
 2050,World,Vehicles,freight,1,1,1,1,1,1
 2050,World,EV Batteries,ev_battery,1,1,1,1,1,1
 2050,World,Fossil Fuel Infrastructure,fossil_fuel_infrastructure,1,1,1,1,1,1
-2050,World,Hydrogen Production,h2_production,1,1,1,1,1,1
+2050,World,Hydrogen Production,hydrogen,1,1,1,1,1,1

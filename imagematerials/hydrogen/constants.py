@@ -6,7 +6,10 @@ TECHS_SPLIT = ["electrolysis_AEL", "electrolysis_SOEL"]    # sub-technologies of
 TECHS_ELECTROLYSIS = ["electrolysis_PEMEL", *TECHS_SPLIT]
 TECHS_CBF = ["CBF+CCS_tech1", "CBF_tech1"]
 
-HYDROGEN_TECHNOLOGIES = [
+HYDROGEN_PRODUCTION_CATEGORIES = sorted(["CBF", "CBF+CCS", "electrolysis"])
+HYDROGEN_PRODUCTION_TYPES = sorted(["CBF", "CBF+CCS", "electrolysis_AEL", "electrolysis_SOEL", "electrolysis_PEMEL"])
+
+HYDROGEN_TECHNOLOGIES_TIMER = [
     'ClGs',
     'POOl',
     'SMR',

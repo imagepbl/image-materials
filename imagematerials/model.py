@@ -15,6 +15,7 @@ from imagematerials.maintenance import Maintenance
 from imagematerials.vehicles.constants import EV_VEHICLE_TYPES, VEHICLES_PASSENGER_TYPES, VEHICLES_FREIGHT_TYPES
 from imagematerials.buildings.constants import BUILDINGS_COMMERCIAL_TYPES, BUILDINGS_URBAN_TYPES, BUILDINGS_RURAL_TYPES
 from imagematerials.electricity.constants import ELECTRICITY_STATIONARY_STORAGE_TYPES_ALL, EPG_TECHNOLOGIES_FINAL, ELECTRICITY_GRID_TYPES
+from imagematerials.hydrogen.constants import HYDROGEN_PRODUCTION_TYPES
 
 REGION = prism.Dimension("Region")
 STOCK_TYPE = prism.Dimension("Type")
@@ -889,6 +890,10 @@ class EndOfLife(prism.Model):
             "generation": EPG_TECHNOLOGIES_FINAL,
             "grid": ELECTRICITY_GRID_TYPES,
             "storage": ELECTRICITY_STATIONARY_STORAGE_TYPES_ALL,
+
+            # "fossil_fuel_infrastructure": 
+
+            "hydrogen": HYDROGEN_PRODUCTION_TYPES,
             }
 
         self.sum_outflow[t] = prism.Q_(0.0, 'kg')
