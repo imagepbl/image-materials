@@ -22,6 +22,10 @@ T_SUBRATE = Q_(2015, 'year')
 TRADE_YEAR = Q_(1971, 'year')
 SUBTYPE_SEPARATOR = " - "
 
+# Materials covered in IMAGE-materials
+ALL_MATERIALS = [
+    'aluminium', 'brick', 'cement','cobalt', 'concrete', 'copper', 'glass','lead', 'lithium', 'manganese','neodymium','nickel', 'plastics', 'rubber', 'steel', 'tantalum', 'titanium', 'wood'
+]
 
 # Regions
 IMAGE_REGIONS = [

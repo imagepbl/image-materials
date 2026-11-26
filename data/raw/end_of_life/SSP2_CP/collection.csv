@@ -1,4 +1,4 @@
-time,regions,sector,category,Steel,Concrete,Wood,Cu,Aluminium,Glass
+time,Region,Sector,Type,steel,concrete,wood,copper,aluminium,glass
 2020,1,Electricity,grid,1,1,1,1,1,1
 2020,1,Electricity,storage,1,1,1,1,1,1
 2020,1,Electricity,generation,1,1,1,1,1,1

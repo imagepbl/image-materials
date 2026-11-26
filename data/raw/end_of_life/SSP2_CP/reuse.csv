@@ -1,4 +1,4 @@
-Time,Region,Sector,Element,Steel,Concrete,Wood,Cu,Aluminium,Glass
+time,Region,Sector,Type,steel,concrete,wood,copper,aluminium,glass
 2020,1,Electricity,grid,0.0525,0,0.1000,0.1100,0.1075,0.0600
 2020,1,Electricity,storage,0.0525,0,0.1000,0.1100,0.1075,0.0600
 2020,1,Electricity,generation,0.0525,0,0.1000,0.1100,0.1075,0.0600

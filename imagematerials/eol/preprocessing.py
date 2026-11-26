@@ -2,7 +2,7 @@ import pandas as pd
 import xarray as xr
 import numpy as np
 from pathlib import Path
-from imagematerials.constants import IMAGE_REGIONS
+from imagematerials.constants import IMAGE_REGIONS, ALL_MATERIALS
 from imagematerials.eol.constants import SCENARIO_SELECT, start_year, end_year, full_time
 from imagematerials.util import (
     flag_enabled,
@@ -21,7 +21,7 @@ def interpolate_eol_rates(
     min_value: float = 0,
     max_value: float = 1,
     full_time: list[int] = None,
-) -> xr.DataArray:
+    ) -> xr.DataArray:
     """
     Interpolate rates from anchor_year to target_year.
     - Constant before anchor_year
@@ -49,78 +49,44 @@ def eol_preprocessing(base_dir, circular_economy_data_file=None, resource_effici
     circular_economy_config = read_circular_economy_data(circular_economy_data_file)
     resource_efficiency_flags = read_resource_efficiency_flags(resource_efficiency_flags_file)
 
-    collection_in = pd.read_csv(Path(base_dir, "end_of_life","SSP2_2D_RE", "collection.csv"))
-    reuse_in = pd.read_csv(Path(base_dir, "end_of_life", "SSP2_CP", "reuse.csv"))
-    recycling_in = pd.read_csv(Path(base_dir, "end_of_life","SSP2_CP","recycling.csv"))
+    collection_data = pd.read_csv(Path(base_dir, "end_of_life", "standard_data", "collection.csv"))
+    reuse_data = pd.read_csv(Path(base_dir, "end_of_life", "standard_data", "reuse.csv"))
+    recycling_data = pd.read_csv(Path(base_dir, "end_of_life","standard_data","recycling.csv"))
 
-    # renaming columns for consistency
-    collection_in = collection_in.rename(columns={'sector': 'Sector', 'regions': 'Region', 'category':'Type'})
-    reuse_in = reuse_in.rename(columns={'Element': 'Type', 'Time': 'time'} )
-    recycling_in = recycling_in.rename(columns={'Element': 'Type', 'Time': 'time'} )
-
-
-    # dropping redundant 'Sector' level
-    collection_in = collection_in.drop(columns='Sector')
-    reuse_in = reuse_in.drop(columns='Sector')
-    recycling_in = recycling_in.drop(columns='Sector')
-
-    # melting material columns
-    id_vars = ['Region', 'time', 'Type'] 
-    value_vars = ['Steel','Concrete','Wood','Cu','Aluminium', 'Glass']
-
-    collection_df = pd.melt(
-        collection_in,
-        id_vars = id_vars,
-        value_vars = value_vars,
-        var_name = 'material',
-        value_name = 'value'
+    xr_collection = (
+        collection_data
+        .drop(columns="Sector")
+        .set_index(["time", "Region", "Type"]) # set_index([...]) moves the id columns into the index, so the remaining columns (steel, concrete, and so on) are the materials
+        .rename_axis(columns="material")   # name the column axis
+        .stack()                           # columns -> 'material' index level
+        .to_xarray()                       # dims: time, Region, Type, material
     )
+    xr_collection.name = "value"
 
-    reuse_df = pd.melt(
-        reuse_in,
-        id_vars = id_vars,
-        value_vars = value_vars,
-        var_name = 'material',
-        value_name = 'value'
+    xr_reuse = (
+        reuse_data
+        .drop(columns="Sector")
+        .set_index(["time", "Region", "Type"])
+        .rename_axis(columns="material")
+        .stack()
+        .to_xarray()
     )
+    xr_reuse.name = "value"
 
-    recycling_df = pd.melt(
-        recycling_in,
-        id_vars = id_vars,
-        value_vars = value_vars,
-        var_name = 'material',
-        value_name = 'value'
+    xr_recycling = (
+        recycling_data
+        .drop(columns="Sector")
+        .set_index(["time", "Region", "Type"])
+        .rename_axis(columns="material")
+        .stack()
+        .to_xarray()
     )
-   
-    # renaming material coordinates
-    material_rename = {
-        'Steel': 'steel',
-        'Concrete': 'concrete',
-        'Wood': 'wood',
-        'Cu': 'copper',
-        'Aluminium': 'aluminium',
-        'Glass': 'glass'
-    }
-
-    collection_df['material'] = collection_df['material'].replace(material_rename)
-    reuse_df['material'] = reuse_df['material'].replace(material_rename)
-    recycling_df['material'] = recycling_df['material'].replace(material_rename)
-
-    # creating xarrays from EoL dfs
-    xr_collection = collection_df.set_index(['time', 'Region', 'Type', 'material']) \
-                    .to_xarray()['value']
-
-    xr_reuse = reuse_df.set_index(['time', 'Region','Type', 'material']) \
-                    .to_xarray()['value']
-
-    xr_recycling = recycling_df.set_index(['time', 'Region','Type', 'material']) \
-                    .to_xarray()['value']
+    xr_recycling.name = "value"
     
-    # add othermaterials dim, fill w/ 0 and reorder
-    outflows_materials = ['aluminium', 'brick', 'cement','cobalt', 'concrete', 'copper', 'glass','lead', 'lithium', 'manganese','neodymium','nickel', 'plastics', 'rubber', 'steel', 'tantalum', 'titanium', 'wood']
-    xr_collection = xr_collection.reindex(material=outflows_materials, fill_value=0)
-    xr_reuse = xr_reuse.reindex(material=outflows_materials, fill_value=0)
-    xr_recycling = xr_recycling.reindex(material=outflows_materials, fill_value=0)
+    # add other materials, fill w/ 0 and reorder
+    xr_collection = xr_collection.reindex(material=ALL_MATERIALS, fill_value=0)
+    xr_reuse = xr_reuse.reindex(material=ALL_MATERIALS, fill_value=0)
+    xr_recycling = xr_recycling.reindex(material=ALL_MATERIALS, fill_value=0)
     
     # set targets for 2060 instead of 2050
     xr_collection = xr_collection.assign_coords(time = [2060 if t == 2050 else t for t in xr_collection.time.values])
