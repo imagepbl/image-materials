@@ -184,6 +184,9 @@ cython_debug/
 # *.scn
 *.his
 
+# model output: don't track as these files are too big (can't push to remote)
+*.pkl
+
 # macOS
 .DS_Store
 
